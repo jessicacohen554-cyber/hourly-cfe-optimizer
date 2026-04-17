@@ -520,6 +520,230 @@ def _elcc_gas_mw(iso, arrays, demand_twh, gf):
 
 
 # ============================================================================
+# POST-PROCESS REWRITE — replace ELCC gas_* columns with worst-hour values
+# ============================================================================
+# SPEC.md §24.5 architecture (option A, locked):
+#   - In-loop sizing uses the legacy vectorized ELCC formula. Fast path intact.
+#   - After per-ISO parquets are written, this function rewrites the gas_*
+#     columns with the SPEC §24.5 worst-hour (99.97th percentile, margin-on-
+#     demand) values. Only the unique winning archetypes in the shipped output
+#     go through the dispatch cache (hundreds per ISO), so on-demand archetype
+#     expansion stays in its designed-for regime — the 21M-candidate EF pool
+#     is NOT dispatched.
+# ============================================================================
+
+# Mixed column-name tolerance: per-row mix arrays ("mix_clean_firm" in
+# baseline/DG parquets, sometimes bare "clean_firm" in track/feasible variants).
+_MIX_COLUMN_ALIASES = {
+    'clean_firm':    ['mix_clean_firm', 'clean_firm'],
+    'solar':         ['mix_solar', 'solar'],
+    'wind':          ['mix_wind', 'wind'],
+    'offshore_wind': ['mix_offshore_wind', 'offshore_wind'],
+    'ccs_ccgt':      ['mix_ccs_ccgt', 'ccs_ccgt'],
+    'hydro':         ['mix_hydro', 'hydro'],
+    'geothermal':    ['mix_geothermal', 'geothermal'],
+    'solar_batt4':   ['mix_solar_batt4', 'solar_batt4'],
+    'solar_batt8':   ['mix_solar_batt8', 'solar_batt8'],
+    'wind_batt4':    ['mix_wind_batt4', 'wind_batt4'],
+    'wind_batt8':    ['mix_wind_batt8', 'wind_batt8'],
+}
+
+
+def _rewrite_gas_columns_worst_hour(parquet_path, iso, verbose=True):
+    """Overwrite ELCC gas_* columns with worst-hour (SPEC §24.5) values.
+
+    Reads ``parquet_path`` (a step_2_2a output parquet), finds the unique
+    archetype tuples, expands the dispatch cache for any missing archetypes
+    via step3a, computes the 99.97th-percentile margin-inclusive residual per
+    archetype, and writes the per-row gas_* columns back to the parquet.
+
+    Handles both baseline (``mix_*`` prefix) and track / feasible layouts
+    where mix columns appear without the ``mix_`` prefix. For demand-growth
+    parquets the row-specific ``annual_demand_mwh`` captures ``gf`` already,
+    so gas_needed_mw scales correctly per year/growth level.
+
+    No-op if the file is missing, empty, or has no gas columns.
+    """
+    import pyarrow.parquet as _pq
+    import pandas as _pd
+
+    parquet_path = str(parquet_path)
+    if not os.path.exists(parquet_path):
+        return
+    df = _pd.read_parquet(parquet_path)
+    n_rows = len(df)
+    if n_rows == 0:
+        return
+
+    gas_cols = [c for c in df.columns if c.lower().startswith('gas_') or 'gas_backup' in c.lower()]
+    if not gas_cols:
+        return
+
+    def _col(name, default=0.0):
+        for c in _MIX_COLUMN_ALIASES.get(name, [name]):
+            if c in df.columns:
+                return df[c].to_numpy(dtype=np.float64)
+        return np.full(n_rows, float(default), dtype=np.float64)
+
+    mix = {k: _col(k) for k in _MIX_COLUMN_ALIASES}
+    bat   = df['battery_dispatch_pct'].to_numpy(dtype=np.float64) \
+        if 'battery_dispatch_pct' in df.columns else np.zeros(n_rows)
+    bat8  = df['battery8_dispatch_pct'].to_numpy(dtype=np.float64) \
+        if 'battery8_dispatch_pct' in df.columns else np.zeros(n_rows)
+    ldes  = df['ldes_dispatch_pct'].to_numpy(dtype=np.float64) \
+        if 'ldes_dispatch_pct' in df.columns else np.zeros(n_rows)
+    h2    = df['h2_dispatch_pct'].to_numpy(dtype=np.float64) \
+        if 'h2_dispatch_pct' in df.columns else np.zeros(n_rows)
+
+    # Consistent archetype key: ccs uses the RESIDUAL (100 − explicit others),
+    # matching step3a's cache-key convention.
+    ccs_resid = np.maximum(0.0, 100.0 - (
+        mix['clean_firm'] + mix['solar'] + mix['wind'] + mix['offshore_wind']
+        + mix['hydro'] + mix['geothermal']
+        + mix['solar_batt4'] + mix['solar_batt8']
+        + mix['wind_batt4'] + mix['wind_batt8']
+    ))
+
+    import dispatch_utils as _du
+    hybrid_arrs = {ht: mix[ht] for ht in _du.HYBRID_TYPES}
+    keys, _ = _du.archetype_keys_from_arrays(
+        iso, mix['clean_firm'], mix['solar'], mix['wind'],
+        mix['offshore_wind'], ccs_resid, mix['hydro'],
+        bat, bat8, ldes, hybrids=hybrid_arrs,
+    )
+    unique_keys, inverse = np.unique(keys, return_inverse=True)
+
+    state = _get_worst_hour_state(iso)
+    cache = state['cache']
+    missing_mask = np.array([k not in cache for k in unique_keys])
+    if missing_mask.any():
+        # Pick a representative row per missing unique key — any row whose
+        # inverse maps to that index works (ccs_resid and hybrid pcts match).
+        # np.unique returns a sorted unique array; the first index in `inverse`
+        # that equals i is O(n_rows) to find via argmax; we batch that.
+        first_of = np.full(len(unique_keys), -1, dtype=np.int64)
+        for row_idx in range(n_rows):
+            u = inverse[row_idx]
+            if first_of[u] < 0:
+                first_of[u] = row_idx
+        missing_infos = []
+        for i in np.where(missing_mask)[0]:
+            r = int(first_of[i])
+            missing_infos.append({
+                'resource_pcts': {
+                    'clean_firm':    float(mix['clean_firm'][r]),
+                    'solar':         float(mix['solar'][r]),
+                    'wind':          float(mix['wind'][r]),
+                    'offshore_wind': float(mix['offshore_wind'][r]),
+                    'ccs_ccgt':      float(ccs_resid[r]),
+                    'hydro':         float(mix['hydro'][r]),
+                    'solar_batt4':   float(mix['solar_batt4'][r]),
+                    'solar_batt8':   float(mix['solar_batt8'][r]),
+                    'wind_batt4':    float(mix['wind_batt4'][r]),
+                    'wind_batt8':    float(mix['wind_batt8'][r]),
+                },
+                'battery_dispatch_pct':  float(bat[r]),
+                'battery8_dispatch_pct': float(bat8[r]),
+                'ldes_dispatch_pct':     float(ldes[r]),
+                'h2_dispatch_pct':       float(h2[r]),
+            })
+        _expand_missing_archetypes(iso, missing_infos)
+        cache = state['cache']
+
+    _ensure_common_data(iso)
+    demand_margin = state['demand_margin_norm']
+    p = WORST_HOUR_PERCENTILE
+    unique_norm = np.empty(len(unique_keys), dtype=np.float64)
+    for i, k in enumerate(unique_keys):
+        entry = cache.get(k)
+        if entry is None:
+            raise RuntimeError(
+                f"Worst-hour rewrite: archetype {k} missing for {iso} after "
+                "step3a expansion — check scripts/step3a_build_dispatch_cache.py."
+            )
+        total_clean = np.asarray(entry['total_clean'], dtype=np.float64)
+        margin_resid = np.maximum(0.0, demand_margin - total_clean)
+        unique_norm[i] = np.percentile(margin_resid, p)
+
+    resid_norm = unique_norm[inverse]  # (n_rows,)
+
+    # Row-specific annual_demand_mwh already reflects demand growth (gf) for
+    # DG rows. Baseline rows use the base-year value.
+    if 'annual_demand_mwh' in df.columns:
+        annual_mwh = df['annual_demand_mwh'].to_numpy(dtype=np.float64)
+    else:
+        annual_mwh = np.full(n_rows, float(REGIONAL_DEMAND_TWH[iso]) * 1e6)
+
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    existing_gas_mw = float(EXISTING_GAS_CAPACITY_MW[iso])
+    gap_mw = resid_norm * annual_mwh
+    gas_raw = gap_mw / gaf
+    gas_raw_2025 = _gas_raw_2025_worst_hour(iso)
+    gas_needed = np.maximum(0.0, existing_gas_mw + (gas_raw - gas_raw_2025))
+    existing_used = np.minimum(gas_needed, existing_gas_mw)
+    new_gas = np.maximum(0.0, gas_needed - existing_gas_mw)
+    gas_cost_per_mwh = np.where(
+        annual_mwh > 0,
+        (existing_used * EXISTING_GAS_FOM_KW_YR[iso] * 1000
+         + new_gas * NEW_CCGT_COST_KW_YR[iso] * 1000) / annual_mwh,
+        0.0,
+    )
+    base_annual_mwh = float(REGIONAL_DEMAND_TWH[iso]) * 1e6
+    gf_row = np.where(base_annual_mwh > 0, annual_mwh / base_annual_mwh, 1.0)
+    peak_grown = PEAK_DEMAND_MW[iso] * gf_row
+    ra_peak_grown = peak_grown * (1.0 + RESOURCE_ADEQUACY_MARGIN)
+    total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
+
+    # Overwrite whichever gas_* column variants exist on disk.
+    for c in df.columns:
+        cl = c.lower()
+        if not (cl.startswith('gas_') or 'gas_backup' in cl or 'ra_gas' in cl):
+            continue
+        if 'backup_needed' in cl or cl.endswith('gas_needed_mw') or 'ra_gas_needed_mw' in cl:
+            df[c] = np.rint(gas_needed).astype(np.int64)
+        elif 'existing_gas_used' in cl:
+            df[c] = np.rint(existing_used).astype(np.int64)
+        elif 'new_gas_build' in cl or cl.endswith('new_gas_mw'):
+            df[c] = np.rint(new_gas).astype(np.int64)
+        elif 'gas_cost_per_mwh' in cl:
+            df[c] = np.round(gas_cost_per_mwh, 2)
+        elif 'clean_peak' in cl:
+            df[c] = np.rint(total_clean_peak).astype(np.int64)
+        elif 'ra_peak' in cl:
+            df[c] = np.rint(ra_peak_grown).astype(np.int64)
+
+    tmp = parquet_path + '.tmp'
+    df.to_parquet(tmp, index=False, compression='zstd')
+    os.replace(tmp, parquet_path)
+    if verbose:
+        print(f"    WH rewrite {os.path.basename(parquet_path)}: "
+              f"{n_rows:,} rows, {len(unique_keys):,} archetypes, "
+              f"gas_needed_mw {gas_needed.min():.0f}–{gas_needed.max():.0f} MW")
+
+
+def _rewrite_all_iso_outputs_worst_hour(iso, output_dir, verbose=True):
+    """Apply ``_rewrite_gas_columns_worst_hour`` to every step_2_2a parquet
+    produced for ``iso`` in ``output_dir``. Called once per ISO after all
+    that ISO's parquets have been written (baseline, tracks, DG per threshold,
+    feasible)."""
+    import glob as _glob
+    patterns = [
+        f'step_2_2a_CO_{iso}.parquet',
+        f'step_2_2a_tracks_{iso}.parquet',
+        f'step_2_2a_feasible_{iso}.parquet',
+        f'step_2_2a_DG_{iso}_*.parquet',
+        f'step_2_2a_track_DG_{iso}_*.parquet',
+    ]
+    paths = []
+    for pat in patterns:
+        paths.extend(sorted(_glob.glob(os.path.join(str(output_dir), pat))))
+    if verbose and paths:
+        print(f"  [worst-hour rewrite] {iso}: {len(paths)} parquet(s)")
+    for pth in paths:
+        _rewrite_gas_columns_worst_hour(pth, iso, verbose=verbose)
+
+
+# ============================================================================
 # VECTORIZED COST FUNCTION
 # ============================================================================
 
@@ -736,33 +960,77 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
                    wb8_pct / 100.0 * wb8_price_h)
 
     # --- Gas Capacity Backup (computed post-hoc, NOT included in optimization cost) ---
-    # Dispatch-driven sizing per SPEC.md §24.5: size gas to the 99.97th-percentile
-    # residual-gap hour (LOLE ≤ 2.6 h/yr) using the 8760 dispatch profile from
-    # data/step3-dispatch/{ISO}_dispatch_cache.parquet. Missing archetypes are
-    # expanded on demand via step3a.expand_cache_for_mixes. ELCC fixed credits
-    # are retained only as a diagnostic in ``_elcc_gas_mw``.
-    demand_mwh = demand * 1e6  # TWh → MWh (already includes gf)
+    # PRELIMINARY sizing uses the legacy ELCC formula (vectorized, fast) so the
+    # optimizer cost/ranking path is not perturbed. The FINAL ``gas_*`` columns
+    # in the output parquet are overwritten by ``_rewrite_gas_columns_worst_hour``
+    # with the SPEC.md §24.5 worst-hour dispatch-driven values — applied only to
+    # unique winning archetypes (hundreds per ISO) where archetype-level dispatch
+    # cache amortization is correct, rather than to the 21M EF candidate pool
+    # where 99.97% of rows are unique and cache lookup provides no benefit.
+    demand_mwh = demand * 1e6  # TWh → MWh
+    avg_demand_mw = demand_mwh / 8760
     gaf = GAS_AVAILABILITY_FACTOR[iso]
+
+    # Peak scales with demand growth
     peak_grown = PEAK_DEMAND_MW[iso] * gf
     ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
 
-    # resid_norm is already the margin-inclusive residual percentile
-    # (demand × (1+RA) − clean). No external × (1+RA) multiplier.
-    resid_norm = _worst_hour_residual_norm(iso, arrays)
-    gap_mw = resid_norm * demand_mwh
-    gas_raw = gap_mw / gaf
-    gas_delta = gas_raw - _gas_raw_2025_worst_hour(iso)
+    # New-build clean peak capacity: energy → installed MW → peak MW
+    # Only new-build above existing floor contributes incremental peak
+    new_clean_peak_mw = np.zeros(N, dtype=np.float64)
+    # Offshore wind is all new-build (no existing fleet)
+    _osw_new_pct = osw_pct if iso in OFFSHORE_ISOS else np.zeros(N, dtype=np.float64)
+    # Note: ccs_new_pct for peak capacity uses clean_firm tranche CCS only, not residual
+    ccs_tranche_peak_pct = np.zeros(N, dtype=np.float64)  # will be set after tranche calc
+    for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
+                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct)]:
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
+        _cc_r = PEAK_CAPACITY_CREDITS[_res]
+        _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
+        _new_installed = _new_avg_mw / _cf_r
+        new_clean_peak_mw += _new_installed * _cc_r
+
+    # Storage peak capacity: convert energy fraction (% of annual demand) → MW via duration.
+    new_clean_peak_mw += (
+        bat_pct / 100.0 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
+    )
+
+    # Hybrid peak capacity: energy fraction → installed MW → peak MW
+    for _htype, _hpct in [('solar_batt4', sb4_pct), ('solar_batt8', sb8_pct),
+                           ('wind_batt4', wb4_pct), ('wind_batt8', wb8_pct)]:
+        _parent = _HYBRID_PARENT_REN[_htype]
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_parent][iso]
+        if _htype in HYBRID_DC_AC_RATIOS:
+            _cf_r = min(_cf_r * HYBRID_DC_AC_RATIOS[_htype][iso], 1.0)
+        _cc_r = PEAK_CAPACITY_CREDITS[_htype]
+        _h_avg_mw = _hpct / 100.0 * avg_demand_mw
+        _h_installed = _h_avg_mw / _cf_r
+        new_clean_peak_mw += _h_installed * _cc_r
+
+    # Add CCS tranche peak contribution (from clean_firm Tranche 3, not residual)
+    _ccs_tranche_pct = np.where(demand > 0, ccs_tranche_twh / demand * 100.0, 0.0)
+    _ccs_cf_r = RESOURCE_CAPACITY_FACTORS['ccs_ccgt'][iso]
+    _ccs_cc_r = PEAK_CAPACITY_CREDITS['ccs_ccgt']
+    new_clean_peak_mw += (_ccs_tranche_pct / 100.0 * avg_demand_mw / _ccs_cf_r) * _ccs_cc_r
+
+    # Total system clean peak = existing (constant) + new-build (ELCC preliminary)
+    total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
+
+    # Gas raw for this scenario vs 2025 baseline (ELCC preliminary)
+    gas_raw = np.maximum(0, ra_peak_grown - total_clean_peak) / gaf
+    gas_delta = gas_raw - GAS_RAW_2025[iso]
     gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
-    # Diagnostic peak-MW view (margin-inclusive residual subtracted from the
-    # grown RA peak); reported as "clean_peak_mw" for continuity with the
-    # prior column.
-    total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
 
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
     new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_mw)
 
-    # Gas cost computed for post-hoc output only — NOT added to total_cost
+    # Gas cost computed for post-hoc output only — NOT added to total_cost.
+    # ELCC values feed the preliminary column; the post-process rewrite
+    # replaces them with worst-hour values for the winning rows that ship.
     gas_cost_per_mwh = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
@@ -1022,23 +1290,55 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_tranche_twh)
 
     # --- Gas backup (computed post-hoc, NOT in optimization cost) ---
-    # Dispatch-driven sizing per SPEC.md §24.5 — single cache read per ISO,
-    # vectorized 99.97th-percentile residual across all N mixes. Missing
-    # archetypes are batch-expanded once via step3a.expand_cache_for_mixes.
+    # PRELIMINARY sizing uses the legacy ELCC formula — vectorized & fast.
+    # The FINAL ``gas_*`` columns in the output parquet are overwritten by
+    # ``_rewrite_gas_columns_worst_hour`` with the SPEC.md §24.5 worst-hour
+    # dispatch-driven values, applied only to unique winning archetypes.
     _base_demand = REGIONAL_DEMAND_TWH[iso]
     _gf = demand_twh / _base_demand if _base_demand > 0 else 1.0
     demand_mwh = demand_twh * 1e6
+    avg_demand_mw = demand_mwh / 8760
     gaf = GAS_AVAILABILITY_FACTOR[iso]
+
     peak_grown = PEAK_DEMAND_MW[iso] * _gf
     ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
 
-    # resid_norm already encodes max(0, demand × (1+RA) − clean) per SPEC.md §24.5.
-    resid_norm = _worst_hour_residual_norm(iso, arrays)
-    gap_mw = resid_norm * demand_mwh
-    gas_raw = gap_mw / gaf
-    gas_delta = gas_raw - _gas_raw_2025_worst_hour(iso)
+    # New-build clean peak capacity (for gas backup computation only)
+    new_clean_peak_mw = np.zeros(N, dtype=np.float64)
+    _osw_new_pct = osw_pct if iso in OFFSHORE_ISOS else np.zeros(N, dtype=np.float64)
+    for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
+                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct)]:
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
+        _cc_r = PEAK_CAPACITY_CREDITS[_res]
+        _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
+        _new_installed = _new_avg_mw / _cf_r
+        new_clean_peak_mw += _new_installed * _cc_r
+
+    new_clean_peak_mw += (
+        bat_pct / 100.0 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
+    )
+
+    # Hybrid peak capacity: energy fraction → installed MW → peak MW
+    # Hybrids are all new-build. Parent CF used (solar adjusted by DC:AC ratio).
+    for _htype, _hpct in [('solar_batt4', sb4_pct), ('solar_batt8', sb8_pct),
+                           ('wind_batt4', wb4_pct), ('wind_batt8', wb8_pct)]:
+        _parent = _HYBRID_PARENT_REN[_htype]
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_parent][iso]
+        if _htype in HYBRID_DC_AC_RATIOS:
+            _cf_r = min(_cf_r * HYBRID_DC_AC_RATIOS[_htype][iso], 1.0)
+        _cc_r = PEAK_CAPACITY_CREDITS[_htype]
+        _h_avg_mw = _hpct / 100.0 * avg_demand_mw
+        _h_installed = _h_avg_mw / _cf_r
+        new_clean_peak_mw += _h_installed * _cc_r
+
+    total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
+
+    gas_raw = np.maximum(0, ra_peak_grown - total_clean_peak) / gaf
+    gas_delta = gas_raw - GAS_RAW_2025[iso]
     gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
-    total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
 
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
@@ -3427,6 +3727,17 @@ def main():
         if n > 0:
             print(f"  {mix_out}: {n:,} feasible mix rows, "
                   f"{os.path.getsize(mix_out) / 1e6:.1f} MB")
+
+        # Post-process: overwrite ELCC-based gas_* columns with SPEC.md §24.5
+        # worst-hour (99.97th percentile, margin-on-demand) values. Operates
+        # only on the unique archetypes that actually shipped — hundreds per
+        # ISO — where the dispatch cache amortizes correctly.
+        try:
+            _rewrite_all_iso_outputs_worst_hour(iso, output_dir)
+        except Exception as _wh_err:
+            print(f"  WARNING: worst-hour rewrite failed for {iso}: {_wh_err}")
+            import traceback
+            traceback.print_exc()
 
         # Free this ISO's source data before processing the next one
         del output['results'][iso]
