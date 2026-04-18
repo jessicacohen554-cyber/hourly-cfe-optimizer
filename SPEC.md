@@ -355,776 +355,204 @@ CAPACITY_MARKET_ISOS = {'PJM', 'NYISO', 'NEISO', 'MISO', 'CAISO'}
 
 ---
 
-## Previous Status (Mar 14, 2026)
+## Historical Status Log — Mar 14 → Feb 28, 2026
 
-### Unit Commitment / Min-Gen Constraints in LMP Engine (Added — Mar 14, 2026)
+Compact session log. Every analytical decision (methodology, constants, cost
+tables, dispatch rules, pipeline architecture) is already captured in the
+canonical §N body below or in the pointed-to reference file. Session-tactical
+notes (branch names, PIDs, "next steps" checklists, completed-task bullets)
+have been dropped — git history is the record.
 
-**Branch:** `claude/add-unit-commitment-constraints-Mq8pE`
+### Mar 14, 2026 — Unit Commitment + 5-Tier Heat-Rate Dispatch
 
-**Problem**: LMP engine off-peak pricing bias — PJM off-peak $34.75 vs actual $28.00 (25% overshoot). The pure merit-order dispatch had no must-run / min-gen constraints, so off-peak prices stayed near merit-order marginal cost instead of being depressed by inflexible baseload.
+- **Unit-commitment layer in LMP engine** — `compute_hourly_lmp_vectorized()`
+  gained must-run pricing depression when residual demand drops below the
+  must-run floor. `MUST_RUN_PCT = {nuclear: 1.0, coal_steam: 0.40, gas_ccgt:
+  0.0, gas_ct: 0.0, oil_ct: 0.0}` in `pipeline_config.py`. Per-ISO
+  `must_run_depression` parameter (PJM/MISO 0.35, SPP 0.30, ERCOT 0.25, other
+  ISOs 0.15). Depression is multiplicative, applied before demand-quantile
+  layers. PJM off-peak $34.75 → $28.77 (target $28 ±15%).
+- **5-tier heat-rate dispatch** replaces the 3-bin model. Per fuel type
+  (`gas_ccgt`, `coal_steam`, `gas_ct`) the stack is `very_low / low / medium /
+  high / very_high` with canonical HR, CO₂, VOM, and capacity fractions in
+  `EFFICIENCY_TIERS` (`scripts/lmp_engine.py`). `VINTAGE_TIER_THRESHOLDS`
+  maps online year → tier (e.g., gas_ccgt 2010+ = very_low, pre-1993 =
+  very_high). Retirement order is very_high → very_low within each tier;
+  coal → oil → gas_CT → gas_CCGT across tiers. Per-tier sweep CFs load from
+  parquet via `SWEEP_TIER_CF_COLS`; falls back to aggregate CF columns.
 
-**Solution**: Added must-run pricing layer to `compute_hourly_lmp_vectorized()` that physically models the price depression when residual demand falls below the total must-run floor (coal min-gen 40% + gas must-run 0%).
+### Mar 9, 2026 — Nuclear Policy Toggle + Net-Zero Convergence + Step 12 Retirement
 
-**Constants** (`pipeline_config.py`):
-```python
-MUST_RUN_PCT = {'nuclear': 1.0, 'coal_steam': 0.40, 'gas_ccgt': 0.0, 'gas_ct': 0.0, 'oil_ct': 0.0}
+- **Nuclear Policy toggle (Stable / Roll-Off)** on procurement dashboard.
+  SSS fixed fleet: PJM 95 TWh, NYISO 42 TWh, MISO 30 TWh. Rolloff schedule:
+  NJ ZEC 2026 (−15 TWh PJM), IL CMC 2028 (−50 TWh PJM, −15 TWh MISO),
+  NY ZEC Tier 3 2030 (−42 TWh NYISO). Rolled-off plants stay running under
+  federal 45U PTC ($15/MWh) + capacity revenue — move from SSS pool (free)
+  to merchant clean pool (priced at EAC market rate ~$5/MWh). Pool
+  reallocation, NOT retirement.
+- **Step 12 nuclear retirement & stranding** — 25 IPP nuclear plants across
+  6 companies. CfD-style policy modeling (NOT additive). `total_rev =
+  base_rev + max(0, applicable_floor - base_rev_per_mwh) × gen_mwh`. Floors:
+  IL CEJA CMC $33.38 (expiry 2027, 11,782 MW), NY ZEC $17.48 (2029, 3,325
+  MW), NJ ZEC $10 (expired 2025, 3,467 MW), 45U Federal PTC $15 (2032,
+  fleet-wide). Added Seabrook (NEISO, 1,244 MW). Output:
+  `scripts/step6_2b_nuclear_retirement.py`, `dashboard/nuclear_retirement.html`.
+- **Step 10 SMARTargets net-zero convergence fix.** Facilitating scenarios
+  (AT1/AT3/QT1/QT3) reach net-zero via DAC backstop (grid deploys until
+  marginal MAC > DAC cost, then DAC offsets remainder). Challenging
+  scenarios (AT2/AT4/QT2/QT4) forced to ~100% clean via $8/MWh queue
+  overshoot adder, shadow price tracks implied policy cost. DAC trajectory
+  (Low / Medium / High $/ton): 2030=$400/600/800, 2035=$250/400/600,
+  2040=$180/300/450, 2045=$130/220/350, 2050=$100/150/250. New output
+  fields: `gross_emissions_mt`, `dac_offset_mt`, `dac_cost_million`,
+  `dac_cost_per_ton`, `carbon_shadow_price`.
+- **Battery/LDES pipeline architecture fix.** `battery_dispatch_pct` was
+  being read as dispatch when it actually encoded capacity (% of annual
+  demand). Fix: Step 4 `build_annual_manifest()` is the single source of
+  truth with separate `battery_capacity_pct` and `battery_dispatch_pct`
+  columns. `enrich_parquets_with_dispatch_shares()` normalization fixed
+  (`sum(profile) * 100`, not `/ H * 100`). Step 5AB merged CO₂ + LMP into
+  one dispatch pass (`step5ab_fossil_dispatch.py`). Dispatch/capacity
+  ratios: CAISO 162×, NYISO 111×, NEISO 118×, SPP 82×, ERCOT 77×, MISO
+  64×, PJM 54×. Manifest schema at `data/step3-dispatch/{ISO}_annual_manifest.parquet`.
+- **Storage unit standardization** — all storage grid levels now use
+  `% of annual demand` (same as solar/wind/clean_firm). Old grids were
+  8,760× too large. Recalibrated in 8 files (`step1_pfs_generator.py`,
+  `step1d_fine_storage.py`, `step1d2_enhanced_storage.py`,
+  `step3_cost_optimization.py`, `step3_track_nb_ctr.py`,
+  `scenario_common.py`, `pipeline_config.py`, `dispatch_utils.py`
+  comments). Cost verification: 0.01% bat4 CAISO Medium = $4.16/MWh
+  matches physical calculation ($4.13/MWh). All pre-standardization
+  step1/step1d parquets invalidated. See also §5.5.
+- **Consequential queue consolidation + MAC bug fix.**
+  `build_consequential_queue()` in `scenario_common.py` is the canonical
+  queue builder; supports `per_iso_sequential` and `global_merit_order`.
+  ISO-aware zone builder starts zones from the nearest threshold ≤ each
+  ISO's existing clean floor: CAISO/ERCOT/PJM/SPP start at 40%,
+  NYISO/NEISO/MISO start at 30%. Strategy 1 consumes the queue via
+  `_load_queue()` in `step5_5_strategy1_consequential.py`. Canonical MAC
+  formula also recorded below.
+
+**Canonical MAC formula (locked Mar 4, 2026):**
 ```
-
-**Per-ISO `must_run_depression` parameter** (PriceModel subclasses):
-| ISO | Depression | Rationale |
-|-----|-----------|-----------|
-| PJM | 0.35 | 29% coal + large nuclear fleet |
-| MISO | 0.35 | 35% coal, heavy must-run floor |
-| SPP | 0.30 | 30% coal |
-| ERCOT | 0.25 | 22% coal |
-| CAISO | 0.15 | No coal, gas-only |
-| NYISO | 0.15 | No coal, gas-only |
-| NEISO | 0.15 | No coal, gas-only |
-
-**Calibration result (PJM)**: Off-peak $34.75 → $28.77 (target $28.00 ± 15%). Avg LMP $35.96 (target $34.70). All 7 ISOs: avg LMP within GOOD range.
-
-**Files modified**:
-- `scripts/pipeline_config.py` — Added `MUST_RUN_PCT` constants
-- `scripts/lmp_engine.py` — Added `must_run_depression` to PriceModel + all subclasses; added must-run pricing layer in `compute_hourly_lmp_vectorized()` (before demand-quantile layers); imported `MUST_RUN_PCT` from pipeline_config
-
-**Design decisions**:
-- Must-run computed inside `compute_hourly_lmp_vectorized()` (not `build_merit_order_stack()`) to avoid changing return signatures
-- Depression is multiplicative (`price *= 1 - surplus_ratio * depression`) — scales with fuel price level
-- Applied BEFORE demand-quantile layers — physical constraint first, statistical refinement second
-- Nuclear must-run not directly in fossil stack (already in clean supply reducing residual demand)
-
----
-
-### 5-Tier Heat-Rate Dispatch (March 2026)
-
-**Decision**: Replaced the 3-bin (efficient/mid/inefficient) aggregate dispatch model with a **5-tier model** (`very_low` through `very_high`) per fuel type, producing a 15-entry merit-order stack (5 tiers × 3 fuel types: `gas_ccgt`, `coal_steam`, `gas_ct`).
-
-**Rationale**: The 3-bin model masked the real-world ~30% heat rate spread within fuel classes. An H-class CCGT (HR 6.2) and a pre-1993 legacy CCGT (HR 9.0) have fundamentally different dispatch economics — blending them into a single "gas CCGT" bin distorts LMP formation and retirement timing. The 5-tier structure also enables vintage-based Constellation fleet mapping for `fleet_scenarios.html`, where each plant's online year determines its efficiency tier.
-
-**Tier Definitions:**
-
-| Tier | Gas CCGT HR | Gas CCGT CO₂ | Gas CCGT VOM | Coal HR | Coal CO₂ | Coal VOM | Gas CT HR | Gas CT CO₂ | Gas CT VOM |
-|------|------------|-------------|-------------|---------|---------|---------|----------|-----------|-----------|
-| very_low | 6.2 | 0.329 | $2.50 | 8.5 | 0.808 | $4.50 | 9.0 | 0.478 | $4.00 |
-| low | 6.8 | 0.361 | $3.00 | 9.5 | 0.903 | $5.00 | 10.0 | 0.531 | $4.50 |
-| medium | 7.5 | 0.398 | $3.50 | 10.5 | 0.998 | $5.50 | 10.5 | 0.557 | $5.00 |
-| high | 8.1 | 0.430 | $4.00 | 11.5 | 1.093 | $6.00 | 11.5 | 0.610 | $5.50 |
-| very_high | 9.0 | 0.478 | $4.50 | 12.5 | 1.188 | $6.50 | 13.0 | 0.690 | $6.00 |
-
-Each tier also has a `capacity_fraction` (share of installed capacity within that fuel type, sums to 1.0 across 5 tiers).
-
-**Vintage → Tier Mapping** (`VINTAGE_TIER_THRESHOLDS`):
-
-| Tier | Gas CCGT | Coal Steam | Gas CT |
-|------|----------|------------|--------|
-| very_low | 2010+ | 2005+ | 2010+ |
-| low | 2002–2009 | 1995–2004 | 2000–2009 |
-| medium | 1998–2001 | 1985–1994 | 1995–1999 |
-| high | 1993–1997 | 1975–1984 | 1985–1994 |
-| very_high | pre-1993 | pre-1975 | pre-1985 |
-
-**Retirement order**: `very_high` retires first → `high` → `medium` → `low` → `very_low` last. Within each tier, fuel types retire in traditional merit order: coal → oil → gas CT → gas CCGT.
-
-**Per-tier sweep CFs**: Loaded from sweep parquet via `SWEEP_TIER_CF_COLS` (e.g., `gas_ccgt_very_low_cf`, `coal_steam_high_cf`). These feed into plant-level dispatch projections in `fleet_scenarios.html`.
-
-**Backward compatibility**: Falls back to aggregate fuel-type CF columns (e.g., `gas_ccgt_cf`) if per-tier columns are missing from the sweep parquet. This ensures older cached sweep results still work.
-
-**Source files**:
-- `scripts/lmp_engine.py` — `EFFICIENCY_TIERS` dict (canonical tier definitions: HR, CO₂, VOM, capacity fraction per fuel type per tier)
-- `market-simulator/scripts/build_fleet_scenario_data.py` — `VINTAGE_TIER_THRESHOLDS` dict, `vintage_to_tier()` function (online year → tier mapping)
-
----
-
-## Previous Status (Mar 9, 2026)
-
-### Nuclear Policy Sensitivity Toggle (Added — Mar 9, 2026)
-
-**Branch:** `claude/fix-strategy-1b-analysis-t7LGs`
-
-**Decision**: Add a "Nuclear Policy" toggle (Stable / Roll-Off) to the procurement deployment dashboard. When active, SSS-using strategies (2C, 3C, 3D) swap to rolloff data variants.
-
-**SSS Fixed Fleet (Stable):**
-- PJM: 95 TWh (IL ZEC/CMC ~50 + NJ ZEC ~15 + PA nuclear ~30)
-- NYISO: 42 TWh (NY ZEC Tier 3)
-- MISO: 30 TWh (IL CMC MISO-zone plants)
-
-**Rolloff Schedule:**
-| Program | Year | TWh Lost from SSS | ISO |
-|---------|------|-------------------|-----|
-| NJ ZEC expires | 2026 | −15 TWh | PJM |
-| IL CMC expires | 2028 | −50 TWh | PJM |
-| IL CMC MISO-zone | 2028 | −15 TWh | MISO |
-| NY ZEC Tier 3 | 2030 | −42 TWh | NYISO |
-
-**Modeling assumption**: Rolled-off plants stay running under federal 45U PTC ($15/MWh) + capacity market revenue. They move from SSS pool (free) to merchant clean pool (priced at EAC market rate ~$5/MWh). This is a pool reallocation, NOT a retirement scenario.
-
-**Impact (PJM, 10% participation, Strategy 2C):**
-- 2028 (IL CMC expiry): +$0.9/MWh
-- 2040 (90% target): +$0.8/MWh
-- 2050 (100% target): +$4.0/MWh
-- ERCOT: zero impact (no SSS)
-
-**Files modified:**
-- `scripts/procurement_utils.py` — Added `NUCLEAR_POLICY_ROLLOFF` schedule, `nuclear_policy` param to `get_sss_twh()` and `get_merchant_clean_twh()`
-- `scripts/step5_2c_strategy_hourly.py` — Runs both stable/rolloff, stores `strategy2C_rolloff`
-- `scripts/step5_2d_strategy_annual.py` — Runs both stable/rolloff, stores `strategy3C_rolloff`, `strategy3D_rolloff`
-- `scripts/step7_1b_extract_deployment_data.py` — Extracts rolloff variants
-- `dashboard/procurement_deployment.html` — Nuclear Policy toggle (Stable/Roll-Off)
-- `dashboard/js/jar-animation.js` — `strategyKeyMapper` support for data remapping
-
----
-
-### Step 12: Nuclear Retirement & Stranding Analysis (Added — Mar 7, 2026)
-
-**Branch:** `claude/nuclear-retirement-analysis-e8kqS`
-
-**Purpose**: Assess which IPP-owned nuclear assets strand under which market conditions, incorporating state nuclear policy rolloffs, 45U PTC expiration, and the 270-scenario parametric market simulation from Steps 10/11.
-
-**Critical design decision — CfD-style policy modeling (NOT additive):**
-- State ZEC/CMC programs and 45U PTC are **contract-for-difference floors**, not additive subsidies
-- They guarantee a minimum revenue per MWh — if market revenue already exceeds the floor, no CfD payment is made
-- State programs and 45U do NOT stack — whichever provides the higher effective floor applies
-- Post-expiry, plant falls to next-highest floor (e.g., IL CMC expires 2027 → 45U $15/MWh through 2032 → fully merchant)
-- Revenue model: `total_rev = base_rev + max(0, applicable_floor - base_rev_per_mwh) × gen_mwh`
-
-**Nuclear fleet scope**: 25 plants across 6 IPP companies (Vistra, Constellation, Talen, PSEG, NextEra). Added Seabrook Nuclear (NextEra, NEISO, 1,244 MW) which was missing from fleet config.
-
-**Policy programs tracked:**
-| Program | Floor $/MWh | Expiry | Plants MW |
-|---------|-------------|--------|-----------|
-| IL CEJA CMC | $33.38 | 2027 | 11,782 MW (6 IL plants) |
-| NY ZEC | $17.48 | 2029 | 3,325 MW (3 NY plants) |
-| NJ ZEC | $10.00 | 2025 (expired) | 3,467 MW (3 NJ plants) |
-| 45U Federal PTC | $15.00 | 2032 | All existing nuclear |
-
-**New files:**
-- `data/nuclear_policy_data.json` — NRC license dates, SLR status, state policy metadata for all 25 plants
-- `scripts/step6_2b_nuclear_retirement.py` — Recomputes nuclear economics from scratch using Step 10 sweep parquets
-- `dashboard/nuclear_retirement.html` — Interactive reference page with policy timeline, stranding heatmap, revenue waterfalls, ISO impact charts
-- `dashboard/js/nuclear-retirement-data.js` — Pre-computed JS data for dashboard
-- `data/step6-smartargets/` — Parquet outputs (stranding results + probabilities)
-
-**Key findings from initial run:**
-- Most PJM nuclear plants are profitable on merchant economics alone (strong $120/kW-yr capacity market)
-- Seabrook (NEISO, $55/kW-yr capacity market) shows first marginal stranding risk (~2.2% in 2040)
-- ERCOT energy-only market makes Comanche Peak/STP more price-sensitive but high TX LMPs compensate
-- IL CEJA CMC plants don't currently need the $33.38 floor — PJM market revenue exceeds it
-- The 45U PTC's $4.55B/yr fleet value is largely theoretical under current market conditions
-
----
-
-### Step 10 SMARTargets Net-Zero Convergence Fix (Completed — Mar 7, 2026)
-
-**Branch:** `claude/fix-net-zero-convergence-ZS2TK`
-
-**Problem**: AT/QT scenarios were NOT converging to 0 emissions by 2050. AT2 (Challenging, PJM) showed 347.6 Mt at 2050 instead of 0. Root causes:
-1. Queue cap was a hard stop for mandated deployment — exhausting queue prevented building more clean energy
-2. No backstop mechanism for residual emissions after physical deployment was exhausted
-3. AT2 and AT4 were producing identical results (economy_nz vs power_nz distinction not applying)
-
-**Fix — Scenario-dependent convergence mechanisms:**
-
-| Scenario Type | Mechanism | How it works |
-|--------------|-----------|--------------|
-| Facilitating (AT1/AT3/QT1/QT3) | DAC backstop | Grid deploys until marginal MAC > DAC cost, then DAC offsets remainder. Cost-optimal switchover. |
-| Challenging (AT2/AT4/QT2/QT4) | Forced grid + queue overshoot | No DAC available. Grid forced to ~100% clean via queue overshoot premium ($8/MWh adder). Carbon shadow price tracks implied policy cost. |
-
-**DAC cost trajectory (facilitating scenarios):**
-| Year | Low (Fac.) | Medium | High (Chal.) |
-|------|-----------|--------|-------------|
-| 2030 | $400/ton | $600 | $800 |
-| 2035 | $250 | $400 | $600 |
-| 2040 | $180 | $300 | $450 |
-| 2045 | $130 | $220 | $350 |
-| 2050 | $100 | $150 | $250 |
-
-**Key results** (all 7 ISOs, all AT scenarios now converge to 0 Mt net CO₂ by 2050):
-- AT1 (Fac. Power NZ): Grid reaches 88-92% clean, DAC handles last mile at $100/ton
-- AT2 (Chal. Power NZ): Grid forced to ~100% clean, shadow prices $500-$58,000/ton
-- AT3 (Fac. Economy NZ): Grid reaches 92-98% clean, DAC offsets remainder
-- AT4 (Chal. Economy NZ): Grid forced to 100%, extreme policy costs
-
-**New output fields**: `gross_emissions_mt`, `dac_offset_mt`, `dac_cost_million`, `dac_cost_per_ton`, `carbon_shadow_price`
-
-**Dashboard redesign**: ISO selector → Pathway selector (Power NZ / Economy NZ / Reference). Shows emission trajectory with cap ceiling, side-by-side resource mix buildout, carbon shadow price vs DAC cost, system cost trajectories, and deep-dive narrative per region/pathway.
-
----
-
-### Battery/LDES Pipeline Architecture Fix (In Progress — Mar 6, 2026)
-
-**Branch:** `claude/fix-dashboard-charts-w0urc`
-
-**Bug**: `battery_dispatch_pct` throughout the pipeline represents storage **CAPACITY** (energy capacity as % of annual demand), not actual dispatch. A 4hr battery at 0.06% capacity cycles ~54-162×/year, producing far more dispatched energy than the capacity number. Every downstream step that reads `battery_dispatch_pct` as if it were annual dispatch massively understates storage's contribution.
-
-**Root cause**: Step 1 PFS physics correctly simulates cycling. `dispatch_utils.reconstruct_hourly_dispatch()` correctly treats the percentage as capacity. But Step 9A falls back to `battery_dispatch_pct` (capacity) when `battery_dispatch_share` is missing in DG/CO parquets, and the dashboard displays this capacity value as if it were dispatch.
-
-**Additional bug found**: `enrich_parquets_with_dispatch_shares()` had a normalization error — dividing by H (8760) when demand sums to 1.0 (not 8760). This made enrichment values 8760× too small.
-
-**Architecture fix — Step 4 Annual Manifest as single source of truth:**
-
-| Change | Status | Description |
-|--------|--------|-------------|
-| Step 4 `build_annual_manifest()` | ✅ Done | New function sums 8760h profiles into annual dispatch %. One row per archetype with capacity vs dispatch clearly separated. QA/QC: energy balance, RTE checks, dispatch sanity. |
-| Step 4 normalization fix | ✅ Done | Fixed `enrich_parquets_with_dispatch_shares()`: `sum(profile) * 100` not `/ H * 100`. |
-| Step 5AB merged module | ✅ Done | New `step5ab_fossil_dispatch.py` computes both CO2 and LMP from single merit-order dispatch pass. Reads from Step 4 cache. Imports stack logic from step5b. |
-| Step 5C no fallback | ✅ Done | Removed live-compute fallback on cache miss. Step 4 cache required. |
-| Step 9A manifest reader | ✅ Done | Loads annual manifests, looks up archetype keys, writes both `battery` (dispatch) and `battery_cap` (capacity) arrays to shared-data.js. |
-| Dashboard capacity vs dispatch | ✅ Done | `priceMix()` returns both `capacity_pct` and `dispatch_pct`. `injectStorageDispatch()` reads actual dispatch from RESOURCE_MIX_DATA. Cost uses capacity; display uses dispatch. |
-| Step 5D | NOT TOUCHED | Intentionally designed to not use dispatch cache. |
-| Column rename (future) | Deferred | Rename `battery_dispatch_pct` → `battery_capacity_pct` in Steps 1-3 parquets. |
-
-**Manifest schema**: `data/step3-dispatch/{ISO}_annual_manifest.parquet`
-- Key: `archetype_key` (MD5 hash of mix params)
-- Capacity columns: `battery_capacity_pct`, `battery8_capacity_pct`, `ldes_capacity_pct`, `h2_capacity_pct`
-- Dispatch columns: `battery_dispatch_pct`, `battery8_dispatch_pct`, etc. (actual cycling dispatch)
-- Per-resource: `{resource}_dispatch_pct`, `{resource}_surplus_pct`
-- Aggregates: `hourly_match_score`, `total_clean_dispatch_pct`, `total_curtailment_pct`, `gap_pct`
-
-**Dispatch/capacity ratios by ISO:**
-| ISO | Avg ratio | Meaning |
-|-----|-----------|---------|
-| CAISO | 162x | Battery dispatches 162× its capacity over the year |
-| ERCOT | 77x | |
-| PJM | 54x | |
-| NYISO | 111x | |
-| NEISO | 118x | |
-| MISO | 64x | |
-| SPP | 82x | |
-
-**Next steps (deferred to future session):**
-- Run Step 9A to regenerate shared-data.js with correct dispatch values
-- Dashboard UI fixes: demand lines, gas chart, delete sections, compressed day
-- Full pipeline rerun via GitHub Actions to populate all downstream outputs
-
----
-
-### Storage Unit Standardization (Completed — Mar 4, 2026)
-
-**Bug**: Storage grid levels were 8,760× too large. The PFS kernel normalizes demand so `sum(demand_arr) = 1.0` over 8,760 hours, making `bp/100` a fraction of **annual** demand. But grid levels were labeled and calibrated as "% of avg hourly demand" — e.g., `bat4=1%` was treated as 1% of annual demand = 2,240 GWh for CAISO, when the intent was 1% of hourly demand = 25.6 MWh. Even the smallest non-zero grid point saturated the battery immediately.
-
-**Fix**: Standardized all storage units to **% of annual demand** — the same unit used by all other resources (solar, wind, clean_firm). Changes across 8 files:
-
-| File | Change |
-|------|--------|
-| `step1_pfs_generator.py` | Recalibrated coarse + fine grid level arrays |
-| `step1d_fine_storage.py` | Recalibrated V1 MAX caps, FULL grids, FINE_STEP, floor values |
-| `step1d2_enhanced_storage.py` | Recalibrated V2 MAX caps + FULL grids |
-| `step3_cost_optimization.py` | LCOE prices ×8760 (remove `/8760` from formula); FOAK/NOAK tables ×8760; peak capacity formula: `pct/100 * demand_mwh / duration_hr * cc` |
-| `step3_track_nb_ctr.py` | Peak capacity formula: `(8760/dur)` factor for storage terms |
-| `scenario_common.py` | LCOE tables ×8760; peak capacity in 3 locations (scalar, numpy, numba) |
-| `pipeline_config.py` | STORAGE_MAX, STORAGE_MAX_V2, STORAGE_FINE_RESOLUTION |
-| `dispatch_utils.py` | Comments only — formulas unchanged (same normalized space) |
-
-**Physical reference (CAISO, 224 TWh):**
-| Grid % | Energy (MWh) | Power 4hr (MW) | vs CAISO fleet |
-|--------|-------------|----------------|----------------|
-| 0.002% | 4,480 | 1,120 | 11% of fleet |
-| 0.01% | 22,400 | 5,600 | 56% |
-| 0.02% | 44,800 | 11,200 | ≈ fleet |
-| 0.05% | 112,000 | 28,000 | 2.8× fleet |
-
-**Cost verification**: 0.01% bat4 CAISO Med = 0.0001 × $41,610 = $4.16/MWh. Physical: 22.4M kWh × $295/kWh × 0.127 CRF+FOM × 1.11 regional = $924M/yr ÷ 224 TWh = $4.13/MWh. ✓
-
-**All existing step1/step1d parquets invalidated** — must regenerate via pipeline rerun.
-
----
-
-### Step 1D.2 Enhanced Storage Model + Economic Assessment (In Progress)
-
-**Branch:** `claude/advanced-tech-storage-analysis-0bVl5`
-
-**Scope**: Build enhanced storage dispatch model (Step 1D.2) with research-informed 2050 capacity caps, and create full economic & revenue source assessment layer for Tracks 1-3. Phased approach: V1 = higher caps with same dispatch, V2 = enhanced multi-service dispatch (later).
-
-**Key Decisions:**
-- 1D.2 uses existing near-miss cache (100k mixes/ISO) — no 1A-1C rerun needed
-- Research-informed 2050 caps (% of annual demand): bat4=0.10%, bat8=0.15%, LDES=1.0%, H2=3.0% (see §16.2)
-- V1 conservative caps: bat4=0.06%, bat8=0.08%, LDES=0.5%, H2=2.0%
-- Phased dispatch: V1 same kernels + higher caps, V2 enhanced multi-service (later)
-- Economic assessment = enhanced lens on Tracks 1-3, NOT a separate Track 4
-- Dashboard integration deferred — focus on compute infrastructure first
-
-**Status:**
-- [x] Storage unit standardization (% of annual demand everywhere)
-- [ ] Step 1D.2 script (`step1d2_enhanced_storage.py`)
-- [ ] Economic assessment constants in `pipeline_config.py`
-- [ ] Step 2 integration (--source flag for 1D.2 parquets)
-- [ ] Economic assessment script (`step3_economic_assessment.py`)
-- [ ] GitHub Actions workflows
-- [ ] Storage analysis page enhancements (deferred)
-
----
-
-### Consequential Queue Consolidation + MAC Bug Fix (Mar 4, 2026)
-
-**Branch:** `claude/analyze-consequential-queue-lsLaJ`
-
-**Problem:** Two parallel implementations of the consequential deployment queue algorithm existed with divergent MAC formulas:
-1. `scenario_common.py::build_consequential_queue()` — used `effective_cost` (wrong: inflated by match_frac, no gas subtraction)
-2. `step5_consequential_deployment_queue.py::compute_zone_metrics()` — used `incremental_cost - gas_cost` where `incremental_cost = effective_cost - wholesale` (wrong: subtracts wholesale, yielding near-$0 MAC)
-
-**MAC Bug Fix:** Both implementations now use the correct formula matching `step5_compute_mac_stats.py`:
+MAC = clean_resource_LCOE × demand_MWh / CO₂_displaced_tons   ($/tCO₂)
 ```
-MAC = (total_cost - gas_backup_cost) × demand_mwh / CO2_displaced_tons  ($/tCO2)
-```
-- `total_cost` = LCOE of all new-build clean resources (existing at $0). No wholesale offset.
-- `gas_backup_cost` = resource adequacy cost (reliability, not abatement). Subtracted.
-- No PCHIP, no isotonic regression — flat LCOE + battery capacity cost / tons CO2 reduced.
-
-**Decisions made:**
-1. **Single source of truth**: `build_consequential_queue()` in `scenario_common.py` is the canonical queue builder. Supports both `per_iso_sequential` and `global_merit_order` sequencing via parameter.
-2. **ISO-aware zone building**: `build_zones(iso=iso)` starts zones from the nearest threshold at or below each ISO's existing clean floor. ISOs with 30-40% existing clean (NYISO, NEISO, MISO) get 30→40→50 zones instead of jumping from existing clean straight to 50%.
-   - CAISO (48.5%), ERCOT (46.1%), PJM (40.6%), SPP (47.0%): start at 40%
-   - NYISO (39.0%), NEISO (33.5%), MISO (31.3%): start at 30%
-3. **gas_cost added to scenario result dicts**: `compute_mix_cost()` now returns `gas_cost` per MWh. `build_augmented_result()` recomputes `gas_cost` from augmented gas MW.
-4. **Strategy 1 consumes queue output**: `step5_5_strategy1_consequential.py` reads `consequential_queue.json` for deployment ordering (cheapest $/tCO2 first) instead of building its own $/MWh ranking. Falls back to price-based ordering when queue file unavailable.
-
-**Files changed:**
-- `scripts/scenario_common.py` — Added `gas_cost` to return dicts, `build_zones()` ISO-aware zone builder, refactored `build_consequential_queue()` with correct MAC formula
-- `scripts/step5_consequential_deployment_queue.py` — Fixed MAC to use `total_cost - gas_cost`, ISO-aware zones via `_build_zones(iso=iso)`
-- `scripts/step5_5_strategy1_consequential.py` — Queue consumption via `_load_queue()`, falls back to price-based
-
-**Queue filtering (Mar 4, 2026 update):**
-- Zones entirely below each ISO's existing clean floor (`t_end <= existing_pct`) are now excluded — no new procurement needed, zero cost and CO₂ deltas.
-- Zones with both `delta_cost ≈ 0` and `delta_co2 ≈ 0` are also excluded (redundant entries).
-- Applied in both `step5d_deployment_queue.py::compute_zone_metrics()` and `scenario_common.py::build_consequential_queue()`.
-
-**MAC formula definition (canonical):**
-```
-MAC = clean_resource_LCOE × demand_MWh / CO₂_displaced_tons  ($/tCO₂)
-```
-- `clean_resource_LCOE` = `total_cost - gas_cost` (Step 3 `total_cost` includes gas RA; subtract to isolate clean resources)
-- Clean resources: solar, wind, offshore wind, nuclear, CCS-CCGT, geothermal, battery (4hr/8hr), LDES, Green H₂
-- Hydro: existing-only at $0 (sunk cost), contributes nothing to MAC numerator
-- Gas RA: excluded (system reliability cost, not clean abatement investment)
-- Wholesale prices: not subtracted (Step 3 already prices existing resources at $0)
-
-**Next steps:**
-- [ ] Run `step5d_deployment_queue.py` to regenerate queue JSON with corrected MACs and filtered zones
-- [ ] Run `step7c_scenario_comparison.py` to regenerate scenario comparison with corrected MACs
-- [ ] Run `step8a_strategy_consequential.py` to verify queue consumption
-- [ ] Verify MAC values are in reasonable range ($30-$500/tCO₂ for most zones)
-- [ ] Verify no zero-delta zones appear in queue output
-
----
-
-## Codebase Audit — Decisions & Action Items (Mar 10, 2026)
-
-**Branch:** `claude/codebase-audit-review-RU7ch`
-
-Comprehensive code audit identified critical, high, and medium-severity issues. User decisions captured below. Items are prioritized C (critical), H (high), M (medium), L (low).
-
-### C1: LDES Double-Counting Bug — Fix Code, Defer Re-Run
-**Issue**: LDES charges energy from `residual_surplus` but never subtracts it (line ~751 of step1 dispatch). Battery 4hr, 8hr, and H2 all subtract. Same MWh can be consumed by both battery AND LDES, inflating CFE% by 2-5% at ≥95% thresholds.
-**Decision**: Fix the bug in code but don't re-run Step 1 yet. Document that existing caches have this known bias. Re-run when next Step 1 is needed.
-**Status**: [x] Fix applied (dispatch_utils.py + step1_pfs_generator.py, 4 locations), [x] Documented in commit message
-
-### C2: CO₂ Emission Baselines — Map to Scope 2 Strategy Variants (Intentional Design)
-**Issue**: Baseline CO₂ uses grid_average rates (0.21-0.43 tCO₂/MWh, includes existing clean) but displaced CO₂ uses fossil_average rates (0.38-0.58). CAISO example: baseline 0.210, displacement 0.430.
-**Decision**: The use of different baselines is **intentional** — testing how proposed Scope 2 accounting approaches play out in real-world optimization. The user is a member of the GHG Protocol Scope 2 technical working group; the revised guidance is under development. Fossil-average from eGRID serves as proxy for short-run marginal emission rate (an unreliable and debated metric with significant methodological variation). Map each strategy variant (1A/1B/1C) to a specific emission accounting tier (location-based, market-based, consequential) and label explicitly.
-**Status**: [ ] Strategy variants labeled with accounting tiers, [ ] Documentation updated
-
-### C3: MAC Definition Divergence — Deferred for Discussion
-**Issue**: Three different MAC calculations (Step 6A system-wide stepwise, Step 6B isotonic-smoothed, Step 5D per-technology LCOE/CO₂) produce 2-5x different values at same threshold. Step 7C scenario comparison uses different MAC sources for A vs B, creating confounding variable.
-**Decision**: User needs more context before deciding. **Revisit in future session.**
-**Status**: [ ] Pending user decision
-
-### C4: DAC Cost Trajectories — Cite and Adjust
-**Issue**: DAC costs hardcoded with no citations. Optimistic case ($100/ton by 2050) is below published lower bounds (Rubin $156-236/ton, Fuss et al. $124-243/ton). DAC crossover drives optimal CFE target recommendations.
-**Decision**: Add citations (Rubin 2015, Fuss et al. 2018, IEA 2022). Raise optimistic floor to ~$150/ton to match literature. Recalculate crossover points.
-**Status**: [x] Citations added (step6b, step9a, step10), [x] Optimistic floor adjusted ($100→$150), [ ] Crossovers recalculated (need to re-run Step 6b)
-
-### H1: Coal Retirement — Add EIA Form 860 Schedule
-**Issue**: Coal capped at 2025 TWh indefinitely with binary retirement at 70% clean threshold. Real coal plants retire for economics/age independent of clean energy — model credits all displacement to clean procurement.
-**Decision**: Add linear coal decline per ISO based on announced closures (EIA Form 860). Reduces claimed abatement but more realistic.
-**Status**: [ ] Retirement schedule implemented, [ ] CO₂ model updated
-
-### H2: Emission Factor Terminology — Covered by C2
-**Issue**: Model uses eGRID blend-weighted averages but context implies "marginal" in some comments.
-**Decision**: Already resolved by C2 decision (map to Scope 2 strategy variants with explicit accounting tier labels). Add labels to code comments.
-**Status**: [ ] Code comments updated
-
-### H3: ISO Single-Zone Assumption — Document as Scope Limitation
-**Issue**: Each ISO modeled as single zone with perfect internal transmission. PJM Western Hub vs Hub can differ $5-15/MWh. CAISO North/South congestion is material.
-**Decision**: Add explicit limitation statement: "Suitable for corporate procurement analysis at ISO-level, not transmission system planning."
-**Status**: [ ] Documented in §19
-
-### H4: Over-Procurement Ratios — Derive from PFS/EF Data
-**Issue**: Hardcoded ratios (1.05x at 50%, 3.0x at 99.9%) claim PFS derivation but no actual link to PFS data. 3x means procuring 3 TWh to deliver 1 TWh.
-**Decision**: Compute total_procurement/demand_met per threshold from Step 1 outputs. Replace hardcoded values with data-driven ratios.
-**Status**: [ ] Ratios computed from PFS, [ ] Hardcoded values replaced
-
-### H5: Deployment Queue Double-Allocation — Add Shared Capacity Tracking
-**Issue**: When multiple ISOs consume from the same deployment queue step, no capacity accounting prevents double-allocation. If SPP wind has 2 TWh and both CAISO and PJM want it, both can consume the full amount.
-**Decision**: Track cumulative consumption per queue step across all buyers. Prevents double-allocation.
-**Status**: [ ] Capacity tracking implemented
-
-### H6: SSS/Merchant Cost Simplification — Document
-**Issue**: SSS savings = wholesale price × capacity. Merchant LCOE static at $35/MWh. No ISO variation, no validation against actual PPA or EAC data.
-**Decision**: Document as simplification. State that pool-adjusted costs are approximate. Note sensitivity to these assumptions.
-**Status**: [ ] Documented in §19
-
-### H7: Hourly Emission Rates — Investigate Current Dispatch Model
-**Issue**: Same scalar emission rate for all 8,760 hours. Real marginal rates vary 2-3x across day/night and season.
-**Decision**: User expected the dispatch model already approximates marginal rates. **Action**: Investigate what the current dispatch model actually does vs. what was intended. Update dispatch model to approximate hourly marginal rates if not already doing so.
-**Status**: [ ] Current model investigated, [ ] Gap assessment completed
-
-### H8: Social Cost of Carbon — Update to 2024 EPA
-**Issue**: Dashboard cites EPA $51/ton (2016, 7% SDR). Biden admin revised to $190-340/ton (2024, 3% SDR). EU ETS is market price, not SCC.
-**Decision**: Replace $51 with $190 (central, 2024 EPA). Keep Rennert et al. $185. Clarify EU ETS is market price, not SCC.
-**Status**: [x] SCC values updated (7 files), [x] EU ETS label clarified, [x] Gas carbon trajectory recalculated
-
-### M1: Weather-Year Sensitivity — Document Limitation
-**Issue**: Model uses 5-year averaged profiles but 2025 demand actuals. No P10/P50/P90 weather-year sensitivity.
-**Decision**: Document that profiles are 5-year average, no weather-year sensitivity exists. Add to future work (§21).
-**Status**: [x] Documented in §19.8 + §21.5
-
-### M2: Battery Annualization — Trace and Document
-**Issue**: Battery cost uses static annualization (0.1270) regardless of cycles/year.
-**Decision**: User believes this is correct by design — PFS results are based on capacity as % of annual demand, enabling simplified capacity pricing rather than cycle-dependent LCOS. **Action**: Trace through code to confirm this is the case. If confirmed, update documentation to make the capacity-pricing rationale explicitly clear.
-**Status**: [x] Code trace completed, [x] Confirmed capacity-based by design
-
-**Trace results**: The 0.1270 factor = CRF (0.1019 at 8% WACC, 20yr life) + FOM (0.0251 at 2.5% of power component per NREL ATB). Battery capacity is specified as % of annual demand energy throughout the pipeline (`battery_dispatch_pct` in dispatch_utils line 454, step3a line 333). LCOE table values are in $/MWh per % of annual demand — e.g., CAISO Medium 4hr = $41,610 means 0.01% costs $4.16/MWh. Revenue credits (capacity market + arbitrage) subtracted in same units. Model correctly treats battery as firm capacity investment, not cycle-dependent dispatch. Existing §19.1 documents the LCOS limitation adequately.
-
-### M3: Storage Dispatch Priority — Document as Lower Bound
-**Issue**: Fixed priority (4hr → 8hr → LDES → H2), window-based, no price signal.
-**Decision**: Document: "Greedy sequential dispatch represents operational lower bound on storage utilization."
-**Status**: [x] Documented in §19.9
-
-### M4: Demand Response / DSM — Add to Future Work
-**Issue**: No demand response, EV flexibility, or demand-side management modeled.
-**Decision**: Add to future work (§21): "DR/EV flexibility could reduce procurement costs 5-15% at high thresholds."
-**Status**: [x] Documented in §19.10 + §21.6
-
-### M5: Wright's Law Learning Rates — Add Citations & Calibrate
-**Issue**: Learning rates (solar 28%, wind 14%, battery 18%) have no citations. Battery 18% may be aggressive as market matures.
-**Decision**: Source all learning rates from published literature. Adjust if deviating from published values.
-**Status**: [x] Citations added (step10, step11, pipeline_config), [x] Rates verified against literature (solar 24% LCOE-based matches Bolinger et al., wind 15% matches, battery 18% matches BNEF)
-
-### M6: NEISO Gas Adder — Validate Against Algonquin Data
-**Issue**: $13.13/MWh winter gas pipeline adder has no citation.
-**Decision**: Check actual Algonquin Citygate basis spread; $13.13 may be high or low depending on year.
-**Status**: [x] Validated (Winter 2024/25 ACG averaged $7.45/MMBtu above HH — model uses $7.50), [x] Citations added (EIA, NGI, ISO-NE sources)
-
-### M7: LMP Calibration — Run Existing Model
-**Issue**: Synthetic LMP from merit-order stack with no validation metrics reported.
-**Decision**: Run existing `calibrate_lmp_model.py`. Document R², MAPE, and bias for each ISO.
-**Status**: [ ] Blocked — calibrate_lmp_model.py imports from step5b_compute_lmp_prices.py which was merged into step5ab_fossil_dispatch.py. Import path needs updating before calibration can run.
-
-### M8: LCOE Tables — Update to NREL ATB 2024
-**Issue**: LCOE tables cite NREL ATB but no year specified. Values suggest 2023 or earlier.
-**Decision**: Update to NREL ATB 2024 (2024 USD). Add version/year to all cost table headers.
-**Status**: [x] Tables already cite ATB 2024 (verified), [x] Version/year header added to pipeline_config.py cost table section
-
-### M9: Geothermal Scope — Document CAISO-Only Rationale + Cap Citation
-**Issue**: Geothermal limited to CAISO only. 39 TWh cap needs citation.
-**Decision**: Document why CAISO-only (Salton Sea ~80% of near-term identified resources). Note other ISOs have marginal potential. Add USGS citation for 39 TWh cap. (Partially covered by existing §19.6 — enhance with cap citation.)
-**Status**: [x] Cap citation added to §19.6 (USGS 2008 + CA Energy Commission 2021)
-
-### L1: Code Quality Improvements
-**Decision**: Pursue three improvements:
-1. **Consolidate dispatch code** — dispatch_utils.py should be single source of truth (eliminate duplication across step scripts)
-2. **Add type hints to public APIs** — aids readability and maintainability
-3. **Expand test coverage** — edge cases (empty ISOs, missing data)
-**Status**: [ ] Dispatch consolidated, [ ] Type hints added, [ ] Tests expanded
-
----
-
-## Previous Status (Mar 3, 2026)
-
-### Dashboard Design Refactor — Observatory Theme (In Progress)
-
-**Branch:** `claude/dashboard-redesign-refactor-BtmrP`
-
-**Design Direction**: Variant B "The Observatory" selected — Space Grotesk + DM Sans + Space Mono font stack. Enhanced with **light/dark rhythm system**: alternating crisp white panels (data-forward, analytical clarity) and dark navy sections (dramatic narrative, emphasis). Not monochromatic dark — uses contrast between light and dark to create visual breathing room and hierarchy.
-
-**Key Design Decisions:**
-- **Fonts**: Space Grotesk (headings), DM Sans (body), Space Mono (data/numbers)
-- **Light/dark rhythm**: White card panels for data + charts, dark navy sections for narrative emphasis and storytelling. Sections alternate to create visual cadence.
-- **Header**: Animated oscilloscope-style SVG — glowing neon energy curves, dot grid, heartbeat pulse
-- **Cards**: Rounded (16px radius), subtle glassmorphism on dark backgrounds, clean white with soft shadow on light backgrounds
-- **Navigation**: Mega-menu with 3 columns (Economics / Markets & Grid / Procurement & Strategy)
-- **CSS Architecture**: 5 files (shared.css + 4 page-type CSS files)
-- **Kids pages**: Excluded from scope
-
-**Completed:**
-- [x] Design preview page created with 4 variants (dashboard/design_preview.html)
-- [x] Observatory variant selected with light/dark contrast enhancement
-- [x] Enhanced Observatory variant with light/dark rhythm system in shared.css
-- [x] Updated shared.css with Observatory font stacks + rhythm components
-- [x] Google Fonts links updated to Observatory stack across all 28 non-kids pages
-- [x] Created 4 page-type CSS files: scrollytell.css, dashboard-ui.css, article.css, reference.css
-- [x] Linked page-type CSS files to all 28 pages by type category
-- [x] Mega-menu navigation implemented (3-column Explore + Research dropdown)
-- [x] Applied light/dark rhythm to ALL pages (scrollytell, article, dashboard-ui, reference)
-- [x] Created scroll-observer.js (centralized IntersectionObserver for all fade-in classes)
-- [x] Linked scroll-observer.js to all 28 pages
-- [x] Removed Franklin Gothic @font-face and all references (replaced by Google Fonts)
-- [x] Extracted ~8,000 lines of inline CSS into page-type CSS files:
-  - dashboard.html: 2,753 → 447 lines (84% reduction)
-  - abatement_dashboard.html: 1,088 → 6 lines (99% reduction)
-  - index.html: 1,043 → 136 lines (87% reduction)
-  - consequential_accounting.html: 610 → 35 lines (94% reduction)
-  - about.html: 449 → 70 lines (84% reduction)
-  - pipeline.html: 686 → 233 lines (66% reduction)
-  - research_paper.html: 354 → 75 lines (79% reduction)
-  - Plus 15 more pages with 40-65% reductions
-- [x] Archived procurement_comparison.html (Legacy, superseded by procurement_strategies)
-- [x] Archived pipeline_map.html (content covered by pipeline.html)
-- [x] Added .related-analyses cross-linking component to shared.css
-- [x] Added Related Analyses cards to 13 article/analysis pages (thematic clusters)
-
-**Next Steps:**
-- [ ] QA/QC visual verification at 320px, 375px, 768px, 1024px, 1440px breakpoints
-- [ ] Test mega-menu on mobile (hamburger collapse, touch targets)
-- [ ] Verify all Chart.js instances use centralized RESOURCE_COLORS/ISO_COLORS
-- [ ] Extract remaining inline CSS from ref-* sub-pages and procurement_research.html
-- [ ] Apply design system to kids pages (currently excluded from scope)
-
-**CSS Architecture:**
-```
-dashboard/styles/
-├── shared.css          — Core design tokens, nav, footer, components, related-analyses (~1,549 lines)
-├── scrollytell.css     — Hero, story sections, glass cards, scrolly layout, region deep-dives (~1,956 lines)
-├── dashboard-ui.css    — Controls, metric tiles, chart grids, cost tables, pathway planning (~1,966 lines)
-├── article.css         — Narrative cards, scroll sections, synthesis, concept cards, timeline (~901 lines)
-└── reference.css       — Long-form typography, TOC, formulas, citations, mind maps, print (~1,176 lines)
-Total centralized: 7,548 lines
-```
-
-**Navigation Structure (Mega-Menu):**
-```
-Home | The Grid | Explore ▾ | Research ▾
-
-EXPLORE (3-column mega-menu):
-Economics           │ Markets & Grid       │ Procurement & Strategy
-CO₂ Abatement       │ Wholesale Prices     │ Carbon Accounting
-Clean Firm Case     │ Fossil Fuel Analysis │ Scenario Comparison
-Cost to Replace     │ Storage Analysis     │ Procurement Strategies
-New Build Analysis  │ Fleet Survival       │ Failure Modes
-Wright's Law        │                      │
-
-RESEARCH (dropdown):
-Research Paper | Methodology | Policy Context | About the Model | About | Reference
-```
-
----
-
-### Offshore Wind Integration — Steps 4–7 + Dashboard (In Progress)
-
-**Branch:** `claude/integrate-offshore-wind-SkQIr`
-
-**Scope**: Thread offshore wind through Steps 4–7, update all dashboard pages, integrate resource caps (geothermal, CCS, offshore wind) into Scenario A/B, Procurement 1-3, Track 2 NB, Track 3 CTR. Simultaneously updating resource colors (nuclear → #6366F1, CCS → #64748B) and display order.
-
-**Status:**
-- [ ] Phase 1: Core infrastructure (dispatch_utils.py + scenario_common.py)
-- [ ] Phase 2: Step 4 (gas/CCS adjustments)
-- [ ] Phase 3: Step 5 (dispatch cache)
-- [ ] Phase 4: Step 6 scripts (10+ files)
-- [ ] Phase 5: Step 7 (shared data generation)
-- [ ] Phase 6: Dashboard (JS + HTML + CSS, 12+ files)
-- [ ] Phase 7: GitHub Actions workflows
-
----
-
-## Previous Status (Mar 2, 2026)
-
-### Step 1c/1d Workflow Fixes (Mar 2, 2026 — COMPLETED)
-
-**Branch:** `claude/fix-workflow-batching-c1EFG`
-
-**Problems Fixed:**
-1. **Zone search getting stuck**: Removed problematic `step1_prior_windows.py` call from workflow that tried to compute from non-existent EF results. Scripts now gracefully handle missing prior windows.
-2. **No threshold batching**: Added `--thresholds` parameter to both `step1c_zone_search.py` and `step1d_fine_storage.py` to allow running individual thresholds or custom subsets (e.g., `--thresholds "95,99"`).
-3. **No per-threshold commits**: Added `git_commit_threshold_single()` function to step1c and updated both scripts to commit after each threshold completes (with retry logic).
-4. **Near-miss parquets**: Verified step1c creates `{ISO}_near_miss.parquet` (union of all near-miss mixes across all thresholds) for step1d to consume.
-5. **Graceful error handling**: Prior windows loading now catches exceptions and falls back to coarse-derived bounds.
-
-**Changes:**
-- `step1c_zone_search.py`: Added `--thresholds` arg, per-threshold commits, graceful prior windows loading
-- `step1d_fine_storage.py`: Added `--thresholds` arg, filtering to requested thresholds only
-- `.github/workflows/step1c-zone-search.yml`: Removed prior windows step, added `thresholds` input, updated script call
-- `.github/workflows/step1d-fine-storage-v2.yml`: Added `thresholds` input, updated script call
-
-**Result:** Both 1c and 1d now support per-threshold execution with auto-commits, preventing work loss on timeout.
-
----
-
-### Streamlined PFS Architecture Redesign (Mar 2, 2026)
-
-**Branch:** `claude/streamline-pfs-architecture-0RMKJ`
-
-**Problem:** Current Step 1c/1d runs `optimize_threshold()` independently per threshold. A mix scoring 63% base gets storage-swept for t50, t55, t60, t65 independently — 4× redundant scoring. Fine 1% refinement around boundary archetypes duplicates across adjacent thresholds. Estimated 5-8× compute waste from per-threshold duplication.
-
-**Architecture Decision: "Score Once, Bin by Threshold"**
-
-A mix's hourly match score is a fixed physics property — it doesn't change per threshold. Score every unique (mix) and (mix, storage_config) tuple exactly once, then assign results to thresholds by their score.
-
-**5-Script Pipeline (replacing old 1a/1b/1c/1d):**
-
-| Script | Status | Purpose |
-|--------|--------|---------|
-| `step1_prior_windows.py` | NEW | Reads prior EF parquets → search window JSON |
-| `step1a_generate_mixes.py` | MODIFIED | Prior-informed bounds + 100 scout mixes |
-| `step1b_score_mixes.py` | MINIMAL CHANGES | Add caching layer |
-| `step1c_zone_search.py` | NEW (replaces old 1c) | Score-band zone fine search with global dedup |
-| `step1d_fine_storage.py` | NEW (replaces old 1d) | Two-pass: coarse global → fine targeted 0.05% |
-
-**Decision 1: Prior-Informed Search Windows (Hard Windows + Scouts)**
-- Load prior EF parquets, compute per-resource [min, max] per threshold
-- Add 15pp absolute buffer: [max(min-15, 0), min(max+15, cap)]
-- Union across thresholds → outer bounds for coarse grid
-- 100 scout mixes (50 random outside window + 50 corner combos) to catch regime shifts
-- If any scout scores near a boundary, dynamically expand the window
-- Saves ~30% of coarse grid compute vs. full Cartesian
-
-**Decision 2: Score-Band Zones (Fine Search Grouping)**
-- 3 overlapping zones replace 15+ per-threshold fine searches:
-  - Zone A: score [0.45, 0.78] → covers t50–t75
-  - Zone B: score [0.73, 0.93] → covers t75–t90
-  - Zone C: score [0.88, 1.00] → covers t90–t99.9
-- Fine 1% grid generated per zone with zone-specific resource windows
-- Global hash set prevents any mix from being scored twice across zones
-- Each scored mix assigned to ALL thresholds where feasible or near-miss
-- ~4× reduction in fine scoring operations
-
-**Decision 3: Two-Pass Storage (Coarse Global → Fine Targeted)**
-- Pass 1: Collect UNION of all near-miss mixes across ALL thresholds (unique set). Sweep storage at coarse resolution (bat4 0-6%, bat8 0-8%, LDES 0-25%, H2 0-25%). Score each (mix, storage) combo ONCE. Bin results to thresholds by score. ~8× reduction vs. per-threshold storage sweep.
-- Pass 2: For each threshold, identify boundary mixes (score within [T-2pp, T+1pp] after Pass 1). Refine winning storage dims at 0.05% resolution ±0.5pp around Pass 1 winner (~21 values/dim). Importance-weighted subset if cross-product >1000. Gets 0.05% storage accuracy on frontier mixes.
-
-**Decision 4: Full Rewrite of 1c/1d**
-- Keep 1a (mix generation) and 1b (scoring kernel) largely intact
-- Numba dispatch kernels preserved — proven, fast
-- Old 1c/1d preserved as `step1c_build_pfs_legacy.py` / `step1d_storage_refinement_legacy.py`
-- New `step1c_zone_search.py` + `step1d_fine_storage.py`
-
-**Accuracy Targets:**
-- Resource mix: 1% (fine grid step)
-- Storage: 0.05% on frontier boundary mixes, 1% elsewhere
-
-**Estimated Compute Savings:** ~5× total reduction in scoring operations. Same or better PFS quality due to finer storage resolution on frontier.
-
----
-
-## Previous Status (Feb 28, 2026)
-
-### MAC Formula: Pure LCOE / CO₂ Displaced — No Wholesale Offset (Mar 1, 2026)
-
-**Decision confirmed:** MAC = pure deployment LCOE of new clean resources / CO₂ displaced by those resources. No wholesale electricity price, fuel cost, or system cost plays any role in the MAC numerator.
-
-**MAC formula:**
-```
-MAC = (new_resource_lcoe_cost × annual_demand_mwh) / CO2_abated_by_new_capital
-```
-
-Where:
-- **Cost numerator**: `cost_total_cost − gas_backup_cost` — the LCOE of NEW-BUILD clean resources only (solar, wind, clean firm, CCS, storage + transmission). Step 3 already prices existing resources at $0 (sunk fleet), so `cost_total_cost` contains only new-build costs. Gas backup (resource adequacy) is subtracted because it's system reliability, not abatement investment.
-- **CO₂ denominator**: Baseline fossil emissions (existing clean only, 2025 demand) minus scenario fossil emissions (at threshold level). Uses merit-order dispatch model (coal → oil → gas retirement). Only counts CO₂ displaced by NEW capital.
-
-**Critical: NO wholesale offset.** The prior code subtracted `existing_pct × wholesale_price` from `cost_total_cost` before computing MAC. This was a phantom double-subtraction — Step 3 already excludes existing resources from cost, so subtracting wholesale for them a second time drove MAC to $0 in wind-heavy ISOs (SPP, ERCOT).
-
-**Sanity check (floor MAC, Medium sensitivity, no TX):**
-- SPP wind: $37/MWh ÷ 1.021 tCO₂/MWh (coal) = **$36/tCO₂** — absolute floor
-- SPP wind: $37/MWh ÷ 0.392 tCO₂/MWh (gas) = **$94/tCO₂** — once coal retired
-- ERCOT wind: $40/MWh ÷ 1.055 tCO₂/MWh (coal) = **$38/tCO₂** — absolute floor
-- ERCOT wind: $40/MWh ÷ 0.393 tCO₂/MWh (gas) = **$102/tCO₂** — once coal retired
-- Values below ~$27/tCO₂ at any threshold are physically impossible.
-
-**Bug fixed (Mar 1, 2026):** Removed `existing_pct × wholesale` subtraction from `add_mac_column()` and `compute_dg_mac()` in `step5_compute_mac_stats.py`. Also removed wholesale-related imports/constants that are no longer needed by MAC calculation.
-
----
-
-### Scenario A Forward-Stepping Rewrite (Feb 28, 2026)
-
-**Branch:** `claude/fix-scenario-a-resources-kDR92`
-
-**Problem:** Old Scenario A forward-stepping evaluated ALL feasible EF mixes at each threshold, then penalized under-floor mixes with excess cost. This was conceptually messy — it priced solutions that should have been filtered out.
-
-**Verification finding:** Scenario A's 50% starting point is NOT equivalent to Step 3's `LHLH_M_M_H1_X` key because (1) Step 6 applies demand growth (843→950 TWh for PJM at 2030), (2) uprate override ($25 vs $40/MWh), (3) different feasible mix pools (shared-data.js subset vs full Step 2 EF).
-
-**New algorithm (filter-first with PFS fallback):**
-1. At each threshold, convert prior-step deployed TWh into per-resource floor percentages (floor_twh / demand_twh at target year).
-2. **Filter** EF mixes to only those meeting ALL per-resource floors (can't un-build deployed assets).
-3. Price filtered mixes under scenario cost assumptions. Pick cheapest total_cost.
-4. If floor eliminates all EF mixes → progressive PFS fallback:
-   a. PFS within floor to floor+10% per resource (narrow window)
-   b. PFS within floor to floor+250% per resource (wide window, 5% grid implicit)
-   c. PFS floor-as-minimum-only (no upper bound)
-   d. All PFS with under-floor cost carry-forward (absolute last resort)
-5. If a PFS mix goes under on a resource to hit the threshold, carry that resource's floor cost forward (priced at newbuild LCOE).
-6. Floor ratchets: `floor = max(prior_floor, deployed)` per resource. Per-resource, not aggregate — can't un-build.
-
-**Key design decisions:**
-- **Per-resource floor** (not aggregate): Each of solar, wind, clean_firm, CCS, hydro, battery, LDES individually >= prior deployed TWh. Most physically realistic — deployed panels/turbines/plants don't disappear.
-- **Cheapest total_cost** (not cheapest $/MWh-CFE): Since EF mixes at threshold T already achieve >= T%, we pick the cheapest total cost, not normalized by match score. This naturally selects barely-above-threshold mixes at each step — correct for sequential procurement modeling.
-- **Demand growth applied**: Floor TWh is absolute (fixed MW deployed). As demand grows, floor as a percentage of demand shrinks slightly — new solutions must still deploy at least as much absolute capacity.
-
-**Files changed:** `scripts/step6_scenario_comparison.py` — rewrote `_forward_step_optimization()`, added `_load_pfs_mixes()`, `_filter_mixes_by_floor()`, `_filter_pfs_by_floor_window()`.
-
-### Consequential Queue: MAC Formula + Threshold Fix (Feb 28, 2026)
-
-**Changes:**
-
-1. **MAC formula = newbuild LCOE / displaced emission rate** (replaces delta_cost/delta_co2).
-   - Buyers using consequential accounting optimize on this metric: cheapest technology cost per tCO2 of their claim.
-   - This is deliberately the *narrow buyer's metric* — it reflects what drives procurement decisions in practice.
-   - The whole point of the analysis is to show that optimizing on this metric in isolation (without contextualizing system costs, gas backup needs, asset stranding, learning curves) yields adverse outcomes.
-   - System costs (gas backup capacity, stranded assets, foregone learning) are tracked separately as comparative layers. They're real costs but they're NOT what drives the buyer's purchasing decision under consequential accounting.
-
-2. **Thresholds filtered to >= 50%** (removed 10-40% from all consequential queue functions). Below 50% is pre-SBTi baseline — not relevant to the deployment queue analysis.
-
-**Files changed:** `scripts/step5_consequential_deployment_queue.py`, `scripts/step6_scenario_comparison.py` — MAC formula in `compute_zone_metrics()` and queue builder.
-
----
-
-### Corporate Procurement Strategy Simulation — Compute Architecture Phase
-
-**Branch:** `claude/procurement-strategy-page-lmOiJ`
-
-**Completed (Research & Design — Feb 27):**
-- [x] Research: C&I load share by ISO (EIA data — national ~62%, ranges 52-67% by ISO)
-- [x] Research: Corporate voluntary procurement market state (NREL 2024: ~315 TWh, ~13% C&I penetration)
-- [x] Research: RPS/compliance/nuclear programs — clean energy already committed per ISO
-- [x] Research: Grid avg vs fossil avg vs marginal emission rates per ISO (eGRID + VERACI-T)
-- [x] Research: EAC scarcity by ISO (20x variation: ERCOT 130-160 TWh available vs NEISO 3-8 TWh)
-- [x] Created `dashboard/procurement_research.html` — research page documenting findings
-- [x] Design decisions captured (see §15 below)
-- [x] Strategy 1C (marginal emission baseline): Include — material in MISO (+17%) and SPP (+22%)
-- [x] Learning curve toggle: On/Off, mapped to Scenario A (Strategy 1/3) and Scenario B (Strategy 2) — see §15.10
-- [x] Supply constraints: Show explicitly with infeasibility bands — see §15.12
-- [x] Adverse effects of delayed hourly matching: 3 compounding effects documented — see §15.11
-- [x] Participation slider defaults: Hyperscaler 5-6%, Other 7-8% — see §15.13
-- [x] Cost-to-replace premium (Strategy 2C): Use existing Track 3 CTR values directly
-
-**Completed (Compute Architecture — Feb 28):**
-- [x] Step 6.5 compute architecture decisions — all 7 decision cards resolved (see §15.14)
-- [x] Card 1 (Script structure): 1A — one script per strategy family + shared utils
-- [x] Card 2 (Existing clean pricing): Dual toggle — 45U + CTR NOAK-based premiums
-- [x] Card 3 (SSS baseline): 2B gets grid 8760 shape free; 2C gets SSS 8760 + existing-minus-SSS at premium + new-build
-- [x] Card 4 (Participation model): 4B — independent annual + hourly translation + scarcity
-- [x] Card 5 (LMP feedback): 5C — full 8760-hour LMP for all 7 ISOs
-- [x] Card 6 (SBTi mapping): 6D — SBTi default + manual override
-- [x] Card 7 (Output format): 7B — standalone procurement-strategy-data.js
-
-- [x] PPA pricing model: Percentage premium (LCOE × (1 + pct)) — VRE 5/12/22%, Firm 12/22/38%, Uprate 10/20/35%
-
-**Completed (LMP Infrastructure — Feb 28):**
-- [x] Extend LMP model to all 7 ISOs: MISO + SPP price models added to `step5_compute_lmp_prices.py`
-- [x] Calibration targets for all 7 ISOs in `calibrate_lmp_model.py` (2024 SOM data)
-- [x] Extend `step0_fetch_lmp_2025.py` to support `--year 2024` and MISO/SPP
-- [x] GitHub Actions workflows: `fetch-actual-lmp.yml` + `run-lmp-calibration.yml`
-
-**Completed (Step 6.5 Compute Scripts — Feb 28):**
-- [x] `step5_5_procurement_utils.py` — Shared utilities (SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curve, 25yr timeline)
-- [x] `step5_5_strategy1_consequential.py` — Strategies 1A/1B/1C (cross-regional consequential netting)
-- [x] `step5_5_strategy2_hourly.py` — Strategies 2A/2B/2C (hourly matching same-ISO)
-- [x] `step5_5_strategy3_annual.py` — Strategies 3A/3B/3C/3D (annual matching 2×2 matrix)
-- [x] GitHub Actions workflow: `run-procurement-strategies.yml` (quick/full mode, per-strategy or ALL)
-
-**Next steps:**
-- Run procurement strategy workflows via GitHub Actions to generate data
-- Run LMP calibration workflow for all 7 ISOs
-- Build interactive procurement comparison dashboard page (`procurement_comparison.html`)
-- Wire up `procurement-strategy-data.js` to dashboard charts
+where `clean_resource_LCOE = total_cost − gas_cost`. Clean resources = solar,
+wind, offshore wind, nuclear, CCS-CCGT, geothermal, battery (4hr/8hr), LDES,
+Green H₂. Hydro existing-only at $0 (sunk), contributes nothing to numerator.
+Gas RA excluded (reliability, not abatement). No wholesale offset (Step 3
+already prices existing at $0). Zones entirely below each ISO's existing
+clean floor are excluded.
+
+### Mar 10, 2026 — Codebase Audit Action Items (closed)
+
+All C/H/M items from the Mar 10 audit are resolved or explicitly deferred.
+- **C1 LDES double-counting** — fix applied in `dispatch_utils.py` +
+  `step1_pfs_generator.py` (4 locations). Existing pre-fix caches carry
+  a known 2–5pp CFE bias at ≥95% thresholds; regenerated caches are clean.
+- **C2 Scope-2 emission baselines** — intentional design. Grid-avg
+  baseline vs fossil-avg displacement maps to Scope-2 accounting tier
+  (location / market / consequential). Strategy variants 1A/1B/1C
+  labeled accordingly.
+- **C3 MAC divergence** — deferred for future session (user decision
+  pending).
+- **C4 DAC cost trajectories** — citations added (Rubin 2015, Fuss 2018,
+  IEA 2022). Optimistic floor raised $100 → $150/ton.
+- **H3 ISO single-zone** — see §19.7.
+- **H4 over-procurement ratios** — open; hardcoded values still in place.
+- **H5 deployment queue double-allocation** — open.
+- **H8 EPA SCC** — $51 → $190 (2024 EPA central, 3% SDR). $185 Rennert
+  retained. EU ETS clarified as market price, not SCC.
+- **M1 weather-year** — documented §19.8, future work §21.5.
+- **M2 battery annualization** — capacity-based by design (0.1270 = CRF
+  0.1019 + FOM 0.0251). Covered by §19.1.
+- **M3 storage dispatch priority** — documented §19.9.
+- **M4 DR/DSM** — documented §19.10, future work §21.6.
+- **M5 learning rates** — citations added; solar 24%, wind 15%, battery
+  18% verified vs Bolinger / BNEF.
+- **M6 NEISO gas adder** — validated ($7.50/MMBtu winter adder matches
+  Winter 2024/25 Algonquin Citygate actuals; sources: EIA, NGI, ISO-NE).
+- **M7 LMP calibration** — blocked on `calibrate_lmp_model.py` import
+  path update (module was merged into `step5ab_fossil_dispatch.py`).
+- **M8 LCOE tables** — verified NREL ATB 2024; year header added to
+  `pipeline_config.py`.
+- **M9 geothermal cap citation** — USGS 2008 + CA Energy Commission
+  2021 added to §19.6.
+- **L1 code quality** — open (dispatch consolidation, type hints, test
+  expansion).
+
+### Mar 3, 2026 — Observatory Dashboard Refactor + Offshore Wind
+
+- **Observatory design system** chosen: Space Grotesk (headings), DM Sans
+  (body), Space Mono (data). Light/dark rhythm — alternating white data
+  panels and dark navy narrative sections. Oscilloscope-style animated
+  header. 16px-radius cards, mega-menu navigation (3-column Economics /
+  Markets & Grid / Procurement & Strategy), 5-file CSS architecture
+  (`shared.css` + `scrollytell.css` + `dashboard-ui.css` + `article.css` +
+  `reference.css`, ~7,548 lines centralized). Design standards live in
+  `DESIGN_SYSTEM.md` (canonical). Franklin Gothic removed site-wide;
+  ~8,000 lines of inline CSS extracted. Archived `procurement_comparison.html`
+  (superseded) and `pipeline_map.html` (covered by `pipeline.html`).
+- **Offshore wind Steps 4–7 integration** — canonical spec at §21.4. Mar 3
+  session drove the color/display-order update below and threaded
+  offshore wind through dispatch, Step 5 cache, Step 6 scripts, Step 7
+  shared-data, dashboards, and GitHub Actions.
+
+**Canonical color update (Mar 3, 2026):** Nuclear `#1E3A5F` → `#6366F1`
+indigo. CCS `#0D9488` → `#64748B` slate. Offshore wind added `#009688`
+teal. Display order: Nuclear → Geothermal → Hydro → CCS → Offshore Wind →
+Onshore Wind → Solar → Battery 4 → Battery 8 → LDES → H₂. Full palette in
+`DESIGN_SYSTEM.md` and `dashboard/js/chart-colors.js`.
+
+### Mar 2, 2026 — Step 1c/1d Streamlined PFS Architecture
+
+- **"Score Once, Bin by Threshold" redesign.** A mix's hourly-match score
+  is a fixed physics property — score every `(mix)` and `(mix, storage)`
+  tuple exactly once, then assign to all thresholds where feasible/near-
+  miss. 5-script pipeline: `step1_prior_windows.py` (search windows from
+  prior EFs), `step1a_generate_mixes.py` (prior-informed bounds + 100
+  scout mixes, 50 random + 50 corner), `step1b_score_mixes.py` (cached
+  scoring kernel), `step1c_zone_search.py` (score-band zones with global
+  dedup), `step1d_fine_storage.py` (two-pass: coarse global → fine
+  targeted 0.05%). Score-band zones: A [0.45,0.78] = t50–t75,
+  B [0.73,0.93] = t75–t90, C [0.88,1.00] = t90–t99.9. Accuracy targets:
+  mix 1%, storage 0.05% on frontier mixes / 1% elsewhere. ~5× compute
+  reduction vs per-threshold loop. Old 1c/1d preserved as `_legacy.py`.
+  Workflow fixes: `--thresholds` flag, per-threshold git commits, graceful
+  fallback when prior windows missing.
+
+### Feb 28, 2026 — MAC / Scenario A / Procurement Compute Architecture
+
+- **MAC formula — pure deployment LCOE / CO₂ displaced, NO wholesale
+  offset.** Bug fixed: `add_mac_column()` and `compute_dg_mac()` in
+  `step5_compute_mac_stats.py` were double-subtracting
+  `existing_pct × wholesale` (Step 3 already zeroes existing resources).
+  Sanity floors: SPP wind $37/MWh ÷ 1.021 tCO₂/MWh = $36/tCO₂ against
+  coal, $94/tCO₂ against gas. Values below ~$27/tCO₂ are physically
+  impossible. Canonical MAC definition at the Mar 4 block above.
+- **Scenario A forward-stepping rewrite** — filter-first with PFS
+  fallback. At each threshold: convert prior-step deployed TWh into
+  per-resource floor %, filter EF mixes to those meeting ALL floors,
+  price under scenario cost assumptions, pick cheapest `total_cost`. If
+  floor eliminates all EF mixes → progressive PFS fallback (narrow
+  window → wide window → floor-as-min-only → under-floor with
+  cost-carry-forward). Per-resource floors, not aggregate. Implemented
+  in `scripts/step6_scenario_comparison.py::_forward_step_optimization()`.
+- **Consequential queue thresholds filtered to ≥ 50%.** Below 50% is
+  pre-SBTi baseline. MAC formula in queue = newbuild LCOE / displaced
+  emission rate (the narrow-buyer's metric — the analysis's whole point
+  is that optimizing on this in isolation yields adverse system-level
+  outcomes; comparative layers track the externalities).
+- **Procurement strategy compute architecture** — resolved all 7 §15.14
+  cards (now canonical in §15.14.1–7). Card 1=1A (one script per strategy
+  family), Card 2=dual-toggle 45U + CTR NOAK premiums, Card 3=SSS 8760 +
+  existing-minus-SSS at premium + new-build, Card 4=4B independent
+  annual + hourly + scarcity, Card 5=5C full 8760-hr LMP all 7 ISOs,
+  Card 6=6D SBTi default + manual override, Card 7=7B standalone
+  `procurement-strategy-data.js`. PPA percentage-premium model (LCOE × (1
+  + pct)): VRE 5/12/22%, Firm 12/22/38%, Uprate 10/20/35%. LMP extended
+  to all 7 ISOs with MISO+SPP models in `step5_compute_lmp_prices.py` and
+  2024 SOM calibration targets in `calibrate_lmp_model.py`.
 
 ---
 
@@ -1730,7 +1158,7 @@ Charts on this page show *that* something is happening at a participation thresh
   - **Each bar split into:** Existing clean premium (gray/blue) vs. New-build capital (green/amber)
   - **At selected participation level** (linked to global slider)
   - **Key insight:** PJM's bar is 60-70% premium (keeping 32% nuclear fleet online). ERCOT's bar is 80%+ new-build (little existing clean to maintain). Both contribute to the same NOAK outcome.
-  - **Data source:** `track_results.json` — newbuild (2A) gives new-build costs; cost_to_replace (2C) gives total including premium. Delta = premium portion. **Available now for 5 ISOs** (CAISO, ERCOT, NEISO, NYISO, PJM). MISO, SPP from `shared-data.js` resource mix data.
+  - **Data source:** `track_results.json` — newbuild (2A) gives new-build costs; cost_to_replace (2C) gives total including premium. Delta = premium portion. **Available for all 7 ISOs** (CAISO, ERCOT, NEISO, NYISO, PJM, MISO, SPP).
   - **Callout box:** "PJM free-rides on the learning curve that ERCOT is paying for — and that's the system working as designed."
 
 ---
@@ -1841,7 +1269,7 @@ Cross-reference links to deep-dive pages:
 | Fig 6 (Resource mix) | 1 (trajectory), 2A, 2C, 3D (=nothing) | 2B, 3A, 3B, 3C |
 | Fig 7 (2ABC table) | All (static) | — |
 | Fig 8 (2C threshold) | 2C (track data + learning curve) | Critical mass exact point |
-| Fig 9 (Regional roles) | 2C (track data, 5 ISOs) | MISO, SPP |
+| Fig 9 (Regional roles) | 2C (track data, 7 ISOs) | — |
 | Fig 10 (FOAK→NOAK) | Both (learning_fraction + LCOEs) | — |
 | Fig 11 (Compounding table) | All (static + trajectory data) | — |
 | Fig 12 (Horse race: cost) | 1, 2A, 2C | 2B, 3A-D |
@@ -3234,8 +2662,8 @@ data/step4-analysis/lmp/                      # Output directory
 ## 4. Dashboard Controls (7 total — paired toggles)
 
 ### Preserved (2):
-1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.9)
+1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP — 7 ISOs)
+2. **Threshold select** (20 values: 10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9)
 
 ### Sensitivity toggles (7 toggles + 1 binary switch):
 
@@ -3279,7 +2707,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 ### 4.1 Warm-Start Optimization (Trifold Seed Strategy)
 
-**Problem**: Full 3-phase co-optimization (Phase 1 coarse grid → Phase 2 medium refinement → Phase 3 fine-tune) takes 5-10 minutes per scenario. With 44 representative scenarios per threshold × 10 thresholds × 5 ISOs, full Phase 1 for every scenario is prohibitively slow.
+**Problem**: Full 3-phase co-optimization (Phase 1 coarse grid → Phase 2 medium refinement → Phase 3 fine-tune) takes 5-10 minutes per scenario. With 44 representative scenarios per threshold × 20 thresholds × 7 ISOs, full Phase 1 for every scenario is prohibitively slow.
 
 **Solution**: Trifold warm-start seeding — run full 3-phase for 3 categories of scenarios, then warm-start the remainder with the discovered mix archetypes:
 
@@ -3315,7 +2743,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 ### 4.2 Scenario Pruning & Adaptive Resampling Pipeline
 
-**Problem**: 5,832 cost scenarios × 20 thresholds × 5 ISOs = 582,000 co-optimizations (16 active thresholds for full cost optimization, 4 coarse thresholds for coarse pass only). Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
+**Problem**: 5,832 cost scenarios × 20 thresholds × 7 ISOs = 816,480 co-optimizations (16 active thresholds for full cost optimization, 4 coarse thresholds for coarse pass only). Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
 
 **Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining ~5,788 via cross-pollination, with adaptive resampling as a safety net.
 
@@ -3984,7 +3412,7 @@ total_co2_abated = existing_grid_displacement + counterfactual_growth_emissions
 
 All values are 2024 USD, net tons CO₂ removed (accounting for 5–12% lifecycle emissions). Full DACCS (capture + transport + storage + MRV).
 
-### 7.2 Abatement Cost Curves (2 new charts)
+### 7.2b Abatement Cost Curves (2 new charts)
 - **Average Cost of Abatement**: Total incremental cost / Total CO2 abated = **$/ton CO2**
 - **Marginal Cost of Abatement**: (Cost_{X+1%} − Cost_{X%}) / (CO2_{X+1%} − CO2_{X%}) = **$/ton CO2**
 - **X-axis**: 75% to 100%, **linear numeric scale** (proportional spacing — distance from 85→90 equals 75→80)
@@ -4153,14 +3581,14 @@ For each resource:
 
 ### v4.0 Architecture (replaces v3.x sequential architecture)
 
-- **Parallel ISO processing (A+F)**: All 5 ISOs run in parallel on 16 cores (~3 cores/ISO). Shared memory for cross-ISO data coordination. Replaces sequential processing.
+- **Parallel ISO processing (A+F)**: All 7 ISOs run in parallel on 16 cores (~2 cores/ISO). Shared memory for cross-ISO data coordination. Replaces sequential processing.
 - **Vectorized storage dispatch (B)**: Battery and LDES scoring use NumPy reshape/vectorized ops instead of Python day-loops. `surplus.reshape(365, 24)` for battery, vectorized rolling windows for LDES.
 - **Batch mix evaluation (C)**: Grid search evaluates all combos in a single matrix multiply: `(N, 4) @ (4, 8760) = (N, 8760)`. Eliminates Python loop over individual mixes.
 - **Numba JIT with fallback (D)**: Storage scoring functions compiled to machine code via Numba. If Numba unavailable, falls back to B+C (vectorized NumPy).
 - **Checkpointing**: Saves after each threshold (20 per ISO); resumes from checkpoint on restart
 - **Score caching**: Matching scores cached across 5,832 cost scenarios per threshold (physics reuse — cost-independent)
 - **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **20 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
+- **20 thresholds × 7 regions × 5,832 scenarios** — incremental saves essential for reliability
 
 ### 11.1 Direct Resource Fractions (v5.0 — replaces procurement multiplier)
 
@@ -4268,13 +3696,13 @@ The methodology page must include:
 
 ## 13. Regional Deep-Dive Pages (1 combined page)
 
-All 5 regions covered in a single scrollytelling page with region selector.
+All 7 regions covered in a single scrollytelling page with region selector.
 
 ### Structure
 - **Status**: DELETED (Feb 19, 2026). Regional deep-dive content consolidated into research paper and homepage scrollytell.
 
 ### Default Cost Scenario for Static Pages
-- **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 5 toggle groups at Medium) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
+- **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 8 toggle groups at Medium — Renewable Gen, Firm Gen, Storage, CCS, 45Q=On, Fossil Fuel, Transmission, Geothermal) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
 - **Dashboard (dashboard.html)**: Interactive — user controls sensitivities via toggles.
 - This ensures consistency across static narrative pages and reserves L/M/H range displays for intentional comparison figures (e.g., cost sensitivity deep-dive section #4 below).
 
@@ -4309,7 +3737,7 @@ All 5 regions covered in a single scrollytelling page with region selector.
 1. **Executive Summary** — key findings across all regions
 2. **Introduction** — hourly CFE matching problem, why annual matching isn't enough
 3. **Methodology** — full model description, all cost tables, algorithms, data sources
-4. **National Results** — overview across all 5 regions, comparison charts
+4. **National Results** — overview across all 7 regions, comparison charts
 5. **Regional Deep-Dives** (5 sections, one per region — content from deep-dive pages)
 6. **Sensitivity Analysis** — how key assumptions drive results
 7. **Policy Implications** — what this means for procurement strategy
@@ -4359,7 +3787,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 1. **The Grid Decarbonization Curve** — Our model's regional marginal abatement curves plotted together. Where does each region's curve cross the DAC line? The SAF line?
 
 2. **The Inflection Point Analysis** — For each region × sensitivity scenario, identify the % threshold where grid decarbonization costs exceed:
-   - The social cost of carbon ($51/ton EPA, $185/ton Rennert et al.)
+   - The social cost of carbon ($190/ton 2024 EPA central (3% SDR), $185/ton Rennert et al.)
    - DAC costs ($300-1,100/ton, trajectory-dependent)
    - SAF costs ($150-400/ton)
    - Voluntary carbon market prices ($10-150/ton)
@@ -4501,7 +3929,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 ---
 
-## 17. QA/QC Requirements
+## 18. QA/QC Requirements
 
 ### Optimizer Results QA (after first region completes)
 - Validate hourly match scores against expected ranges from existing research
@@ -4529,7 +3957,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 - Test at: 320px (small phone), 375px (iPhone), 768px (tablet)
 
 ### Pre-Push Checklist
-- [ ] Optimizer results QA passed for all 5 regions
+- [ ] Optimizer results QA passed for all 7 regions
 - [ ] All dashboard controls functional
 - [ ] All charts render correctly
 - [ ] Mobile compatibility verified
@@ -4706,7 +4134,7 @@ This section documents how our model compares to established capacity expansion 
 | **Solar/wind hourly profiles** | EIA 930 actual generation data, 5-year average | NREL ATB capacity factors, or NSRDB/WIND Toolkit | ✓ Comparable rigor; actual generation vs. modeled resource |
 | **Two-tier pricing** | Existing capacity at wholesale; new-build at LCOE + transmission | Standard in procurement models (LevelTen, 3Degrees) | ✓ Full alignment |
 | **Co-optimization of cost + mix** | Cost drives resource mix selection at every threshold | Standard in all capacity expansion models | ✓ Full alignment |
-| **Regional granularity** | 5 ISOs (CAISO, ERCOT, PJM, NYISO, NEISO) | GenX: zonal; ReEDS: 134 BAs; SWITCH: load zones | ✓ Comparable scope for procurement analysis |
+| **Regional granularity** | 7 ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) | GenX: zonal; ReEDS: 134 BAs; SWITCH: load zones | ✓ Comparable scope for procurement analysis |
 
 ### 20.2 Deliberate Differentiations (with justification)
 
@@ -4800,7 +4228,7 @@ Any post-processing (cost overlays, BECCS, gas constraints, carbon pricing) oper
 - BECCS provides firm dispatchable generation (like CCS-CCGT) PLUS negative emissions
 - NEISO has significant forestry biomass resource (wood pellets, forestry residues)
 - Cost estimate: ~$120-180/MWh LCOE (NREL ATB) — higher than CCS-CCGT but with carbon-negative value
-- **Post-processing approach**: For scenarios with high CCS share (>25%), run a cost overlay replacing a fraction of CCS with BECCS pricing. Include negative emissions credit at SCC values ($51-185/tCO2). This avoids full re-optimization — just re-price cached mixes.
+- **Post-processing approach**: For scenarios with high CCS share (>25%), run a cost overlay replacing a fraction of CCS with BECCS pricing. Include negative emissions credit at SCC values ($185–190/tCO2 — Rennert et al. / 2024 EPA central). This avoids full re-optimization — just re-price cached mixes.
 
 **Decision**: Implemented in post-processing (Feb 15, 2026). See §22.
 
@@ -5076,7 +4504,7 @@ Applied to Step 3 cost optimization results via `step4_postprocess.py`. Correcte
 
 ### 22.1 CO₂ Monotonicity Enforcement
 
-**Problem**: CO₂ abatement is non-monotonic across thresholds in 4 of 5 ISOs. Higher hourly match targets can result in LESS CO₂ abated (up to -15.3M tons in ERCOT 90%→92.5%). Root cause: the optimizer minimizes cost, not CO₂. A cheaper mix at a higher threshold may procure less total clean energy (substituting storage for overprocurement), reducing total fossil displacement even as temporal matching improves.
+**Problem**: CO₂ abatement is non-monotonic across thresholds in most ISOs. Higher hourly match targets can result in LESS CO₂ abated (up to -15.3M tons in ERCOT 90%→92.5%). Root cause: the optimizer minimizes cost, not CO₂. A cheaper mix at a higher threshold may procure less total clean energy (substituting storage for overprocurement), reducing total fossil displacement even as temporal matching improves.
 
 **Fix**: Running-max constraint — `co2_corrected[t] = max(co2[t], co2[t-1])` across thresholds. Ensures abatement narrative never shows "paying more for less CO₂."
 
@@ -5211,7 +4639,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 
 5. **No-45Q mix bias** (documented limitation) — The no-45Q overlay reprices the same resource mix that was co-optimized WITH 45Q. This mix over-represents CCS, making the no-45Q cost a conservative upper bound. A true no-45Q re-optimization would substitute LDES/renewables for CCS, yielding lower costs.
 
-### 22.7 ≥99.9% Hourly Match Asymptote — Literature Review & Procurement Bounds
+### 22.10 ≥99.9% Hourly Match Asymptote — Literature Review & Procurement Bounds
 
 **Decision (Feb 2026):** Top threshold lowered from 100% to ≥99.9%. True 100% hourly matching is physically unreachable due to float precision and dispatch constraints. ≥99.9% is labeled "effectively 100%" (8.76 unmatched hours/year). This makes the threshold honest — we label what we can actually achieve.
 
@@ -5236,7 +4664,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - Only 4–14 unique mixes per threshold (massive redundancy across 5,832 scenarios)
 - Cache comprehensively covers the feasible solution space — new constraint runs can seed from existing archetypes rather than cold-start
 
-### 22.9 Step 1 PFS Improvement Opportunities (Feb 21, 2026)
+### 22.11 Step 1 PFS Improvement Opportunities (Feb 21, 2026)
 
 **Constraint: No changes may sacrifice the ability to find the full PFS.** All improvements below are backward-compatible — they improve speed and/or coverage without changing the feasible space definition or dispatch physics.
 
