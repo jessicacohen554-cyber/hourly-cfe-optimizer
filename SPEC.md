@@ -5,6 +5,51 @@
 
 ## Current Status (Apr 18, 2026)
 
+### Reliability Tax Page — v4.7 Bake-off Variant — PLAN STAGE (Apr 18, 2026, latest)
+
+**Task context.** User wants a *new* file `dashboard/reliability-tax-4.7.html` produced as one side of a bake-off — a full redesign that matches the narrative voice and chart conventions of `gen_market_overview.html`, `ipp-transition-report.html`, `abatement_dashboard.html`, and `ipp_vistra.html`. The existing `dashboard/reliability-tax.html` must stay byte-for-byte untouched (acceptance gate #1). This is orthogonal to the in-place redesign logged in the subsection below — different file, different branch discipline.
+
+**Plan locked (approved by user):**
+- Branch: develop + push on `claude/redesign-reliability-tax-page-rW5Y2`. No PR.
+- File structure: hero (4 stat-tile counters) + 8 numbered sections.
+- §1 duck-curve SVGs kept (schematic illustration, not Chart.js). §2–§7 built on same JSON payloads already in `dashboard/js/reliability-tax/` (no data regeneration). §8 table retained with plain-English pathway labels.
+- Chart shape choices (locked to task rules):
+  - §2 new-gas trajectory → **7-ISO small-multiples grid**, each cell shows 3 pathway lines on same axes. No ISO toggle.
+  - §3 stranding snapshot → **grouped stacked bar**, 7 ISOs × 2 pathways (wind-and-solar vs clean firm), each bar stacked (running / written off).
+  - §4 cost decomposition → **grouped stacked bar**, 7 ISOs × 2 pathways, 5 stacked components. Fixed at 95% clean. NO threshold toggle.
+  - §5 pathway ranking → **horizontal bar**, 5 pathways sorted descending by $/MWh, averaged across 7 ISOs at 90% clean (option A; option B of per-ISO small-multiples dropped).
+  - §6 stranded-capital decomposition → **horizontal stacked bar**, 5 pathway rows stacked by ISO contribution in $B. Replaces the original's fake-Sankey.
+  - §7 cost of waiting → **line chart, all 7 ISOs on same axes**. No toggle. One annotation line at 2035. Uses `chartjs-plugin-annotation@3.0.1` (new dep in `<head>`).
+  - §8 full-results table → retain filter + sort logic; relabel pathway chips to plain English.
+- Visible variant tag: `<title>` reads "The Reliability Tax (v4.7) | The 8,760 Problem"; header contains a `v4.7` badge styled `var(--font-data)` / 0.72rem / 0.08em / uppercase / muted.
+- User-facing ban list (zero hits before commit): SPEC, Card, §, NOAK, FOAK, LOLE, ELCC, CFE, P1, P1a, P2a, P2b, P3, ep90, ep95, ep99p9, "hump", "sankey". JS-internal keys using "1"/"1a"/etc. are fine — only rendered text is checked. Plain-English replacements locked: "Wind, solar, and storage" / "Onshore wind and solar only" / "Reactive pivot at the 90% wall" / "Reactive pivot when the math flips" / "Proactive clean firm".
+- Chart style inherits: colors only from `RESOURCE_COLORS`, `ISO_COLORS`, `SEMANTIC_COLORS`, CSS variables, plus `withAlpha()`. Zero hex in Chart.js datasets. Every canvas has a `.chart-title` above and a plain-English caption below. Every axis has a descriptive title with units. Tick formatters convert 1200→"1.2k" etc. Legend bottom, `usePointStyle:true`, `boxWidth:10`, 12px. Peak / annotation-only datasets filtered out of legend. Plus Jakarta Sans 12/600 for titles, DM Mono 11 for ticks.
+
+**What's done this session:**
+- Full read of reliability-tax.html (source, 1945 lines) + reference pages via subagent extraction (section-structure / voice / chart-pattern / typography / color-token / animation notes captured in working memory).
+- Data-shape validation of all 5 JSON payloads confirms the picked chart shapes render cleanly from existing data — no regeneration needed. Key confirmations: `peaks_per_pathway[iso][pw]` exists for all 5 pathways; `per_iso_pathway.new_gas_stranding[iso][pw].total_stranded_capex_usd` exists (enables §6 ISO-stacked bar).
+- Session-prompt package drafted: 5 paste-ready, self-contained prompts handed to user. Each embeds the SHARED RULES block so each session runs cold. Session boundaries via `SESSION-N_SECTION-M` marker divs — next session replaces only its assigned markers.
+- A scratch `cp reliability-tax.html → reliability-tax-4.7.html` was made and then deleted (untracked, byte-identical, no information value — Stop hook flagged it as dirty tree, cleanest resolution was `rm`).
+
+**What's still to do (scoped to 5 sessions):**
+1. **Session 1** — head / CSS / hero / §1 duck curves / reading-progress + counter JS. Drop 7 `SESSION-N_SECTION-M` marker divs for later fills. No commit.
+2. **Session 2** — §2 small-multiples (7 mini line charts) + §3 grouped stacked bar. No commit.
+3. **Session 3** — §4 cost-decomposition stack + §5 pathway ranking horizontal bar. No commit.
+4. **Session 4** — §6 ISO-stacked stranded capital + §7 cost-of-waiting line (7 ISOs, annotation at 2035). No commit.
+5. **Session 5** — §8 table + full QA sweep (ban-list grep, hex-in-datasets grep, canvas-has-title grep, axis-title check, tag-balance check) + single commit + push to branch. Commit message: `"Add reliability-tax-4.7.html — 4.7 variant for bake-off"`.
+
+**Acceptance gates (run in Session 5 before commit):**
+1. `git diff dashboard/reliability-tax.html` returns empty.
+2. `dashboard/reliability-tax-4.7.html` exists with visible `v4.7` badge in header.
+3. Banned strings return zero hits in user-facing text.
+4. Every canvas has a `chart-title` above and a plain-English caption below.
+5. No pathway toggles on any chart.
+6. No hardcoded hex in Chart.js dataset configs.
+7. Every axis has a descriptive title with units.
+8. Browser QA at 320/768/desktop — no broken layouts, no mobile overflow.
+
+**Resume prompt for next session:** *"Execute Session 1 of 5 for the reliability-tax-4.7.html bake-off variant. The 5-session build plan is locked in SPEC.md ## Current Status — read it first. Session 1 scope: full-file skeleton + hero + §1 (duck curves) + reading-progress JS + SESSION-2 through SESSION-5 marker divs. Do NOT commit — commit happens only in Session 5. Do NOT edit `dashboard/reliability-tax.html` (must stay byte-identical). Use the 5 paste-ready session prompts already given to the user; each is self-contained with a SHARED RULES block covering the ban list, color tokens, data-wiring invariants, voice norms, and mobile requirements. If the user has not already pasted Session 1's prompt, ask them to paste it — the prompts are the scope-control mechanism for this bake-off."*
+
 ### Reliability Tax Page Redesign — IN PROGRESS (Apr 18, 2026, late)
 
 **Task context.** User rejected current `dashboard/reliability-tax.html` as too weird, jargon-heavy, and self-referential. Specific feedback: section names like "The Setup" / "The Hump" / "The Abandonment" / "The Tax" / "The Cost of Waiting" are pretentious; in-body `SPEC §24.5`, `SPEC §24.6`, `SPEC §24.7`, `SPEC §24.8`, `Card F'`, `Card J`, `Card R` references are idiotic for public readers; charts/layout weak. Goal: reframe streamlined, plain-language, in the voice of `clean_firm_case.html` and `lmp_trends.html` (numbered `section-header` + `section-number` badges, descriptive titles, direct analytical prose, no methodology-doc self-reference).
