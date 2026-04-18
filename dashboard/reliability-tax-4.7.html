@@ -393,8 +393,69 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- Later-session marker divs — replaced in Sessions 2–5                   -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <div id="SESSION2_SECTION2"></div>
-    <div id="SESSION2_SECTION3"></div>
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 2 — How much new gas gets built                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>How much new gas gets built</h2>
+        <p>On the wind-and-solar-only path, new-gas build peaks in the middle of the clean-energy journey &mdash; not at the end. Seven grids, same shape, different scales.</p>
+    </div>
+    <section class="content-section" id="section2">
+
+        <div class="pathway-legend fade-in" id="section2Legend" aria-label="Pathway color key">
+            <span class="pathway-legend-item">
+                <span class="pathway-legend-swatch" id="legendSwatch_WS_Storage" aria-hidden="true"></span>
+                Wind, solar, and storage
+            </span>
+            <span class="pathway-legend-item">
+                <span class="pathway-legend-swatch" id="legendSwatch_WS_Only" aria-hidden="true"></span>
+                Onshore wind and solar only
+            </span>
+            <span class="pathway-legend-item">
+                <span class="pathway-legend-swatch" id="legendSwatch_CleanFirm" aria-hidden="true"></span>
+                Proactive clean firm
+            </span>
+        </div>
+
+        <div class="chart-title fade-in">New gas capacity built by clean-energy target &mdash; seven ISOs compared</div>
+
+        <div class="small-multiples-grid fade-in" id="section2Grid">
+            <div class="mini-panel"><div class="mini-title" data-iso="CAISO">CAISO</div><canvas id="mini_CAISO" aria-label="CAISO new-gas capacity build by clean-energy target"></canvas></div>
+            <div class="mini-panel"><div class="mini-title" data-iso="ERCOT">ERCOT</div><canvas id="mini_ERCOT" aria-label="ERCOT new-gas capacity build by clean-energy target"></canvas></div>
+            <div class="mini-panel"><div class="mini-title" data-iso="MISO">MISO</div><canvas id="mini_MISO"  aria-label="MISO new-gas capacity build by clean-energy target"></canvas></div>
+            <div class="mini-panel"><div class="mini-title" data-iso="NEISO">NEISO</div><canvas id="mini_NEISO" aria-label="NEISO new-gas capacity build by clean-energy target"></canvas></div>
+            <div class="mini-panel"><div class="mini-title" data-iso="NYISO">NYISO</div><canvas id="mini_NYISO" aria-label="NYISO new-gas capacity build by clean-energy target"></canvas></div>
+            <div class="mini-panel"><div class="mini-title" data-iso="PJM">PJM</div><canvas id="mini_PJM"   aria-label="PJM new-gas capacity build by clean-energy target"></canvas></div>
+            <div class="mini-panel"><div class="mini-title" data-iso="SPP">SPP</div><canvas id="mini_SPP"   aria-label="SPP new-gas capacity build by clean-energy target"></canvas></div>
+        </div>
+
+        <p class="chart-caption fade-in">
+            Each panel is one grid, same axes. On the wind-and-solar paths, the curve climbs, peaks, and then falls as clean-energy targets rise past 90%: gas built to cover residual peaks gets unwound when storage and curtailment finally close the gap. The clean-firm path sits lower and flatter &mdash; gas sized to the worst hour once, and left there.
+        </p>
+
+        <div class="insight-box fade-in" style="max-width: 820px; margin: var(--space-md) auto 0;">
+            <strong>Peak build-out lands in the middle, not the end.</strong> On the wind-and-solar path, ERCOT peaks at <strong>134 GW</strong> of new gas near 80% clean, PJM peaks at <strong>106 GW</strong> near 80%, MISO peaks at <strong>70 GW</strong> near 90%. Wind-rich and hydro-heavy grids &mdash; NEISO, NYISO, SPP &mdash; stay in single-digit to low-tens-of-GW territory. The clean-firm path peaks earlier and lower in every grid, and never climbs as high.
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 3 — How much of that gas runs out of hours                     -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>How much of that gas runs out of hours</h2>
+        <p>When the grid crosses 95% clean, the same gas fleet you built to cover reliability stops running enough hours to earn back its capex. It's still on the grid. It just isn't working.</p>
+    </div>
+    <section class="content-section" id="section3">
+        <div class="chart-panel fade-in">
+            <div class="chart-title">New-gas fleet at peak: still running vs written off in 2050</div>
+            <div class="chart-container-lg"><canvas id="strandingChart" aria-label="Peak new-gas capacity by ISO, wind-and-solar vs clean-firm pathway, split by still-running vs written-off at 2050"></canvas></div>
+            <p class="chart-caption">Two bars per grid: the wind-and-solar-only path on the left, the clean-firm path on the right. Solid bottom = still running in 2050. Darker red top = written off by 2050.</p>
+        </div>
+        <div class="insight-box fade-in" id="strandingInsight" style="max-width: 820px; margin: var(--space-md) auto 0;">&nbsp;</div>
+    </section>
+
     <div id="SESSION3_SECTION4"></div>
     <div id="SESSION3_SECTION5"></div>
     <div id="SESSION4_SECTION6"></div>
@@ -467,6 +528,308 @@
             }, { threshold: 0.25 });
             io.observe(hero);
         })();
+
+        // ===== Shared data fetch — section2_gas_hump.json (cached on window) =====
+        var ISO_LIST = ['CAISO', 'ERCOT', 'MISO', 'NEISO', 'NYISO', 'PJM', 'SPP'];
+
+        var PATHWAY_DEFS = [
+            { id: '1',  label: 'Wind, solar, and storage',       swatch: 'legendSwatch_WS_Storage', color: SEMANTIC_COLORS.negative },
+            { id: '1a', label: 'Onshore wind and solar only',    swatch: 'legendSwatch_WS_Only',    color: RESOURCE_COLORS.solar    },
+            { id: '3',  label: 'Proactive clean firm',           swatch: 'legendSwatch_CleanFirm',  color: RESOURCE_COLORS.greenH2  }
+        ];
+
+        function paintLegendSwatches() {
+            PATHWAY_DEFS.forEach(function(p) {
+                var sw = document.getElementById(p.swatch);
+                if (sw) sw.style.background = p.color;
+            });
+        }
+
+        function paintMiniTitles() {
+            var titles = document.querySelectorAll('#section2Grid .mini-title[data-iso]');
+            for (var i = 0; i < titles.length; i++) {
+                var iso = titles[i].getAttribute('data-iso');
+                if (iso && ISO_COLORS[iso]) titles[i].style.color = ISO_COLORS[iso];
+            }
+        }
+
+        function loadHumpData(cb) {
+            if (window._rtHumpData) { cb(window._rtHumpData); return; }
+            fetch('js/reliability-tax/section2_gas_hump.json', { cache: 'no-cache' })
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(function(data) { window._rtHumpData = data; cb(data); })
+                .catch(function(err) {
+                    // Surface the failure on-page so the section doesn't silently render blank.
+                    var grid = document.getElementById('section2Grid');
+                    if (grid) grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:24px;">Gas-capacity data unavailable (' + err.message + ').</p>';
+                });
+        }
+
+        // ===== §2 — small-multiples: one mini line chart per ISO =====
+        function renderSection2(data) {
+            if (typeof Chart === 'undefined') return;
+
+            for (var i = 0; i < ISO_LIST.length; i++) {
+                var iso = ISO_LIST[i];
+                var canvas = document.getElementById('mini_' + iso);
+                if (!canvas) continue;
+                var isoRows = (data.per_iso && data.per_iso[iso]) || {};
+
+                var datasets = PATHWAY_DEFS.map(function(pw) {
+                    var rows = isoRows[pw.id] || [];
+                    var pts = rows
+                        .filter(function(r) { return r && r.available !== false && isFinite(r.achieved_cfe_pct) && isFinite(r.cum_new_gas_mw); })
+                        .slice()
+                        .sort(function(a, b) { return a.achieved_cfe_pct - b.achieved_cfe_pct; })
+                        .map(function(r) { return { x: r.achieved_cfe_pct, y: r.cum_new_gas_mw / 1000 }; }); // MW → GW at the boundary
+                    return {
+                        label: pw.label,
+                        data: pts,
+                        borderColor: pw.color,
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.25,
+                        pointRadius: 1.5,
+                        pointHoverRadius: 4,
+                        fill: false,
+                        spanGaps: true
+                    };
+                }).filter(function(d) { return d.data.length > 0; });
+
+                new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: { datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'nearest', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        var gw = ctx.parsed.y;
+                                        var shown = (gw >= 10) ? gw.toFixed(0) : gw.toFixed(1);
+                                        return ctx.dataset.label + ': ' + shown + ' GW';
+                                    },
+                                    title: function(items) {
+                                        if (!items.length) return '';
+                                        return 'At ' + items[0].parsed.x.toFixed(0) + '% clean';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                min: 55,
+                                max: 100,
+                                title: { display: true, text: 'Clean energy reached (%)', font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }, color: 'rgba(0,0,0,0.6)' },
+                                ticks: { callback: function(v) { return v + '%'; }, font: { family: 'DM Mono', size: 10 }, color: 'rgba(0,0,0,0.55)', maxTicksLimit: 5 },
+                                grid: { color: 'rgba(0,0,0,0.06)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'New gas (GW)', font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }, color: 'rgba(0,0,0,0.6)' },
+                                ticks: {
+                                    callback: function(v) { return (v >= 10 ? v.toFixed(0) : v.toFixed(1)) + ' GW'; },
+                                    font: { family: 'DM Mono', size: 10 },
+                                    color: 'rgba(0,0,0,0.55)',
+                                    maxTicksLimit: 5
+                                },
+                                grid: { color: 'rgba(0,0,0,0.06)' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ===== §3 — grouped stacked bar: running vs written-off per ISO × pathway =====
+        function final2050Row(rows) {
+            if (!rows || !rows.length) return null;
+            var best = null;
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i];
+                if (!r || r.available === false) continue;
+                if (!best || (r.achieved_cfe_pct || 0) > (best.achieved_cfe_pct || 0)) best = r;
+            }
+            return best;
+        }
+
+        function computeStrandingSeries(data) {
+            var byIso = {};
+            ISO_LIST.forEach(function(iso) {
+                var isoRows = (data.per_iso && data.per_iso[iso]) || {};
+                var wsRow = final2050Row(isoRows['1']);  // wind-and-solar path
+                var cfRow = final2050Row(isoRows['3']);  // proactive clean firm
+                byIso[iso] = {
+                    wsRunning:  wsRow ? (wsRow.cum_new_gas_mw          || 0) : 0,
+                    wsStranded: wsRow ? (wsRow.cum_new_gas_stranded_mw || 0) : 0,
+                    cfRunning:  cfRow ? (cfRow.cum_new_gas_mw          || 0) : 0,
+                    cfStranded: cfRow ? (cfRow.cum_new_gas_stranded_mw || 0) : 0
+                };
+            });
+            return byIso;
+        }
+
+        function renderSection3(data) {
+            if (typeof Chart === 'undefined') return;
+            var canvas = document.getElementById('strandingChart');
+            if (!canvas) return;
+
+            var series = computeStrandingSeries(data);
+            var labels = ISO_LIST.slice();
+
+            function pick(key) { return labels.map(function(iso) { return (series[iso][key] || 0) / 1000; }); } // MW → GW
+
+            var dsRunningWS = pick('wsRunning');
+            var dsStrandedWS = pick('wsStranded');
+            var dsRunningCF = pick('cfRunning');
+            var dsStrandedCF = pick('cfStranded');
+
+            var datasets = [
+                {
+                    label: 'Wind-and-solar path — still running',
+                    stack: 'ws',
+                    data: dsRunningWS,
+                    backgroundColor: RESOURCE_COLORS.fossilGas,
+                    borderColor:     RESOURCE_COLORS.fossilGas,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Wind-and-solar path — written off',
+                    stack: 'ws',
+                    data: dsStrandedWS,
+                    backgroundColor: SEMANTIC_COLORS.negative,
+                    borderColor:     SEMANTIC_COLORS.negative,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Clean-firm path — still running',
+                    stack: 'cf',
+                    data: dsRunningCF,
+                    backgroundColor: withAlpha(RESOURCE_COLORS.fossilGas, 0.55),
+                    borderColor:     withAlpha(RESOURCE_COLORS.fossilGas, 0.9),
+                    borderWidth: 1
+                },
+                {
+                    label: 'Clean-firm path — written off',
+                    stack: 'cf',
+                    data: dsStrandedCF,
+                    backgroundColor: withAlpha(SEMANTIC_COLORS.negative, 0.55),
+                    borderColor:     withAlpha(SEMANTIC_COLORS.negative, 0.9),
+                    borderWidth: 1
+                }
+            ];
+
+            new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, boxWidth: 10, font: { family: 'Plus Jakarta Sans', size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(items) { return items.length ? items[0].label : ''; },
+                                label: function(ctx) {
+                                    var gw = ctx.parsed.y;
+                                    return ctx.dataset.label + ': ' + (gw >= 10 ? gw.toFixed(0) : gw.toFixed(1)) + ' GW';
+                                },
+                                footer: function(items) {
+                                    if (!items.length) return '';
+                                    var stacks = {};
+                                    for (var i = 0; i < items.length; i++) {
+                                        var s = items[i].dataset.stack || '';
+                                        stacks[s] = (stacks[s] || 0) + (items[i].parsed.y || 0);
+                                    }
+                                    var lines = [];
+                                    if (stacks.ws != null) lines.push('Wind-and-solar stack: '  + (stacks.ws >= 10 ? stacks.ws.toFixed(0) : stacks.ws.toFixed(1)) + ' GW');
+                                    if (stacks.cf != null) lines.push('Clean-firm stack: '      + (stacks.cf >= 10 ? stacks.cf.toFixed(0) : stacks.cf.toFixed(1)) + ' GW');
+                                    return lines.join('\n');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: { font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' }, color: 'rgba(0,0,0,0.75)' },
+                            grid: { display: false },
+                            categoryPercentage: 0.82,
+                            barPercentage: 0.85
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Peak new-gas capacity (GW, 2050)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' }, color: 'rgba(0,0,0,0.7)' },
+                            ticks: {
+                                callback: function(v) { return (v / 1).toFixed(0) + ' GW'; },
+                                font: { family: 'DM Mono', size: 11 },
+                                color: 'rgba(0,0,0,0.6)'
+                            },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        }
+                    }
+                }
+            });
+
+            renderStrandingInsight(series);
+        }
+
+        function gwStr(mw) {
+            var gw = (mw || 0) / 1000;
+            return (gw >= 10 ? gw.toFixed(0) : gw.toFixed(1)) + ' GW';
+        }
+
+        function renderStrandingInsight(series) {
+            var box = document.getElementById('strandingInsight');
+            if (!box) return;
+
+            // Worst offender on the wind-and-solar path = largest stranded MW.
+            var worstIso = null;
+            var worstStranded = -1;
+            ISO_LIST.forEach(function(iso) {
+                var s = series[iso].wsStranded || 0;
+                if (s > worstStranded) { worstStranded = s; worstIso = iso; }
+            });
+            if (!worstIso || worstStranded <= 0) {
+                box.innerHTML = '<strong>Stranding concentrates in the big gas-heavy grids.</strong> The wind-and-solar path writes off the most capacity in ERCOT and PJM; the clean-firm path keeps more gas in service by building less of it to begin with.';
+                return;
+            }
+
+            var ws = series[worstIso];
+            var wsTotal = (ws.wsRunning || 0) + (ws.wsStranded || 0);
+            var wsPct = wsTotal > 0 ? Math.round(100 * ws.wsStranded / wsTotal) : 0;
+            var cfTotal = (ws.cfRunning || 0) + (ws.cfStranded || 0);
+            var cfPct = cfTotal > 0 ? Math.round(100 * ws.cfStranded / cfTotal) : 0;
+
+            var saved = Math.max(0, ws.wsStranded - ws.cfStranded);
+            var avoidanceClause;
+            if (ws.cfStranded <= 0) {
+                avoidanceClause = 'the clean-firm path for the same grid writes off <strong>nothing</strong> &mdash; about ' + gwStr(saved) + ' of stranded capital avoided';
+            } else if (saved > 0) {
+                avoidanceClause = 'the clean-firm path writes off <strong>' + gwStr(ws.cfStranded) + '</strong> (' + cfPct + '%) &mdash; about ' + gwStr(saved) + ' less stranded capital for the same grid';
+            } else {
+                avoidanceClause = 'the clean-firm path also writes off <strong>' + gwStr(ws.cfStranded) + '</strong> (' + cfPct + '%), so on this grid the pathway choice doesn\u2019t move the stranded total much';
+            }
+
+            box.innerHTML = '<strong>' + worstIso + ' takes the biggest write-down.</strong> On the wind-and-solar path, <strong>' + gwStr(ws.wsStranded) + '</strong> of new gas sits on the grid but stops earning its capex by 2050 &mdash; ' + wsPct + '% of everything ' + worstIso + ' built. For comparison, ' + avoidanceClause + '.';
+        }
+
+        // ===== Kick off the shared fetch once Chart.js is ready =====
+        paintLegendSwatches();
+        paintMiniTitles();
+        loadHumpData(function(data) {
+            renderSection2(data);
+            renderSection3(data);
+        });
 
     })();
     </script>
