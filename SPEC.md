@@ -5,31 +5,6 @@
 
 ## Current Status (Apr 18, 2026)
 
-### reliability-tax-4.7.html Bake-off — Session 1 LANDED (Apr 18, 2026, late)
-
-**Task context.** v4.7 variant of the reliability-tax page, built in parallel against v4.6 as one side of a bake-off. Plan doc: `RELIABILITY_TAX_4.7_BAKEOFF.md` (standalone, not in SPEC). Work split across 5 sessions; Session 1 lays the skeleton that Sessions 2–4 fill in and Session 5 QAs + commits the final file to branch `claude/redesign-reliability-tax-page-rW5Y2`. This session ran on a separate branch (`claude/gas-capacity-stranding-charts-GxZtC`) as WIP.
-
-**What's done (WIP commit `d93fe31` on `claude/gas-capacity-stranding-charts-GxZtC`):**
-- `dashboard/reliability-tax-4.7.html` created, 474 lines.
-- `<head>`: title with `(v4.7)`; Google Fonts preconnect (Plus Jakarta Sans + DM Sans); shared.css + article.css + scrollytell.css; chart.js 4.4.7 + chartjs-plugin-annotation 3.0.1; nav.js + chart-colors.js + shared-header.js + scroll-observer.js + shared-footer.js (no GSAP, no cinematic.css). Inline `<style>` scaffold only: reading-progress, variant-tag, duck-* (copied from original), stat-row/stat-tile (local since cinematic.css is deliberately omitted), small-multiples-grid (4/2/1 responsive), pathway-legend, mini-panel/mini-title, chart-caption.
-- `<body>`: reading-progress bar, nav, header with h1 + subtitle + `v4.7` variant tag + header-accent.
-- **Hero (`#section0`)**: tax-hero-lead paragraph copied verbatim from the original, stat-row with 4 animated counter tiles (175 runs / 7 ISOs / 5 pathways / 10 clean-energy targets), "what this bill is made of" insight-box.
-- **Section 1 (`#section1`)**: `.section-header` + h2 + subtitle, both duck SVGs copied verbatim (70% clean and 95% clean), duck-legend, and a tightened 2-paragraph section1-body that keeps the "8,757 hours" factoid.
-- Seven marker divs left for later sessions: `SESSION2_SECTION2`, `SESSION2_SECTION3`, `SESSION3_SECTION4`, `SESSION3_SECTION5`, `SESSION4_SECTION6`, `SESSION4_SECTION7`, `SESSION5_SECTION8`.
-- Footer with original `data-footer-note`.
-- Closing IIFE: reading-progress bar port + easeOutCubic 1.5s counter animation triggered once when the hero enters the viewport (IntersectionObserver, threshold 0.25).
-- Acceptance gates all green: zero banned strings in user-facing text (after stripping `<style>`/`<script>`); two `<section>` opens matched by two closes; `git diff dashboard/reliability-tax.html` empty; no hardcoded hex in any Chart.js dataset (no Chart.js datasets yet — they land in later sessions).
-
-**What's still to do:**
-- **Session 2** — replace `SESSION2_SECTION2` (§2 small-multiples grid of 7 mini line charts, shared pathway legend, fetch `section2_gas_hump.json` and cache on `window._rtHumpData`) and `SESSION2_SECTION3` (§3 grouped stacked bar: 7 ISOs × 2 pathways × running/written-off, reuse cached data).
-- **Session 3** — replace `SESSION3_SECTION4` (§4 cost-decomposition stack) and `SESSION3_SECTION5` (§5 pathway ranking horizontal bar).
-- **Session 4** — replace `SESSION4_SECTION6` (§6 ISO-stacked stranded capital) and `SESSION4_SECTION7` (§7 cost-of-waiting line with 2035 annotation).
-- **Session 5** — replace `SESSION5_SECTION8` (§8 filterable table), run the full acceptance sweep from the bake-off doc, then commit + push the final file to branch `claude/redesign-reliability-tax-page-rW5Y2`.
-
-**Open questions:** none — the bake-off plan doc (`RELIABILITY_TAX_4.7_BAKEOFF.md`) locks the chart shapes, plain-English pathway labels, banned strings, and data-file fetch paths.
-
-**Resume prompt:** *"Session 2 of 5 for the `reliability-tax-4.7.html` bake-off variant. Read `RELIABILITY_TAX_4.7_BAKEOFF.md` first. The Session 1 skeleton is already on disk (`dashboard/reliability-tax-4.7.html`, 474 lines) with hero + §1 duck curves built and seven marker divs stubbed for later sessions. Replace `SESSION2_SECTION2` with the §2 small-multiples grid (7 mini line charts, one per ISO, three pathway lines each: 'Wind, solar, and storage', 'Onshore wind and solar only', 'Proactive clean firm'; shared `.pathway-legend` above the grid; fetch `js/reliability-tax/section2_gas_hump.json` once and cache on `window._rtHumpData`; convert MW → GW at the data boundary). Replace `SESSION2_SECTION3` with the §3 grouped stacked bar (7 ISOs × 2 pathways × running / written-off in 2050, GW units, tooltip footer shows stack total, dynamic insight box compares worst-offender ISO's wind-and-solar stranding to its clean-firm-path stranding). Reuse `window._rtHumpData` — no second fetch. No hardcoded hex in Chart.js datasets — only `RESOURCE_COLORS`, `SEMANTIC_COLORS`, `ISO_COLORS`, or `withAlpha()` wrappers. No pathway toggles. Mark §4–§8 marker divs untouched — those are later sessions."*
-
 ### Reliability Tax Page Redesign + Project Infra Refresh — IN PROGRESS (Apr 18, 2026, late evening)
 
 **Task context.** User rejected the prior reliability-tax page as too jargon-heavy and self-referential. Two parallel workstreams now in flight: (1) finish redesigning `dashboard/reliability-tax.html` in plain-language voice, with pathway comparisons on single plots (no toggles); (2) build durable project infrastructure that prevents the same regressions on future pages.
