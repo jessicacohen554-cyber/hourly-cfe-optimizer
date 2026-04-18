@@ -305,12 +305,23 @@ def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
     return pd.read_parquet(path)
 
 
+# Memoized per-ISO slices of static reference tables. These files are read-only
+# from the pathway optimizer's perspective; repeat loads across the 50 runs per
+# ISO cost ~20 ms each — cheap in isolation, but the parallel sweep multiplies
+# this by 350 runs × 2 helpers = 14 s of wasted parquet reads without these caches.
+_FOSSIL_MIX_CACHE: dict[str, pd.DataFrame] = {}
+_ANNUAL_MANIFEST_LOADER_CACHE: dict[str, pd.DataFrame] = {}
+
+
 def load_fossil_mix(iso: str) -> pd.DataFrame:
-    """Load EIA-930 hourly fossil-share profiles for ISO.
+    """Load EIA-930 hourly fossil-share profiles for ISO (memoized).
 
     Returns a DataFrame with columns: year, hour, coal_share, gas_share, oil_share.
     Averaged across all available years (2021–2025) for a representative baseline.
     """
+    cached = _FOSSIL_MIX_CACHE.get(iso)
+    if cached is not None:
+        return cached
     path = DATA_EIA930 / 'eia_fossil_mix.parquet'
     if not path.exists():
         raise FileNotFoundError(f"EIA 930 fossil mix parquet missing at {path}")
@@ -318,15 +329,22 @@ def load_fossil_mix(iso: str) -> pd.DataFrame:
     mask = df['iso'] == iso
     if not mask.any():
         raise KeyError(f"ISO {iso} not present in eia_fossil_mix.parquet")
-    return df.loc[mask].reset_index(drop=True)
+    out = df.loc[mask].reset_index(drop=True)
+    _FOSSIL_MIX_CACHE[iso] = out
+    return out
 
 
 def load_annual_manifest(iso: str) -> pd.DataFrame:
-    """Load Step 3 annual dispatch manifest for ISO (one row per archetype)."""
+    """Load Step 3 annual dispatch manifest for ISO (one row per archetype, memoized)."""
+    cached = _ANNUAL_MANIFEST_LOADER_CACHE.get(iso)
+    if cached is not None:
+        return cached
     path = DATA_STEP3 / f"{iso}_annual_manifest.parquet"
     if not path.exists():
         raise FileNotFoundError(f"Annual manifest missing for {iso} at {path}")
-    return pd.read_parquet(path)
+    df = pd.read_parquet(path)
+    _ANNUAL_MANIFEST_LOADER_CACHE[iso] = df
+    return df
 
 
 def available_thresholds(iso: str) -> list[float]:
@@ -2855,29 +2873,54 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
     MANIFEST.json lives at ``<output_root>/MANIFEST.json`` and is keyed by
     ``_run_key(config)``. Re-running the same run updates its entry in place
     rather than creating duplicates.
+
+    Concurrency: the parallel per-ISO in-process sweep (``_sweep_pathways_inproc``)
+    fans 7 workers at a shared ``output_root``. The read-modify-write below is
+    serialised by an flock on ``<output_root>/.manifest.lock``, and the tmp
+    file name is PID-scoped so concurrent writers never collide on the same
+    pathname (the earlier unscoped tmp produced FileNotFoundError when two
+    workers raced the atomic rename).
     """
     root = result.config.output_root
     root.mkdir(parents=True, exist_ok=True)
     manifest_path = root / MANIFEST_FILENAME
-    if manifest_path.exists():
-        try:
-            with open(manifest_path) as fh:
-                manifest = json.load(fh)
-        except Exception:
+    lock_path = root / '.manifest.lock'
+
+    try:
+        import fcntl
+        lock_fh = open(lock_path, 'a+')
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
+    except Exception:
+        lock_fh = None
+
+    try:
+        if manifest_path.exists():
+            try:
+                with open(manifest_path) as fh:
+                    manifest = json.load(fh)
+            except Exception:
+                manifest = {}
+        else:
             manifest = {}
-    else:
-        manifest = {}
-    if 'runs' not in manifest or not isinstance(manifest.get('runs'), dict):
-        manifest['runs'] = {}
-    manifest.setdefault('schema_version', 1)
-    manifest.setdefault('description',
-        'Reliability Tax pathway optimizer manifest (4 pathways × 5 endpoints × 7 ISOs).')
-    key = _run_key(result.config)
-    manifest['runs'][key] = _manifest_entry(result)
-    tmp = manifest_path.with_suffix('.json.tmp')
-    with open(tmp, 'w') as fh:
-        json.dump(manifest, fh, indent=2, default=str)
-    os.replace(tmp, manifest_path)
+        if 'runs' not in manifest or not isinstance(manifest.get('runs'), dict):
+            manifest['runs'] = {}
+        manifest.setdefault('schema_version', 1)
+        manifest.setdefault('description',
+            'Reliability Tax pathway optimizer manifest (4 pathways × 5 endpoints × 7 ISOs).')
+        key = _run_key(result.config)
+        manifest['runs'][key] = _manifest_entry(result)
+        tmp = manifest_path.with_suffix(f'.json.tmp.{os.getpid()}')
+        with open(tmp, 'w') as fh:
+            json.dump(manifest, fh, indent=2, default=str)
+        os.replace(tmp, manifest_path)
+    finally:
+        if lock_fh is not None:
+            try:
+                import fcntl
+                fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+            except Exception:
+                pass
+            lock_fh.close()
     return manifest_path
 
 
@@ -3083,29 +3126,55 @@ def _vintage_weighted_lcoe(
     return numer / denom
 
 
+# Module-level memo for the disk-loaded dispatch cache. Keyed by ISO. The
+# cache is a large dict (one entry per archetype; each entry holds 8760-hour
+# profiles). Loading from parquet is ~1.5 s + ~16 s of ndarray.copy for
+# deserialization. Memoizing collapses 26 per-year lookups per run to a
+# single cold load per ISO per process.
+_DISK_DISPATCH_CACHE: dict[str, dict] = {}
+
+
+def _get_dispatch_cache_for_iso(iso: str) -> dict:
+    """Return the ISO's dispatch cache, loading from disk on first call.
+
+    Prefers the step2_2a worst-hour in-memory cache (shared module-level
+    state populated by ``size_required_gas_mw`` during the per-year loop,
+    with on-demand archetype expansion) so writes from gas sizing propagate
+    to the curtailment-pricing path. Falls back to a memoized disk read if
+    step2_2a's state hasn't been bootstrapped yet. Returns the canonical
+    mutable dict — callers must not close over a snapshot.
+    """
+    if du is None:
+        return {}
+    try:
+        from step2_2a_cost_optimization import _get_worst_hour_state
+        cache = _get_worst_hour_state(iso).get('cache')
+        if cache is not None:
+            return cache
+    except Exception:
+        pass
+    cache = _DISK_DISPATCH_CACHE.get(iso)
+    if cache is None:
+        try:
+            cache = du.load_dispatch_cache(iso, require_version=du.CACHE_VERSION) or {}
+        except Exception:
+            cache = {}
+        _DISK_DISPATCH_CACHE[iso] = cache
+    return cache
+
+
 def _dispatch_cache_entry(iso: str, archetype_key: str | None):
     """Lookup a dispatch-cache entry for ``archetype_key``.
 
-    Preferred path: the step2_2a worst-hour in-memory cache, which
-    ``size_required_gas_mw`` populates on-demand during the per-year loop.
-    Fallback: read the parquet from disk (covers cold runs and sweeps that
-    bypassed gas sizing).
+    Wraps ``_get_dispatch_cache_for_iso`` which memoizes the disk load —
+    SPEC §24.7 + the accounting fix call this 26× per run (once per year)
+    for the curtailment-pricing path, so hitting the parquet every time
+    was costing ~20 s per run in warm-cache profiling (Apr 2026).
     """
-    if not archetype_key or du is None:
+    if not archetype_key:
         return None
-    try:
-        from step2_2a_cost_optimization import _get_worst_hour_state
-        cache = _get_worst_hour_state(iso).get('cache') or {}
-        entry = cache.get(archetype_key)
-        if entry is not None:
-            return entry
-    except Exception:
-        pass
-    try:
-        cache = du.load_dispatch_cache(iso, require_version=du.CACHE_VERSION) or {}
-    except Exception:
-        cache = {}
-    return cache.get(archetype_key)
+    cache = _get_dispatch_cache_for_iso(iso)
+    return cache.get(archetype_key) if cache else None
 
 
 def _archetype_key_for_target(iso: str, target: dict[str, Any]) -> str | None:
@@ -3220,24 +3289,22 @@ def compute_endpoint_hourly_dispatch(
 ) -> list[float] | None:
     """Return the 8760 total_clean vs. demand shape for the endpoint mix.
 
-    Pulled from ``data/step3-dispatch/{ISO}_dispatch_cache.parquet`` by
-    archetype key. Returns a list of 8760 floats (matched clean TWh per
-    hour, normalized so the sum over the year equals the endpoint clean
-    fraction of demand). If the archetype isn't in the cache, returns None.
+    Pulled from the module-level dispatch cache (loaded once per ISO per
+    process via ``_get_dispatch_cache_for_iso``; see the note on that
+    function re: the 26×-per-run reload bug that used to live here).
+    Returns a list of 8760 floats (matched clean TWh per hour, normalised
+    so the sum over the year equals the endpoint clean fraction of demand).
+    Returns None when the archetype isn't present.
     """
     archetype_key = _endpoint_archetype_key(result)
     if archetype_key is None:
         return None
-    cache_path = DATA_STEP3 / f'{result.config.iso}_dispatch_cache.parquet'
-    if not cache_path.exists():
-        return None
     try:
-        df = pd.read_parquet(cache_path)
-        hits = df[df['archetype_key'] == archetype_key]
-        if len(hits) == 0:
+        cache = _get_dispatch_cache_for_iso(result.config.iso)
+        entry = cache.get(archetype_key) if cache else None
+        if entry is None:
             return None
-        row = hits.iloc[0]
-        total_clean = row.get('total_clean')
+        total_clean = entry.get('total_clean')
         if total_clean is None:
             return None
         arr = np.asarray(total_clean, dtype=np.float64)
