@@ -108,6 +108,10 @@ When context climbs past ~80% or the user signals wrap-up:
 
 The `Stop` hook in `.claude/settings.json` enforces this on exit.
 
+## SPEC.md / SPEC_LOG.md maintenance
+
+When writing a new `## Current Status` block to `SPEC.md`, in the same commit move the oldest Current Status block out of `SPEC.md` and append it to `SPEC_LOG.md`. `SPEC.md` is capped at ~500 lines; `SPEC_LOG.md` grows indefinitely.
+
 ## File boundaries
 
 - Never modify raw data in `data/` — preserved from source.
