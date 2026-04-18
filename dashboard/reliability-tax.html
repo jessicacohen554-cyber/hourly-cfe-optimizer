@@ -456,11 +456,6 @@
                     <button type="button" class="iso-btn" data-iso="PJM">PJM</button>
                     <button type="button" class="iso-btn" data-iso="SPP">SPP</button>
                 </div>
-                <div class="toggle-btn-group" id="humpPathwayToggle" role="tablist" aria-label="Pathway toggle">
-                    <button type="button" class="active" data-pathway="1">Wind + solar + storage</button>
-                    <button type="button" data-pathway="1a">Onshore only</button>
-                    <button type="button" data-pathway="3">Clean firm</button>
-                </div>
             </div>
             <div class="chart-title" style="text-align:center; font-family: var(--font-heading); font-weight: 700; font-size: 1rem; color: var(--navy); margin-top: var(--space-sm); margin-bottom: var(--space-xs);">New-gas capacity built, by clean-energy target</div>
             <div class="chart-container-lg">
@@ -615,23 +610,12 @@
         <div class="chart-panel fade-in">
             <div class="tax-controls">
                 <div style="font-family: var(--font-data); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);">
-                    95% clean &middot; summed across all 7 ISOs &middot; each vintage booked at its peak-build year
-                </div>
-                <div class="toggle-btn-group" id="sankeyPathwayToggle" role="tablist" aria-label="Pathway toggle">
-                    <button type="button" class="active" data-pathway="1">P1</button>
-                    <button type="button" data-pathway="1a">P1a</button>
-                    <button type="button" data-pathway="2a">P2a</button>
-                    <button type="button" data-pathway="2b">P2b</button>
-                    <button type="button" data-pathway="3">P3</button>
+                    95% clean &middot; summed across all 7 ISOs &middot; new gas that fell below 15% capacity factor for 2 years running
                 </div>
             </div>
-            <div class="chart-title" style="text-align:center; font-family: var(--font-heading); font-weight: 700; font-size: 1rem; color: var(--navy); margin-top: var(--space-sm); margin-bottom: var(--space-xs);">Stranded gas capital, by the year each plant was built</div>
+            <div class="chart-title" style="text-align:center; font-family: var(--font-heading); font-weight: 700; font-size: 1rem; color: var(--navy); margin-top: var(--space-sm); margin-bottom: var(--space-xs);">Stranded gas capital by pathway</div>
             <div class="chart-container-lg">
                 <canvas id="sankeyChart"></canvas>
-            </div>
-            <div class="legend" style="justify-content:center; margin-top: var(--space-sm);">
-                <span class="legend-item"><span class="legend-dot" style="background: var(--fossil-gas, #6B7280);"></span>Stranded capital, by the year the plant was built ($B)</span>
-                <span class="legend-item"><span class="legend-dot" style="background:#DC2626;"></span>Total written off</span>
             </div>
             <div class="hump-peak-caption" id="sankeyCaption" aria-live="polite">&nbsp;</div>
         </div>
@@ -765,17 +749,23 @@
             update();
         })();
 
-        // ===== Section 2 — THE HUMP chart wiring =====
+        // ===== Section 2 — hump chart (all pathways on one plot) =====
         (function initHumpChart() {
             var canvas = document.getElementById('humpChart');
             if (!canvas || typeof Chart === 'undefined') return;
 
             var state = {
                 iso: 'ERCOT',
-                pathway: '1',
                 data: null,
                 chart: null
             };
+
+            // All three pathways drawn together per selected ISO.
+            var HUMP_PATHWAYS = [
+                { id: '1',  name: 'Wind + solar + storage', color: '#EF4444' },
+                { id: '1a', name: 'Onshore only',           color: '#F59E0B' },
+                { id: '3',  name: 'Clean firm',             color: '#10B981' }
+            ];
 
             function fmtMW(v) {
                 if (v == null || !isFinite(v)) return '—';
@@ -786,65 +776,49 @@
             function render() {
                 if (!state.data) return;
                 var isoRows = state.data.per_iso && state.data.per_iso[state.iso];
-                var rows = isoRows && isoRows[state.pathway];
-                if (!rows || !rows.length) return;
+                if (!isoRows) return;
 
-                // Keep only rows marked available and sort by achieved CFE for a clean trajectory.
-                var pts = rows.filter(function(r) { return r && r.available !== false; })
-                              .slice()
-                              .sort(function(a, b) { return a.achieved_cfe_pct - b.achieved_cfe_pct; });
+                var datasets = [];
+                var peaksByPathway = (state.data.peaks_per_pathway && state.data.peaks_per_pathway[state.iso]) || {};
 
-                var lineColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[state.iso])
-                             || (typeof SEMANTIC_COLORS !== 'undefined' && SEMANTIC_COLORS.muted)
-                             || 'currentColor';
-                var fillColor = (typeof withAlpha === 'function') ? withAlpha(lineColor, 0.25) : lineColor;
+                HUMP_PATHWAYS.forEach(function(pw) {
+                    var rows = isoRows[pw.id];
+                    if (!rows || !rows.length) return;
+                    var pts = rows.filter(function(r) { return r && r.available !== false; })
+                                  .slice()
+                                  .sort(function(a, b) { return a.achieved_cfe_pct - b.achieved_cfe_pct; });
+                    if (!pts.length) return;
 
-                var totalData     = pts.map(function(r) { return { x: r.achieved_cfe_pct, y: r.cum_new_gas_mw }; });
-                var strandedData  = pts.map(function(r) { return { x: r.achieved_cfe_pct, y: r.cum_new_gas_stranded_mw || 0 }; });
-
-                var peak = state.data.peaks_per_pathway
-                        && state.data.peaks_per_pathway[state.iso]
-                        && state.data.peaks_per_pathway[state.iso][state.pathway];
-                var peakData = peak ? [{ x: peak.achieved_cfe_pct, y: peak.cum_new_gas_mw }] : [];
-
-                var datasets = [
-                    {
-                        label: 'Stranded by 2050',
-                        data: strandedData,
-                        borderColor: lineColor,
-                        borderWidth: 1,
-                        borderDash: [4, 4],
-                        backgroundColor: fillColor,
-                        fill: 'origin',
-                        pointRadius: 0,
-                        pointHoverRadius: 3,
-                        tension: 0.25,
-                        order: 2
-                    },
-                    {
-                        label: 'Cumulative new gas',
-                        data: totalData,
-                        borderColor: lineColor,
-                        borderWidth: 2.5,
+                    datasets.push({
+                        label: pw.name,
+                        data: pts.map(function(r) { return { x: r.achieved_cfe_pct, y: r.cum_new_gas_mw }; }),
+                        borderColor: pw.color,
                         backgroundColor: 'transparent',
+                        borderWidth: 2.5,
                         fill: false,
-                        pointRadius: 3,
+                        pointRadius: 2,
                         pointHoverRadius: 5,
                         tension: 0.25,
                         order: 1
-                    },
-                    {
-                        label: 'Peak build',
-                        data: peakData,
-                        borderColor: lineColor,
-                        backgroundColor: lineColor,
-                        pointRadius: 7,
-                        pointHoverRadius: 9,
-                        pointStyle: 'rectRot',
-                        showLine: false,
-                        order: 0
+                    });
+
+                    var peak = peaksByPathway[pw.id];
+                    if (peak && peak.cum_new_gas_mw > 0) {
+                        datasets.push({
+                            label: pw.name + ' — peak build',
+                            data: [{ x: peak.achieved_cfe_pct, y: peak.cum_new_gas_mw }],
+                            borderColor: pw.color,
+                            backgroundColor: pw.color,
+                            pointRadius: 7,
+                            pointHoverRadius: 9,
+                            pointStyle: 'rectRot',
+                            showLine: false,
+                            order: 0,
+                            // hide peak markers from the legend so it stays readable
+                            legendGroup: 'peak'
+                        });
                     }
-                ];
+                });
 
                 if (state.chart) {
                     state.chart.data.datasets = datasets;
@@ -860,7 +834,16 @@
                             plugins: {
                                 legend: {
                                     position: 'bottom',
-                                    labels: { usePointStyle: true, boxWidth: 10, font: { family: 'Plus Jakarta Sans', size: 12 } }
+                                    labels: {
+                                        usePointStyle: true,
+                                        boxWidth: 10,
+                                        font: { family: 'Plus Jakarta Sans', size: 12 },
+                                        filter: function(item, chartData) {
+                                            // hide peak markers; their color is the line color
+                                            var ds = chartData.datasets[item.datasetIndex];
+                                            return !(ds && ds.legendGroup === 'peak');
+                                        }
+                                    }
                                 },
                                 tooltip: {
                                     callbacks: {
@@ -897,23 +880,25 @@
                     });
                 }
 
-                // Peak caption
+                // Caption: one-line summary of every pathway's peak
                 var captionEl = document.getElementById('humpPeakCaption');
-                var PATH_NAMES = { '1': 'the wind + solar + storage path', '1a': 'the onshore-only path', '3': 'the clean-firm path' };
                 if (captionEl) {
-                    var pathLabel = PATH_NAMES[state.pathway] || ('pathway ' + state.pathway);
-                    if (peak && peak.cum_new_gas_mw > 0) {
+                    var parts = [];
+                    HUMP_PATHWAYS.forEach(function(pw) {
+                        var peak = peaksByPathway[pw.id];
+                        if (!peak || !peak.cum_new_gas_mw) return;
                         var share = peak.cum_new_gas_mw > 0
                             ? Math.round(100 * (peak.cum_new_gas_stranded_mw || 0) / peak.cum_new_gas_mw)
                             : 0;
-                        captionEl.innerHTML =
-                            '<span class="hump-peak-iso">' + state.iso + '</span> on ' + pathLabel +
-                            ' peaks at ~<strong>' + peak.achieved_cfe_pct.toFixed(1) + '%</strong> clean &mdash; ' +
-                            '<strong>' + fmtMW(peak.cum_new_gas_mw) + '</strong> of new gas, ' +
-                            '<strong>' + share + '%</strong> of it written off by 2050.';
-                    } else {
-                        captionEl.textContent = state.iso + ' on ' + pathLabel + ': no new gas built.';
-                    }
+                        var strandNote = share > 0 ? ' (' + share + '% written off)' : '';
+                        parts.push(
+                            '<strong>' + pw.name + ':</strong> ' +
+                            fmtMW(peak.cum_new_gas_mw) + ' at ' + peak.achieved_cfe_pct.toFixed(0) + '% clean' + strandNote
+                        );
+                    });
+                    captionEl.innerHTML = parts.length
+                        ? '<span class="hump-peak-iso">' + state.iso + '</span> — peaks: ' + parts.join(' · ')
+                        : state.iso + ': no new gas built on any pathway.';
                 }
             }
 
@@ -923,16 +908,6 @@
                     document.querySelectorAll('#humpIsoSelector .iso-btn').forEach(function(b) { b.classList.remove('active'); });
                     btn.classList.add('active');
                     state.iso = btn.dataset.iso;
-                    render();
-                });
-            });
-
-            // Pathway toggle
-            document.querySelectorAll('#humpPathwayToggle button').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('#humpPathwayToggle button').forEach(function(b) { b.classList.remove('active'); });
-                    btn.classList.add('active');
-                    state.pathway = btn.dataset.pathway;
                     render();
                 });
             });
@@ -1400,15 +1375,21 @@
             });
         })();
 
-        // ===== Section 6 — Stranding Sankey (vintage-year bars → single sink) =====
+        // ===== Section 6 — Stranded capital by pathway (all pathways on one plot) =====
         (function initSankey() {
             var canvas = document.getElementById('sankeyChart');
             if (!canvas || typeof Chart === 'undefined') return;
 
-            var state = { pathway: '1', data: null, chart: null };
+            var state = { data: null, chart: null };
 
-            var gasColor  = RESOURCE_COLORS.fossilGas;
-            var sinkColor = SEMANTIC_COLORS.negative;
+            // All five pathways drawn as horizontal bars on the same chart.
+            var STRAND_PATHWAYS = [
+                { id: '1',  name: 'Wind + solar + storage',   color: '#EF4444' },
+                { id: '1a', name: 'Onshore only',             color: '#F59E0B' },
+                { id: '2a', name: 'Reactive pivot (90% wall)', color: '#8B5CF6' },
+                { id: '2b', name: 'Reactive pivot (economics)', color: '#0EA5E9' },
+                { id: '3',  name: 'Proactive clean firm',      color: '#10B981' }
+            ];
 
             function fmtBn(v) {
                 if (v == null || !isFinite(v)) return '\u2014';
@@ -1422,39 +1403,32 @@
             }
 
             function render() {
-                if (!state.data || !state.data.nodes) return;
-                var sources = (state.data.nodes.sources || []).filter(function(s) { return s.pathway === state.pathway; });
-                sources.sort(function(a, b) { return a.vintage_year - b.vintage_year; });
+                if (!state.data) return;
 
-                var labels = sources.map(function(s) { return String(s.vintage_year); });
-                labels.push('\u21D2  Stranded');
+                var labels = STRAND_PATHWAYS.map(function(pw) { return pw.name; });
+                var values = STRAND_PATHWAYS.map(function(pw) {
+                    var pt = state.data.pathway_totals && state.data.pathway_totals[pw.id];
+                    return pt ? (pt.new_gas_stranded_capex_usd || 0) / 1e9 : 0;
+                });
+                var mws = STRAND_PATHWAYS.map(function(pw) {
+                    var pt = state.data.pathway_totals && state.data.pathway_totals[pw.id];
+                    return pt ? (pt.new_gas_stranded_mw || 0) : 0;
+                });
+                var shares = STRAND_PATHWAYS.map(function(pw) {
+                    var pt = state.data.pathway_totals && state.data.pathway_totals[pw.id];
+                    return pt && pt.stranded_share_of_new_gas_pct != null ? pt.stranded_share_of_new_gas_pct : null;
+                });
+                var colors = STRAND_PATHWAYS.map(function(pw) { return pw.color; });
 
-                var yearBn = sources.map(function(s) { return (s.stranded_capex_usd || 0) / 1e9; });
-                var total = yearBn.reduce(function(a, b) { return a + b; }, 0);
-                // Stacked "flow" column: push total on to the right
-                var vintageSeries = yearBn.concat([null]);
-                var sinkSeries    = labels.map(function(_, i) { return i === labels.length - 1 ? total : null; });
-
-                var datasets = [
-                    {
-                        label: 'Vintage stranded capex',
-                        data: vintageSeries,
-                        backgroundColor: gasColor,
-                        borderColor: gasColor,
-                        borderWidth: 0,
-                        barPercentage: 0.88,
-                        categoryPercentage: 0.9
-                    },
-                    {
-                        label: 'Total written off',
-                        data: sinkSeries,
-                        backgroundColor: sinkColor,
-                        borderColor: sinkColor,
-                        borderWidth: 0,
-                        barPercentage: 0.92,
-                        categoryPercentage: 0.9
-                    }
-                ];
+                var datasets = [{
+                    label: 'Stranded capital ($B)',
+                    data: values,
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    borderWidth: 0,
+                    barPercentage: 0.78,
+                    categoryPercentage: 0.82
+                }];
 
                 if (state.chart) {
                     state.chart.data.labels = labels;
@@ -1465,6 +1439,7 @@
                         type: 'bar',
                         data: { labels: labels, datasets: datasets },
                         options: {
+                            indexAxis: 'y',
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
@@ -1476,68 +1451,51 @@
                                             return items[0].label;
                                         },
                                         label: function(ctx) {
-                                            var v = ctx.parsed.y;
-                                            if (v == null) return '';
-                                            if (ctx.dataset.label === 'Total written off') {
-                                                var pt = state.data.pathway_totals && state.data.pathway_totals[state.pathway];
-                                                var mw = pt ? pt.new_gas_stranded_mw : null;
-                                                return 'Total written off: ' + fmtBn(v) + '  (' + fmtMWv(mw) + ')';
-                                            }
-                                            var idx = ctx.dataIndex;
-                                            var src = (state.data.nodes.sources || []).filter(function(s) { return s.pathway === state.pathway; });
-                                            src.sort(function(a, b) { return a.vintage_year - b.vintage_year; });
-                                            var row = src[idx];
-                                            if (!row) return fmtBn(v);
-                                            return 'Built ' + row.vintage_year + ': ' + fmtBn(v) + '  (' + fmtMWv(row.stranded_mw) + ')';
+                                            var i = ctx.dataIndex;
+                                            var sh = shares[i] != null ? ' \u2014 ' + shares[i].toFixed(1) + '% of every MW built' : '';
+                                            return fmtBn(values[i]) + '  (' + fmtMWv(mws[i]) + ')' + sh;
                                         }
                                     }
                                 }
                             },
                             scales: {
                                 x: {
-                                    stacked: false,
-                                    ticks: { font: { family: 'DM Mono, monospace', size: 10, weight: '600' }, autoSkip: false, maxRotation: 0, minRotation: 0 },
-                                    grid: { display: false }
-                                },
-                                y: {
-                                    stacked: false,
                                     beginAtZero: true,
-                                    title: { display: true, text: 'Stranded capex ($B, 2025\u20132050)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    title: { display: true, text: 'Stranded capital ($B, summed across 7 ISOs)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
                                     ticks: {
                                         font: { family: 'DM Mono, monospace', size: 11 },
                                         callback: function(v) { return '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'T' : v + 'B'); }
                                     },
                                     grid: { color: 'rgba(0,0,0,0.06)' }
+                                },
+                                y: {
+                                    ticks: { font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    grid: { display: false }
                                 }
                             }
                         }
                     });
                 }
 
+                // Caption: worst vs. best pathway.
                 var cap = document.getElementById('sankeyCaption');
-                var PW_NAMES = { '1': 'Wind + solar + storage', '1a': 'Onshore only', '2a': 'Reactive pivot (90% wall)', '2b': 'Reactive pivot (economics)', '3': 'Proactive clean firm' };
                 if (cap) {
-                    var pt = state.data.pathway_totals && state.data.pathway_totals[state.pathway];
-                    var pwName = PW_NAMES[state.pathway] || ('Pathway ' + state.pathway);
-                    if (pt) {
-                        cap.innerHTML =
-                            '<span class="hump-peak-iso">' + pwName + '</span>: ' +
-                            '<strong>' + fmtBn((pt.new_gas_stranded_capex_usd || 0) / 1e9) + '</strong> written off on ' +
-                            '<strong>' + fmtMWv(pt.new_gas_stranded_mw) + '</strong> of new-build gas &mdash; ' +
-                            '<strong>' + (pt.stranded_share_of_new_gas_pct != null ? pt.stranded_share_of_new_gas_pct.toFixed(1) : '\u2014') +
-                            '%</strong> of every MW built.';
+                    var ranked = STRAND_PATHWAYS.map(function(pw, i) { return { name: pw.name, v: values[i], mw: mws[i] }; })
+                                                .filter(function(x) { return x.v > 0; })
+                                                .sort(function(a, b) { return b.v - a.v; });
+                    if (ranked.length) {
+                        var worst = ranked[0];
+                        var best  = ranked[ranked.length - 1];
+                        if (ranked.length === 1 || worst.name === best.name) {
+                            cap.innerHTML = '<strong>' + worst.name + '</strong> strands <strong>' + fmtBn(worst.v) + '</strong> (' + fmtMWv(worst.mw) + '). All other pathways strand zero new gas.';
+                        } else {
+                            cap.innerHTML = '<strong>' + worst.name + '</strong> strands the most: <strong>' + fmtBn(worst.v) + '</strong> (' + fmtMWv(worst.mw) + '). <strong>' + best.name + '</strong> strands the least feasible amount: <strong>' + fmtBn(best.v) + '</strong>.';
+                        }
+                    } else {
+                        cap.textContent = 'No stranding at this target on any pathway.';
                     }
                 }
             }
-
-            document.querySelectorAll('#sankeyPathwayToggle button').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('#sankeyPathwayToggle button').forEach(function(b) { b.classList.remove('active'); });
-                    btn.classList.add('active');
-                    state.pathway = btn.dataset.pathway;
-                    render();
-                });
-            });
 
             fetch('js/reliability-tax/section5_stranding_sankey.json', { cache: 'no-cache' })
                 .then(function(r) { return r.json(); })
