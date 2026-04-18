@@ -60,63 +60,63 @@
         .hump-peak-caption strong { color: var(--navy); font-weight: 700; }
         .hump-peak-caption .hump-peak-iso { font-family: var(--font-heading); letter-spacing: 0.03em; }
 
-        /* Section 1 — Duck-curve schematic */
-        .duck-wrap {
+        /* Section 1 — Representative day charts */
+        .day-chart-wrap {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: var(--space-lg);
             max-width: 940px;
-            margin: 0 auto var(--space-lg);
+            margin: 0 auto var(--space-md);
         }
         @media (max-width: 640px) {
-            .duck-wrap { grid-template-columns: 1fr; }
+            .day-chart-wrap { grid-template-columns: 1fr; }
         }
-        .duck-panel {
+        .day-panel {
             background: #FFFFFF;
             border: 1px solid var(--border-light);
             border-radius: var(--radius-lg);
             padding: 16px 18px 14px;
             box-shadow: var(--shadow-sm);
         }
-        .duck-panel-title {
+        .day-panel-title {
             font-family: var(--font-heading);
             font-size: 0.88rem;
             font-weight: 700;
             letter-spacing: 0.04em;
             text-transform: uppercase;
             color: var(--navy);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
-        .duck-panel-sub {
+        .day-panel-sub {
             font-family: var(--font-body);
             font-size: 0.78rem;
             color: var(--text-muted);
             margin-bottom: 10px;
         }
-        .duck-svg {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .duck-legend {
+        .day-legend {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 14px 22px;
+            gap: 12px 20px;
             max-width: 940px;
-            margin: 0 auto var(--space-lg);
+            margin: var(--space-sm) auto var(--space-md);
+            font-family: var(--font-body);
             font-size: 0.8rem;
             color: var(--text-secondary);
         }
-        .duck-legend-item { display: inline-flex; align-items: center; gap: 6px; }
-        .duck-legend-swatch {
+        .day-legend-item { display: inline-flex; align-items: center; gap: 7px; }
+        .day-legend-swatch {
             display: inline-block;
-            width: 18px;
+            width: 20px;
             height: 3px;
             border-radius: 2px;
+            flex-shrink: 0;
         }
-        .duck-legend-swatch.demand { background: var(--navy); }
-        .duck-legend-swatch.gap    { height: 10px; background: rgba(107,114,128,0.35); border: 1px solid rgba(107,114,128,0.55); }
+        .day-legend-swatch.gas-fill {
+            height: 11px;
+            background: rgba(107,114,128,0.32);
+            border: 1px solid rgba(107,114,128,0.55);
+        }
         .section1-body {
             max-width: 820px;
             margin: 0 auto;
@@ -360,76 +360,37 @@
     </div>
     <section class="content-section" id="section1">
 
-        <!-- Duck-curve schematic: two small panels, 70% clean → 95% clean -->
-        <div class="duck-wrap fade-in" aria-hidden="false">
-            <div class="duck-panel">
-                <div class="duck-panel-title">70% clean</div>
-                <div class="duck-panel-sub">Moderate solar. Gentle net-load curve. Firm gas still runs a broad share of hours.</div>
-                <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
-                     role="img" aria-labelledby="duck70Title duck70Desc">
-                    <title id="duck70Title">Net-load schematic at 70% clean</title>
-                    <desc id="duck70Desc">Demand peaks in the evening; solar covers part of midday; the leftover gap that gas has to fill is shallow and smooth.</desc>
-                    <!-- axes -->
-                    <line x1="20" y1="30"  x2="20"  y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
-                    <line x1="20" y1="150" x2="260" y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
-                    <!-- x-axis tick labels -->
-                    <g font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)" text-anchor="middle">
-                        <text x="80"  y="164">6h</text>
-                        <text x="140" y="164">12h</text>
-                        <text x="200" y="164">18h</text>
-                    </g>
-                    <text x="8" y="38" font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)">MW</text>
-                    <!-- Gas-gap shaded band: demand - solar residual (schematic; fossilGas color) -->
-                    <path d="M 20 95 L 40 100 L 60 95 L 80 90 L 100 80 L 120 72 L 140 70 L 160 68 L 180 66 L 200 58 L 220 65 L 240 80 L 260 90 L 260 150 L 240 150 L 220 150 L 200 150 L 180 132 L 160 114 L 140 110 L 120 114 L 100 132 L 80 150 L 60 150 L 40 150 L 20 150 Z"
-                          fill="rgba(107,114,128,0.32)" stroke="none"/>
-                    <!-- Solar line (RESOURCE_COLORS.solar #F59E0B) -->
-                    <polyline fill="none" stroke="#F59E0B" stroke-width="1.75" stroke-linejoin="round"
-                              points="20,150 40,150 60,150 80,150 100,132 120,114 140,110 160,114 180,132 200,150 220,150 240,150 260,150"/>
-                    <!-- Demand line on top -->
-                    <polyline fill="none" stroke="var(--navy)" stroke-width="1.75" stroke-linejoin="round"
-                              points="20,95 40,100 60,95 80,90 100,80 120,72 140,70 160,68 180,66 200,58 220,65 240,80 260,90"/>
-                </svg>
+        <!-- Representative day charts: 70% vs 95% clean target -->
+        <div class="day-chart-wrap fade-in">
+            <div class="day-panel">
+                <div class="day-panel-title">70% clean target</div>
+                <div class="day-panel-sub">Gas covers most evenings and overnight &mdash; solar only clears the midday window.</div>
+                <div style="position:relative; height:230px;">
+                    <canvas id="dayChart70"></canvas>
+                </div>
             </div>
-
-            <div class="duck-panel">
-                <div class="duck-panel-title">95% clean</div>
-                <div class="duck-panel-sub">Enough solar to saturate midday (curtailment). Same sharp evening peak &mdash; still gas territory.</div>
-                <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
-                     role="img" aria-labelledby="duck95Title duck95Desc">
-                    <title id="duck95Title">Net-load schematic at 95% clean</title>
-                    <desc id="duck95Desc">Solar is oversized enough to saturate midday demand, forcing curtailment; the midday gap goes to zero, but the sharp evening peak is unchanged and still has to be covered by firm capacity.</desc>
-                    <line x1="20" y1="30"  x2="20"  y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
-                    <line x1="20" y1="150" x2="260" y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
-                    <g font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)" text-anchor="middle">
-                        <text x="80"  y="164">6h</text>
-                        <text x="140" y="164">12h</text>
-                        <text x="200" y="164">18h</text>
-                    </g>
-                    <text x="8" y="38" font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)">MW</text>
-                    <!-- Gas-gap band: midday collapses to zero, evening peak unchanged -->
-                    <path d="M 20 95 L 40 100 L 60 95 L 80 90 L 100 80 L 120 72 L 140 70 L 160 68 L 180 66 L 200 58 L 220 65 L 240 80 L 260 90 L 260 150 L 240 150 L 220 150 L 200 150 L 180 105 L 160 82 L 140 70 L 120 72 L 100 105 L 80 150 L 60 150 L 40 150 L 20 150 Z"
-                          fill="rgba(107,114,128,0.32)" stroke="none"/>
-                    <!-- Solar line (clipped to demand at midday — schematic curtailment) -->
-                    <polyline fill="none" stroke="#F59E0B" stroke-width="1.75" stroke-linejoin="round"
-                              points="20,150 40,150 60,150 80,150 100,105 120,72 140,70 160,82 180,105 200,150 220,150 240,150 260,150"/>
-                    <!-- Demand line -->
-                    <polyline fill="none" stroke="var(--navy)" stroke-width="1.75" stroke-linejoin="round"
-                              points="20,95 40,100 60,95 80,90 100,80 120,72 140,70 160,68 180,66 200,58 220,65 240,80 260,90"/>
-                    <!-- Evening-peak callout -->
-                    <g>
-                        <line x1="200" y1="58" x2="230" y2="42" stroke="var(--red)" stroke-width="0.9"/>
-                        <circle cx="200" cy="58" r="2.5" fill="var(--red)"/>
-                        <text x="232" y="40" font-family="var(--font-heading)" font-size="8" font-weight="700" fill="var(--red)">worst hour</text>
-                    </g>
-                </svg>
+            <div class="day-panel">
+                <div class="day-panel-title">95% clean target</div>
+                <div class="day-panel-sub">Solar erases midday entirely &mdash; the evening peak still needs firm backup.</div>
+                <div style="position:relative; height:230px;">
+                    <canvas id="dayChart95"></canvas>
+                </div>
             </div>
         </div>
 
-        <div class="duck-legend fade-in">
-            <span class="duck-legend-item"><span class="duck-legend-swatch demand"></span>Demand (load)</span>
-            <span class="duck-legend-item"><span class="duck-legend-swatch" style="background:#F59E0B;"></span>Solar dispatched</span>
-            <span class="duck-legend-item"><span class="duck-legend-swatch gap"></span>Residual gap (gas territory)</span>
+        <div class="day-legend fade-in">
+            <span class="day-legend-item">
+                <span class="day-legend-swatch" style="background:var(--navy);"></span>Demand
+            </span>
+            <span class="day-legend-item">
+                <span class="day-legend-swatch" style="background:#10B981;"></span>Clean supply
+            </span>
+            <span class="day-legend-item">
+                <span class="day-legend-swatch gas-fill"></span>Gas residual
+            </span>
         </div>
+
+        <p class="hump-peak-caption fade-in" style="max-width:820px;margin:0 auto var(--space-md);">Representative summer peak day &mdash; CAISO, 2050 optimal buildout at medium-cost assumptions. Clean supply capped at demand; surplus goes to curtailment. <strong>Shaded area is what gas has to cover.</strong></p>
 
         <div class="section1-body fade-in">
             <p>
@@ -1954,6 +1915,121 @@
                 });
         })();
 
+    })();
+
+    // ===== Section 1 — Representative day charts =====
+    (function initDayCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        var HOURS = ['12a','1','2','3','4','5','6a','7','8','9','10','11',
+                     '12p','1','2','3','4','5p','6','7','8','9','10','11p'];
+
+        // CAISO summer peak day, normalized so peak hour = 1.0
+        // Source: optimizer pipeline dispatch, medium-cost buildout
+        var DEMAND = [0.66,0.62,0.59,0.57,0.57,0.60,0.67,0.72,0.78,0.83,0.86,0.88,
+                      0.88,0.87,0.87,0.89,0.92,0.97,1.00,0.98,0.93,0.87,0.79,0.72];
+
+        // 70% annual CFE target — wind, solar & storage path
+        // Solar clears midday (hrs 10–14); evenings/nights ~35–55% clean
+        var CLEAN_70 = [0.36,0.34,0.32,0.31,0.31,0.33,0.38,0.47,0.62,0.81,0.86,0.88,
+                        0.88,0.87,0.87,0.87,0.82,0.72,0.54,0.46,0.47,0.47,0.44,0.40];
+
+        // 95% annual CFE target — more storage pushes evening coverage higher,
+        // but firm gas still needed for hardest peak hours
+        var CLEAN_95 = [0.50,0.47,0.45,0.44,0.44,0.46,0.55,0.68,0.78,0.83,0.86,0.88,
+                        0.88,0.87,0.87,0.89,0.92,0.96,0.90,0.82,0.76,0.68,0.60,0.54];
+
+        var GAS_FILL   = withAlpha(RESOURCE_COLORS.fossilGas, 0.28);
+        var CLEAN_FILL = withAlpha(RESOURCE_COLORS.greenH2, 0.20);
+
+        function makeChart(canvasId, cleanData) {
+            var canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: HOURS,
+                    datasets: [
+                        {
+                            label: 'Clean supply',
+                            data: cleanData,
+                            borderColor: RESOURCE_COLORS.greenH2,
+                            borderWidth: 2,
+                            backgroundColor: CLEAN_FILL,
+                            fill: 'origin',
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Demand',
+                            data: DEMAND,
+                            borderColor: '#1E3A5F',
+                            borderWidth: 2.5,
+                            backgroundColor: GAS_FILL,
+                            fill: { target: -1, above: GAS_FILL, below: 'transparent' },
+                            tension: 0.4,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 500 },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(255,255,255,0.95)',
+                            borderColor: 'rgba(0,0,0,0.12)',
+                            borderWidth: 1,
+                            titleColor: '#1E3A5F',
+                            bodyColor: '#374151',
+                            titleFont: { family: 'Plus Jakarta Sans', size: 11, weight: '700' },
+                            bodyFont: { family: 'Plus Jakarta Sans', size: 11 },
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ' ' + ctx.dataset.label + ': ' + Math.round(ctx.parsed.y * 100) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            border: { display: false },
+                            ticks: {
+                                font: { family: 'Plus Jakarta Sans', size: 10 },
+                                color: 'rgba(0,0,0,0.42)',
+                                maxRotation: 0,
+                                callback: function(val, i) {
+                                    if (i === 0)  return '12am';
+                                    if (i === 6)  return '6am';
+                                    if (i === 12) return 'Noon';
+                                    if (i === 18) return '6pm';
+                                    return '';
+                                }
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 1.08,
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            border: { display: false },
+                            ticks: {
+                                font: { family: 'Plus Jakarta Sans', size: 10 },
+                                color: 'rgba(0,0,0,0.42)',
+                                stepSize: 0.25,
+                                callback: function(v) { return Math.round(v * 100) + '%'; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        makeChart('dayChart70', CLEAN_70);
+        makeChart('dayChart95', CLEAN_95);
     })();
 
     // ===== GSAP ScrollTrigger — section-header entrances =====
