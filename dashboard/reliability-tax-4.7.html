@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Reliability Tax (v4.7) | The 8,760 Problem</title>
+    <meta name="description" content="What ratepayers pay when wind, solar, and storage are asked to cover reliability on their own. Seven U.S. Independent System Operators (ISOs), ten clean-energy targets, five pathways.">
+    <meta property="og:title" content="The Reliability Tax">
+    <meta property="og:description" content="What ratepayers pay when wind, solar, and storage are asked to cover reliability on their own — the gas fleet that gets built, and the part that gets written off.">
+    <meta property="og:type" content="article">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/scrollytell.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <style>
+        /* ===== Page-local scaffolding only — all components use shared classes ===== */
+
+        /* Reading progress bar (scroll indicator, above nav) */
+        .reading-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, var(--navy), var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red));
+            z-index: 10000;
+            transition: width 0.1s linear;
+            pointer-events: none;
+        }
+
+        /* Variant tag in header — marks this as the v4.7 bake-off build */
+        .variant-tag {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 3px 10px;
+            font-family: var(--font-data);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 999px;
+        }
+
+        /* Section 1 — Duck-curve schematic */
+        .duck-wrap {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-lg);
+            max-width: 940px;
+            margin: 0 auto var(--space-lg);
+        }
+        @media (max-width: 640px) {
+            .duck-wrap { grid-template-columns: 1fr; }
+        }
+        .duck-panel {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px 14px;
+            box-shadow: var(--shadow-sm);
+        }
+        .duck-panel-title {
+            font-family: var(--font-heading);
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .duck-panel-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .duck-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .duck-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 14px 22px;
+            max-width: 940px;
+            margin: 0 auto var(--space-lg);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .duck-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+        .duck-legend-swatch {
+            display: inline-block;
+            width: 18px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .duck-legend-swatch.demand { background: var(--navy); }
+        .duck-legend-swatch.gap    { height: 10px; background: rgba(107,114,128,0.35); border: 1px solid rgba(107,114,128,0.55); }
+
+        .section1-body {
+            max-width: 820px;
+            margin: 0 auto;
+            font-size: 0.98rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+        .section1-body p { margin-bottom: var(--space-md); }
+        .section1-body p:last-child { margin-bottom: 0; }
+        .section1-body strong { color: var(--navy); font-weight: 700; }
+
+        /* Hero (Section 0) */
+        .tax-hero-lead {
+            max-width: 820px;
+            margin: 0 auto var(--space-xl);
+            font-size: 1.08rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            text-align: center;
+        }
+        .tax-hero-lead strong { color: var(--navy); font-weight: 700; }
+
+        /* Stat row — 4 animated-counter tiles in the hero */
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            max-width: 980px;
+            margin: 0 auto var(--space-xl);
+        }
+        @media (max-width: 820px) {
+            .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 460px) {
+            .stat-row { grid-template-columns: 1fr; }
+        }
+        .stat-tile {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 22px 18px 18px;
+            text-align: center;
+        }
+        .stat-tile .stat-value {
+            font-family: var(--font-heading);
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.05;
+            letter-spacing: -0.01em;
+        }
+        .stat-tile .stat-label {
+            margin-top: 8px;
+            font-family: var(--font-data);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .stat-tile .stat-sublabel {
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        /* Small-multiples grid — 7-panel mini-chart grid (filled in Session 2) */
+        .small-multiples-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) {
+            .small-multiples-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 520px) {
+            .small-multiples-grid { grid-template-columns: 1fr; }
+        }
+        .mini-panel {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            padding: 10px 12px 12px;
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+        }
+        .mini-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .mini-panel canvas {
+            flex: 1 1 auto;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 170px;
+        }
+
+        /* Shared legend rendered above a grid of small-multiples */
+        .pathway-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px 22px;
+            max-width: 940px;
+            margin: 0 auto var(--space-md);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+        .pathway-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pathway-legend-swatch {
+            display: inline-block;
+            width: 22px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* Plain-English caption that sits below a canvas */
+        .chart-caption {
+            max-width: 820px;
+            margin: var(--space-sm) auto 0;
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            text-align: center;
+        }
+        .chart-caption strong { color: var(--navy); font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>The Reliability Tax</h1>
+        <div class="subtitle">What ratepayers pay when wind, solar, and storage are asked to cover reliability on their own.</div>
+        <span class="variant-tag">v4.7</span>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Hero                                                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="section0">
+        <p class="tax-hero-lead fade-in">
+            Wind, solar, and batteries can deliver clean energy. They cannot, on their own, cover the worst hour of the worst week &mdash; the hour grid planners are legally obligated to keep the lights on for. Something has to stand behind them. Absent new clean firm generation, that something is gas. The capex, fixed costs, and eventual write-off of that backup fleet land on customer bills. <strong>That&rsquo;s the reliability tax.</strong>
+        </p>
+
+        <div class="stat-row fade-in">
+            <div class="stat-tile">
+                <div class="stat-value counter" data-target="175">0</div>
+                <div class="stat-label">Runs in the database</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value counter" data-target="7">0</div>
+                <div class="stat-label">ISOs modeled</div>
+                <div class="stat-sublabel">Independent System Operators across the U.S.</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value counter" data-target="5">0</div>
+                <div class="stat-label">Pathways compared</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value counter" data-target="10">0</div>
+                <div class="stat-label">Clean-energy targets</div>
+            </div>
+        </div>
+
+        <div class="insight-box fade-in" style="max-width: 820px; margin: 0 auto;">
+            <strong>What this bill is made of.</strong> We add the annualized capex on new gas, the fixed O&amp;M on the new and existing gas fleet, the value of wind and solar that gets curtailed, and the cost of overbuilding wind, solar, and storage. Divide by total demand. Report it gross &mdash; capacity-market payments and similar transfers shuffle the money between ratepayers and developers, they don&rsquo;t reduce the total bill.
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 1 — Why clean-only grids still build gas                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>Why a clean-only grid still builds gas</h2>
+        <p>As clean-energy targets climb, the grid doesn&rsquo;t need <em>more</em> firm capacity &mdash; it needs firm capacity used <em>less</em>. An expensive shape to buy.</p>
+    </div>
+    <section class="content-section" id="section1">
+
+        <!-- Duck-curve schematic: two small panels, 70% clean → 95% clean -->
+        <div class="duck-wrap fade-in" aria-hidden="false">
+            <div class="duck-panel">
+                <div class="duck-panel-title">70% clean</div>
+                <div class="duck-panel-sub">Moderate solar. Gentle net-load curve. Firm gas still runs a broad share of hours.</div>
+                <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-labelledby="duck70Title duck70Desc">
+                    <title id="duck70Title">Net-load schematic at 70% clean</title>
+                    <desc id="duck70Desc">Demand peaks in the evening; solar covers part of midday; the leftover gap that gas has to fill is shallow and smooth.</desc>
+                    <!-- axes -->
+                    <line x1="20" y1="30"  x2="20"  y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <line x1="20" y1="150" x2="260" y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <!-- x-axis tick labels -->
+                    <g font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)" text-anchor="middle">
+                        <text x="80"  y="164">6h</text>
+                        <text x="140" y="164">12h</text>
+                        <text x="200" y="164">18h</text>
+                    </g>
+                    <text x="8" y="38" font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)">MW</text>
+                    <!-- Gas-gap shaded band: demand - solar residual (schematic; fossilGas color) -->
+                    <path d="M 20 95 L 40 100 L 60 95 L 80 90 L 100 80 L 120 72 L 140 70 L 160 68 L 180 66 L 200 58 L 220 65 L 240 80 L 260 90 L 260 150 L 240 150 L 220 150 L 200 150 L 180 132 L 160 114 L 140 110 L 120 114 L 100 132 L 80 150 L 60 150 L 40 150 L 20 150 Z"
+                          fill="rgba(107,114,128,0.32)" stroke="none"/>
+                    <!-- Solar line (RESOURCE_COLORS.solar #F59E0B) -->
+                    <polyline fill="none" stroke="#F59E0B" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,150 40,150 60,150 80,150 100,132 120,114 140,110 160,114 180,132 200,150 220,150 240,150 260,150"/>
+                    <!-- Demand line on top -->
+                    <polyline fill="none" stroke="var(--navy)" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,95 40,100 60,95 80,90 100,80 120,72 140,70 160,68 180,66 200,58 220,65 240,80 260,90"/>
+                </svg>
+            </div>
+
+            <div class="duck-panel">
+                <div class="duck-panel-title">95% clean</div>
+                <div class="duck-panel-sub">Enough solar to saturate midday (curtailment). Same sharp evening peak &mdash; still gas territory.</div>
+                <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-labelledby="duck95Title duck95Desc">
+                    <title id="duck95Title">Net-load schematic at 95% clean</title>
+                    <desc id="duck95Desc">Solar is oversized enough to saturate midday demand, forcing curtailment; the midday gap goes to zero, but the sharp evening peak is unchanged and still has to be covered by firm capacity.</desc>
+                    <line x1="20" y1="30"  x2="20"  y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <line x1="20" y1="150" x2="260" y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <g font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)" text-anchor="middle">
+                        <text x="80"  y="164">6h</text>
+                        <text x="140" y="164">12h</text>
+                        <text x="200" y="164">18h</text>
+                    </g>
+                    <text x="8" y="38" font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)">MW</text>
+                    <!-- Gas-gap band: midday collapses to zero, evening peak unchanged -->
+                    <path d="M 20 95 L 40 100 L 60 95 L 80 90 L 100 80 L 120 72 L 140 70 L 160 68 L 180 66 L 200 58 L 220 65 L 240 80 L 260 90 L 260 150 L 240 150 L 220 150 L 200 150 L 180 105 L 160 82 L 140 70 L 120 72 L 100 105 L 80 150 L 60 150 L 40 150 L 20 150 Z"
+                          fill="rgba(107,114,128,0.32)" stroke="none"/>
+                    <!-- Solar line (clipped to demand at midday — schematic curtailment) -->
+                    <polyline fill="none" stroke="#F59E0B" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,150 40,150 60,150 80,150 100,105 120,72 140,70 160,82 180,105 200,150 220,150 240,150 260,150"/>
+                    <!-- Demand line -->
+                    <polyline fill="none" stroke="var(--navy)" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,95 40,100 60,95 80,90 100,80 120,72 140,70 160,68 180,66 200,58 220,65 240,80 260,90"/>
+                    <!-- Evening-peak callout -->
+                    <g>
+                        <line x1="200" y1="58" x2="230" y2="42" stroke="var(--red)" stroke-width="0.9"/>
+                        <circle cx="200" cy="58" r="2.5" fill="var(--red)"/>
+                        <text x="232" y="40" font-family="var(--font-heading)" font-size="8" font-weight="700" fill="var(--red)">worst hour</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <div class="duck-legend fade-in">
+            <span class="duck-legend-item"><span class="duck-legend-swatch demand"></span>Demand (load)</span>
+            <span class="duck-legend-item"><span class="duck-legend-swatch" style="background:#F59E0B;"></span>Solar dispatched</span>
+            <span class="duck-legend-item"><span class="duck-legend-swatch gap"></span>Residual gap (gas territory)</span>
+        </div>
+
+        <div class="section1-body fade-in">
+            <p>
+                Between 70% and 95% clean, solar and storage scale faster than load does. Midday fills in &mdash; often overshoots, forcing curtailment &mdash; but the evening peak barely moves. The gap firm capacity covers doesn&rsquo;t shrink evenly. It gets <strong>narrower and sharper</strong>. A few hundred hours a year still demand something that burns fuel, and those hours land in a tighter, pricier window.
+            </p>
+            <p>
+                New gas sizing runs off hourly dispatch, not a thumbnail capacity credit. Flat credits &mdash; 30% for solar, 95% for batteries &mdash; smooth over the worst week and systematically under-build. Gas is sized instead against the hour that <strong>8,757 others exceed</strong> (about 2.6 hours of tail risk a year), which is the bar planners actually have to clear.
+            </p>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Later-session marker divs — replaced in Sessions 2–5                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="SESSION2_SECTION2"></div>
+    <div id="SESSION2_SECTION3"></div>
+    <div id="SESSION3_SECTION4"></div>
+    <div id="SESSION3_SECTION5"></div>
+    <div id="SESSION4_SECTION6"></div>
+    <div id="SESSION4_SECTION7"></div>
+    <div id="SESSION5_SECTION8"></div>
+
+    <footer id="siteFooter" data-footer-note="The Reliability Tax — five decarbonization pathways compared across 7 U.S. ISOs and 10 clean-energy targets."></footer>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ===== Reading progress bar =====
+        (function initReadingProgress() {
+            var bar = document.getElementById('readingProgress');
+            if (!bar) return;
+            var ticking = false;
+            function update() {
+                var scrollY = window.scrollY || window.pageYOffset;
+                var docH = document.documentElement.scrollHeight - window.innerHeight;
+                var pct = docH > 0 ? Math.min(100, Math.max(0, (scrollY / docH) * 100)) : 0;
+                bar.style.width = pct + '%';
+                ticking = false;
+            }
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    requestAnimationFrame(update);
+                    ticking = true;
+                }
+            }, { passive: true });
+            update();
+        })();
+
+        // ===== Hero stat-tile counter animation (easeOutCubic, 1.5s, trigger once) =====
+        (function initCounters() {
+            var hero = document.getElementById('section0');
+            if (!hero) return;
+            var counters = Array.prototype.slice.call(hero.querySelectorAll('.counter'));
+            if (!counters.length) return;
+
+            function animateOne(el) {
+                var target = parseFloat(el.getAttribute('data-target'));
+                if (!isFinite(target)) return;
+                var duration = 1500;
+                var start = null;
+                var isInt = Math.abs(target - Math.round(target)) < 1e-9;
+                function step(ts) {
+                    if (start === null) start = ts;
+                    var t = Math.min(1, (ts - start) / duration);
+                    var eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+                    var value = target * eased;
+                    el.textContent = isInt ? Math.round(value).toLocaleString() : value.toFixed(1);
+                    if (t < 1) requestAnimationFrame(step);
+                    else el.textContent = isInt ? Math.round(target).toLocaleString() : target.toFixed(1);
+                }
+                requestAnimationFrame(step);
+            }
+
+            function runAll() { counters.forEach(animateOne); }
+
+            if (typeof IntersectionObserver === 'undefined') { runAll(); return; }
+            var io = new IntersectionObserver(function(entries) {
+                for (var i = 0; i < entries.length; i++) {
+                    if (entries[i].isIntersecting) {
+                        io.disconnect();
+                        runAll();
+                        return;
+                    }
+                }
+            }, { threshold: 0.25 });
+            io.observe(hero);
+        })();
+
+    })();
+    </script>
+</body>
+</html>
