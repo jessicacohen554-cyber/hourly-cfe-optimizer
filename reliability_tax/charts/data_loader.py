@@ -5,8 +5,18 @@ Reads MANIFEST.json and per-run JSON files produced by the Prompt-3 optimizer
 (scripts/step_2_3_pathway_optimizer.py + scripts/run_pathway_sweep.py).
 
 Data root: analysis/reliability-tax/data/
-  MANIFEST.json          — index of all 140 runs (7 ISO × 4 pathway × 5 endpoint)
+  MANIFEST.json          — index of all 350 runs (7 ISO × 5 pathway × 10 endpoint)
   <ISO>/pathway<N>_ep<E>.json — per-run detail files
+
+Schema notes (v2 — Apr 2026, post-§24.6/§24.7/§24.8):
+  - `reliability_tax.components_usd.priced_vre_curtailment_usd` is now non-zero
+    for VRE-heavy pathways; consumers MUST read it from the solver rather than
+    recomputing (see §24.8 ripple effects).
+  - `stranding_metadata.peak_year` may be 2050 (no stranding) but is never None.
+  - `terminal_ledger` (top-level) now pre-seeds existing-fleet zero-LCOE
+    vintages at `cod_year = 2024`. Downstream consumers that iterate vintages
+    must either filter `cod_year >= 2025` for new-build attribution or bucket
+    seed vintages as "existing fleet" via `resource == 'clean_firm_existing'`.
 
 Public API
 ----------
@@ -67,7 +77,10 @@ _EP_LABEL: dict[float, str] = {
 ENDPOINTS: list[float] = [
     0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.975, 0.99, 0.999,
 ]
-PATHWAYS: list[str]    = ["1a", "1b", "2a", "2b", "3"]
+# SPEC §24.1 locks the pathway set at {1, 1a, 2a, 2b, 3} — "1" is the VRE +
+# batteries + offshore-wind headline; "1a" is the strict onshore-only VRE
+# baseline (Card R). Pathway "1b" was retired before the v2 sweep.
+PATHWAYS: list[str]    = ["1", "1a", "2a", "2b", "3"]
 ISOS: list[str]        = ["CAISO", "ERCOT", "MISO", "NEISO", "NYISO", "PJM", "SPP"]
 
 # Fossil capacity factors (from optimizer, _FOSSIL_CAPACITY_FACTORS)
@@ -128,12 +141,12 @@ def list_isos() -> list[str]:
 
 
 def list_pathways() -> list[str]:
-    """Return canonical list of pathways: ['1', '2a', '2b', '3']."""
+    """Return canonical list of pathways per SPEC §24.1 v2: ['1', '1a', '2a', '2b', '3']."""
     return list(PATHWAYS)
 
 
 def list_endpoints() -> list[float]:
-    """Return canonical list of 5 CFE endpoints."""
+    """Return canonical list of 10 CFE endpoints (SPEC §24.4 Card S)."""
     return list(ENDPOINTS)
 
 
@@ -524,8 +537,8 @@ if __name__ == "__main__":
     runs = manifest.get("runs", {})
     print(f"MANIFEST runs loaded: {len(runs)}")
 
-    # Test ERCOT Pathway 1 @ 95%
-    run = get_run("ERCOT", "1", 0.95)
+    # Test ERCOT Pathway 1 @ 90%
+    run = get_run("ERCOT", "1", 0.90)
     print(f"\nERCOT / Pathway 1 / 95%:")
     print(f"  Achieved CFE: {run['achieved_cfe_pct']:.1f}%")
     print(f"  Undiscounted cost: ${run['undiscounted_cost_usd']/1e12:.3f}T")

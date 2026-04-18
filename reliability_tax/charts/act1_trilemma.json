@@ -69,7 +69,7 @@
   "framing_copy": {
     "headline": "Every grid faces the same trilemma \u2014 the pathways differ in which corner they sacrifice first.",
     "body": "The energy trilemma is the constraint that grids face when they optimize without explicit reliability design: the system can be clean, affordable, or reliable \u2014 but pursuing any two without the third creates hidden costs. The reliability tax is what you pay when reliability is treated as a residual rather than a design objective.",
-    "reliability_tax_definition": "The reliability tax = the fixed costs of the gas fleet that must remain online to fill hours that VRE and storage cannot economically serve, net of capacity market revenues, expressed as $/MWh of total consumption.",
+    "reliability_tax_definition": "The reliability tax = the GROSS ratepayer-cost components attributable to pushing CFE higher: annualized new-build gas capex + new-gas FOM + existing-gas FOM carried for reliability + priced VRE curtailment + annualized VRE+storage overbuild capex, divided by total 2025\u20132050 consumption MWh (SPEC \u00a724.4 locked formula, Card M' \u2014 capacity-market revenues are not netted out, since that only changes who pays).",
     "source_note": "Pathway and cost data: see MANIFEST.json and per-run JSONs in analysis/reliability-tax/data/."
   },
   "axis_hint": {

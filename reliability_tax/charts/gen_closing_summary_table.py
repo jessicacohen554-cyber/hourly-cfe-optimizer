@@ -46,7 +46,7 @@ EXISTING_GAS_GW = {
 COLUMNS = [
     {"name": "run_key",            "description": "Unique run identifier", "unit": "string"},
     {"name": "iso",                "description": "ISO/RTO region", "unit": "string"},
-    {"name": "pathway",            "description": "Decarbonization pathway (1a/1b/2a/2b/3)", "unit": "string"},
+    {"name": "pathway",            "description": "Decarbonization pathway (1/1a/2a/2b/3)", "unit": "string"},
     {"name": "endpoint",           "description": "CFE target endpoint (fraction)", "unit": "fraction"},
     {"name": "endpoint_pct",       "description": "CFE target (% label)", "unit": "%"},
     {"name": "feasible_physical",  "description": "Physically achievable (Card J)", "unit": "bool"},
@@ -257,20 +257,29 @@ def _build_row(iso: str, pathway: str, ep: float) -> dict:
 def _compute_aggregations(rows: list[dict]) -> dict:
     feasible_rows = [r for r in rows if r.get("feasible_physical")]
 
-    # Per-ISO at ep95: P1a vs P3 reliability tax delta
+    # Per-ISO at ep90: P1 vs P3 reliability tax delta. ep90 is the §24.8
+    # "central finding" endpoint — ERCOT P1≡P3, PJM P3 saves 66.7%.
     iso_summary: dict[str, dict] = {}
     for iso in ISOS:
-        iso_rows = [r for r in feasible_rows if r["iso"] == iso and r["endpoint"] == 0.95]
+        iso_rows = [r for r in feasible_rows if r["iso"] == iso and r["endpoint"] == 0.90]
         p3 = next((r for r in iso_rows if r["pathway"] == "3"), None)
-        p1a = next((r for r in iso_rows if r["pathway"] == "1a"), None)
-        if p3 and p1a:
+        p1 = next((r for r in iso_rows if r["pathway"] == "1"), None)
+        if p3 and p1:
+            p1_rtax = p1["reliability_tax_usd_per_mwh"]
+            p3_rtax = p3["reliability_tax_usd_per_mwh"]
+            p1_cost = p1["undiscounted_gross_cost_trillion"]
+            p3_cost = p3["undiscounted_gross_cost_trillion"]
             iso_summary[iso] = {
-                "p3_rtax_usd_per_mwh": p3["reliability_tax_usd_per_mwh"],
-                "p1a_rtax_usd_per_mwh": p1a["reliability_tax_usd_per_mwh"],
-                "delta_p1a_vs_p3_usd_per_mwh": round(
-                    p1a["reliability_tax_usd_per_mwh"] - p3["reliability_tax_usd_per_mwh"], 2),
-                "p1a_stranded_new_gas_billion": p1a["stranded_new_gas_capex_billion"],
-                "p1a_active_new_gas_mw": p1a["active_new_gas_fleet_mw_2050"],
+                "p3_rtax_usd_per_mwh": p3_rtax,
+                "p1_rtax_usd_per_mwh": p1_rtax,
+                "delta_p1_vs_p3_usd_per_mwh": round(p1_rtax - p3_rtax, 2),
+                "p1_stranded_new_gas_billion": p1["stranded_new_gas_capex_billion"],
+                "p1_active_new_gas_mw": p1["active_new_gas_fleet_mw_2050"],
+                "p1_undiscounted_cost_trillion": p1_cost,
+                "p3_undiscounted_cost_trillion": p3_cost,
+                "delta_p1_vs_p3_cost_pct": (
+                    round((p1_cost - p3_cost) / p3_cost * 100, 1) if p3_cost else None
+                ),
             }
 
     # Per-pathway sum of stranded new-gas capex at ep95 across feasible ISOs
@@ -296,7 +305,7 @@ def _compute_aggregations(rows: list[dict]) -> dict:
         "total_runs": total_runs,
         "feasible_runs": feas_count,
         "infeasible_runs": infeas_count,
-        "by_iso_at_ep95": iso_summary,
+        "by_iso_at_ep90": iso_summary,
         "by_pathway_at_ep95": pathway_summary,
     }
 
@@ -322,7 +331,9 @@ def main() -> None:
             "note": (
                 f"Full cross-ISO × pathway × endpoint table. {len(rows)} rows "
                 f"(7 ISO × 5 pathway × {len(CLOSING_ENDPOINTS)} endpoint). "
-                "Pathways: 1a (onshore VRE+storage only), 1b (+offshore wind), 2a, 2b, 3. "
+                "Pathways: 1 (VRE + storage + offshore headline), 1a (strict onshore "
+                "Card R baseline), 2a (behavioral pivot), 2b (economic pivot), "
+                "3 (proactive clean firm per §24.8 NOAK-2035). "
                 "Endpoints are the 5 headline thresholds out of the full 10-endpoint sweep."
             ),
             "reliability_tax_formula": (
@@ -359,13 +370,14 @@ def main() -> None:
     print("\n--- closing_summary_table quick summary ---")
     print(f"Total rows: {len(rows)}")
     print(f"Feasible: {agg['feasible_runs']} | Infeasible: {agg['infeasible_runs']}")
-    print("\nBy ISO at ep95 (P1a vs P3 reliability tax):")
-    for iso, d in agg["by_iso_at_ep95"].items():
+    print("\nBy ISO at ep90 (P1 vs P3 reliability tax + undisc. cost delta):")
+    for iso, d in agg["by_iso_at_ep90"].items():
         print(
             f"  {iso:6s}: P3=${d['p3_rtax_usd_per_mwh']:6.2f}/MWh, "
-            f"P1a=${d['p1a_rtax_usd_per_mwh']:6.2f}/MWh, "
-            f"Δ={d['delta_p1a_vs_p3_usd_per_mwh']:+6.2f}/MWh, "
-            f"P1a stranded=${d['p1a_stranded_new_gas_billion']:,.1f}B"
+            f"P1=${d['p1_rtax_usd_per_mwh']:6.2f}/MWh, "
+            f"Δ={d['delta_p1_vs_p3_usd_per_mwh']:+6.2f}/MWh, "
+            f"Δcost={d['delta_p1_vs_p3_cost_pct']}%, "
+            f"P1 stranded=${d['p1_stranded_new_gas_billion']:,.1f}B"
         )
     print("\nBy pathway at ep95 (sum across feasible ISOs):")
     for path, d in agg["by_pathway_at_ep95"].items():

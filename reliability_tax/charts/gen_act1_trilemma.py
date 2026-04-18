@@ -148,9 +148,12 @@ def main() -> None:
                 "rather than a design objective."
             ),
             "reliability_tax_definition": (
-                "The reliability tax = the fixed costs of the gas fleet that must remain "
-                "online to fill hours that VRE and storage cannot economically serve, "
-                "net of capacity market revenues, expressed as $/MWh of total consumption."
+                "The reliability tax = the GROSS ratepayer-cost components attributable "
+                "to pushing CFE higher: annualized new-build gas capex + new-gas FOM + "
+                "existing-gas FOM carried for reliability + priced VRE curtailment + "
+                "annualized VRE+storage overbuild capex, divided by total 2025–2050 "
+                "consumption MWh (SPEC §24.4 locked formula, Card M' — capacity-market "
+                "revenues are not netted out, since that only changes who pays)."
             ),
             "source_note": "Pathway and cost data: see MANIFEST.json and per-run JSONs in analysis/reliability-tax/data/.",
         },

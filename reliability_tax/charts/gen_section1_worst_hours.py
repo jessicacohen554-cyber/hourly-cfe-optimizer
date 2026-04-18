@@ -101,8 +101,9 @@ def _installed_gw_from_buildout(bo: list[dict], iso: str) -> dict[str, float]:
     Convert annual_buildout cumulative TWh → installed GW using capacity factors.
 
     Sums all vintage TWh across all years (gives total installed capacity at 2050).
-    This is the correct source for P1a/P1b where stranding_ledger only contains
-    resources where the pathway exceeds P3 (sparse/empty for low-stress ISOs).
+    This is the correct source for VRE-only pathways where stranding_ledger
+    only contains resources where the pathway exceeds P3 (sparse/empty for
+    low-stress ISOs).
     """
     totals: dict[str, float] = {}
     for yr_row in bo:
@@ -288,7 +289,7 @@ def main() -> None:
         # At ep99.9, storage overbuild eclipses gas entirely, obscuring the story.
         TARGET_EP = 0.95
         best_ep = TARGET_EP
-        best_run = get_run(iso, "1a", TARGET_EP)
+        best_run = get_run(iso, "1", TARGET_EP)
 
         if best_run is None:
             per_iso[iso] = {
@@ -343,7 +344,7 @@ def main() -> None:
         "per_iso": per_iso,
         "meta": {
             "payload_id": "section1_worst_hours",
-            "pathway": "1a",
+            "pathway": "1",
             "note": (
                 "SYNTHETIC worst-hour profiles. "
                 "endpoint_hourly_dispatch is None in schema_version=1 runs. "

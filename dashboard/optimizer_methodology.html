@@ -1134,19 +1134,24 @@ Where:
     <div class="insight-box" style="margin:var(--space-md) 0;">
         <strong>Reliability tax formula (five components):</strong>
         <span style="font-family:var(--font-data);">(annualized new-gas capex + new-gas FOM + carried existing-gas FOM + priced VRE curtailment + annualized VRE/storage overbuild capex) &divide; total demand MWh</span>,
-        summed across the 25-year horizon. Each component is reported separately. VRE/storage
-        overbuild is capacity whose dispatched energy falls below a 15% capacity-factor
-        threshold &mdash; otherwise it is serving real load. Curtailment is priced at the
-        weighted-average VRE LCOE.
+        summed across the 25-year horizon. Each component is reported separately. Priced
+        VRE curtailment follows SPEC &sect;24.7:
+        <span style="font-family:var(--font-data);">&Sigma;<sub>r</sub> surplus_frac[r,y] &times; demand_mwh[y] &times; vintage_lcoe[r,y]</span>
+        summed 2025&ndash;2050, with hybrid surplus priced at the underlying VRE vintage LCOE
+        (battery capex did not produce the curtailed MWh). Existing-fleet VRE vintages seeded
+        at <span style="font-family:var(--font-data);">cod_year&nbsp;=&nbsp;2024</span> carry
+        <span style="font-family:var(--font-data);">locked_lcoe&nbsp;=&nbsp;0</span> and dilute
+        the TWh-weighted average accordingly.
     </div>
 
     <p>
         <strong>Stranding is absolute, not comparative.</strong> A new-gas vintage is stranded
         when its annual capacity factor falls below 15% for two consecutive years, triggering
         a write-off of the unrecovered portion of book value: <span style="font-family:var(--font-data);">overnight_capex &times; (1 &minus; cumulative_recovered_revenue &divide; (capex + required_return_over_life))</span>.
-        The test is applied to each vintage in its own pathway; the P1a&ndash;vs&ndash;P3 delta
+        The test is applied to each vintage in its own pathway; the P1&ndash;vs&ndash;P3 delta
         is the headline narrative, not the definition. Every pathway carries some reliability
-        tax; the question is how large.
+        tax; the question is how large &mdash; and how much of it clean firm actually avoids
+        under each region&rsquo;s resource endowment (SPEC &sect;24.8).
     </p>
 
     <h4 style="margin-top:var(--space-lg);">Card-level methodology</h4>
@@ -1172,13 +1177,22 @@ Where:
 
         <p><strong>Card K&prime; &mdash; Stranding definition.</strong> Absolute per-pathway,
         not comparative. Existing clean firm in P2a/P2b/P3 is never stranded &mdash; it serves
-        real load. The P1a&ndash;vs&ndash;P3 delta in reliability tax $/MWh is the narrative
+        real load. The P1&ndash;vs&ndash;P3 delta in reliability tax $/MWh is the narrative
         device, not the definition.</p>
 
         <p><strong>Card S &mdash; Endpoint coverage.</strong> Ten CFE endpoints
-        (60/70/75/80/85/90/95/97.5/99/99.9%) &times; 5 pathways &times; 7 ISOs = 350 runs.
-        Lower endpoints expose the medium-CFE new-gas hump; upper endpoints expose the
-        abandonment pattern past 90%.</p>
+        (60/70/75/80/85/90/95/97.5/99/99.9%) &times; 5 pathways (1, 1a, 2a, 2b, 3) &times;
+        7 ISOs = 350 runs. Lower endpoints expose the medium-CFE new-gas hump; upper endpoints
+        expose the abandonment pattern past 90%.</p>
+
+        <p><strong>SPEC &sect;24.8 &mdash; Per-pathway exogenous NOAK year.</strong> Pathway
+        differentiation for clean-firm technologies (nuclear / CCS-CCGT / geothermal) is
+        encoded as an exogenous NOAK year: P3 &rarr; 2035, P2b &rarr; 2040, P2a &rarr; 2045;
+        P1 and P1a do not build new clean firm, so the override is irrelevant. No pathway
+        filters, no clean-firm floors &mdash; the cost-optimal mix surfaces organically under
+        each pathway&rsquo;s accelerated Wright&rsquo;s-Law curve. In VRE-rich ISOs (ERCOT,
+        SPP) P1 and P3 converge within ~1% on undiscounted cost; in VRE-constrained ISOs
+        (PJM, NYISO, NEISO) P3 saves 50&ndash;70% of undiscounted cost at 90% CFE.</p>
     </div>
 
     <h3>CO&#8322; Abatement Analysis</h3>
