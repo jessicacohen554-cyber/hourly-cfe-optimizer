@@ -7,6 +7,25 @@
 
 ## Current Status (Apr 18, 2026)
 
+### Pipeline-Audit Re-Launch + SPEC Rotation — IN PROGRESS (Apr 18, 2026, late night)
+
+**Accomplished this session.**
+- Rotated the oldest `## Current Status` sub-block ("Reliability Tax Page Redesign — IN PROGRESS (Apr 18, 2026, late)") from SPEC.md to the top of `SPEC_LOG.md`'s archive section. SPEC.md: 563 → 538 lines. SPEC_LOG.md: 5,362 → 5,391 lines. Reverse-chronological ordering preserved in the log.
+- Re-launched the pipeline-audit sub-agent against the step_2_3 + reliability-tax chain that the prior session had started but did not finish. Four inputs supplied per the agent's spec (target paths, plain-language intent, hypothesis, observed result including the user's suspicion of `_filter_pathway_3` / `solve_pathway` / `compute_clean_firm_tranches_for_year` / `size_required_gas_mw` or SBTi+NOAK timing skew).
+
+**In progress.** Audit agent running in background as of this writeout; verdict (A/B/C) not yet returned. No memo on disk at `reliability_tax/` yet.
+
+**Next steps (gated on audit completion).**
+1. If Verdict A: short chat memo; no file or SPEC action.
+2. If Verdict B: audit memo will land at `reliability_tax/AUDIT_2026-04-18_step_2_3_pathway_optimizer.md`, agent adds a one-line `AUDIT (2026-04-18): ...` pointer under this Current Status entry, and emits a coding-session handoff prompt to paste into a fresh `subagent_type: "coding-session"`.
+3. If Verdict C: chat-only mechanism explanation; no code change — the hypothesis was wrong, not the code.
+
+**Open questions.**
+- SPEC.md is still at 538 lines — 38 over the ~500 cap. Rotate one more block (next candidate: the "Coding-Session Sub-Agent — LANDED" block, since it's complete and self-contained), or let it ride until the next new Current Status block is written?
+- If the audit returns Verdict B and the user picks card options that touch `step_2_3_pathway_optimizer.py`, should the coding-session agent also re-run the 350-run v2 sweep as a validation gate, or is a per-ISO spot-check sufficient? (The full sweep is heavy-compute — see `OPS.md` pre-run gate.)
+
+**Resume prompt for next session:** *"A pipeline-audit re-launch was triggered on `scripts/step_2_3_pathway_optimizer.py` + `reliability_tax/charts/gen_section{2,3}_*.py` + `dashboard/reliability-tax.html`. Check `reliability_tax/` for an `AUDIT_2026-04-18_step_2_3_*.md` memo and the top of SPEC.md `## Current Status` for the one-line verdict pointer. If memo exists and verdict is B, paste the coding-session handoff prompt the agent emitted into a fresh `subagent_type: coding-session` and proceed with the user's chosen card options. If no memo was written and no pointer line is present, verdict was A or C (no code change needed) or the agent errored — look at the agent transcript. After the audit is resolved, SPEC.md may still be over the ~500-line cap; user can approve rotating the 'Coding-Session Sub-Agent — LANDED' block to SPEC_LOG if a second rotation is desired."*
+
 ### Pipeline-Audit Sub-Agent — LANDED (Apr 18, 2026, night)
 
 **What landed.** `.claude/agents/pipeline-audit-agent.md` — sub-agent for systematic, third-party audits of pipeline code against a plain-language statement of design intent. Workflow: Phase 1 silent reads (`CLAUDE.md`, `SPEC.md` Current Status, every file in the code-reference table for the task, the target file in full, the local methodology doc, ≥3 cached output files); Phase 2 code-vs-intent trace marking each operation Aligned / Silent-assumption / Misaligned / Outside-scope; Phase 3 hypothesis-vs-data trace re-derived directly from cached JSONs (never trusts manifest summaries or README claims); Phase 4 mandatory external sanity checks against NREL ATB, Lazard, EIA AEO, BNEF, IEA, SBTi for every load-bearing parameter; Phase 5 verdict via fixed decision tree producing exactly one of three outcomes — A (sound design + sound results), B (fundamentally flawed methodology), C (sound design but hypothesis does not hold). Verdict B writes `<feature_dir>/AUDIT_<date>_<target>.md` with intervention points + decision cards (each card has options, recommended choice, blast radius), adds a one-line pointer to SPEC.md `## Current Status`, and emits a self-contained ``` ``` handoff prompt for `subagent_type: coding-session`. Verdict C explains the mechanism in chat — no file written, no SPEC edit, no handoff. Hard rules: never trust docstrings/README/methodology-doc claims; never propose code fixes (those are user-choosable card options); never modify the target code or methodology docs; never rubber-stamp; never declare Verdict A without ≥3 cached files re-derived by hand. Invoke with `subagent_type: "pipeline-audit-agent"`.
@@ -54,32 +73,7 @@
 
 **Resume prompt for next session:** *"Pick up the project-infra workstream on the reliability-tax redesign branch. Three sub-agents and three slash commands are landed (`jargon-fixer`, `voice-fixer`, plus `/fix-jargon`, `/fix-voice`, `/fix-prose`). `CLAUDE.draft.md` is on disk awaiting user approval to replace `CLAUDE.md`. Once approved: (1) move draft into place; (2) create `OPS.md` with optimizer-run / compute / data-persistence content extracted from the current `CLAUDE.md`; (3) seed `LESSONS.md` with this session's five learnings; (4) create `SPEC_LOG.md` archive and cap `SPEC.md`; (5) test-drive `/fix-prose` against `dashboard/reliability-tax.html` to validate. Do NOT replace `CLAUDE.md` until the user explicitly approves the draft."*
 
-### Reliability Tax Page Redesign — IN PROGRESS (Apr 18, 2026, late)
-
-**Task context.** User rejected current `dashboard/reliability-tax.html` as too weird, jargon-heavy, and self-referential. Specific feedback: section names like "The Setup" / "The Hump" / "The Abandonment" / "The Tax" / "The Cost of Waiting" are pretentious; in-body `SPEC §24.5`, `SPEC §24.6`, `SPEC §24.7`, `SPEC §24.8`, `Card F'`, `Card J`, `Card R` references are idiotic for public readers; charts/layout weak. Goal: reframe streamlined, plain-language, in the voice of `clean_firm_case.html` and `lmp_trends.html` (numbered `section-header` + `section-number` badges, descriptive titles, direct analytical prose, no methodology-doc self-reference).
-
-**What's done (committed this session):**
-- **Hero (§0)** — rewrote lead paragraph in plain language; added 4-tile key-findings grid ($4–18/MWh tax, 30–40% stranded, 50–70% cheaper with P3, ~1% ERCOT/SPP convergence); replaced SPEC-speak "reliability tax formula" insight with "what this bill is made of" plain-English version.
-- **Section 1 (was "The Setup")** — renamed to **"Why a clean-only grid still builds gas"** using `section-header` + `section-number` pattern. Duck-panel titles switched `70% CFE → 70% clean`, `95% CFE → 95% clean` with plain-language subs. Body prose fully rewritten: dropped SPEC §24.5 citation, ELCC-credit jargon, "99.97th percentile of hourly margin-on-demand residual", NERC / PJM 1-day-in-10-years LOLE benchmark. Kept the physical rule (2.6 tail hours/year) in accessible terms.
-- **Section 2 (was "The Hump")** — renamed to **"How much new gas gets built"** with `section-header` wrapper + descriptive subtitle.
-
-**What's still to do (unchanged in the file):**
-1. **Section 2 insight box** — still has "The hump." lead, §24.6 citation, Card F′ reference, SPP/MISO/PJM/ERCOT run-on methodology sentence. Rewrite as plain-language "where new-gas build peaks and why".
-2. **Section 3 ("The Abandonment")** — rename to e.g. **"How much of it gets stranded"**. Strip Card F′ references from subtitle and legend. Update `#abandonmentInsight` JS-rendered copy.
-3. **Section 4 ("The Tax")** — rename to e.g. **"The bill on ratepayers"**. Strip §24.7 reference from subtitle. The delta-insight JS is mostly fine (already plain-language) but drop the `§24.8 NOAK-2035` clause in the verdict strings.
-4. **Section 5 ("Five pathways, five taxes")** — keep the title, rewrite the green-bordered insight box so it doesn't cite "§24.8 findings to watch for"; list the findings plainly. Strip §24.8 from the `ERCOT P1 ≡ P3` and `PJM P3 saves 66.7%` lines. Pathway-card `PATHWAYS` array descriptions also need cleanup: P1a mentions "(Card R)", P3 mentions "§24.8 NOAK-2035 Wright's-Law curve", etc.
-5. **Section 6 (Stranding Sankey)** — rewrite subtitle ("§24.6 peak-year snapshot" → plain), drop Card F′ from the chart-panel meta line and bottom insight box.
-6. **Section 7 ("The Cost of Waiting")** — keep the title (it's fine), rewrite closing insight box to drop "Card F′", "§24.8 NOAK-2035 window", and P1a shorthand.
-7. **Section 8 ("All 175 runs")** — keep title. Bottom insight box drops Card J and italic-cost ceiling citation.
-8. **Footer** — `data-footer-note` has `v2 methodology (SPEC §24.4)`. Strip the SPEC citation.
-9. **Chart titles/axes** — pass through every Chart.js `options.plugins.title` / `scales.*.title.text` and simplify: e.g. "Cumulative new gas (MW, 2050)" is fine, but `"Stranded capex ($B, 2025–2050)"` etc. are OK. Mostly fine already; verify after the copy rewrites land.
-10. **Chart-title elements** — existing page has no `<div class="chart-title">` labels above each canvas (unlike `clean_firm_case.html`/`lmp_trends.html`). Add one to each `.chart-panel` so users know what the chart shows at a glance without reading the narrative first.
-
-**Style-reference pages used.** `dashboard/clean_firm_case.html` (section-header numbered pattern, narrative-card style, foak-hero layout) and `dashboard/lmp_trends.html` (key-findings-panel grid, Era 1/2/3 title convention, section subtitles).
-
-**Resume prompt:** *"Continue the Reliability Tax page redesign in `dashboard/reliability-tax.html`. Hero (§0), Section 1, and Section 2 opener have been rewritten in plain language (no SPEC §, no Card F′). Still to do: (a) Section 2 insight box, (b) Section 3 'Abandonment' rename + prose + JS insight, (c) Section 4 'The Tax' rename + prose + JS delta-insight verdict strings, (d) Section 5 insight box and PATHWAYS array descriptions, (e) Section 6 Sankey subtitle + bottom insight, (f) Section 7 closing insight, (g) Section 8 bottom insight + footer data-footer-note, (h) add per-chart `<div class="chart-title">` headers above each `<canvas>` matching the clean_firm_case pattern. Reference pages: `clean_firm_case.html` and `lmp_trends.html`. Do NOT reference SPEC.md or any `Card X'` shorthand anywhere in the user-facing copy."*
-
-> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut). See that file for the historical decision log.
+> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; late-night rotation moved the oldest reliability-tax redesign block to SPEC_LOG). See that file for the historical decision log.
 ---
 
 ## 1. Model Framework
