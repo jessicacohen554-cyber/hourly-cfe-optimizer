@@ -1,9 +1,40 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-04-17.
+> Last updated: 2026-04-18.
 
-## Current Status (Apr 17, 2026)
+## Current Status (Apr 18, 2026)
+
+### Reliability Tax Dashboard Regeneration — LANDED (Apr 18, 2026)
+
+**Branch:** `claude/regen-reliability-tax-v2-d0U5j` (3 commits; pushed; no PR opened per user default).
+
+**What was accomplished this session:**
+- **Phase A — chart payloads regenerated.** All 12 `reliability_tax/charts/gen_*.py` generators re-run against the banked 350-run v2 sweep. Key fixes: `data_loader.PATHWAYS` corrected to the real sweep set `["1", "1a", "2a", "2b", "3"]`; `gen_section3_reliability_tax.py` now reads `priced_vre_curtailment_usd` and `vre_storage_overbuild_capex_usd` directly from the solver (resolves the only "Action item (open)" flagged in the previous Current Status block); headline comparator swap from `"1a"` to `"1"` across 5 generators; `gen_act1_trilemma` reliability-tax definition updated to the gross Card M' framing.
+- **Phase B — `dashboard/reliability-tax.html` walked section by section.** Pathway wiring switched from `[1a, 1b, 2a, 2b, 3]` → `[1, 1a, 2a, 2b, 3]`; Section 4 delta-insight JS rewritten to distinguish VRE-rich convergence (ERCOT, SPP: P1 ≡ P3) from VRE-constrained divergence (PJM, NYISO, NEISO: P3 saves 50–70%); Section 5 journey cards moved to ep90 (the §24.8 central-finding endpoint) with a new green-accent insight box listing the two §24.8 findings; Section 2 hump insight refreshed to §24.6 peak-year-snapshot semantics; Section 6 Sankey subtitle reframed for the single-consolidated-vintage schema; Section 7 cost-of-waiting cites the §24.8 NOAK-2035 window. ERCOT/SPP scarcity-pricing callout preserved verbatim.
+- **Phase C — cross-page propagation.** `optimizer_methodology.html` Card K' / Card S updated, new §24.8 card appended, priced-curtailment formula rewritten to SPEC §24.7 form. `index.html` Act 4 scanned — no hardcoded reliability-tax numbers; methodology-neutral narrative compatible with v2, no edits required. `abatement_dashboard.html` has no reliability-tax references. `research_paper.html` does not exist in the repo.
+
+**Headline numeric shifts (selected — see §24.9 for the full table):**
+- `hook_reliability_tax.json` cross-ISO P1-vs-P3 cost delta: **17.7% → 29.6%** ($2.84T → $4.10T summed across feasible ISOs at ep95).
+- `section3_reliability_tax.json` PJM ep90: **P1 $12.94/MWh vs P3 $2.47/MWh** (−81% on tax basis, −66.7% on undiscounted cost basis — matches §24.8 empirical table exactly).
+- `section3_reliability_tax.json` ERCOT ep90: **P1 $11.36/MWh vs P3 $11.34/MWh** (Δ = $0.02/MWh — confirms the §24.8 VRE-rich convergence finding).
+- `section5_stranding_sankey.json` total @ ep95: **$5,639B → $14.6B** (Card K' absolute framing correctly captures only CF<15%-for-2-years vintages; pre-regen value was the old Card K comparative VRE book-value delta).
+
+**Schema invariants added to `reliability_tax/charts/data_loader.py` docstring.**
+- Consumers MUST read `priced_vre_curtailment_usd` from the solver, not recompute.
+- `stranding_metadata.peak_year` can be 2050 (no stranding) but never None.
+- `terminal_ledger` top-level list now pre-seeds existing-fleet vintages at `cod_year = 2024, locked_lcoe = 0`; any future generator that iterates vintages must filter `cod_year >= 2025` for new-build attribution or explicitly bucket `resource == 'clean_firm_existing'` as existing fleet.
+
+**Verification (all success gates passed).**
+1. Every regenerated JSON parses (12 in `reliability_tax/charts/` + 7 mirrored in `dashboard/js/reliability-tax/`).
+2. 5 canvases in `reliability-tax.html` (hump / abandonment / tax / sankey / wait) each wire to a `new Chart(` call; `getElementById` + IIFE scoping intact.
+3. No orphan hardcoded numbers in HTML — all $/MWh, $B, GW values either (a) render from fetched payloads or (b) are methodology constants (NOAK years, CF<15% threshold, 99.97th percentile).
+4. Mobile: chart-container-lg = 320px min-height (shared.css @768px); 44px min tap targets preserved.
+5. `/security-review` clean on the diff (data/narrative refresh only; no new untrusted-input sinks, no deserialization, no crypto).
+
+**Next open item (gated on user authorization):** optional 7-ISO × 3-endpoint L/H-cost sensitivity sweep. Current 350-run bank is Medium costs only. §24.8 finds the central story survives Medium; L/H corners would show sensitivity bands on the P1-vs-P3 delta in each ISO. Pre-Run Gate applies: ~6–9h wall clock; methodology already locked; no optimizer-code changes needed.
+
+**Resume prompt for next session:** *"Pick up on the Reliability Tax workstream. Current state: Apr 18, 2026 dashboard regeneration is LANDED at §24.9. Next open item is the 7-ISO × 3-endpoint L/H-cost sensitivity sweep documented in §24.9 Scope Boundary — gated on user authorization. If user approves, follow the Pre-Run Gate in CLAUDE.md before launching."*
 
 ### Reliability Tax Sizing Bugs — Steps 1–3 Complete (Apr 17, 2026)
 
@@ -5723,3 +5754,67 @@ priced_vre_curtailment_usd (cumulative)
 - Dispatch cache (`data/step3-dispatch/*.parquet`) grows monotonically as the sweep expands archetype coverage; commit alongside the 350 per-run JSONs.
 
 **Scope boundary.** Step 3 v2 (`8f87a56`) + accounting fix (`c576cec`) is the final methodology for pathway differentiation. The accounting fix is a bug repair, not a methodology change — it restores the property that identical mixes produce identical costs across pathways while preserving the exogenous-NOAK divergence that is the scientific content of the sub-project.
+
+### 24.9 Dashboard regeneration against v2 sweep (Apr 18, 2026)
+
+**Context.** Step 3 v2 accounting fix (`c576cec`) + 350-run sweep (`c7868df`) left the dashboard chart payloads and `reliability-tax.html` narrative stale. This session regenerated every payload from the banked sweep and walked the dashboard + cross-page references to reflect the real §24.6 / §24.7 / §24.8 numbers.
+
+**Scope (landed this session on branch `claude/regen-reliability-tax-v2-d0U5j`).**
+
+**Phase A — chart regeneration.**
+- `reliability_tax/charts/data_loader.py`: `PATHWAYS` corrected to the actual sweep set `["1", "1a", "2a", "2b", "3"]` (was `["1a", "1b", "2a", "2b", "3"]`; pathway 1b retired before v2). Docstring updated to flag the v2 schema changes — non-zero `priced_vre_curtailment_usd` for VRE-heavy pathways, non-None `stranding_metadata.peak_year`, pre-seeded `terminal_ledger` at `cod_year = 2024` per §24.8.
+- `gen_section3_reliability_tax.py`: priced-VRE-curtailment and VRE+storage-overbuild components now read directly from the solver's `reliability_tax.components_usd` dict instead of recomputing a local mix-excess proxy. This resolves the "Action item (open)" from the prior Current Status block. P1 now shows the real §24.7 vintage-weighted curtailment stack ($9.19/MWh on PJM P1 ep90, dominant at high CFE).
+- `gen_closing_summary_table.py`: per-ISO aggregation switched from ep95 P1a-vs-P3 to ep90 P1-vs-P3 (matches §24.8 empirical table); column description updated; pathway-listing text refreshed.
+- `gen_section1_narratives.py`, `gen_section1_worst_hours.py`, `gen_section2_gas_hump.py`: headline VRE pathway swapped from `"1a"` → `"1"` in all data lookups, labels, and print statements. `gen_section6_cost_of_waiting.py` keeps `"1a"` as the strict-onshore "never commit" anchor and documents that choice inline.
+- `gen_sankey.py`: added §24.8 seed-vintage note to `meta.note` (consumer reads `tables.new_gas_fleet[]` with `cod_year >= 2025` by construction; seed vintages are not double-counted).
+- `gen_act1_trilemma.py`: `reliability_tax_definition` rewritten to the gross Card M' framing (dropped "net of capacity market revenues" language).
+- All 12 generators re-run without error; stdout/stderr captured to `logs/rt_charts_regen.log`. Output parquets for `reliability_tax/charts/*.json` and mirrored `dashboard/js/reliability-tax/*.json` all parse.
+
+**Phase B — HTML narrative update (`dashboard/reliability-tax.html`).**
+- Pathway wiring across Sections 2/3/4/5/6/8 switched from `[1a, 1b, 2a, 2b, 3]` → `[1, 1a, 2a, 2b, 3]`. P1b button removed everywhere; P1 added as the headline VRE pathway; P1a retained as the strict-onshore Card R baseline.
+- Section 4 delta-insight JS rewritten to distinguish VRE-rich convergence (ERCOT, SPP — "P1 ≡ P3 within ~$1/MWh") from VRE-constrained divergence (PJM, NYISO, NEISO — "P3 cuts the reliability tax by 50–70%"). Verdict copy fires off the sign of the P1 − P3 delta and the ISO identity.
+- Section 5 journey subtitle + new green-accent insight box surfaces the two §24.8 findings verbatim (ERCOT P1 ≡ P3 at every endpoint within ~1% on cost; PJM P3 saves 66.7% of undiscounted cost at ep90, wipes the $275B priced-curtailment bar). Journey cards now render at ep90 (the §24.8 central-finding endpoint) rather than ep95.
+- Section 2 "hump" insight updated to §24.6 peak-year-snapshot semantics (ERCOT P1 peak = 134 GW @ ep80 not 111 GW @ ep90 as in the pre-fix data; PJM P1 peak = 106 GW @ ep80; MISO peak = 70 GW @ ep90).
+- Section 6 Sankey subtitle reframed for the §24.6 single-consolidated-vintage-at-peak schema (drops the old vintage-year histogram framing).
+- Section 7 cost-of-waiting insight cites the §24.8 NOAK-2035 window explicitly; retains P1a as the "never commit" anchor.
+- ERCOT/SPP callout (capacity-market-vs-scarcity-pricing language) preserved verbatim — methodology-neutral and unchanged by v2.
+
+**Phase C — cross-page propagation.**
+- `dashboard/optimizer_methodology.html`: Card K' description (P1a → P1 headline), Card S pathway list corrected, new §24.8 card appended (per-pathway exogenous NOAK + VRE-rich convergence finding), priced-curtailment formula block rewritten to the §24.7 formal form.
+- `dashboard/index.html` Act 4: scanned; no hardcoded reliability-tax $/MWh or $B/GW numbers. Narrative uses paper-Strategy-1B/2C framing from the separate main-optimizer shared-data.js pipeline, not the reliability-tax sweep. Methodology-neutral language compatible with v2. No edits required.
+- `dashboard/abatement_dashboard.html`: no reliability-tax references in page body. No edits required.
+- `research_paper.html`: not in the repo. Skipped per §24.4 Status note.
+
+**Headline numeric shifts (pre-regen → post-regen, selected).**
+```
+hook_reliability_tax.json (cross-ISO P1 vs P3 @ ep95, feasible ISOs sum):
+  pathway1_total_usd                $18.93T  ->  $17.94T
+  pathway3_total_usd                $16.09T  ->  $13.84T
+  delta_pct                           17.70% ->   29.60%
+
+section3_reliability_tax.json (rtax $/MWh):
+  ERCOT P1 ep90                       N/A    ->  $11.36/MWh   (new P1 track)
+  ERCOT P3 ep90                      $19.23  ->  $11.34/MWh
+  PJM P1 ep90                         N/A    ->  $12.94/MWh
+  PJM P3 ep90                        $11.09  ->   $2.47/MWh   (-66.7% cost vs P1)
+
+closing_summary_table.json by_iso ($/MWh, swap ep95 P1a→ep90 P1):
+  CAISO  +2.59 ->  +12.10    (VRE-tight, P3 still wins)
+  ERCOT  +0.00 ->   +0.02    (P1 ≡ P3 convergence gate)
+  MISO   +0.60 ->   +1.07
+  NEISO  +0.87 ->   -2.56    (P1 cheaper — VRE + offshore suffices)
+  NYISO  +0.89 ->   +0.00
+  PJM    -0.04 ->  +10.47    (P3 saves 66.7% cost; $10.47/MWh rtax)
+  SPP    +0.00 ->   -3.55    (VRE-rich — P1 actually cheaper)
+
+section5_stranding_sankey.json (Card K' absolute @ ep95):
+  total_stranded_capex            $5,639B  ->   $14.6B
+```
+The $5.6T → $15B stranding collapse is a direct consequence of dropping the old Card K comparative framing: VRE book-value deltas were being attributed as "stranding" pre-v2, while Card K' absolute counts only new-gas vintages that trip the CF<15%-for-2-years Card F' test.
+
+**Data-loader schema changes (locked).**
+- `data_loader.PATHWAYS = ["1", "1a", "2a", "2b", "3"]`.
+- Module docstring enumerates v2 schema invariants that every downstream consumer must honor: (a) read `priced_vre_curtailment_usd` from solver, not recompute; (b) `stranding_metadata.peak_year` can be 2050 (meaning "no stranding") but is never None; (c) `terminal_ledger` top-level list now includes pre-seeded `cod_year=2024, locked_lcoe=0` entries that must be either filtered to `cod_year >= 2025` for new-build attribution or bucketed as "existing fleet" via `resource == 'clean_firm_existing'`.
+- No generator currently iterates `terminal_ledger` directly, so (c) is a forward-looking invariant for any future generator that touches vintage ledgers.
+
+**Scope boundary.** Dashboard regeneration is complete. No further optimizer runs required. The next open item is the optional 7-ISO × 3-endpoint sensitivity sweep at the L/H cost corners (Medium only is banked) — gated on user authorization per the Pre-Run Gate rule.
