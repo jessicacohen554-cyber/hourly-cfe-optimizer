@@ -7,10 +7,11 @@
 
 1. **Use full thinking depth** on every non-trivial edit. Don't downshift because a task "seems mechanical." The harness sets `MAX_THINKING_TOKENS=64000` — use it.
 2. **Anchor every new page to a reference filename** ("build it like `abatement_dashboard.html`"). If no reference was named in the task brief, ask before starting.
-3. **Plan before writing** any data-touching code or any user-facing prose >100 words. Output the plan, wait for OK.
-4. **Vectorize before looping.** Never write a Python `for` loop over data arrays >1k rows. If you're about to, stop and write the vectorized kernel signature first, show it, wait for OK.
-5. **Run `/fix-prose` before committing** any HTML/MD page you wrote or substantially edited. The `jargon-fixer` and `voice-fixer` agents catch self-referential jargon and AI-tell language you missed.
-6. **End every session by writing one line** to `LESSONS.md` describing the most important fix-this-next-time learning.
+3. **Anchor every code task to reference files.** Before writing or editing any script, identify the task category from the **code-reference table below** and read the listed reference files in full. Pattern-matching from filename alone produces wrong code.
+4. **Plan before writing** any data-touching code or any user-facing prose >100 words. Output the plan, wait for OK.
+5. **Vectorize before looping.** Never write a Python `for` loop over data arrays >1k rows. If you're about to, stop and write the vectorized kernel signature first, show it, wait for OK. Reference exemplar: `market-simulator/scripts/fleet_dispatch.py` ("Fully vectorized — no Python for-loops over the 1,215 scenarios").
+6. **Run `/fix-prose` before committing** any HTML/MD page you wrote or substantially edited. The `jargon-fixer` and `voice-fixer` agents catch self-referential jargon and AI-tell language you missed.
+7. **End every session by writing one line** to `LESSONS.md` describing the most important fix-this-next-time learning.
 
 ## Source docs — what to read when
 
@@ -34,6 +35,31 @@
 | Interactive optimizer page | `dashboard/dashboard.html` |
 | Methodology / spec page | `dashboard/optimizer_methodology.html` |
 | Research-paper-style page | `dashboard/research_paper.html` |
+
+## Code-reference table — anchor every code task
+
+When the task involves writing or editing code, identify the category and read the listed files in full **before writing anything**.
+
+| Working on... | Read first |
+|---|---|
+| Reliability-tax chart payload generators | `reliability_tax/charts/data_loader.py`, `reliability_tax/charts/gen_section3_reliability_tax.py` (cleanest gen_* example), `reliability_tax/methodogy.md`, `reliability_tax/INHERITANCE_PLAN.md` |
+| Reliability-tax pipeline / data ingestion | `reliability_tax/charts/data_loader.py`, `analysis/reliability-tax/README.md`, `analysis/reliability-tax/data/` (sample run output) |
+| Optimizer pipeline (Steps 0–7, 7-ISO sweeps) | `PIPELINE.md`, `market-simulator/scripts/pipeline_config.py`, `market-simulator/scripts/sweep_params_io.py`, `market-simulator/scripts/run_sweep_1215.py`, `data/step1-pfs/` … `data/step7*` for cached outputs |
+| Fleet dispatch / 1,215-scenario sweep | `market-simulator/scripts/fleet_dispatch.py` (canonical vectorized exemplar), `market-simulator/scripts/build_fleet_scenario_data.py`, `market-simulator/scripts/fleet_model.py`, `market-simulator/scripts/scenario_common.py` |
+| LMP modeling / wholesale price simulation | `market-simulator/scripts/lmp_engine.py`, `market-simulator/scripts/zonal_lmp.py`, `market-simulator/scripts/dispatch_utils.py`, `market-simulator/scripts/market_simulation.py` |
+| EIA / fuel-price / interchange ingestion | `market-simulator/scripts/eia_data_io.py`, `market-simulator/scripts/step0_fetch_interchange.py`, `market-simulator/scripts/step0_parse_aeo_fuel_prices.py`, `market-simulator/scripts/fuel_price_projections.py`, `data/eia-860/`, `data/eia-923/`, `data/eia-930/` |
+| Plant-level data (heat rates, retirement, eGRID) | `market-simulator/scripts/generate_plant_heat_rates.py`, `market-simulator/scripts/validate_plant_retirement.py`, `data/egrid_emission_rates.json`, `data/eia-860/` |
+| Synthetic profile generation | `market-simulator/scripts/generate_synthetic_profiles.py`, `data/eia_demand_profiles_multiyear.json`, `data/eia_generation_profiles_multiyear.json` |
+| Profile modeling / dispatch optimizer (separate codebase) | `profile-modeling/dispatch.py`, `profile-modeling/optimizer.py`, `profile-modeling/supply.py`, `profile-modeling/load_profiles.py`, `profile-modeling/run_analysis.py` |
+| Hybrid VRE+storage profiles | `step7_1h_extract_hybrid_data.py`, `data/hybrid_profiles/*.npz`, `dashboard/js/hybrid-analysis-data.js` |
+| Datacenter-load modeling | `step0_generate_datacenter_load.py`, `data-center-cfe/analysis/coal_wall_analysis.py`, `data-center-cfe/analysis/gap_analysis.py`, `data/datacenter_load_metadata.json`, `data/datacenter_load_profile.csv` |
+| Constellation / multi-fleet scenarios | `market-simulator/scripts/generate_constellation_scenarios.py`, `market-simulator/fleet_scenarios/`, `market-simulator/scripts/scenario_common.py` |
+| Sensitivity analysis | `market-simulator/scripts/sensitivity_analysis.py`, `market-simulator/scripts/sweep_params_io.py` |
+| Smoke / validation tests | `run_ercot_smoke_test.py`, `qa_check.sh`, `market-simulator/scripts/tests/`, `market-simulator/scripts/validate_plant_retirement.py`, `pytest.ini` |
+| Dashboard JS / Chart.js wiring | `dashboard/js/chart-colors.js`, `dashboard/js/scroll-observer.js`, `dashboard/js/shared-header.js`, `dashboard/js/shared-footer.js`, plus the matching reference dashboard page from the page table above |
+| Dashboard CSS / styling | `dashboard/styles/shared.css`, `dashboard/styles/article.css`, `dashboard/styles/scrollytell.css`, `DESIGN_SYSTEM.md` |
+| Building a new chart-payload `gen_*.py` | `reliability_tax/charts/data_loader.py` (canonical loader), the closest sibling `gen_*.py` to your new chart, the JSON schema of an existing payload, and the dashboard page that consumes it |
+| Market-simulator desktop app changes | `market-simulator/desktop_app.py`, `market-simulator/backend/main.py`, `market-simulator/backend/models.py`, `market-simulator/USER_MANUAL.md` |
 
 ## Voice — what gets shipped to readers
 
