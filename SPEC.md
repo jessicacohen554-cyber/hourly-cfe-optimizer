@@ -43,9 +43,11 @@ PJM    90    7167.8   2390.3   −66.65 %  cf=79 sol=0  wind=10  (strong diverge
 **Resume instructions for next session (350-run sweep + dashboard regeneration):**
 1. Read §24.6–§24.8 if context is lost.
 2. Pre-seed / base-year accounting fix is LANDED (commit c576cec). Re-running the reproducer (`python3 scripts/step_2_3_pathway_optimizer.py --iso ERCOT --pathway 3 --endpoint 0.60 …`) now matches P1 within 0.23 %.
-3. Launch the full 350-run sweep: `python3 scripts/run_pathway_sweep.py --iso <ISO>` across all 7 ISOs × 10 endpoints × 5 pathways. Expected wall clock ~8–9 hours end-to-end. User has previously explicitly authorized this sweep pending Step 3 completion.
-4. Bank results: `git add analysis/reliability-tax/data/ data/step3-dispatch/` after the sweep writes MANIFEST + all 350 per-run JSONs and any expanded dispatch-cache archetypes, then commit + push.
-5. Regenerate dashboard JS data via `reliability_tax/charts/*.py` readers. The new `priced_vre_curtailment_usd_this_year` field flows through to the tax-decomposition stacked bars (§24.7 + §24.4 Card U/F'); verify it lands non-zero for VRE-heavy pathways in the dashboard payloads.
+3. **350-run sweep is LIVE** as of 2026-04-17 ~23:43 UTC. Launched via `nohup setsid bash scripts/_sweep_all_isos_step3fix.sh > logs/rt_step3fix_sweep_wrapper.log 2>&1 &`. Streams ISO_START/ISO_DONE/ISO_FAIL/SWEEP_DONE events to `logs/rt_step3fix_sweep.log`. Check `ps -ef | grep run_pathway_sweep` before launching a second instance. Old pre-fix data archived to `analysis/reliability-tax/data-archive-pre-step3-fix-2026-04-17/`.
+   - If sweep completes while session is idle, pick up at step 4.
+   - If sweep died mid-run, inspect log, troubleshoot, rerun with `--force` if needed. MANIFEST-based resume should skip already-completed runs.
+4. Bank results: `git add analysis/reliability-tax/data/ data/step3-dispatch/ analysis/reliability-tax/data-archive-pre-step3-fix-2026-04-17/` after the sweep writes MANIFEST + all 350 per-run JSONs and any expanded dispatch-cache archetypes, then commit + push.
+5. Regenerate dashboard JS data via `reliability_tax/charts/*.py` readers. **Action item (open):** `gen_section3_reliability_tax.py::_compute_priced_curtailment_usd` currently computes curtailment locally from a mix-excess proxy rather than consuming the solver's new `components_usd.priced_vre_curtailment_usd` field (§24.7). Either (a) patch the chart to use the solver value directly, or (b) leave the proxy in place and verify the solver value flows through to a separate downstream artifact (e.g. via `data_loader.get_pathway_cost` → `annual_cost[].priced_vre_curtailment_usd_this_year`). Verify the final stacked bars show non-zero VRE-curtailment bars for VRE-heavy pathways (PJM P1 ep90 ≈ $275 B cumulative, ERCOT P1 ep99.9 ≈ $182 B).
 
 ### Reliability Tax v2 Dashboard Rewrite (Landed — Apr 17, 2026)
 
