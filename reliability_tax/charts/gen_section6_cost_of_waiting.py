@@ -10,8 +10,10 @@ Framing under SPEC §24.4:
   - Pathway 2a (pivot_year anchor): delay then pivot late when VRE-only hits
     its floor. New-build gas accumulates before pivot and ends up stranded
     (SPEC Card F' trigger, CF<15% for 2 yrs).
-  - Pathway 1a (2050 upper bound): never commit to clean firm. Accumulates
-    the most stranded gas and most residual gap on the worst hour.
+  - Pathway 1a (2050 upper bound): strict onshore + batteries only (Card R) —
+    never commits to clean firm, never books offshore. The "no planning
+    commitment" terminal. Pathway 1 (VRE + offshore + storage) is available in
+    the per_pathway roll-up of the sparse-ISO numbers but not the anchor here.
 
 No per-year-of-commitment runs exist — curves are LINEARLY INTERPOLATED
 between the three anchors above. The penalty vs P3 is decomposed into

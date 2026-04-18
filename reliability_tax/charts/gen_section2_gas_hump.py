@@ -5,9 +5,10 @@ v2 (Apr 2026). HEADLINE chart for the reliability-tax page.
 
 For each ISO × pathway, plots cumulative new-build gas MW at the 2050 endpoint
 as a function of achieved CFE %. The central finding under SPEC §24.4+§24.5:
-P1a new-gas builds peak at a middle CFE threshold (roughly 75-85%) and then
-flatten or decline as the grid pushes past 90% — the builds that came online
-to serve medium-CFE residual demand are now stranded.
+the VRE-only pathways (P1, P1a) show a gas hump at middle CFE thresholds
+(roughly 75-90%) and then flatten or decline as the grid pushes past 95% —
+the builds that came online to serve medium-CFE residual demand are now
+stranded under Card F'.
 
 Schema:
   per_iso[ISO][pathway] = [
@@ -105,9 +106,10 @@ def main() -> None:
             "schema_version": 2,
             "note": (
                 "Headline chart: cumulative new-build gas MW at 2050 vs achieved CFE %, "
-                "per ISO per pathway. Under worst-hour sizing (SPEC §24.5), P1a shows a "
-                "hump at middle thresholds — gas built to cover residual peaks becomes "
-                "stranded as the grid climbs past 90%."
+                "per ISO per pathway. Under worst-hour sizing (SPEC §24.5), P1 / P1a show "
+                "a hump at middle thresholds — gas built to cover residual peaks becomes "
+                "stranded as the grid climbs past 90%. P3 avoids the hump by procuring "
+                "clean firm from year 1 under the §24.8 exogenous NOAK-2035 curve."
             ),
             "sizing_method": (
                 "active_new_gas_fleet_mw from tables.annual_buildout[-1].gas_sizing. "
@@ -127,9 +129,9 @@ def main() -> None:
     print(f"Wrote {DASH_OUT}")
 
     # Summary
-    print("\nP1a peak new-gas MW per ISO:")
+    print("\nP1 peak new-gas MW per ISO:")
     for iso in ISOS:
-        pk = peaks.get(iso, {}).get("1a")
+        pk = peaks.get(iso, {}).get("1")
         if pk:
             print(f"  {iso}: peak at {pk['endpoint_label']} "
                   f"({pk['achieved_cfe_pct']:.1f}% CFE) = {pk['cum_new_gas_mw']:.0f} MW, "

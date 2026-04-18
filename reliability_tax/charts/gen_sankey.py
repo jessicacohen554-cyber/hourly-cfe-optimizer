@@ -42,7 +42,7 @@ ENDPOINT = 0.95
 # Card K' covers all 5 pathways — gas can be built and stranded in any
 # pathway that relies on new-build gas. P3 (clean firm build-out) is the
 # low-gas reference but can still show some stranding in edge ISOs.
-SANKEY_PATHWAYS = PATHWAYS  # ["1a", "1b", "2a", "2b", "3"]
+SANKEY_PATHWAYS = PATHWAYS  # ["1", "1a", "2a", "2b", "3"] per §24.1 v2
 
 
 def _collect_new_gas_stranding(iso: str, pathway: str) -> dict:
@@ -249,7 +249,11 @@ def main() -> None:
             ),
             "note": (
                 "Flow widths proportional to absolute stranded capex ($USD). "
-                "Dropped old Card K comparative framing in favor of Card K' absolute."
+                "Dropped old Card K comparative framing in favor of Card K' absolute. "
+                "Seed vintages in the SPEC §24.8 terminal_ledger (cod_year=2024, "
+                "locked_lcoe=0) represent pre-existing fleet and are NOT consumed "
+                "by this Sankey — only new-gas vintages in tables.new_gas_fleet with "
+                "stranded_flag=True contribute. year_built is by construction ≥ 2025."
             ),
         },
     }
