@@ -308,34 +308,57 @@
 
     <div class="header" id="pageHeader">
         <h1>The Reliability Tax</h1>
-        <div class="subtitle">What ratepayers pay when VRE+storage is forced to cover reliability.</div>
+        <div class="subtitle">What ratepayers pay when wind, solar, and storage are asked to cover reliability on their own.</div>
         <div class="header-accent"></div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 0 — Hero                                                       -->
+    <!-- Hero                                                                   -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section0">
         <p class="tax-hero-lead fade-in">
-            VRE and storage can deliver clean energy. They cannot, on their own, deliver reliability &mdash; not at the 99.97th-percentile worst hour that planners are obligated to cover. Something has to stand behind them for those hours, and absent new clean firm generation, that something is gas. The capex, fixed O&amp;M, and eventual stranding of that backup fleet land on customer bills. <strong>That is the reliability tax.</strong>
+            Wind, solar, and batteries can deliver clean energy. They cannot, on their own, cover the worst hour of the worst week &mdash; the hour grid planners are legally obligated to keep the lights on for. Something has to stand behind them. Absent new clean firm generation, that something is gas. The capex, fixed costs, and eventual write-off of that backup fleet land on customer bills. <strong>That&rsquo;s the reliability tax.</strong>
         </p>
+
+        <div class="key-findings fade-in" style="max-width: 980px; margin: 0 auto var(--space-xl); display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 16px;">
+            <div class="key-finding" style="background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; text-align:center; border-top: 3px solid var(--red);">
+                <div style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: var(--red-dark); line-height: 1.1;">$4&ndash;18</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-top: 6px;">per MWh, customer bill at 95% CFE</div>
+            </div>
+            <div class="key-finding" style="background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; text-align:center; border-top: 3px solid var(--navy);">
+                <div style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: var(--navy); line-height: 1.1;">30&ndash;40%</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-top: 6px;">of new gas ends up stranded before 2050</div>
+            </div>
+            <div class="key-finding" style="background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; text-align:center; border-top: 3px solid var(--wind);">
+                <div style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: var(--wind); line-height: 1.1;">50&ndash;70%</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-top: 6px;">cheaper with proactive clean firm in VRE-constrained grids</div>
+            </div>
+            <div class="key-finding" style="background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; text-align:center; border-top: 3px solid var(--solar);">
+                <div style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: var(--solar); line-height: 1.1;">~1%</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-top: 6px;">the same in ERCOT &amp; SPP &mdash; wind is already doing the work</div>
+            </div>
+        </div>
+
         <div class="insight-box fade-in" style="max-width: 820px; margin: 0 auto;">
-            <strong>Reliability tax</strong> = <span style="font-family: var(--font-data);">(annualized new-gas capex&nbsp;+ new-gas FOM&nbsp;+ carried existing-gas FOM&nbsp;+ priced VRE curtailment&nbsp;+ annualized VRE/storage overbuild capex)&nbsp;&divide;&nbsp;total demand&nbsp;MWh</span>. Reported <strong>gross</strong> &mdash; capacity-market payments and similar transfers are internal to the ratepayer&ndash;developer system, not a cost reduction, and are not netted against this number.
+            <strong>What this bill is made of.</strong> We add the annualized capex on new gas, the fixed O&amp;M on the new and existing gas fleet, the value of wind and solar that gets curtailed, and the cost of overbuilding wind, solar, and storage. Divide by total demand. Report it gross &mdash; capacity-market payments and similar transfers shuffle the money between ratepayers and developers, they don&rsquo;t reduce the total bill.
         </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 1 — The Setup                                                  -->
+    <!-- Section 1 — Why clean-only grids still build gas                       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>Why a clean-only grid still builds gas</h2>
+        <p>As clean-energy targets rise, the grid doesn&rsquo;t need <em>more</em> firm capacity. It needs firm capacity that&rsquo;s used <em>less</em>. That&rsquo;s an expensive shape to buy.</p>
+    </div>
     <section class="content-section" id="section1">
-        <h2 class="section-title fade-in" style="text-align:center;">The Setup</h2>
-        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg);">Why hourly CFE with VRE+storage alone forces a redundant gas fleet.</p>
 
         <!-- Duck-curve schematic: two small panels, 70% CFE → 95% CFE -->
         <div class="duck-wrap fade-in" aria-hidden="false">
             <div class="duck-panel">
-                <div class="duck-panel-title">70% CFE</div>
-                <div class="duck-panel-sub">Moderate solar. Shallow net-load duck. Short evening residual.</div>
+                <div class="duck-panel-title">70% clean</div>
+                <div class="duck-panel-sub">Moderate solar. Gentle net-load curve. Firm gas still runs a broad share of hours.</div>
                 <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
                      role="img" aria-labelledby="duck70Title duck70Desc">
                     <title id="duck70Title">70% CFE net-load schematic</title>
@@ -363,8 +386,8 @@
             </div>
 
             <div class="duck-panel">
-                <div class="duck-panel-title">95% CFE</div>
-                <div class="duck-panel-sub">Massive solar overbuild. Midday goes to zero (curtailment). Evening peak unchanged.</div>
+                <div class="duck-panel-title">95% clean</div>
+                <div class="duck-panel-sub">Enough solar to saturate midday (curtailment). Same sharp evening peak &mdash; still gas territory.</div>
                 <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
                      role="img" aria-labelledby="duck95Title duck95Desc">
                     <title id="duck95Title">95% CFE net-load schematic</title>
@@ -404,20 +427,23 @@
 
         <div class="section1-body fade-in">
             <p>
-                As CFE rises from 70% to 95%, solar and storage get added faster than the underlying load shape changes. Midday demand is covered &mdash; often oversupplied, forcing curtailment &mdash; but the evening peak moves barely at all. The residual gap doesn&rsquo;t shrink uniformly; it gets <strong>narrower and sharper</strong>. A few hundred hours a year still need firm capacity, and those hours are now concentrated in a tighter window.
+                Between 70% and 95% clean, solar and storage scale up faster than the underlying load changes shape. Midday fills in &mdash; often spills over, forcing curtailment &mdash; but the evening peak barely moves. The gap that firm capacity has to cover doesn&rsquo;t shrink evenly; it gets <strong>narrower and sharper</strong>. A few hundred hours a year still demand something that burns fuel, and those hours now land in a tighter, pricier window.
             </p>
             <p>
-                The reliability tax sizes new-build gas against that sharper residual. Following <strong>SPEC &sect;24.5</strong>, we do not use ELCC credits &mdash; a fixed 0.30 solar credit or 0.95 battery credit averages across the year and systematically under-sizes the worst hour. Instead, gas is sized to the <strong>99.97th percentile of the hourly margin-on-demand residual</strong>, computed directly from the 8,760 dispatch. That percentile leaves roughly 2.6 hours a year of tail risk above the sized gap &mdash; consistent with the NERC / PJM 1-day-in-10-years LOLE benchmark. Every MW of gas on the page below was sized by that physical rule, not by a credit factor.
+                We size new-build gas against that sharper gap directly from hour-by-hour dispatch. No rule-of-thumb capacity credits &mdash; a flat 30% credit for solar or 95% for batteries smooths over the worst week and systematically under-builds for it. Instead, gas is sized to the hour that 8,757 other hours exceed (roughly 2.6 hours of tail risk per year), which is the bar planners actually have to clear. That&rsquo;s the physical rule behind every MW on the rest of this page.
             </p>
         </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 2 — THE HUMP (headline chart)                                  -->
+    <!-- Section 2 — How much new gas gets built                                -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>How much new gas gets built</h2>
+        <p>On a wind-and-solar-only path, new gas capacity peaks somewhere in the middle of the clean-energy journey &mdash; not at the end. This is the shape of that build-up.</p>
+    </div>
     <section class="content-section" id="section2">
-        <h2 class="section-title fade-in" style="text-align:center;">The Hump</h2>
-        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg);">How much new gas gets built on the way to a clean grid &mdash; and how much of it ends up stranded.</p>
 
         <div class="chart-panel fade-in">
             <div class="hump-controls">
