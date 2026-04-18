@@ -383,7 +383,7 @@
                 <span class="day-legend-swatch" style="background:var(--navy);"></span>Demand
             </span>
             <span class="day-legend-item">
-                <span class="day-legend-swatch" style="background:#10B981;"></span>Clean supply
+                <span class="day-legend-swatch" style="background:var(--green-h2);"></span>Clean supply
             </span>
             <span class="day-legend-item">
                 <span class="day-legend-swatch gas-fill"></span>Gas residual
@@ -510,11 +510,11 @@
                 <canvas id="taxChart"></canvas>
             </div>
             <div class="legend" id="taxLegend">
-                <span class="legend-item"><span class="legend-dot" style="background:#6B7280;"></span>New gas &mdash; capital, annualized</span>
-                <span class="legend-item"><span class="legend-dot" style="background:rgba(107,114,128,0.6);"></span>New gas &mdash; fixed O&amp;M</span>
-                <span class="legend-item"><span class="legend-dot" style="background:#374151;"></span>Existing gas &mdash; fixed O&amp;M kept on</span>
-                <span class="legend-item"><span class="legend-dot" style="background:#F59E0B;"></span>Wind &amp; solar curtailed</span>
-                <span class="legend-item"><span class="legend-dot" style="background:#EF4444;"></span>Wind / solar / storage overbuild</span>
+                <span class="legend-item"><span class="legend-dot" style="background:var(--fossil-gas);"></span>New gas &mdash; capital, annualized</span>
+                <span class="legend-item"><span class="legend-dot" style="background:rgba(107,114,128,0.55);"></span>New gas &mdash; fixed O&amp;M</span>
+                <span class="legend-item"><span class="legend-dot" style="background:var(--fossil-coal);"></span>Existing gas &mdash; fixed O&amp;M kept on</span>
+                <span class="legend-item"><span class="legend-dot" style="background:var(--solar);"></span>Wind &amp; solar curtailed</span>
+                <span class="legend-item"><span class="legend-dot" style="background:var(--storage);"></span>Wind / solar / storage overbuild</span>
             </div>
         </div>
 
@@ -759,7 +759,7 @@
                         fill: false,
                         pointRadius: 2,
                         pointHoverRadius: 5,
-                        tension: 0.25,
+                        tension: 0.3,
                         order: 1
                     });
 
@@ -926,9 +926,10 @@
                     {
                         label: 'Stranded',
                         data: stranded,
-                        backgroundColor: strandedColor,
+                        backgroundColor: strandedPattern || strandedColor,
                         borderColor: strandedColor,
-                        borderWidth: 0,
+                        borderWidth: 2,
+                        borderRadius: 3,
                         stack: 'gas'
                     },
                     {
@@ -936,7 +937,8 @@
                         data: stillRunning,
                         backgroundColor: stillRunningColor,
                         borderColor: stillRunningColor,
-                        borderWidth: 0,
+                        borderWidth: 2,
+                        borderRadius: 3,
                         stack: 'gas'
                     }
                 ];
@@ -1062,7 +1064,7 @@
 
             var COMPONENT_DEFS = [
                 { key: 'new_gas_capex_annualized_usd',     label: 'New gas \u2014 capital, annualized',     color: rc.fossilGas },
-                { key: 'new_gas_fom_usd',                  label: 'New gas \u2014 fixed O&M',                color: alpha(rc.fossilGas, 0.6) },
+                { key: 'new_gas_fom_usd',                  label: 'New gas \u2014 fixed O&M',                color: alpha(rc.fossilGas, 0.55) },
                 { key: 'existing_gas_fom_carried_usd',     label: 'Existing gas \u2014 fixed O&M kept on',   color: rc.fossilCoal },
                 { key: 'priced_vre_curtailment_usd',       label: 'Wind &amp; solar curtailed',              color: rc.solar },
                 { key: 'vre_storage_overbuild_capex_usd',  label: 'Wind / solar / storage overbuild',      color: rc.storage }
@@ -1100,9 +1102,10 @@
                     return {
                         label: def.label,
                         data: data,
-                        backgroundColor: def.color,
+                        backgroundColor: def.pattern || def.color,
                         borderColor: def.color,
                         borderWidth: 0,
+                        borderRadius: 3,
                         stack: 'tax'
                     };
                 });
@@ -1274,9 +1277,9 @@
                     return {
                         label: pw.name,
                         data: ISO_LIST.map(function(iso) { return getTax(iso, pw.id); }),
-                        backgroundColor: alpha(pw.color, 0.82),
+                        backgroundColor: alpha(pw.color, 0.85),
                         borderColor: pw.color,
-                        borderWidth: 1.5,
+                        borderWidth: 2,
                         borderRadius: 3
                     };
                 });
@@ -1498,7 +1501,7 @@
                 var vals = years.map(function(y) { var v = byYear[y]; return (v == null || !isFinite(v)) ? null : v; });
 
                 var isoColor = ISO_COLORS[state.iso] || SEMANTIC_COLORS.muted;
-                var fill     = (typeof withAlpha === 'function') ? withAlpha(isoColor, 0.14) : isoColor;
+                var fill     = (typeof withAlpha === 'function') ? withAlpha(isoColor, 0.12) : isoColor;
 
                 // Pivot-year markers
                 var pivot2a = curve.pivot_year_2a || null;
@@ -1517,7 +1520,7 @@
                         fill: 'origin',
                         pointRadius: 5,
                         pointHoverRadius: 7,
-                        tension: 0.2
+                        tension: 0.3
                     }
                 ];
 
@@ -1957,7 +1960,7 @@
                             borderWidth: 2,
                             backgroundColor: CLEAN_FILL,
                             fill: 'origin',
-                            tension: 0.4,
+                            tension: 0.3,
                             pointRadius: 0
                         },
                         {
@@ -1967,7 +1970,7 @@
                             borderWidth: 2.5,
                             backgroundColor: GAS_FILL,
                             fill: { target: -1, above: GAS_FILL, below: 'transparent' },
-                            tension: 0.4,
+                            tension: 0.3,
                             pointRadius: 0
                         }
                     ]
