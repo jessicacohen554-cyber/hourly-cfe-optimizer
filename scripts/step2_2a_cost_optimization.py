@@ -500,6 +500,47 @@ def worst_hour_gas_sizing(iso, mix_pct, storage_pct, demand_twh, gf):
     }
 
 
+def worst_hour_residual_per_row(iso, ef):
+    """Vectorized per-row 99.97th-percentile residual norm for a candidate EF.
+
+    Thin adapter over ``_worst_hour_residual_norm``: pulls EF DataFrame columns
+    into the ``arrays`` dict shape the batch residual function already expects
+    and returns a ``(N,)`` float64 array of residual norms (fractions of annual
+    demand). Multiply by ``demand_mwh_grown`` to get the 99.97th-percentile
+    gap_mw per row. RA margin is already baked into the residual on the demand
+    side per SPEC §24.5 (margin-on-demand).
+
+    Used by ``score_ef_batch_with_gas`` (SPEC §24.9) to fold expected new-gas-
+    build cost into the argmin. No Python loop over rows — archetype-cache
+    expansion happens inside the callee exactly as in the scalar path.
+    """
+    n_rows = len(ef)
+    if n_rows == 0:
+        return np.zeros(0, dtype=np.float64)
+
+    def _col(name):
+        if name in ef.columns:
+            return ef[name].to_numpy(dtype=np.float64, copy=False)
+        return np.zeros(n_rows, dtype=np.float64)
+
+    arrays = {
+        'clean_firm':             _col('clean_firm'),
+        'solar':                  _col('solar'),
+        'wind':                   _col('wind'),
+        'hydro':                  _col('hydro'),
+        'offshore_wind':          _col('offshore_wind'),
+        'geothermal':             _col('geothermal'),
+        'battery_dispatch_pct':   _col('battery_dispatch_pct'),
+        'battery8_dispatch_pct':  _col('battery8_dispatch_pct'),
+        'ldes_dispatch_pct':      _col('ldes_dispatch_pct'),
+        'h2_dispatch_pct':        _col('h2_dispatch_pct'),
+    }
+    for ht in HYBRID_TYPES:
+        arrays[ht] = _col(ht)
+
+    return _worst_hour_residual_norm(iso, arrays)
+
+
 def _elcc_gas_mw(iso, arrays, demand_twh, gf):
     """Diagnostic ELCC-based gas sizing — parallels the legacy formula.
 

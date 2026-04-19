@@ -1431,6 +1431,16 @@ NOAK_YEAR_BY_PATHWAY = {
     '2a': 2045,
 }
 
+# ----------------------------------------------------------------------------
+# SPEC §24.9 — Endogenized new-gas-build cost in select_target_mix's argmin.
+# When True, score_ef_batch_with_gas folds the expected new-gas-build capex +
+# fuel cost into each candidate EF row's score, so rows whose worst-hour
+# residual is already covered by clean firm get an argmin advantage. When
+# False, the legacy EF-only score is used. Flip to False for parity probes.
+# See reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md.
+# ----------------------------------------------------------------------------
+INCLUDE_GAS_COST_IN_ARGMIN = True
+
 # Which tech keys receive the pathway-specific NOAK override. Clean-firm only
 # (nuclear, CCGT+CCS, geothermal) — battery / VRE / LDES / H2 learning curves
 # are globally driven, not US-pathway-driven.

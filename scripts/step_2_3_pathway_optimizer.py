@@ -1784,6 +1784,80 @@ def score_ef_batch(
 _score_ef_vectorized = score_ef_batch
 
 
+def score_ef_batch_with_gas(
+    ef: 'pd.DataFrame',
+    iso: str,
+    year: int,
+    config: 'RunConfig',
+) -> np.ndarray:
+    """SPEC §24.9 — score_ef_batch + expected-new-gas-build cost.
+
+    Endogenizes the capex + fuel cost of the new gas each candidate row would
+    force the pathway to build, so rows whose worst-hour residual is already
+    covered by clean firm get an argmin advantage over pure-VRE rows that
+    would require a large new-gas fleet downstream.
+
+    Per-row cost = row_ef_cost + new_gas_cost_usd where
+
+        resid_norm   = worst_hour_residual_per_row(iso, ef)            # (N,)
+        gap_mw       = resid_norm * demand_mwh_grown
+        gas_raw_mw   = gap_mw / GAS_AVAILABILITY_FACTOR[iso]
+        new_gas_mw   = max(0, gas_raw_mw - gas_raw_2025_mw)
+                       * (1 + RESOURCE_ADEQUACY_MARGIN)
+        capex_usd    = new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+        fuel_usd     = new_gas_mw * NEW_GAS_REFERENCE_CF * HOURS_PER_YEAR
+                       * WHOLESALE_PRICES[iso]['Medium']
+        new_gas_cost_usd = capex_usd + fuel_usd
+
+    Constants match tax_components_cumulative's downstream realization so the
+    argmin's expectation is consistent with the realized reliability tax:
+      - NEW_CCGT_COST_KW_YR — same as solve_pathway line ~2402 (annualized
+        all-in $/kW-yr, Lazard source).
+      - WHOLESALE_PRICES[iso]['Medium'] — same as solve_pathway line ~2410
+        (gas fuel price).
+      - NEW_GAS_REFERENCE_CF (0.85) — reuses the module-level break-even CF
+        constant.
+      - RESOURCE_ADEQUACY_MARGIN — applied as a 1.15× multiplier on
+        new_gas_mw per planner's reserve-margin convention.
+
+    `resid_norm` is already margin-inclusive on the demand side (§24.5 margin-
+    on-demand); the additional (1 + RA_margin) factor here is a deliberate
+    planner-reserve conservatism over the raw residual.
+    """
+    n_rows = len(ef)
+    if n_rows == 0:
+        return np.empty(0, dtype=np.float64)
+
+    base_cost = score_ef_batch(ef, iso, year, config)
+
+    from step2_2a_cost_optimization import (
+        worst_hour_residual_per_row,
+        _gas_raw_2025_worst_hour,
+    )
+
+    resid_norm = worst_hour_residual_per_row(iso, ef)
+
+    demand_twh = demand_for_year(iso, year, config.demand_growth_level)
+    demand_mwh_grown = demand_twh * 1.0e6
+
+    gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
+    gas_raw_2025_mw = float(_gas_raw_2025_worst_hour(iso))
+
+    gap_mw = resid_norm * demand_mwh_grown
+    gas_raw_mw = gap_mw / gaf
+    new_gas_mw = np.maximum(0.0, gas_raw_mw - gas_raw_2025_mw) * (
+        1.0 + float(pc.RESOURCE_ADEQUACY_MARGIN)
+    )
+
+    capex_per_mw = float(pc.NEW_CCGT_COST_KW_YR[iso]) * 1000.0
+    wholesale_price = float(pc.WHOLESALE_PRICES.get(iso, {}).get('Medium', 0.0))
+    fuel_per_mw = NEW_GAS_REFERENCE_CF * HOURS_PER_YEAR * wholesale_price
+
+    new_gas_cost_usd = new_gas_mw * (capex_per_mw + fuel_per_mw)
+
+    return base_cost + new_gas_cost_usd
+
+
 def select_target_mix(
     iso: str,
     pathway: str,
@@ -1845,7 +1919,15 @@ def select_target_mix(
     # to ``score_ef_row_cost`` (same merit-order cost, not a scalar
     # cheapest-LCOE approximation). Replaces an iterrows() loop that took
     # minutes on multi-million-row EF parquets.
-    costs = score_ef_batch(ef, iso, year, config)
+    #
+    # SPEC §24.9 — when pc.INCLUDE_GAS_COST_IN_ARGMIN is True, the scorer
+    # also folds expected new-gas-build capex + fuel into each row's cost
+    # so pure-VRE rows with large worst-hour residuals get penalized
+    # against clean-firm-heavy rows with low residuals.
+    if getattr(pc, 'INCLUDE_GAS_COST_IN_ARGMIN', False):
+        costs = score_ef_batch_with_gas(ef, iso, year, config)
+    else:
+        costs = score_ef_batch(ef, iso, year, config)
     if costs.size == 0 or not np.isfinite(costs).any():
         return {'infeasible': True, 'reason': 'no_finite_cost',
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
