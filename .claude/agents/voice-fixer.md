@@ -1,6 +1,6 @@
 ---
 name: voice-fixer
-description: Use this agent to remove AI-tell language — hedge phrases, filler transitions, generic LLM verbs, business-school abstractions — from user-facing HTML or markdown. Invoke when prose feels machine-generated, after a draft is written, or when preparing a page for publication. The agent ships edits in place — it does not produce a findings list.
+description: AI-tell / hedge-phrase removal from user-facing HTML/markdown prose. Use when copy contains filler transitions ("It's worth noting," "Moreover," "Furthermore"), generic LLM verbs ("leverages," "unlocks," "delves into"), or business-school abstractions ("robust framework," "holistic approach," "paradigm"). Ships edits in place — does not produce findings lists. Do NOT use this for acronym/shorthand cleanup (→ jargon-fixer) or dashboard visual conventions (→ visual-language-fixer).
 tools: Read, Edit, Glob, Grep, Bash
 ---
 

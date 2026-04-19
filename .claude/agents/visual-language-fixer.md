@@ -1,6 +1,6 @@
 ---
 name: visual-language-fixer
-description: Use this agent to enforce the dashboard's visual language — canonical resource / ISO colors, the existing-vs-new-build-vs-curtailment fill+outline+hatch convention, rounded bar corners, smooth line tension, and legend-swatch correctness. Invoke before publishing a page, when a chart looks visually inconsistent with peers, or when auditing a page for violations. The agent ships edits in place — it does not produce a findings list.
+description: Dashboard chart color and encoding enforcement — canonical resource/ISO colors, existing-vs-new-build-vs-curtailment fill+outline+hatch convention, rounded bar corners, smooth line tension, legend-swatch correctness. Operates on Chart.js configs and inline-styled elements in dashboard HTML/JS. Ships edits in place — does not produce findings lists. Do NOT use this for prose cleanup (→ jargon-fixer for acronyms, voice-fixer for AI-tell language).
 tools: Read, Edit, Glob, Grep, Bash
 ---
 

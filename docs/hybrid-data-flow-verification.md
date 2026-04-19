@@ -14,7 +14,7 @@
 | 4 | Step 3B MAC queue — CAISO | WARN | No `mac_queue_CAISO.parquet`. All other 6 ISOs present. Likely intentional (geothermal dimension). |
 | 5 | Step 5 strategy output | WARN | `data/step5-scenarios/` is empty. Not yet computed — not data loss. |
 | 6 | Step 7 shared-data.js — hybrid keys | **FAIL** | 0 occurrences of `solar_batt4/8` or `wind_batt4/8` in `shared-data.js`. `MIX_RESOURCES` missing all 4 hybrid types. The `step7_1a` script writes them (line 848) but the file is stale. **Re-run step7_1a needed.** |
-| 7 | Step 7.1H hybrid-analysis-data.js — NYISO | **WARN** | File exists but excludes NYISO. `ISOS` list at line 25 of `step7_1h_extract_hybrid_data.py` omits NYISO despite NYISO having 28,530 non-zero `mix_solar_batt4` rows in step2.2 parquets. **Add NYISO to ISOS list and re-run.** |
+| 7 | Step 7.1H hybrid-analysis-data.js — NYISO | **WARN** | File exists but excludes NYISO. `ISOS` list at line 25 of `scripts/step7_1h_extract_hybrid_data.py` omits NYISO despite NYISO having 28,530 non-zero `mix_solar_batt4` rows in step2.2 parquets. **Add NYISO to ISOS list and re-run.** |
 | 8 | Hybrid profile NPZ files | PASS | All 7 ISOs have NPZ files with 4 keys each (`solar_batt4/8`, `wind_batt4/8`), shape `(8760,)`, valid values. |
 | 9 | dispatch_utils.py — hybrid loading | PASS | `_load_hybrid_profiles()` loads NPZ correctly. `get_supply_profiles()` injects hybrids when `include_hybrids=True`. Curtailment order correct. |
 | 10 | scenario_common.py — RESOURCES_WITH_HYBRIDS | PASS | Line 60: `RESOURCES_WITH_HYBRIDS = RESOURCES + list(HYBRID_TYPES)`. |
@@ -32,13 +32,13 @@
 
 **Fix:** Run `python3 scripts/step7_1a_generate_shared_data.py`
 
-### 2. WARN: NYISO excluded from step7_1h_extract_hybrid_data.py
+### 2. WARN: NYISO excluded from scripts/step7_1h_extract_hybrid_data.py
 
 **Impact:** `hybrid-analysis-data.js` has no NYISO data, despite NYISO having significant hybrid adoption in step2.2 results.
 
 **Evidence:** NYISO step2.2 parquet has 28,530 non-zero `mix_solar_batt4` rows out of 116,640 total (24.5% adoption rate).
 
-**Fix:** Add `'NYISO'` to `ISOS` list at line 25 of `step7_1h_extract_hybrid_data.py` and re-run.
+**Fix:** Add `'NYISO'` to `ISOS` list at line 25 of `scripts/step7_1h_extract_hybrid_data.py` and re-run.
 
 ## Data Flow Summary
 
