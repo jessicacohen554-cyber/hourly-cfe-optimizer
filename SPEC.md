@@ -18,15 +18,32 @@
 - `ERCOT/pathway1_ep80.json` (`run_key=ERCOT__pathway1__ep80`, cost $1,104 B) — identical.
 - `PJM/pathway3_ep90.json` (`run_key=PJM__pathway3__ep90`, cost $2,390 B) — identical.
 
-**In progress when session wrapped.** 12-config sanity probe (ERCOT + PJM × ep80 / ep90 / ep99 × P1 / P3) with flag=TRUE; not yet executed. Dispatch-cache parquets (`data/step3-dispatch/ERCOT_dispatch_cache.parquet`, `PJM_dispatch_cache.parquet`) were expanded during the parity probe — committed as-is.
+**In progress when session wrapped.** 12-config sanity probe (ERCOT + PJM × ep80 / ep90 / ep99 × P1 / P3) with flag=TRUE; **blocked on a latent defect in f060d38**. Single ERCOT P1 ep80 smoke run crashed in `score_ef_batch_with_gas` before any JSON wrote. No probe results exist. `data/step3-dispatch/ERCOT_dispatch_cache.parquet` regenerated to ~110 MB during the aborted run (vs. 47.6 MB committed baseline) — reverted on session wrap per the task-brief directive that dispatch parquets stay uncommitted (>100 MB GitHub limit).
+
+**Blocker found (not yet patched).** `scripts/step_2_3_pathway_optimizer.py:1853`:
+```python
+wholesale_price = float(pc.WHOLESALE_PRICES.get(iso, {}).get('Medium', 0.0))
+```
+`pc.WHOLESALE_PRICES` is a flat scalar dict (`{'ERCOT': 27, 'PJM': 34, ...}`), not nested. `.get('Medium')` on an `int` raises `AttributeError`. Parity probe missed this — flag=FALSE bypasses `score_ef_batch_with_gas`. The task-brief formula `WHOLESALE_PRICES[iso]['Medium']` doesn't match the actual schema. `FUEL_ADJUSTMENTS[iso]['Medium']` is 0 by definition across all ISOs, so Medium is numerically just the base scalar.
+
+Proposed fix (awaiting user approval):
+```python
+wholesale_price = float(pc.WHOLESALE_PRICES[iso]) + float(
+    pc.FUEL_ADJUSTMENTS[iso].get('Medium', 0.0)
+)
+```
+Preserves the sensitivity-level intent while surviving the flat-scalar schema. ERCOT fuel_per_mw resolves to 0.85 × 8760 × 27 ≈ $201,123/MW-yr; PJM ≈ $253,130/MW-yr. Alternative: pure-scalar `float(pc.WHOLESALE_PRICES[iso])` with no FUEL_ADJUSTMENTS term.
+
+**Environment note.** SessionStart hook installs numpy / pyarrow / numba but not pandas; `step_2_3_pathway_optimizer.py` imports pandas. Manual `pip install pandas` required to run the optimizer on a fresh web container. Consider adding pandas to the hook.
 
 **Pending.**
-1. 12-config sanity probe with flag=TRUE (~10–20 min total). Check: ERCOT P3 < P1 at ≥1 endpoint; PJM ep80 P3 ≠ P1; PJM ep90/ep99 gap ≥ current 62–64%; hump shape preserved.
-2. Present probe results, wait for user approval before full sweep.
-3. Full 350-run v2 sweep re-run per `OPS.md` pre-run gate.
-4. Regenerate 12 chart payloads in `reliability_tax/charts/`.
-5. Dashboard-gate check: P3 new-gas < P1 in every ISO at ep90 or ep99 minimum; gap widens ep80→ep99; hump visible; §4 tax in $4–18/MWh range.
-6. Append §24.9 entry to `reliability_tax/methodogy.md` documenting the change. Do NOT frame as reversal of §24.8 (§24.8 no-floor stands).
+1. Decide fix form (FUEL_ADJUSTMENTS-aware vs. pure scalar), patch `step_2_3_pathway_optimizer.py:1853`, commit as follow-up to f060d38.
+2. 12-config sanity probe with flag=TRUE (~10–20 min total). Check: ERCOT P3 < P1 at ≥1 endpoint; PJM ep80 P3 ≠ P1; PJM ep90/ep99 gap ≥ current 62–64%; hump shape preserved.
+3. Present probe results, wait for user approval before full sweep.
+4. Full 350-run v2 sweep re-run per `OPS.md` pre-run gate.
+5. Regenerate 12 chart payloads in `reliability_tax/charts/`.
+6. Dashboard-gate check: P3 new-gas < P1 in every ISO at ep90 or ep99 minimum; gap widens ep80→ep99; hump visible; §4 tax in $4–18/MWh range.
+7. Append §24.9 entry to `reliability_tax/methodogy.md` documenting the change. Do NOT frame as reversal of §24.8 (§24.8 no-floor stands).
 
 **Key design decisions locked this session.**
 - Expected CF for new-gas fuel term in argmin = `NEW_GAS_REFERENCE_CF = 0.85` (user-selected via AskUserQuestion). Tunable knob — flag if probe penalty looks too large/small.
@@ -36,7 +53,7 @@
 
 **Open questions.** None blocking. If the 12-config probe shows ERCOT P3 ≥ P1 at every endpoint, the penalty magnitude is too small — candidates to tune: drop `NEW_GAS_REFERENCE_CF` to 0.30–0.40, or raise RA multiplier. Defer tuning until the probe lands.
 
-**Resume prompt for next session:** *"SPEC §24.9 endogenization is implemented and parity-verified. Next: run the 12-config sanity probe (ERCOT + PJM × {ep80, ep90, ep99} × {P1, P3}, flag=TRUE), diff against current cached JSON, show the user the P3-vs-P1 gas-fleet deltas per endpoint per ISO, wait for approval, then launch the full 350-run v2 sweep per OPS.md pre-run gate. Code changes live in `scripts/pipeline_config.py` (flag), `scripts/step2_2a_cost_optimization.py` (`worst_hour_residual_per_row`), and `scripts/step_2_3_pathway_optimizer.py` (`score_ef_batch_with_gas` + gated call in `select_target_mix`). Plan file at `/root/.claude/plans/you-are-picking-up-velvety-wreath.md` has the full design. Audit memo at `reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md` Locked-Decisions section is the binding directive. After the sweep + chart-payload regen land, append §24.9 to `reliability_tax/methodogy.md` — NOT as a reversal of §24.8."*
+**Resume prompt for next session:** *"SPEC §24.9 endogenization is implemented and parity-verified (flag=FALSE reproduces cached JSON bit-for-bit), but f060d38 has a latent defect that blocks the flag=TRUE sanity probe. `scripts/step_2_3_pathway_optimizer.py:1853` does `pc.WHOLESALE_PRICES.get(iso, {}).get('Medium', 0.0)` but `pc.WHOLESALE_PRICES` is a flat scalar dict — calling `.get('Medium')` on an int raises AttributeError. Fix (pending user approval): `float(pc.WHOLESALE_PRICES[iso]) + float(pc.FUEL_ADJUSTMENTS[iso].get('Medium', 0.0))` (numerically identical to the base scalar since Medium adjustment is 0, but preserves sensitivity-level intent). Alternative: pure scalar `float(pc.WHOLESALE_PRICES[iso])`. Once user picks, patch the one line, then run the 12-config sanity probe (ERCOT + PJM × {ep80, ep90, ep99} × {P1, P3}) with `--output-root /tmp/reliability_probe_sanity`, extract `stranding_metadata.fleet_size_mw` from each JSON, present the P3-vs-P1 delta table per ISO per endpoint, wait for approval, then launch the full 350-run v2 sweep per OPS.md pre-run gate. Environment note: web-session Python has numpy/pyarrow/numba but NOT pandas — `pip install pandas` before running. Dispatch parquets (`data/step3-dispatch/ERCOT_dispatch_cache.parquet`, `PJM_dispatch_cache.parquet`) are NOT committed (exceed 100 MB); they regenerate on the first probe run. Audit memo at `reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md` Locked-Decisions section is the binding directive. After sweep + chart-payload regen, append §24.9 to `reliability_tax/methodogy.md` — NOT as a reversal of §24.8."*
 
 ### Pipeline-Audit Sub-Agent — HARDENED (Apr 19, 2026) / live re-run PENDING
 
