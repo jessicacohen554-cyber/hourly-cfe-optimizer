@@ -7,6 +7,41 @@
 
 ---
 
+### Reliability Tax Page Redesign + Project Infra Refresh — IN PROGRESS (Apr 18, 2026, late evening)
+
+**Task context.** User rejected the prior reliability-tax page as too jargon-heavy and self-referential. Two parallel workstreams now in flight: (1) finish redesigning `dashboard/reliability-tax.html` in plain-language voice, with pathway comparisons on single plots (no toggles); (2) build durable project infrastructure that prevents the same regressions on future pages.
+
+**Workstream 1 — page redesign (LANDED across 3 commits on `claude/redesign-reliability-tax-page-LlqKc`):**
+- Hero rewritten in plain language with a 4-tile key-findings grid.
+- All 8 sections renamed away from "The Setup / The Hump / The Abandonment / The Tax / The Cost of Waiting" to descriptive titles using the numbered `section-header` + `section-number` pattern from `clean_firm_case.html` and `lmp_trends.html`.
+- Every `SPEC §`, `Card [A-Z]'`, `NOAK-2035`, `ELCC`, `LOLE`, `NERC`, internal endpoint code (`ep90`, `ep95`), and bare pathway code (`P1`, `P1a`, `P2a`, `P2b`, `P3`) removed from user-facing copy.
+- Pathway labels swapped to readable names ("Wind + solar + storage", "Onshore only", "Reactive pivot (90% wall)", "Reactive pivot (economics)", "Proactive clean firm") in buttons, table cells, tooltips, captions.
+- §2 hump chart: pathway toggle removed; all three pathways now overlay as colored lines on the same axes per ISO. Peak-build markers in pathway colors, filtered out of the legend.
+- §6 stranding chart: pathway toggle removed; converted from a vintage-year bar chart of one pathway to a horizontal bar chart of all five pathways, sorted descending. Caption identifies worst and least-bad pathway.
+
+**Workstream 2 — project infra (IN PROGRESS, this session):**
+- `.claude/agents/jargon-fixer.md` — sub-agent that ships in-place edits to remove self-referential project shorthand (`SPEC §X.Y`, `Card [A-Z]'`, `§24.X`, internal endpoint codes, bare pathway codes, `NOAK-YYYY` codenames) AND defines industry acronyms (ELCC, NOAK, FOAK, LCOE, CCS, LDES, 45Q, 45U, ITC, PTC, ATB, LOLE, CFE, VRE, BESS, CCGT, IPP, ISO, AEO, NREL, LBNL, EIA, NERC) parenthetically on first use per page. **LANDED.**
+- `.claude/agents/voice-fixer.md` — sub-agent that ships in-place edits to remove AI-tell language: hedge phrases ("It's worth noting"), filler transitions ("Moreover"), LLM-tell verbs ("leverages," "unlocks," "delves into," "underscores"), business-school abstractions ("robust framework," "holistic approach," "paradigm"). Flags sentence-rhythm tells (uniform length, em-dash overuse, triadic structure overload) for human review. **LANDED.**
+- `.claude/commands/fix-jargon.md`, `.claude/commands/fix-voice.md`, `.claude/commands/fix-prose.md` — three slash commands. `/fix-jargon` and `/fix-voice` invoke the matching agent; `/fix-prose` runs both sequentially against the same target. All take a file path as arg, fall back to dirty working tree. **LANDED.**
+- `CLAUDE.draft.md` — proposed lean replacement for `CLAUDE.md` (92 lines vs 279). Restructured around six top-of-file non-negotiables, a source-docs table, a reference-page table, a voice-rules section that points at the prose-fixer agents. Methodology / ops / design-system content cut and routed to `SPEC.md`, `OPS.md` (to be created), and `DESIGN_SYSTEM.md`. **DRAFTED, awaiting user approval before replacing.**
+
+**What's still to do (gated on user approval of `CLAUDE.draft.md`):**
+1. Approve or revise `CLAUDE.draft.md`.
+2. `mv CLAUDE.draft.md CLAUDE.md` once approved.
+3. Create `OPS.md` and migrate the optimizer-run-discipline / compute-execution / incremental-results / completion-verification / data-persistence / build-process content out of the current `CLAUDE.md`.
+4. Create `LESSONS.md` with this session's key learnings: (a) section names should describe content not metaphors, (b) never cite `SPEC §` in user-facing copy, (c) pathway comparison charts must show all pathways on one plot — toggles are not comparisons, (d) industry acronyms get defined on first use per page rather than banned, (e) prose-fixer agents replace the originally proposed pre-commit jargon hook.
+5. Create `SPEC_LOG.md` as the historical-decision archive; cap `SPEC.md` at ~500 lines by moving everything older than the prior status update into the log.
+6. Test-drive `/fix-prose` against the current `dashboard/reliability-tax.html` to validate the agents and surface any rule gaps.
+
+**Open questions for the user:**
+- Approve the lean `CLAUDE.draft.md`, request revisions, or punt to a later session?
+- Should `LESSONS.md` accumulate forever, or rotate (e.g., last 50 lessons in-file, older archived)?
+- For the bake-off: user is running Sonnet (mobile constraint, no Opus 4.6 access) vs Opus 4.7 in parallel on the same redesign task to compare output quality. Both prompts already drafted in conversation; user is executing them in separate sessions.
+
+**Resume prompt for next session:** *"Pick up the project-infra workstream on the reliability-tax redesign branch. Three sub-agents and three slash commands are landed (`jargon-fixer`, `voice-fixer`, plus `/fix-jargon`, `/fix-voice`, `/fix-prose`). `CLAUDE.draft.md` is on disk awaiting user approval to replace `CLAUDE.md`. Once approved: (1) move draft into place; (2) create `OPS.md` with optimizer-run / compute / data-persistence content extracted from the current `CLAUDE.md`; (3) seed `LESSONS.md` with this session's five learnings; (4) create `SPEC_LOG.md` archive and cap `SPEC.md`; (5) test-drive `/fix-prose` against `dashboard/reliability-tax.html` to validate. Do NOT replace `CLAUDE.md` until the user explicitly approves the draft."*
+
+---
+
 ### Reliability Tax Page Redesign — IN PROGRESS (Apr 18, 2026, late)
 
 **Task context.** User rejected current `dashboard/reliability-tax.html` as too weird, jargon-heavy, and self-referential. Specific feedback: section names like "The Setup" / "The Hump" / "The Abandonment" / "The Tax" / "The Cost of Waiting" are pretentious; in-body `SPEC §24.5`, `SPEC §24.6`, `SPEC §24.7`, `SPEC §24.8`, `Card F'`, `Card J`, `Card R` references are idiotic for public readers; charts/layout weak. Goal: reframe streamlined, plain-language, in the voice of `clean_firm_case.html` and `lmp_trends.html` (numbered `section-header` + `section-number` badges, descriptive titles, direct analytical prose, no methodology-doc self-reference).
