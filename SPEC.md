@@ -3,7 +3,7 @@
 > Historical decisions and landed workstreams live in `SPEC_LOG.md`.
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-04-19.
+> Last updated: 2026-04-19 (session: hot-path cache-write regression fix).
 
 ## Current Status (Apr 19, 2026)
 
@@ -39,43 +39,62 @@
 - `scripts/pipeline_config.py` — new flag `INCLUDE_GAS_COST_IN_ARGMIN = True` (defaults True; flip to False to reproduce pre-change outputs).
 - `scripts/step2_2a_cost_optimization.py` — new vectorized adapter `worst_hour_residual_per_row(iso, ef)` (~40 lines). Wraps existing batch `_worst_hour_residual_norm`; pulls EF DataFrame columns into the `arrays` dict shape that function already expects. Returns `(N,)` fractions of annual demand. No Python row loop.
 - `scripts/step_2_3_pathway_optimizer.py` — new sibling scorer `score_ef_batch_with_gas(ef, iso, year, config)` (~70 lines). Per-row cost = `row_ef_cost + new_gas_mw × (capex_per_mw + fuel_per_mw)` where `new_gas_mw = max(0, gas_raw_mw − gas_raw_2025_mw) × (1 + RESOURCE_ADEQUACY_MARGIN)`. RA-margin multiplier applied per user's explicit directive. Uses the SAME constants `tax_components_cumulative` uses downstream: `NEW_CCGT_COST_KW_YR[iso]`, `WHOLESALE_PRICES[iso]['Medium']`, `NEW_GAS_REFERENCE_CF = 0.85`. `select_target_mix` call site gated on the flag.
+### Hot-path cache-write regression — FIX LANDED (commit `4513cca`, Apr 19, 2026)
 
-**Parity probe passed.** Flag=FALSE reproduces pre-change cached JSON bit-for-bit on both probes:
-- `ERCOT/pathway1_ep80.json` (`run_key=ERCOT__pathway1__ep80`, cost $1,104 B) — identical.
-- `PJM/pathway3_ep90.json` (`run_key=PJM__pathway3__ep90`, cost $2,390 B) — identical.
+Fix for the §24.9 hot-path cache-write regression that bloated every pathway-run wall-clock 5–10× and would have bloated the full 350-run v2 sweep proportionally. Call chain: `solve_pathway` → 26-year loop → `size_required_gas_mw` → `worst_hour_gas_sizing` → `_worst_hour_residual_norm` → `_expand_missing_archetypes(...)` → `expand_cache_for_mixes(persist=True)` → full ~100 MB parquet rewrite of `data/step3-dispatch/<ISO>_dispatch_cache.parquet` on every archetype-batch expansion. Under the ELCC-era call shape, `_expand_missing_archetypes` ran ~once per ISO (archetype sets were small, pre-built by step3a); under §24.9's per-row EF-scorer (`worst_hour_residual_per_row`), it fires 26 years × O(EF-rows) times per pathway run.
 
-**In progress when session wrapped.** WHOLESALE_PRICES blocker is **fixed and committed** (`fd89c22`) — `score_ef_batch_with_gas` now reads `float(pc.WHOLESALE_PRICES[iso]) + float(pc.FUEL_ADJUSTMENTS[iso].get('Medium', 0.0))`. Numerically equivalent to the base scalar today (Medium adjustments are 0 across all ISOs), but the form preserves the task-brief sensitivity-level intent and survives any future non-zero Medium delta. User picked this form via `AskUserQuestion` over the pure-scalar alternative. Lesson 8 added to LESSONS.md (`cb5c3a0`): parity probes must exercise both branches of a flag-gated rollout.
+Fix:
+- `scripts/step2_2a_cost_optimization.py` — `_WH_STATE[iso]` gains a `'dirty'` bool. `_expand_missing_archetypes` now passes `persist=False` to `expand_cache_for_mixes` and flips the dirty flag only when the in-memory cache actually grew. New module function `flush_expanded_cache(iso)` writes the full parquet exactly once per call and clears the flag; no-op if not dirty.
+- `scripts/step_2_3_pathway_optimizer.py` — `run_pathway` calls `flush_expanded_cache(config.iso)` once at the pathway-run boundary (after `write_run_json` / `append_to_manifest`). Covers both the P3-pre-solve branch (when target pathway != 3) and the target solve in a single flush.
 
-**Sanity probe — STILL NOT EXECUTED.** Three attempts this session, all failed:
-- Attempt 1 (pre-fix): single ERCOT P1 ep80 smoke run crashed in `score_ef_batch_with_gas` on the WHOLESALE_PRICES bug.
-- Attempt 2 (post-fix): launched the full 12-config probe via `bash /tmp/run_probe.sh` in background. Bash wrapper started, logged the first run header (`=== START ERCOT pw=3 ep=0.80 ===`), then was reaped at the turn boundary. Zero JSONs written. Background subprocesses do not survive turn boundaries in this environment.
-- Attempt 3 (post-fix, foreground): aborted before launch after the user challenged the "10–20 min" time estimate. Investigation revealed the estimate was based on the wrong probe shape — see "Orchestrator regression" below.
+Preserves SPEC §24.5's cross-session cache-inheritance semantic (parquets are still persisted — just once per pathway run instead of 26+ times).
 
-**Orchestrator regression — in-proc driver exists but is orphaned (Apr 19, 2026).** The planned probe shape was 12 separate `python3 scripts/step_2_3_pathway_optimizer.py ...` invocations, which pays the 8.3s Python-startup + module-import tax per run (~100s) AND reloads the dispatch-cache parquet per run (5–10s ERCOT, much worse PJM). There is already an in-process driver at `scripts/_sweep_pathways_inproc.py` that keeps the interpreter hot across all (pathway, endpoint) combos for one ISO — its own docstring documents a profiled cost of ~0.5–1s per run after cold-start. But `scripts/run_pathway_sweep.py:227` still uses `subprocess.run` to fork the optimizer per config, never calls the in-proc driver. For the 12-config probe, the correct shape is two invocations of `python3 scripts/_sweep_pathways_inproc.py --iso <ISO> --pathways 1,3 --endpoints 0.80,0.90,0.99 --output-root /tmp/reliability_probe_sanity` (one for ERCOT, one for PJM). Revised cost estimate: **~1–1.5 min total** (vs. the original "10–20 min"). Gas-cost layering was inspected for a loop regression — the per-year `for year in YEARS:` loop at `step_2_3_pathway_optimizer.py:2344` is 26 iterations and the gas-cost math in `score_ef_batch_with_gas` (`:1843–1858`) is vectorized (`np.maximum`, scalar arithmetic on `(N,)` arrays). No regression from §24.9.
+**What's NOT done.** The sanity probe has still not been launched (4 attempts this session total, all aborted). The fix is in place and pushed, but wall-clock is unmeasured.
 
-**Dispatch cache.** `data/step3-dispatch/ERCOT_dispatch_cache.parquet` regenerated to 106 MB during attempt 2 (matches task-brief expected size) and re-grew to 110 MB during this session's import side-effects. Reverted at session wrap — exceeds GitHub's 100 MB limit, will regenerate again next probe attempt (~1–2 min on first ISO touch).
+**Open decision — three paths for next session.** User flagged three candidates:
+- **(A) Launch probe as-is.** Dirty-flag fix alone collapses per-pathway-run parquet writes to 1 (or 0 if cache saturates). Expected wall-clock ~1–1.5 min for 12 configs. Column-pruning / storage-swap become separate work items.
+- **(B) Also add column-pruned read.** `_worst_hour_residual_norm` only reads `entry['total_clean']` — the other ~10 dispatch fields in the cache parquet are dead weight on load. A column-pruned `pq.read_table(path, columns=['archetype_key', 'total_clean'])` path in `load_dispatch_cache` (or a dedicated thin-load accessor) would cut cache load ~10×, meaningfully speeding subprocess-spawn paths. ~30 min extra before launching the probe.
+- **(C) Storage-format swap.** Bigger surgery: DuckDB append-only, or pyarrow row-group append, to eliminate full-parquet rewrite entirely. Addresses write amplification more thoroughly than the dirty-flag fix and scales better if archetype counts grow. ~1 day + cache-version migration. Probably its own SPEC entry.
 
-**Environment note.** Web container's SessionStart hook installs numpy / pyarrow / numba but not pandas; `step_2_3_pathway_optimizer.py` imports pandas. Manual `pip install pandas` was required this session — will be required again on a fresh container until the hook is updated.
+Recommendation is (A) → measure → decide on (B)/(C) based on probe output, but user hasn't ruled yet.
+
+**Prior context still valid.** SPEC §24.9 implementation (f060d38), WHOLESALE_PRICES fix (fd89c22), flag=False parity bit-for-bit passing on `ERCOT/pathway1_ep80.json` and `PJM/pathway3_ep90.json`. In-proc driver `scripts/_sweep_pathways_inproc.py` is the correct shape for the probe — not `run_pathway_sweep.py`'s subprocess-per-config loop. Pandas install required on fresh container (`pip install pandas`). Dispatch parquets excluded from commit per `.gitignore:69` (ERCOT_dispatch_cache.parquet is legacy-tracked; untracking deferred until after probe lands).
+
+**Pending (carry-over).**
+1. User decision on A / B / C path above.
+2. Launch 12-config sanity probe via in-proc driver (`for iso in ERCOT PJM; do python3 scripts/_sweep_pathways_inproc.py --iso $iso --pathways 1,3 --endpoints 0.80,0.90,0.99 --output-root /tmp/reliability_probe_sanity; done`).
+3. Extract `stranding_metadata.fleet_size_mw` from 12 JSONs; present P3-vs-P1 gas-fleet delta table per ISO per endpoint.
+4. Wait for user approval, then full 350-run v2 sweep per OPS.md.
+5. Regenerate 12 chart payloads in `reliability_tax/charts/`.
+6. Dashboard-gate check: P3 new-gas < P1 in every ISO at ep90 or ep99 minimum; gap widens ep80→ep99; hump visible; §4 tax in $4–18/MWh range.
+7. Patch `scripts/run_pathway_sweep.py:227` from `subprocess.run` to an in-proc `run_pathway(RunConfig(...))` call (same subprocess-spawn amortization regression as the probe; bloats v2 sweep separately from the cache-write regression fixed this session).
+8. Append §24.9 entry to `reliability_tax/methodogy.md` after sweep + chart-payload regen. Do NOT frame as reversal of §24.8.
+
+**Key design decisions (unchanged from prior).** `NEW_GAS_REFERENCE_CF = 0.85`. `(1 + RESOURCE_ADEQUACY_MARGIN) = 1.15` multiplier on `new_gas_mw`. §24.8 no-floor for P3 stands. Hump narrative stays (§24.5 descending-side monotonicity is an ep80→ep99 claim; ascending ep0→ep80 carries the hump).
+
+**Open questions.** None blocking once the probe lands. If ERCOT P3 ≥ P1 at every endpoint post-probe, penalty magnitude is too small — tune `NEW_GAS_REFERENCE_CF` down to 0.30–0.40 or raise RA multiplier.
 
 **Pending.**
-1. **Re-launch the probe via the in-proc driver.** Single turn, foreground, ~1–1.5 min total:
+1. **Launch the 12-config sanity probe via the in-proc driver.** Chunked per (ISO, endpoint) with explicit `timeout` ceilings so one bad chunk doesn't blow the session (prior 4 attempts all timed out on monolithic invocations):
    ```bash
    pip install pandas
-   for iso in ERCOT PJM; do
-     python3 scripts/_sweep_pathways_inproc.py \
-       --iso $iso --pathways 1,3 --endpoints 0.80,0.90,0.99 \
-       --output-root /tmp/reliability_probe_sanity
+   for ep in 0.80 0.90 0.99; do
+     for iso in ERCOT PJM; do
+       timeout 180 python3 scripts/_sweep_pathways_inproc.py \
+         --iso $iso --pathways 1,3 --endpoints $ep \
+         --output-root /tmp/reliability_probe_sanity
+     done
    done
    ```
-   Logs per-run timing to stdout (`[ISO] [n/N] pathway@ep OK cfe=X.XX% in Ts`). Fully self-contained within one turn — no background-subprocess survival problem.
-   Separate follow-up (not blocking the probe): patch `run_pathway_sweep.py` to call the in-proc driver for the full 350-run v2 sweep instead of the subprocess-per-config loop.
+   Logs per-run timing to stdout (`[ISO] [n/N] pathway@ep OK cfe=X.XX% in Ts`). ERCOT ep80 is the cold chunk (regenerates `ERCOT_dispatch_cache.parquet` to ~110 MB); subsequent chunks should be ~20–40 s each.
 2. Extract `stranding_metadata.fleet_size_mw` from each of the 12 JSONs.
 3. Build the P3-vs-P1 gas-fleet delta table per ISO per endpoint.
 4. Present results, wait for user approval before full sweep.
 5. Full 350-run v2 sweep re-run per `OPS.md` pre-run gate.
 6. Regenerate 12 chart payloads in `reliability_tax/charts/`.
 7. Dashboard-gate check: P3 new-gas < P1 in every ISO at ep90 or ep99 minimum; gap widens ep80→ep99; hump visible; §4 tax in $4–18/MWh range.
-8. Append §24.9 entry to `reliability_tax/methodogy.md` documenting the change. Do NOT frame as reversal of §24.8 (§24.8 no-floor stands).
+8. Patch `scripts/run_pathway_sweep.py:227` from `subprocess.run` to an in-proc `run_pathway(RunConfig(...))` call (separate subprocess-spawn regression from the cache-write regression fixed this session).
+9. Append §24.9 entry to `reliability_tax/methodogy.md` documenting the change. Do NOT frame as reversal of §24.8 (§24.8 no-floor stands).
 
 **Key design decisions locked this session.**
 - Expected CF for new-gas fuel term in argmin = `NEW_GAS_REFERENCE_CF = 0.85` (user-selected via AskUserQuestion). Tunable knob — flag if probe penalty looks too large/small.
