@@ -1850,7 +1850,9 @@ def score_ef_batch_with_gas(
     )
 
     capex_per_mw = float(pc.NEW_CCGT_COST_KW_YR[iso]) * 1000.0
-    wholesale_price = float(pc.WHOLESALE_PRICES.get(iso, {}).get('Medium', 0.0))
+    wholesale_price = float(pc.WHOLESALE_PRICES[iso]) + float(
+        pc.FUEL_ADJUSTMENTS[iso].get('Medium', 0.0)
+    )
     fuel_per_mw = NEW_GAS_REFERENCE_CF * HOURS_PER_YEAR * wholesale_price
 
     new_gas_cost_usd = new_gas_mw * (capex_per_mw + fuel_per_mw)
