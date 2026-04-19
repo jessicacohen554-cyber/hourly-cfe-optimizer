@@ -183,6 +183,7 @@ def _get_worst_hour_state(iso):
         cache = {}
     state = {
         'cache': cache,
+        'dirty': False,                 # True when in-memory cache has archetypes not yet persisted
         'demand_data': None,
         'gen_profiles': None,
         'demand_norm': None,            # (8760,) normalized demand shape
@@ -209,19 +210,62 @@ def _ensure_common_data(iso):
 
 
 def _expand_missing_archetypes(iso, missing_mix_infos):
-    """Delegate to step3a's batch-expansion entry point and refresh memo."""
+    """Expand the in-memory archetype cache for ``iso``; mark state dirty.
+
+    SPEC §24.5 requires that missing archetypes discovered during optimization
+    be persisted so subsequent sessions inherit the expanded cache. Prior to
+    the §24.9 argmin-endogenization landing this function passed ``persist=True``
+    to ``expand_cache_for_mixes`` on every call — fine under the ELCC-era code
+    path where expansions happened ~once per ISO. Under §24.9's per-year
+    `worst_hour_gas_sizing` calls (26 years × per-endpoint) plus the vectorized
+    `worst_hour_residual_per_row` EF-scorer (batch-expanding O(EF-rows) archetypes),
+    the hard-coded ``persist=True`` meant a full ~100 MB parquet rewrite on every
+    call, bloating pathway-run wallclock 5–10× (see LESSONS.md — "LESSON 10:
+    profile before multi-run").
+
+    Fix: expand in memory only, flag the ISO state as dirty, and let callers
+    flush once at a natural batch boundary (end of ``run_pathway`` — see
+    ``flush_expanded_cache`` below). Functionally identical cross-session
+    semantic to the prior code path; N× fewer parquet writes per pathway run.
+    """
     if not missing_mix_infos:
         return
     state = _ensure_common_data(iso)
     from step3a_build_dispatch_cache import expand_cache_for_mixes
+    cache_before = state['cache']
+    size_before = len(cache_before)
     updated = expand_cache_for_mixes(
         iso, missing_mix_infos,
-        existing_cache=state['cache'],
+        existing_cache=cache_before,
         demand_data=state['demand_data'],
         gen_profiles=state['gen_profiles'],
-        persist=True,
+        persist=False,
     )
     state['cache'] = updated
+    if len(updated) > size_before:
+        state['dirty'] = True
+
+
+def flush_expanded_cache(iso):
+    """Persist accumulated in-memory archetype expansions for ``iso`` to disk.
+
+    No-op if the in-memory cache has not grown since the last flush (or the
+    initial load). Callers should invoke this at the boundary of a pathway run
+    (end of ``run_pathway``) or at the end of a standalone script that invoked
+    any worst-hour-sizing function. Preserves the SPEC §24.5 cross-session
+    cache-inheritance semantic without paying per-call parquet-write costs
+    during the optimizer hot loop.
+
+    Returns ``True`` if a parquet write happened, ``False`` otherwise. The
+    return value is informational only — typical callers ignore it.
+    """
+    state = _WH_STATE.get(iso)
+    if state is None or not state.get('dirty'):
+        return False
+    import dispatch_utils as _du
+    _du.save_dispatch_cache(iso, state['cache'], version=_du.CACHE_VERSION)
+    state['dirty'] = False
+    return True
 
 
 def _gas_raw_2025_worst_hour(iso):
