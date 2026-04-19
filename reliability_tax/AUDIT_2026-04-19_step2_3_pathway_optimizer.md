@@ -194,3 +194,26 @@ No parameter is demonstrably out-of-range. Verdict B via parameter drift does no
 - **The retired ELCC / peak-net-of-clean sizing model.** Only noted in passing (Finding 7); not re-derived or externally checked.
 - **`run_sweep_1215.py` and the 350-run v2 sweep mechanics.** If card 1 option A/D is taken, the sweep must be re-run; compute discipline lives in `OPS.md` and was not audited here.
 
+## Post-audit corrections (Apr 19, 2026)
+
+**Finding 7 was incomplete, not wrong.** The claim "worst-hour sizing is monotone-decreasing; the hump is mechanically impossible" is correct *across the audited endpoint range (ep80 → ep99)*. It does not extend to the full range (ep0 → ep99). The ascending side of a hump lives between the current-baseline CFE (~40% ERCOT, higher elsewhere) and the peak-gas endpoint. Gas new-build at baseline is ~0; gas new-build at ep80 is 134 GW in ERCOT. That IS the hump — the peak happens to sit at or near the bottom of the audited range. The dashboard's "gas builds up as CFE targets get ambitious, then strands as you push past the peak" narrative is defensible; the audit over-read Finding 7 as a claim about the full curve when it is actually a claim about monotonicity on the descending side.
+
+**Card 2 (hump storyline) is withdrawn.** Keep the §24.5-consistent hump narrative. No Section 2 rewrite.
+
+## Locked decisions (Apr 19, 2026)
+
+User reviewed the verdict and redirected on all three cards:
+
+1. **Card 1 — §24.8 stays.** Do NOT add a clean-firm floor, hard-wired or otherwise. The §24.8 decision to remove the floor is not reversed. Instead, change the optimizer's cost function: endogenize new-gas-build cost (capex + fuel) into the `select_target_mix` argmin, so that candidate EF rows that generate a large worst-hour residual (and therefore a large required new-gas-build) are penalized relative to rows whose residual is already covered by clean firm. Under this change, P3's NOAK-2035-discounted clean-firm rows should naturally beat P1's NOAK-2045 rows in VRE-rich ISOs, because the clean-firm rows' lower-residual-gap advantage flows into the argmin.
+
+2. **Card 2 — hump storyline stays** (see correction above).
+
+3. **Card 3 — methodology doc.** Do not document a reversal (there is no reversal — §24.8 still stands). Instead, add a new §24.9 entry documenting the endogenization change and its expected directional effect on P1-vs-P3 divergence. Link the audit memo for the evidence trail.
+
+**P2a / P2b pivot-trigger logic.** User: "this should also change on endogenous new gas cost in optimization." Implication: endogenization is expected to make the pivot behavior P2a/P2b are supposed to exhibit fall out of the economics, rather than requiring a separate `should_pivot_*` mechanism. `should_pivot_2a` / `should_pivot_2b` stay as dead code; no re-enablement.
+
+**Expected directional change after intervention.**
+- ERCOT: P3 < P1 at some endpoint(s); magnitude ISO-dependent. Previously P1 ≡ P1a ≡ P3 bit-for-bit.
+- PJM: ep80 divergence emerges (previously P3 ≡ P1); ep90/ep99 gap may widen from the current 62–64% differential.
+- Hump may sharpen or shift in endpoint (still present; Finding 4's descending side holds).
+
