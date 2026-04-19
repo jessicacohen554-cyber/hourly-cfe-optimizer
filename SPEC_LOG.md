@@ -7,6 +7,35 @@
 
 ---
 
+### Reliability Tax Page Redesign — IN PROGRESS (Apr 18, 2026, late)
+
+**Task context.** User rejected current `dashboard/reliability-tax.html` as too weird, jargon-heavy, and self-referential. Specific feedback: section names like "The Setup" / "The Hump" / "The Abandonment" / "The Tax" / "The Cost of Waiting" are pretentious; in-body `SPEC §24.5`, `SPEC §24.6`, `SPEC §24.7`, `SPEC §24.8`, `Card F'`, `Card J`, `Card R` references are idiotic for public readers; charts/layout weak. Goal: reframe streamlined, plain-language, in the voice of `clean_firm_case.html` and `lmp_trends.html` (numbered `section-header` + `section-number` badges, descriptive titles, direct analytical prose, no methodology-doc self-reference).
+
+**What's done (committed this session):**
+- **Hero (§0)** — rewrote lead paragraph in plain language; added 4-tile key-findings grid ($4–18/MWh tax, 30–40% stranded, 50–70% cheaper with P3, ~1% ERCOT/SPP convergence); replaced SPEC-speak "reliability tax formula" insight with "what this bill is made of" plain-English version.
+- **Section 1 (was "The Setup")** — renamed to **"Why a clean-only grid still builds gas"** using `section-header` + `section-number` pattern. Duck-panel titles switched `70% CFE → 70% clean`, `95% CFE → 95% clean` with plain-language subs. Body prose fully rewritten: dropped SPEC §24.5 citation, ELCC-credit jargon, "99.97th percentile of hourly margin-on-demand residual", NERC / PJM 1-day-in-10-years LOLE benchmark. Kept the physical rule (2.6 tail hours/year) in accessible terms.
+- **Section 2 (was "The Hump")** — renamed to **"How much new gas gets built"** with `section-header` wrapper + descriptive subtitle.
+
+**What's still to do (unchanged in the file):**
+1. **Section 2 insight box** — still has "The hump." lead, §24.6 citation, Card F′ reference, SPP/MISO/PJM/ERCOT run-on methodology sentence. Rewrite as plain-language "where new-gas build peaks and why".
+2. **Section 3 ("The Abandonment")** — rename to e.g. **"How much of it gets stranded"**. Strip Card F′ references from subtitle and legend. Update `#abandonmentInsight` JS-rendered copy.
+3. **Section 4 ("The Tax")** — rename to e.g. **"The bill on ratepayers"**. Strip §24.7 reference from subtitle. The delta-insight JS is mostly fine (already plain-language) but drop the `§24.8 NOAK-2035` clause in the verdict strings.
+4. **Section 5 ("Five pathways, five taxes")** — keep the title, rewrite the green-bordered insight box so it doesn't cite "§24.8 findings to watch for"; list the findings plainly. Strip §24.8 from the `ERCOT P1 ≡ P3` and `PJM P3 saves 66.7%` lines. Pathway-card `PATHWAYS` array descriptions also need cleanup: P1a mentions "(Card R)", P3 mentions "§24.8 NOAK-2035 Wright's-Law curve", etc.
+5. **Section 6 (Stranding Sankey)** — rewrite subtitle ("§24.6 peak-year snapshot" → plain), drop Card F′ from the chart-panel meta line and bottom insight box.
+6. **Section 7 ("The Cost of Waiting")** — keep the title (it's fine), rewrite closing insight box to drop "Card F′", "§24.8 NOAK-2035 window", and P1a shorthand.
+7. **Section 8 ("All 175 runs")** — keep title. Bottom insight box drops Card J and italic-cost ceiling citation.
+8. **Footer** — `data-footer-note` has `v2 methodology (SPEC §24.4)`. Strip the SPEC citation.
+9. **Chart titles/axes** — pass through every Chart.js `options.plugins.title` / `scales.*.title.text` and simplify: e.g. "Cumulative new gas (MW, 2050)" is fine, but `"Stranded capex ($B, 2025–2050)"` etc. are OK. Mostly fine already; verify after the copy rewrites land.
+10. **Chart-title elements** — existing page has no `<div class="chart-title">` labels above each canvas (unlike `clean_firm_case.html`/`lmp_trends.html`). Add one to each `.chart-panel` so users know what the chart shows at a glance without reading the narrative first.
+
+**Style-reference pages used.** `dashboard/clean_firm_case.html` (section-header numbered pattern, narrative-card style, foak-hero layout) and `dashboard/lmp_trends.html` (key-findings-panel grid, Era 1/2/3 title convention, section subtitles).
+
+**Resume prompt:** *"Continue the Reliability Tax page redesign in `dashboard/reliability-tax.html`. Hero (§0), Section 1, and Section 2 opener have been rewritten in plain language (no SPEC §, no Card F′). Still to do: (a) Section 2 insight box, (b) Section 3 'Abandonment' rename + prose + JS insight, (c) Section 4 'The Tax' rename + prose + JS delta-insight verdict strings, (d) Section 5 insight box and PATHWAYS array descriptions, (e) Section 6 Sankey subtitle + bottom insight, (f) Section 7 closing insight, (g) Section 8 bottom insight + footer data-footer-note, (h) add per-chart `<div class="chart-title">` headers above each `<canvas>` matching the clean_firm_case pattern. Reference pages: `clean_firm_case.html` and `lmp_trends.html`. Do NOT reference SPEC.md or any `Card X'` shorthand anywhere in the user-facing copy."*
+
+> Archived from SPEC.md on Apr 19, 2026 — superseded by the Apr-19 Pipeline-Audit Sub-Agent HARDENED block at the top of SPEC.md's Current Status.
+
+---
+
 ### Reliability Tax Dashboard Regeneration — LANDED (Apr 18, 2026)
 
 **Branch:** `claude/regen-reliability-tax-v2-d0U5j` (3 commits; pushed; no PR opened per user default).
