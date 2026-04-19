@@ -19,4 +19,4 @@ fi
   echo "  4. Emit a resume prompt focused on task context (no branch name)."
 } >&2
 
-exit 2
+exit 1

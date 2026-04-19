@@ -54,7 +54,7 @@ HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 | `step7_1e_dispatch_deployment.py` | 7.1E | **FRAGILE** | Low | Hybrid CF + capacity credits OK; `_map_resource()` missing explicit mappings |
 | `step7_1f_extract_hourly_comparison.py` | 7.1F | OK | None | Resources list includes all 4 |
 | `step7_1g_extract_use_case_data.py` | 7.1G | OK | None | Mix columns with defaults |
-| `step7_1h_extract_hybrid_data.py` | 7.1H | DEDICATED | None | Entire script for hybrid dashboard |
+| `scripts/step7_1h_extract_hybrid_data.py` | 7.1H | DEDICATED | None | Entire script for hybrid dashboard |
 | `step7_1h_extract_strategy_comparison.py` | 7.1H | **MISSING** | **Critical** | categorize_resources() ignores hybrids |
 | `step7_2_extract_no_regrets.py` | 7.2 | OK | None | Resources list includes all 4 |
 
@@ -98,7 +98,7 @@ Fix:
 4. Verify upstream: check step5_2c_strategy_hourly.py output to confirm hybrid keys exist
    in the resource_mix dicts that this script consumes.
 
-Reference pattern: see how step7_1h_extract_hybrid_data.py (at repo root) handles hybrid data.
+Reference pattern: see how scripts/step7_1h_extract_hybrid_data.py handles hybrid data.
 Also check: the ISOS list at line 26 of step7_1h_extract_hybrid_data.py excludes NYISO -- verify
 this is intentional.
 
@@ -110,7 +110,7 @@ before and after to confirm coverage. Commit to branch.
 - `scripts/step7_1h_extract_strategy_comparison.py` -- categorize_resources() ~lines 78-118
 - `scripts/pipeline_config.py` -- HYBRID_TYPES at line 58
 - `scripts/step5_2c_strategy_hourly.py` -- upstream data producer
-- `step7_1h_extract_hybrid_data.py` -- reference pattern (repo root)
+- `scripts/step7_1h_extract_hybrid_data.py` -- reference pattern
 
 ---
 
@@ -214,7 +214,7 @@ Trace hybrid resource data flow across the full pipeline:
 6. Cross-step backward compatibility: Verify scripts that read parquets from prior steps handle
    missing hybrid columns gracefully (look for .get(col, 0) or default=0 patterns).
 
-7. Check step7_1h_extract_hybrid_data.py (at repo root): its ISOS list excludes NYISO --
+7. Check scripts/step7_1h_extract_hybrid_data.py: its ISOS list excludes NYISO --
    determine if this is intentional by checking if NYISO has step2.2 parquets.
 
 Report findings as a compatibility table with PASS/FAIL/WARN per check.
@@ -358,7 +358,7 @@ Verify: grep for _map_resource in the file and confirm all resource types have e
 - `dashboard/js/shared-data.js` -- MIX_RESOURCES, RESOURCE_LABELS, RESOURCE_STYLES
 - `dashboard/dashboard.html` -- main optimizer dashboard
 - `dashboard/js/hybrid-analysis-data.js` -- hybrid-specific dashboard data
-- `step7_1h_extract_hybrid_data.py` -- hybrid data extractor (repo root)
+- `scripts/step7_1h_extract_hybrid_data.py` -- hybrid data extractor
 - `scripts/step7_1e_dispatch_deployment.py` -- `_map_resource()` at lines 280-294
 
 ---

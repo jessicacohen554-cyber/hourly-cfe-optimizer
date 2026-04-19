@@ -51,8 +51,8 @@ When the task involves writing or editing code, identify the category and read t
 | Plant-level data (heat rates, retirement, eGRID) | `market-simulator/scripts/generate_plant_heat_rates.py`, `market-simulator/scripts/validate_plant_retirement.py`, `data/egrid_emission_rates.json`, `data/eia-860/` |
 | Synthetic profile generation | `market-simulator/scripts/generate_synthetic_profiles.py`, `data/eia_demand_profiles_multiyear.json`, `data/eia_generation_profiles_multiyear.json` |
 | Profile modeling / dispatch optimizer (separate codebase) | `profile-modeling/dispatch.py`, `profile-modeling/optimizer.py`, `profile-modeling/supply.py`, `profile-modeling/load_profiles.py`, `profile-modeling/run_analysis.py` |
-| Hybrid VRE+storage profiles | `step7_1h_extract_hybrid_data.py`, `data/hybrid_profiles/*.npz`, `dashboard/js/hybrid-analysis-data.js` |
-| Datacenter-load modeling | `step0_generate_datacenter_load.py`, `data-center-cfe/analysis/coal_wall_analysis.py`, `data-center-cfe/analysis/gap_analysis.py`, `data/datacenter_load_metadata.json`, `data/datacenter_load_profile.csv` |
+| Hybrid VRE+storage profiles | `scripts/step7_1h_extract_hybrid_data.py`, `data/hybrid_profiles/*.npz`, `dashboard/js/hybrid-analysis-data.js` |
+| Datacenter-load modeling | `scripts/step0_generate_datacenter_load.py`, `data-center-cfe/analysis/coal_wall_analysis.py`, `data-center-cfe/analysis/gap_analysis.py`, `data/datacenter_load_metadata.json`, `data/datacenter_load_profile.csv` |
 | Constellation / multi-fleet scenarios | `market-simulator/scripts/generate_constellation_scenarios.py`, `market-simulator/fleet_scenarios/`, `market-simulator/scripts/scenario_common.py` |
 | Sensitivity analysis | `market-simulator/scripts/sensitivity_analysis.py`, `market-simulator/scripts/sweep_params_io.py` |
 | Smoke / validation tests | `run_ercot_smoke_test.py`, `qa_check.sh`, `market-simulator/scripts/tests/`, `market-simulator/scripts/validate_plant_retirement.py`, `pytest.ini` |

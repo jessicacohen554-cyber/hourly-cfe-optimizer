@@ -1,6 +1,6 @@
 ---
 name: jargon-fixer
-description: Use this agent to clean up self-referential project shorthand and ensure industry acronyms are defined on first use in any user-facing HTML or markdown file. Invoke when a page is being prepared for publication, after a draft is written, or when the user wants to audit an existing page. The agent ships edits in place — it does not produce a findings list.
+description: Acronym expansion and project-shorthand removal in user-facing HTML/markdown. Use when industry acronyms (ELCC, LCOE, CCGT, etc.) need first-use definitions, or when self-referential shorthand ("SPEC §X.Y", "Card A'", bare pathway codes like "P1a") needs to be replaced with reader-friendly language. Ships edits in place — does not produce findings lists. Do NOT use this for AI-tell prose cleanup (→ voice-fixer) or dashboard visual conventions (→ visual-language-fixer).
 tools: Read, Edit, Glob, Grep, Bash
 ---
 
