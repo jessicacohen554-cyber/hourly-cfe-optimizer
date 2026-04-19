@@ -112,3 +112,108 @@ Pathway 1 and Pathway 3 build essentially the same new-gas capacity in 6 of 7 IS
 - **Why it matters.** Phase 4 check comes back in-range overall, which means Verdict B via "the parameter choice is the flaw" does not fire. The cost parameters are aggressive-clean-firm-friendly; if they weren't, P3 would not even win PJM ep90 / ep99. The hypothesis failure in ERCOT and at low endpoints is *not* a function of pessimistic cost assumptions.
 - **Needs follow-up in.** Phase 5 classification (rules out Verdict B via parameter drift).
 
+## What the code actually does
+
+Step 2.3's optimizer ranks a candidate EF (each row is a clean-energy mix) by cost for each year's SBTi-interpolated CFE target, snaps to the smallest EF band that meets target, picks the argmin-cost row, sizes new gas from the 99.97th-percentile worst-hour residual of that row's hourly dispatch, and accumulates year-over-year (Findings 6, 7). Pathway differentiation is exogenous-only: `NOAK_YEAR_BY_PATHWAY` sets 2045 for P1/P1a/P2a, 2040 for P2b, and 2035 for P3 — the same EF rows are candidates for every pathway at every year, so pathway differentiation collapses to "which year does the learning-curve curve bend" (Findings 1, 2). The design decision to drop P3's clean-firm floor is explicit in a comment at `scripts/step_2_3_pathway_optimizer.py:1493-1513` ("A floor was prototyped and rejected because it hard-wired the outcome (P3 ≠ P1 by construction) and smothered the regional heterogeneity"). §24.8 also made P2a/P2b's pivot logic dead code: `should_pivot_2a` and `should_pivot_2b` are kept as types but never `.trigger()`'d.
+
+## Where the design breaks
+
+1. **No forcing mechanism for P3's stated behavior.** The hypothesis says P3 should "build clean firm proactively" and "swap gas for clean firm before the gas would have been built." The code has no mechanism that makes either sentence true — P3's only advantage is a 5–10 year earlier NOAK, and if the argmin at P3's SBTi-interpolated target still picks a pure-VRE row, the NOAK advantage is irrelevant. Findings 1, 2, 6 diagnose this at the code level; Finding 3 (ERCOT P1 ≡ P1a ≡ P3) shows it firing in the data. Magnitude: zero P3-vs-P1 gas divergence in ERCOT at every endpoint; P3 ≡ P1 in PJM at ep80. P3 wins only where the argmin naturally picks clean-firm-heavy mixes (PJM ep90 / ep99).
+
+2. **"Gas hump at medium CFE" dashboard storyline is mechanically impossible under §24.5 worst-hour sizing.** The sizing rule is `gap_mw = residual_norm(mix) × demand_mwh_grown`, where `residual_norm` is strictly monotone-decreasing in the mix's CFE. So `new_gas_required_cumulative_mw` is deterministically monotone-decreasing in the endpoint by construction (Finding 7). The hump story belongs to the pre-§24.5 ELCC + peak-net-of-clean sizing model, which §24.5 explicitly replaced. The dashboard's Section 2 prose, hump-chart framing, and several insight boxes have not been updated to reflect that the hump is now impossible. Magnitude: the entire "Section 2 / The Hump" narrative is orphaned from the methodology. Finding 4 confirms ERCOT gas is monotone-decreasing across ep80 → ep99; Finding 5 shows PJM plateau with a dip, not a hump.
+
+3. **Methodology doc drift from code.** `reliability_tax/methodogy.md` (Card C, Card E) still describes P2a/P2b pivot triggers and P3 clean-firm forcing that the code explicitly does not implement (§24.8 comments cite the removal). Magnitude: the spec artifact that readers consult to understand the pathways is misleading about what the code does.
+
+## Decision cards
+
+### AUDIT-2026-04-19-1 — Does P3 need a forcing mechanism, or is "P3 wins where it should" the real story?
+
+**Options:**
+- **A. Add a clean-firm floor to `_filter_pathway_3`.** Require P3 to procure at least `FLOOR_BY_YEAR[year]` fraction of clean-firm capacity starting at 2030 (or whatever year the user chooses), ramping to endpoint. This is what the methodology doc originally described; the §24.8 comment says it was prototyped and rejected. Re-enabling it makes P3 < P1 universally, at the cost of hard-wiring the outcome. **Implication:** dashboard hypothesis becomes true by construction; regional heterogeneity disappears.
+- **B. Reframe dashboard to match real code behavior.** Accept that P3's Wright's-Law advantage only matters in ISOs where the argmin naturally picks clean-firm-heavy rows (PJM ep90+, NYISO, NEISO). Rewrite Section 2 / Section 5 / Section 7 to tell the "P3 wins in VRE-constrained ISOs at high endpoints, not in VRE-rich ISOs at low endpoints" story. **Implication:** no code change; dashboard copy + JS insight strings change; story is scientifically more defensible but less marketable.
+- **C. Hybrid — keep the current no-floor code but add a diagnostic "P3 win-map" section to the dashboard.** Show a heatmap of P3-vs-P1 gas gap by ISO × endpoint to make explicit where the mechanism fires and where it doesn't. **Implication:** adds a new payload generator + chart; keeps both existing and reframed narratives.
+- **D. Weaker floor — min-tranche rather than min-fraction.** Require P3 to procure at least one tranche of clean firm per year after NOAK-2035, even if the argmin doesn't pick it. Softer than A, harder than B/C. **Implication:** P3 moves off P1 in most ISOs but doesn't dominate; re-run the sweep; all chart payloads change.
+
+**Recommended:** B. The §24.8 design decision was deliberate and well-reasoned; the dashboard is the stale artifact.
+
+**Blast radius per option:**
+- A: `step_2_3_pathway_optimizer.py`, `pipeline_config.py` (floor parameters), re-run the 350-run sweep (`run_sweep_1215.py` subset — ~3h), all 12 `reliability_tax/charts/gen_*.py`, `reliability-tax.html` copy.
+- B: `reliability-tax.html` (hero key-findings, Section 2/5/7 prose, Section 5 PATHWAYS array, JS insight strings), `reliability_tax/methodogy.md`.
+- C: one new `gen_p3_winmap.py`, new canvas + code in `reliability-tax.html`, copy updates in Section 5.
+- D: `step_2_3_pathway_optimizer.py`, re-run sweep, all chart payloads, copy updates.
+
+### AUDIT-2026-04-19-2 — What to do with the "gas hump at medium CFE" storyline?
+
+**Options:**
+- **A. Strip the hump storyline entirely.** Update Section 2 prose + JS insight to describe the observed monotone decline and explain it via §24.5 worst-hour sizing ("gas builds are largest where CFE is loosest because the residual gap shrinks as CFE tightens"). **Implication:** dashboard matches code; retires a wrong narrative.
+- **B. Restore pre-§24.5 ELCC + peak-net-of-clean sizing.** Revert §24.5. Hump re-appears. **Implication:** invalidates every gas-sizing number in the current sweep; massive re-run; re-opens retired methodology debates.
+- **C. Keep §24.5, reframe hump narrative as "why gas peaks where CFE is loosest."** Same data as A, different framing. **Implication:** copy only; slightly counterintuitive to a lay reader ("why does lax CFE build more gas?").
+
+**Recommended:** A. Plainest description of what the data actually shows.
+
+**Blast radius per option:**
+- A / C: `reliability-tax.html` Section 2 + related JS insights; `reliability_tax/methodogy.md`.
+- B: `step2_2a_cost_optimization.py`, `step_2_3_pathway_optimizer.py`, `pipeline_config.py`, re-run full sweep, all 12 chart payloads, all section prose in `reliability-tax.html`.
+
+### AUDIT-2026-04-19-3 — Reconcile methodology doc with current code.
+
+**Options:**
+- **A. Update `reliability_tax/methodogy.md` to describe what the code actually does.** Mark Card C pivot-trigger logic and Card E P3 forcing as superseded by §24.8. State plainly that pathway differentiation is NOAK-year-only. **Implication:** spec matches code; future auditors don't chase dead mechanisms.
+- **B. Update the code to match the existing methodology doc.** Restore pivot triggers and P3 floor. Same as card 1 option A. **Implication:** card 1 is effectively resolved the same way; large blast radius.
+- **C. Both — revise both and explicitly mark the §24.8 pivot decision as a methodology change.** **Implication:** most complete; requires a coherent narrative about why the change was made.
+
+**Recommended:** A (if card 1 → B) or B (if card 1 → A/D). Whichever option keeps doc + code coherent.
+
+**Blast radius per option:**
+- A: `reliability_tax/methodogy.md` only.
+- B: same as card 1 option A.
+- C: `reliability_tax/methodogy.md` + inline comments in `step_2_3_pathway_optimizer.py` pointing at §24.8.
+
+## External-check log
+
+| Parameter | Code value | External benchmark | Source | Verdict |
+| --- | --- | --- | --- | --- |
+| SBTi ladder | `(2025,0),(2030,50),(2035,70),(2040,90),(2045,95),(2050,99.9)` | ~100% by 2040 (SBTi 1.5°C OECD power, IPCC AR6 C1) | SBTi Power Sector Guidance 2020; IPCC AR6 WG3 | 2°C-ish framing, not 1.5°C — in-range for a conservative scenario |
+| Nuclear newbuild NOAK (Medium) | $90–110/MWh | $82–124 (NREL ATB 2024 Moderate); $141–221 (Lazard v17) | NREL ATB 2024; Lazard LCOE v17 | In-range, aggressive end |
+| Nuclear FOAK | $169–212/MWh | ~$190/MWh Vogtle U3 realized | EIA; utility filings | In-range |
+| CCGT + CCS (45Q-on) NOAK | $69–80/MWh | $52–68 (NREL ATB 2024 net of 45Q) | NREL ATB 2024 | In-range, 5–15/MWh above ATB central |
+| NOAK-2035 for nuclear | 5-yr FOAK→NOAK | 5%/dbl (pessimistic) to 20%/dbl (optimistic) | Grubler 2010; Lovering 2016 | Aggressive but defensible |
+| `LEARNING_EXPONENT = 0.6` | front-loads 80% decline by 1/3-way | 0.3–0.5 typical Wright's Law on year-fraction domain | various | Aggressive |
+
+No parameter is demonstrably out-of-range. Verdict B via parameter drift does not fire.
+
+## Verdict
+
+**B — methodology as implemented does not support the stated hypothesis.** The hypothesis says P3 < P1 in every ISO at every endpoint; the code intentionally (per §24.8) provides no mechanism to force P3 to do that. The data confirms the code: P3 ≡ P1 wherever the argmin picks pure-VRE mixes. Separately, the "gas hump" storyline is mechanically impossible under §24.5 worst-hour sizing and should not be on the dashboard. Cost parameters are in-range and are not the cause of the hypothesis failure. The canonical fix is decision card 1 option B (reframe the dashboard to match the real story) paired with card 2 option A (strip the hump narrative) and card 3 option A (update the methodology doc) — Verdict-B-in-name but Verdict-C-in-substance. The nuclear option (card 1 option A) is available if the user wants the original hypothesis to be true by construction.
+
+## Out-of-scope items
+
+- **Other 5 ISOs** (CAISO, NYISO, NEISO, MISO, SPP). CAISO is reportedly the one ISO where P3 < P1 behaves per hypothesis; the other four are not audited here. A follow-up audit on NYISO / NEISO (VRE-constrained, where card 1 option B's story predicts P3 wins) would corroborate or refute the "reframe" path.
+- **All 12 `reliability_tax/charts/gen_*.py` generators** beyond Section 2 and Section 3. The Section 2 / Section 3 pair was sufficient to confirm the mechanism; other sections likely inherit the same framing drift.
+- **Dashboard `reliability-tax.html`** user-facing copy — flagged as the downstream intervention surface but not read line-by-line in this run.
+- **The retired ELCC / peak-net-of-clean sizing model.** Only noted in passing (Finding 7); not re-derived or externally checked.
+- **`run_sweep_1215.py` and the 350-run v2 sweep mechanics.** If card 1 option A/D is taken, the sweep must be re-run; compute discipline lives in `OPS.md` and was not audited here.
+
+## Post-audit corrections (Apr 19, 2026)
+
+**Finding 7 was incomplete, not wrong.** The claim "worst-hour sizing is monotone-decreasing; the hump is mechanically impossible" is correct *across the audited endpoint range (ep80 → ep99)*. It does not extend to the full range (ep0 → ep99). The ascending side of a hump lives between the current-baseline CFE (~40% ERCOT, higher elsewhere) and the peak-gas endpoint. Gas new-build at baseline is ~0; gas new-build at ep80 is 134 GW in ERCOT. That IS the hump — the peak happens to sit at or near the bottom of the audited range. The dashboard's "gas builds up as CFE targets get ambitious, then strands as you push past the peak" narrative is defensible; the audit over-read Finding 7 as a claim about the full curve when it is actually a claim about monotonicity on the descending side.
+
+**Card 2 (hump storyline) is withdrawn.** Keep the §24.5-consistent hump narrative. No Section 2 rewrite.
+
+## Locked decisions (Apr 19, 2026)
+
+User reviewed the verdict and redirected on all three cards:
+
+1. **Card 1 — §24.8 stays.** Do NOT add a clean-firm floor, hard-wired or otherwise. The §24.8 decision to remove the floor is not reversed. Instead, change the optimizer's cost function: endogenize new-gas-build cost (capex + fuel) into the `select_target_mix` argmin, so that candidate EF rows that generate a large worst-hour residual (and therefore a large required new-gas-build) are penalized relative to rows whose residual is already covered by clean firm. Under this change, P3's NOAK-2035-discounted clean-firm rows should naturally beat P1's NOAK-2045 rows in VRE-rich ISOs, because the clean-firm rows' lower-residual-gap advantage flows into the argmin.
+
+2. **Card 2 — hump storyline stays** (see correction above).
+
+3. **Card 3 — methodology doc.** Do not document a reversal (there is no reversal — §24.8 still stands). Instead, add a new §24.9 entry documenting the endogenization change and its expected directional effect on P1-vs-P3 divergence. Link the audit memo for the evidence trail.
+
+**P2a / P2b pivot-trigger logic.** User: "this should also change on endogenous new gas cost in optimization." Implication: endogenization is expected to make the pivot behavior P2a/P2b are supposed to exhibit fall out of the economics, rather than requiring a separate `should_pivot_*` mechanism. `should_pivot_2a` / `should_pivot_2b` stay as dead code; no re-enablement.
+
+**Expected directional change after intervention.**
+- ERCOT: P3 < P1 at some endpoint(s); magnitude ISO-dependent. Previously P1 ≡ P1a ≡ P3 bit-for-bit.
+- PJM: ep80 divergence emerges (previously P3 ≡ P1); ep90/ep99 gap may widen from the current 62–64% differential.
+- Hump may sharpen or shift in endpoint (still present; Finding 4's descending side holds).
+
