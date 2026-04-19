@@ -3520,6 +3520,16 @@ def run_pathway(
     out_path = write_run_json(target_result)
     manifest_path = append_to_manifest(target_result)
 
+    # 4. Persist any archetype-cache expansions accumulated during the per-year
+    #    `worst_hour_gas_sizing` loop and the §24.9 `worst_hour_residual_per_row`
+    #    EF-scorer batches. Batched here (once per pathway run) instead of
+    #    inside `_expand_missing_archetypes` (which used to pass persist=True
+    #    on every call and rewrote the full ~100 MB parquet 26+ times per run).
+    #    Preserves SPEC §24.5 cross-session cache-inheritance. No-op if no new
+    #    archetypes were added since the last flush.
+    from step2_2a_cost_optimization import flush_expanded_cache
+    flush_expanded_cache(config.iso)
+
     return {
         'run_key': _run_key(config),
         'status': 'ok' if target_result.feasibility['physical'] else 'infeasible',
