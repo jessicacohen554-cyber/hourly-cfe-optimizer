@@ -32,7 +32,7 @@ Analysis of cost and buildout consequences across four decarbonization pathways 
 | Planning horizon | 2025–2050 (25 years) |
 | Cost basis | Real 2025 dollars, no inflation adjustment |
 | Cost reporting | Undiscounted cumulative 2025–2050 + NPV at 5%, 7%, 9% real |
-| Objective function | Minimize NPV@7% real subject to endpoint constraint |
+| Objective function | Minimize undiscounted cumulative cost subject to endpoint constraint |
 | ISO scope | All 7 ISOs, fully parametric |
 | Run count | 4 pathways × 5 endpoints × 7 ISOs = 140 runs + Section 2 demand sensitivity |
 | Smoke test | ERCOT first |
@@ -140,7 +140,7 @@ FOAK resets. Post-pivot clean firm starts at FOAK and rides the Wright's Law cur
 - Closing summary table adds P1a and P1b as separate pathway rows (140 rows becomes 175 rows: 7 ISO × 5 pathway × 5 endpoint).
 
 ### Card S — Primary cost metric and new-build gas stranding
-**Approved amendment (April 2026).** The optimizer objective function minimizes NPV@7%, but NPV is not the right lens for customer rate impacts — customers pay actual annual costs, not discounted present values.
+**Approved amendment (April 2026).** The optimizer objective function minimizes undiscounted cumulative cost. NPV is not the right lens for customer rate impacts — customers pay actual annual costs, not discounted present values.
 
 **Resolution:**
 - **Primary cost metric: undiscounted cumulative cost (real 2025$).** This is `sum(net_annual_cost_usd, 2025–2050)` with no time discounting. It directly translates to what customers pay in rates over the planning period.

@@ -123,7 +123,7 @@ def main() -> None:
                 "description": (
                     "Clean firm (nuclear / CCS-CCGT / geothermal) available from year 1 "
                     "on the standard Wright's Law curve starting from FOAK. Optimizer "
-                    "co-selects VRE and clean firm to minimize NPV@7% at each CFE endpoint."
+                    "co-selects VRE and clean firm to minimize undiscounted annual cost at each CFE endpoint."
                 ),
                 "corner_weights": {
                     "affordability": "medium",

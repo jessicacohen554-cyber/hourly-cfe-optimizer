@@ -1,7 +1,7 @@
 """Step 2.3 — Reliability Tax Pathway Optimizer.
 
-Deterministic NPV-minimization of the 2025–2050 cost to reach a fixed CFE
-endpoint under four decarbonization pathways. Not a market prediction.
+Deterministic undiscounted-cost minimization of the 2025–2050 cost to reach a
+fixed CFE endpoint under four decarbonization pathways. Not a market prediction.
 
 Parameters
 ----------
@@ -15,9 +15,12 @@ endpoint : one of {0.90, 0.95, 0.975, 0.99, 0.999}
 
 Objective
 ---------
-Minimize NPV@7% real of cumulative 2025–2050 system cost subject to the
-endpoint constraint being met at 2050. Also report undiscounted cumulative and
-NPV@5% / NPV@9% for sensitivity. Real 2025 dollars; no inflation adjustment.
+Minimize undiscounted cumulative 2025–2050 system cost subject to the endpoint
+constraint being met at 2050. Each year's cost is the actual dollar outlay for
+that year (LCOE × MWh + gas annualized capex/FOM + fuel) — the sum across years
+equals the total amount ratepayers pay without any time-value-of-money adjustment.
+NPV@5%, 7%, 9% are reported as secondary sensitivity metrics only. Real 2025
+dollars; no inflation adjustment.
 
 Run sequence
 ------------
