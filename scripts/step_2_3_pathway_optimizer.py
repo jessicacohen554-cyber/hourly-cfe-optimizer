@@ -63,6 +63,7 @@ MANIFEST.json at analysis/reliability-tax/data/MANIFEST.json aggregates all runs
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import errno
 import fcntl
 import json
@@ -73,7 +74,7 @@ import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -237,6 +238,25 @@ class ResourceBook:
 
 
 # ============================================================================
+# TIMEOUT HELPER
+# ============================================================================
+
+_T = TypeVar('_T')
+
+
+def _call_with_timeout(fn: Callable[[], _T], timeout_s: float, label: str) -> _T:
+    """Run ``fn()`` in a thread and raise TimeoutError if it stalls past ``timeout_s``."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+        fut = ex.submit(fn)
+        try:
+            return fut.result(timeout=timeout_s)
+        except concurrent.futures.TimeoutError:
+            raise TimeoutError(
+                f"_call_with_timeout: {label!r} stalled after {timeout_s:.0f}s"
+            )
+
+
+# ============================================================================
 # PARQUET LOADERS
 # ============================================================================
 
@@ -285,7 +305,10 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
             raise FileNotFoundError(
                 f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
             )
-        frames = [pd.read_parquet(p) for p in paths]
+        frames = [
+            _call_with_timeout(lambda p=p: pd.read_parquet(p), 30.0, f"load_ef_mixes:{p}")
+            for p in paths
+        ]
         df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
 
         # Pad optional dims so downstream code can index them unconditionally.
@@ -311,7 +334,7 @@ def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
     path = DATA_STEP22 / f"step_2_2a_DG_{iso}_{threshold:g}.parquet"
     if not path.exists():
         raise FileNotFoundError(f"No DG parquet at {path}")
-    return pd.read_parquet(path)
+    return _call_with_timeout(lambda: pd.read_parquet(path), 30.0, f"load_dg_costs:{path}")
 
 
 # Memoized per-ISO slices of static reference tables. These files are read-only
@@ -337,7 +360,7 @@ def load_fossil_mix(iso: str) -> pd.DataFrame:
         path = DATA_EIA930 / 'eia_fossil_mix.parquet'
         if not path.exists():
             raise FileNotFoundError(f"EIA 930 fossil mix parquet missing at {path}")
-        df = pd.read_parquet(path)
+        df = _call_with_timeout(lambda: pd.read_parquet(path), 30.0, f"load_fossil_mix:{path}")
         mask = df['iso'] == iso
         if not mask.any():
             raise KeyError(f"ISO {iso} not present in eia_fossil_mix.parquet")
@@ -355,7 +378,7 @@ def load_annual_manifest(iso: str) -> pd.DataFrame:
         path = DATA_STEP3 / f"{iso}_annual_manifest.parquet"
         if not path.exists():
             raise FileNotFoundError(f"Annual manifest missing for {iso} at {path}")
-        df = pd.read_parquet(path)
+        df = _call_with_timeout(lambda: pd.read_parquet(path), 30.0, f"load_annual_manifest:{path}")
         _ANNUAL_MANIFEST_LOADER_CACHE[iso] = df
         return df
 
@@ -1026,7 +1049,7 @@ def _load_ledger_from_json(path: Path) -> VintageLedger | None:
     """
     try:
         with open(path) as fh:
-            data = json.load(fh)
+            data = _call_with_timeout(lambda: json.load(fh), 30.0, f"_load_ledger_from_json:{path}")
         raw = data.get('terminal_ledger')
         if raw is None:
             return None
@@ -1039,7 +1062,7 @@ def _load_fleet_from_json(path: Path, iso: str) -> NewGasFleet | None:
     """Load the terminal new-gas fleet from an existing per-run JSON file."""
     try:
         with open(path) as fh:
-            data = json.load(fh)
+            data = _call_with_timeout(lambda: json.load(fh), 30.0, f"_load_fleet_from_json:{path}")
         raw = data.get('terminal_new_gas_fleet')
         if raw is None:
             return None
@@ -2755,7 +2778,9 @@ def _load_emission_rates() -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"egrid_emission_rates.json missing at {path}")
     with open(path) as fh:
-        _EMISSION_RATES_CACHE = json.load(fh)
+        _EMISSION_RATES_CACHE = _call_with_timeout(
+            lambda: json.load(fh), 30.0, f"_load_emission_rates:{path}"
+        )
     return _EMISSION_RATES_CACHE
 
 
@@ -3045,7 +3070,9 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
         if manifest_path.exists():
             try:
                 with open(manifest_path) as fh:
-                    manifest = json.load(fh)
+                    manifest = _call_with_timeout(
+                        lambda: json.load(fh), 30.0, f"append_to_manifest:{manifest_path}"
+                    )
             except Exception:
                 manifest = {}
         else:
