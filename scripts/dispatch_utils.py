@@ -1238,6 +1238,8 @@ def load_dispatch_cache(iso, require_version=None):
                     entry[field] = vals[offs[i]:offs[i + 1]].copy()
                 cache[key] = entry
             return cache
+        except TimeoutError:
+            raise
         except Exception:
             pass
 
