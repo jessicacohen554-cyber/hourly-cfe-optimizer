@@ -674,69 +674,74 @@ def _fit_surrogate(iso: str, threshold: float,
                    ef_arrays: dict) -> None:
     """Fit a HistGBM surrogate for _worst_hour_residual_norm on (iso, threshold).
 
-    Serialized by _SURROGATE_LOCK. A second thread that finds the cache
-    populated on re-check returns immediately without refitting.
+    Double-checked locking: outer check avoids lock acquisition on the hot
+    path once fitted; inner check inside the lock prevents redundant refits
+    when two threads race on the same (iso, threshold) key. The lock is held
+    for the full fit duration so only one thread pays the compute cost.
     """
-    import dispatch_utils as _du
-
-    N = len(ef_arrays['clean_firm'])
-    cf   = np.asarray(ef_arrays['clean_firm'],                         dtype=np.float64)
-    sol  = np.asarray(ef_arrays['solar'],                              dtype=np.float64)
-    wnd  = np.asarray(ef_arrays['wind'],                               dtype=np.float64)
-    hyd  = np.asarray(ef_arrays['hydro'],                              dtype=np.float64)
-    osw  = np.asarray(ef_arrays.get('offshore_wind',   np.zeros(N)),   dtype=np.float64)
-    geo  = np.asarray(ef_arrays.get('geothermal',      np.zeros(N)),   dtype=np.float64)
-    hybrid_arrs = {ht: np.asarray(ef_arrays.get(ht, np.zeros(N)), dtype=np.float64)
-                   for ht in _du.HYBRID_TYPES}
-    bat  = np.asarray(ef_arrays['battery_dispatch_pct'],               dtype=np.float64)
-    bat8 = np.asarray(ef_arrays.get('battery8_dispatch_pct', np.zeros(N)), dtype=np.float64)
-    ldes = np.asarray(ef_arrays['ldes_dispatch_pct'],                  dtype=np.float64)
-
-    hybrid_sum = sum(hybrid_arrs[ht] for ht in _du.HYBRID_TYPES)
-    ccs_res = np.maximum(0.0, 100.0 - (cf + sol + wnd + hyd + osw + geo + hybrid_sum))
-
-    keys_full, _ = _du.archetype_keys_from_arrays(
-        iso, cf, sol, wnd, osw, ccs_res, hyd, bat, bat8, ldes,
-        hybrids=hybrid_arrs,
-    )
-    unique_keys, unique_row_idx = np.unique(keys_full, return_index=True)
-    feat_unique  = _surrogate_features({k: v[unique_row_idx] for k, v in ef_arrays.items()})
-    memo         = _get_worst_hour_state(iso)['percentile_memo']
-    free_mask    = np.fromiter((k in memo for k in unique_keys),
-                               dtype=bool, count=len(unique_keys))
-    free_idx     = np.where(free_mask)[0]
-    remaining    = np.where(~free_mask)[0]
-    target_K     = min(5000, len(unique_keys))
-    need         = max(0, target_K - len(free_idx))
-    if need > 0 and remaining.size > need:
-        scaler0      = StandardScaler().fit(feat_unique[remaining])
-        km           = MiniBatchKMeans(n_clusters=need, batch_size=1024,
-                                       n_init=3, max_iter=100,
-                                       random_state=0).fit(
-                                           scaler0.transform(feat_unique[remaining]))
-        picked_local = pairwise_distances_argmin(
-                           km.cluster_centers_,
-                           scaler0.transform(feat_unique[remaining]))
-        sampled      = np.concatenate([free_idx, remaining[picked_local]])
-    else:
-        sampled      = np.concatenate([free_idx, remaining])[:target_K]
-
-    sub_rows   = unique_row_idx[sampled]
-    sub_arrays = {k: v[sub_rows] for k, v in ef_arrays.items()}
-    targets    = _worst_hour_residual_norm(iso, sub_arrays)
-    X          = feat_unique[sampled]
-    scaler     = StandardScaler().fit(X)
-    model      = HistGradientBoostingRegressor(
-                     max_iter=400,
-                     learning_rate=0.05,
-                     max_depth=6,
-                     l2_regularization=0.1,
-                     random_state=0,
-                 ).fit(scaler.transform(X), targets)
-
+    if (iso, threshold) in _SURROGATE_CACHE:
+        return
     with _SURROGATE_LOCK:
         if (iso, threshold) in _SURROGATE_CACHE:
             return
+
+        import dispatch_utils as _du
+
+        N = len(ef_arrays['clean_firm'])
+        cf   = np.asarray(ef_arrays['clean_firm'],                         dtype=np.float64)
+        sol  = np.asarray(ef_arrays['solar'],                              dtype=np.float64)
+        wnd  = np.asarray(ef_arrays['wind'],                               dtype=np.float64)
+        hyd  = np.asarray(ef_arrays['hydro'],                              dtype=np.float64)
+        osw  = np.asarray(ef_arrays.get('offshore_wind',   np.zeros(N)),   dtype=np.float64)
+        geo  = np.asarray(ef_arrays.get('geothermal',      np.zeros(N)),   dtype=np.float64)
+        hybrid_arrs = {ht: np.asarray(ef_arrays.get(ht, np.zeros(N)), dtype=np.float64)
+                       for ht in _du.HYBRID_TYPES}
+        bat  = np.asarray(ef_arrays['battery_dispatch_pct'],               dtype=np.float64)
+        bat8 = np.asarray(ef_arrays.get('battery8_dispatch_pct', np.zeros(N)), dtype=np.float64)
+        ldes = np.asarray(ef_arrays['ldes_dispatch_pct'],                  dtype=np.float64)
+
+        hybrid_sum = sum(hybrid_arrs[ht] for ht in _du.HYBRID_TYPES)
+        ccs_res = np.maximum(0.0, 100.0 - (cf + sol + wnd + hyd + osw + geo + hybrid_sum))
+
+        keys_full, _ = _du.archetype_keys_from_arrays(
+            iso, cf, sol, wnd, osw, ccs_res, hyd, bat, bat8, ldes,
+            hybrids=hybrid_arrs,
+        )
+        unique_keys, unique_row_idx = np.unique(keys_full, return_index=True)
+        feat_unique  = _surrogate_features({k: v[unique_row_idx] for k, v in ef_arrays.items()})
+        memo         = _get_worst_hour_state(iso)['percentile_memo']
+        free_mask    = np.fromiter((k in memo for k in unique_keys),
+                                   dtype=bool, count=len(unique_keys))
+        free_idx     = np.where(free_mask)[0]
+        remaining    = np.where(~free_mask)[0]
+        target_K     = min(5000, len(unique_keys))
+        need         = max(0, target_K - len(free_idx))
+        if need > 0 and remaining.size > need:
+            scaler0      = StandardScaler().fit(feat_unique[remaining])
+            km           = MiniBatchKMeans(n_clusters=need, batch_size=1024,
+                                           n_init=3, max_iter=100,
+                                           random_state=0).fit(
+                                               scaler0.transform(feat_unique[remaining]))
+            picked_local = pairwise_distances_argmin(
+                               km.cluster_centers_,
+                               scaler0.transform(feat_unique[remaining]))
+            sampled      = np.concatenate([free_idx, remaining[picked_local]])
+        else:
+            sampled      = np.concatenate([free_idx, remaining])[:target_K]
+
+        sub_rows   = unique_row_idx[sampled]
+        sub_arrays = {k: v[sub_rows] for k, v in ef_arrays.items()}
+        targets    = _worst_hour_residual_norm(iso, sub_arrays)
+        X          = feat_unique[sampled]
+        scaler     = StandardScaler().fit(X)
+        model      = HistGradientBoostingRegressor(
+                         max_iter=400,
+                         learning_rate=0.05,
+                         max_depth=6,
+                         l2_regularization=0.1,
+                         random_state=0,
+                     ).fit(scaler.transform(X), targets)
+
         _SURROGATE_CACHE[(iso, threshold)] = {
             'features_raw':    X,
             'targets':         targets,
