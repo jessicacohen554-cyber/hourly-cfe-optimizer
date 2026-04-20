@@ -179,6 +179,53 @@ _DEMAND_PROFILE_BY_ISO = _load_demand_profiles_by_iso()
 _STAGE1_MISSES: dict[tuple, list] = {}
 
 
+def _compute_gas_raw_2025_by_iso() -> dict[str, float]:
+    """2025-baseline gas_raw per ISO under the 99.97 margin-on-demand rule.
+
+    Mirrors `_gas_raw_2025_worst_hour` in step2_2a_cost_optimization.py:435
+    without importing from it. Uses the existing-grid mix from
+    `GRID_MIX_SHARES[iso]` (no storage) matched to its closest cached
+    archetype via manifest L1-NN. `gas_raw = resid_p9997 * annual_mwh /
+    GAS_AVAILABILITY_FACTOR`. Constant per ISO — precomputed at import.
+    """
+    out: dict[str, float] = {}
+    mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
+             'mix_ccs_ccgt', 'mix_hydro']
+    for iso in ISOS:
+        cache = _DISPATCH_CACHE_BY_ISO.get(iso)
+        am = _ANNUAL_MANIFEST_BY_ISO.get(iso)
+        annual_mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6
+        gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
+        if cache is None or am is None:
+            # Conservative: assume the full RA margin is a gap at 2025.
+            out[iso] = float(pc.RESOURCE_ADEQUACY_MARGIN) * annual_mwh / gaf
+            continue
+        shares = pc.GRID_MIX_SHARES.get(iso, {})
+        target = np.array([float(shares.get(c.replace('mix_', ''), 0.0))
+                           for c in mcols], dtype=np.float64)
+        am_mat = np.column_stack(
+            [am.column(c).to_numpy() for c in mcols]).astype(np.float64)
+        nn = int(np.argmin(np.abs(am_mat - target).sum(axis=1)))
+        arch_key = am.column('archetype_key')[nn].as_py()
+        cache_keys = cache.column('archetype_key').to_pylist()
+        if arch_key not in cache_keys:
+            out[iso] = float(pc.RESOURCE_ADEQUACY_MARGIN) * annual_mwh / gaf
+            continue
+        ridx = cache_keys.index(arch_key)
+        tc = np.asarray(cache.column('total_clean')[ridx].as_py(),
+                        dtype=np.float64)
+        demand_hr = _DEMAND_PROFILE_BY_ISO[iso]
+        demand_frac = demand_hr / max(1.0, annual_mwh)
+        demand_margin_frac = demand_frac * (1.0 + pc.RESOURCE_ADEQUACY_MARGIN)
+        margin_resid = np.maximum(0.0, demand_margin_frac - tc)
+        resid_2025 = float(np.percentile(margin_resid, 99.97))
+        out[iso] = resid_2025 * annual_mwh / gaf
+    return out
+
+
+_GAS_RAW_2025_BY_ISO = _compute_gas_raw_2025_by_iso()
+
+
 # ─── Ported from scripts/dispatch_utils.py lines 925–1051 (verbatim logic) ──
 
 def _twh_to_gw(twh_per_year: float, capacity_factor: float) -> float:
@@ -364,44 +411,66 @@ def _synthetic_clean_peak_fallback(iso: str, ef: pa.Table,
     return (sub @ P).min(axis=1).astype(np.float64)
 
 
+WORST_HOUR_PERCENTILE = 99.97  # SPEC §24.5 — NERC/PJM LOLE-aligned (≤2.6 h/yr).
+
+
+def _per_archetype_resid_norm(iso: str, cache: pa.Table) -> np.ndarray:
+    """Per-archetype 99.97th-percentile margin-on-demand residual (fraction).
+
+    Residual[h] = max(0, demand_frac[h] × (1 + RA) − total_clean_frac[h]).
+    Returns a (n_archetypes,) array of float64 fractions of annual demand.
+    Mirrors `_worst_hour_residual_norm` in step2_2a_cost_optimization.py:485
+    without importing from it.
+    """
+    demand_hr = _DEMAND_PROFILE_BY_ISO[iso]
+    annual_mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6
+    demand_frac = demand_hr / max(1.0, annual_mwh)  # sums to 1.0
+    demand_margin_frac = demand_frac * (1.0 + pc.RESOURCE_ADEQUACY_MARGIN)
+    TC = np.stack([
+        np.asarray(cache.column('total_clean')[i].as_py(), dtype=np.float64)
+        for i in range(cache.num_rows)
+    ], axis=0)  # (A, 8760), fractions of annual demand
+    margin_resid = np.maximum(0.0, demand_margin_frac[None, :] - TC)
+    return np.percentile(margin_resid, WORST_HOUR_PERCENTILE, axis=1)
+
+
 def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
-    """Stage-1: per-EF-row worst-hour clean MW via dispatch-cache archetype lookup.
+    """Stage-1: per-EF-row 99.97th-percentile residual-gap fraction.
 
     For each EF row, resolve the closest cached archetype via
-    `_archetype_for_endpoint_mix`, fetch the 8760-h `total_clean` vector
-    (includes standalone storage), and pick the hour that maximizes
-    `demand_hr - total_clean_hr` — the hour that actually drives new-gas
-    sizing. Archetype misses fall back to the v1 synthetic path.
+    `_archetype_for_endpoint_mix` and return that archetype's
+    99.97th-percentile margin-on-demand residual (fraction of annual demand).
+    Stage-2 multiplies this by per-year annual MWh to get the gas gap.
+    Archetype misses fall back to a worst-case `resid_norm = RA_margin`
+    (treats them as if all clean were zero at peak — conservative).
+
+    Output columns:
+      - `resid_norm_p9997`  : float32, fraction of annual demand, the
+                              canonical Stage-2 input.
+      - `clean_peak_hour_mw`: float32, diagnostic MW value computed as
+                              `(1 - resid_norm_p9997) * PEAK_DEMAND_MW`,
+                              kept for downstream display at line ~1029
+                              (not consumed by gas sizing anymore).
     """
     ef = _read_ef_table(iso, threshold)
     n = ef.num_rows
-    demand_hr = _DEMAND_PROFILE_BY_ISO[iso]  # (8760,) MW
+    resid_out = np.empty(n, dtype=np.float32)
 
     cache = _DISPATCH_CACHE_BY_ISO.get(iso)
     am = _ANNUAL_MANIFEST_BY_ISO.get(iso)
-    out = np.empty(n, dtype=np.float32)
 
     if cache is None or am is None:
-        # No cache — entire table falls through to synthetic path.
-        out[:] = _synthetic_clean_peak_fallback(
-            iso, ef, np.arange(n)).astype(np.float32)
+        # No cache — conservative fallback: treat as full residual (all RA).
+        resid_out[:] = float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR
         _STAGE1_MISSES[(iso, threshold)] = list(range(n))
         print(f"[stage1] {iso} t={threshold}: no dispatch cache; "
-              f"synthetic fallback for all {n} rows", flush=True)
+              f"conservative fallback for all {n} rows", flush=True)
     else:
-        # Build archetype lookup tables once.
-        # `total_clean` in the cache is stored as a fraction of annual demand
-        # (sums to ~1.0 per resource share, per step3a_build_dispatch_cache
-        # line 561 "Demand in cache is normalized to sum=1.0"). Multiply by
-        # annual MWh to compare against demand_hr (MW).
-        annual_mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6
+        # Per-archetype 99.97-percentile residual fraction — computed once.
+        resid_per_arch = _per_archetype_resid_norm(iso, cache).astype(np.float32)
+
         cache_keys = cache.column('archetype_key').to_pylist()
         key_to_cache_row = {k: i for i, k in enumerate(cache_keys)}
-        TC = np.stack([
-            np.asarray(cache.column('total_clean')[i].as_py(),
-                       dtype=np.float64)
-            for i in range(len(cache_keys))
-        ], axis=0) * annual_mwh  # (A_cache, 8760) in MW
 
         mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
                  'mix_ccs_ccgt', 'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8',
@@ -422,30 +491,20 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
         miss_rows: list[int] = []
         hits = 0
         batch = 5000
+        # Conservative miss value: RA fraction per hour (uniformly bad).
+        miss_resid = np.float32(float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR)
         for i in range(0, n, batch):
             eb = ef_mat[i:i + batch]                      # (b, 10)
             dists = np.abs(eb[:, None, :] - manifest_mat[None, :, :]).sum(axis=2)
             nn_man = np.argmin(dists, axis=1)             # (b,)
             cache_idx = manifest_to_cache[nn_man]         # (b,)
             hit_mask = cache_idx >= 0
-            out_batch = np.empty(eb.shape[0], dtype=np.float32)
-
+            out_batch = np.full(eb.shape[0], miss_resid, dtype=np.float32)
             if hit_mask.any():
-                ci = cache_idx[hit_mask]
-                tc_rows = TC[ci]                           # (h, 8760)
-                diff = demand_hr[None, :] - tc_rows        # (h, 8760)
-                h_worst = np.argmax(diff, axis=1)          # (h,)
-                clean_at_peak = tc_rows[np.arange(tc_rows.shape[0]), h_worst]
-                out_batch[np.nonzero(hit_mask)[0]] = clean_at_peak.astype(np.float32)
-
+                out_batch[hit_mask] = resid_per_arch[cache_idx[hit_mask]]
             if (~hit_mask).any():
-                miss_b = np.nonzero(~hit_mask)[0]
-                absolute_idx = (i + miss_b).astype(np.int64)
-                miss_rows.extend(absolute_idx.tolist())
-                out_batch[miss_b] = _synthetic_clean_peak_fallback(
-                    iso, ef, absolute_idx).astype(np.float32)
-
-            out[i:i + batch] = out_batch
+                miss_rows.extend((i + np.nonzero(~hit_mask)[0]).tolist())
+            resid_out[i:i + batch] = out_batch
             hits += int(hit_mask.sum())
 
         _STAGE1_MISSES[(iso, threshold)] = miss_rows
@@ -454,10 +513,12 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
               f"{hits}/{n} = {match_rate * 100:.1f}%  "
               f"(misses={len(miss_rows)})", flush=True)
 
-    norm = out / max(1e-9, float(pc.REGIONAL_DEMAND_TWH[iso]))
+    # Diagnostic MW value for display (line ~1029). Not consumed by Stage-2.
+    peak_mw = float(pc.PEAK_DEMAND_MW[iso])
+    clean_peak_diag = (1.0 - resid_out.astype(np.float64)) * peak_mw
     tbl = pa.table({
-        'clean_peak_hour_mw': pa.array(out),
-        'clean_pct_mw_per_twh_demand': pa.array(norm.astype(np.float32)),
+        'resid_norm_p9997': pa.array(resid_out),
+        'clean_peak_hour_mw': pa.array(clean_peak_diag.astype(np.float32)),
     })
     return tbl.replace_schema_metadata({
         'source_cache_version': _dispatch_cache_version(iso),
@@ -493,6 +554,9 @@ def load_ef_mixes(iso: str, threshold) -> dict[str, np.ndarray]:
     arrs = {c: (ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n))
             for c in _RESOURCE_COLS + _STORAGE_COLS + ('hourly_match_score',)}
     arrs['clean_peak_hour_mw'] = pc_tbl.column('clean_peak_hour_mw').to_numpy()
+    arrs['resid_norm_p9997'] = (pc_tbl.column('resid_norm_p9997').to_numpy()
+                                if 'resid_norm_p9997' in pc_tbl.column_names
+                                else np.zeros(n, dtype=np.float32))
     return arrs
 
 
@@ -530,13 +594,26 @@ def existing_gas_available_vec(iso: str, clean_pct_vec: np.ndarray,
     return out
 
 
-def gas_sizing_matrix(peak_vec: np.ndarray, existing_gas_vec: np.ndarray,
-                      clean_arr: np.ndarray, ra_margin: float) -> np.ndarray:
-    """Per-year-per-mix new gas requirement (MW). One numpy op."""
-    return np.maximum(0.0,
-                      peak_vec[:, None] * (1.0 + ra_margin)
-                      - clean_arr[None, :]
-                      - existing_gas_vec[:, None])
+def gas_sizing_matrix(annual_mwh_vec: np.ndarray,
+                      existing_gas_vec: np.ndarray,
+                      resid_arr: np.ndarray,
+                      gas_raw_2025: float,
+                      existing_base_mw: float,
+                      gaf: float) -> np.ndarray:
+    """Per-year-per-mix new gas (MW) under v1 margin-on-demand residual rule.
+
+    gap_mwh[y, mix] = resid_arr[mix] * annual_mwh_vec[y]     # (N_YEARS, n_mixes)
+    gas_raw[y, mix] = gap_mwh / gaf
+    gas_needed[y, mix] = max(0, existing_base + gas_raw - gas_raw_2025)
+    new_gas[y, mix] = max(0, gas_needed - existing_gas_vec[y])
+
+    Matches the formula in step2_2a_cost_optimization.py:865–888 without
+    importing it. Fully vectorized — preserves N_YEARS=26 invariant.
+    """
+    gap_mwh = resid_arr[None, :] * annual_mwh_vec[:, None]
+    gas_raw = gap_mwh / max(1e-9, gaf)
+    gas_needed = np.maximum(0.0, existing_base_mw + gas_raw - gas_raw_2025)
+    return np.maximum(0.0, gas_needed - existing_gas_vec[:, None])
 
 
 def _resource_lcoe_year(iso: str, resource: str, year: int,
@@ -699,8 +776,12 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
 
     peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
     demand_vec = demand_twh_vec(cfg.iso, cfg.demand_growth_level)
+    annual_mwh_vec = demand_vec * 1.0e6  # per-year annual MWh (grown)
     score_vec = ef['hourly_match_score']
-    clean_arr = ef['clean_peak_hour_mw']
+    resid_arr = ef['resid_norm_p9997'].astype(np.float64)
+    gas_raw_2025 = _GAS_RAW_2025_BY_ISO[cfg.iso]
+    existing_base = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
+    gaf = float(pc.GAS_AVAILABILITY_FACTOR[cfg.iso])
 
     # Two-pass: first pass picks winners assuming clean_pct = endpoint each year
     # to seed existing-gas retirement; second pass uses winners' actual scores.
@@ -710,8 +791,8 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
 
     # Seed pass: clean_pct ≈ cfe_target, build existing_gas_vec
     existing_gas_vec = existing_gas_available_vec(cfg.iso, cfe_targets, cfg.demand_growth_level)
-    gas_required = gas_sizing_matrix(peak_vec, existing_gas_vec, clean_arr,
-                                     pc.RESOURCE_ADEQUACY_MARGIN)
+    gas_required = gas_sizing_matrix(annual_mwh_vec, existing_gas_vec, resid_arr,
+                                     gas_raw_2025, existing_base, gaf)
     op_cost = operating_cost_matrix(ef, demand_vec, cfg)
     fuel_unit = pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso]['Medium']
     gas_fuel = gas_fuel_cost_matrix(ef, demand_vec, fuel_unit)
@@ -739,8 +820,9 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     # Phase B: realized clean_pct from winners → re-run existing_gas_vec, apply ratchet
     achieved_cfe = score_vec[winners]
     existing_gas_vec_real = existing_gas_available_vec(cfg.iso, achieved_cfe, cfg.demand_growth_level)
-    gas_required_real = gas_sizing_matrix(peak_vec, existing_gas_vec_real, clean_arr,
-                                          pc.RESOURCE_ADEQUACY_MARGIN)
+    gas_required_real = gas_sizing_matrix(annual_mwh_vec, existing_gas_vec_real,
+                                          resid_arr, gas_raw_2025,
+                                          existing_base, gaf)
     cum_new_gas = gas_required_real[np.arange(N_YEARS), winners]
     active_fleet = np.maximum.accumulate(cum_new_gas)
     fleet_size_mw = float(active_fleet.max())
@@ -752,14 +834,18 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     gas_cf = np.where(total_gas_mw > 1e-6,
                       np.minimum(1.0, gas_gen_mwh / (total_gas_mw * HOURS_PER_YEAR)), 0.0)
 
-    # Existing gas used = min(peak_demand × (1+RA) - clean, existing_gas)
-    existing_gas_used = np.minimum(
-        existing_gas_vec_real,
-        np.maximum(0.0, peak_vec * (1 + pc.RESOURCE_ADEQUACY_MARGIN) - clean_arr[winners]))
+    # Existing gas used = min(gas_needed_at_winner, existing_gas_available).
+    # gas_needed[y, winner] = existing_base + gas_raw[y, winner] - gas_raw_2025
+    gap_mwh_winner = resid_arr[winners] * annual_mwh_vec
+    gas_raw_winner = gap_mwh_winner / max(1e-9, gaf)
+    gas_needed_winner = np.maximum(0.0, existing_base + gas_raw_winner - gas_raw_2025)
+    existing_gas_used = np.minimum(existing_gas_vec_real, gas_needed_winner)
+    # Diagnostic "clean at worst hour" MW (display only, not used in sizing).
+    clean_arr_diag = ef['clean_peak_hour_mw']
     return _finalize_run(cfg, ef, winners, peak_vec, demand_vec,
                          achieved_cfe, existing_gas_vec_real, existing_gas_used,
                          cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
-                         clean_arr)
+                         clean_arr_diag)
 
 
 # ─── Output-side helpers ─────────────────────────────────────────────────────
