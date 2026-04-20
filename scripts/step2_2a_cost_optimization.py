@@ -595,6 +595,76 @@ def _worst_hour_residual_norm(iso, arrays):
     return unique_norm[inverse]
 
 
+# ── Surrogate model — module-level state ─────────────────────────────────────
+# Fit/predict functions land in Session A2. This session adds the cache
+# namespace and the feature-matrix builder only.
+
+_SURROGATE_CACHE: dict[tuple[str, float], dict] = {}
+_SURROGATE_LOCK = threading.Lock()
+
+
+def _surrogate_features(arrays: dict) -> np.ndarray:
+    """Build (N, 13) float64 feature matrix for the surrogate model.
+
+    Column layout is LOCKED (surrogate foundation, chunk 1):
+      0  firm_clean_pct  = clean_firm + geothermal + ccs_ccgt_residual + hydro
+      1  solar_pct
+      2  wind_pct
+      3  offshore_wind_pct
+      4  solar_batt4_pct
+      5  solar_batt8_pct
+      6  wind_batt4_pct
+      7  wind_batt8_pct
+      8  battery_dispatch_pct
+      9  battery8_dispatch_pct
+     10  ldes_dispatch_pct
+     11  h2_dispatch_pct
+     12  total_vre_pct   = solar + wind + offshore_wind + sum(hybrids)
+
+    ccs_ccgt_residual derivation is an exact match to _worst_hour_residual_norm
+    line ~519: max(0, 100 - (cf + sol + wnd + hyd + osw + geo + sum_hybrids)).
+    One np.asarray cast per input column. No Python loop over N rows.
+    """
+    N = len(arrays['clean_firm'])
+
+    cf   = np.asarray(arrays['clean_firm'],                        dtype=np.float64)
+    sol  = np.asarray(arrays['solar'],                             dtype=np.float64)
+    wnd  = np.asarray(arrays['wind'],                              dtype=np.float64)
+    hyd  = np.asarray(arrays['hydro'],                             dtype=np.float64)
+    osw  = np.asarray(arrays.get('offshore_wind',  np.zeros(N)),   dtype=np.float64)
+    geo  = np.asarray(arrays.get('geothermal',     np.zeros(N)),   dtype=np.float64)
+    sb4  = np.asarray(arrays.get('solar_batt4',    np.zeros(N)),   dtype=np.float64)
+    sb8  = np.asarray(arrays.get('solar_batt8',    np.zeros(N)),   dtype=np.float64)
+    wb4  = np.asarray(arrays.get('wind_batt4',     np.zeros(N)),   dtype=np.float64)
+    wb8  = np.asarray(arrays.get('wind_batt8',     np.zeros(N)),   dtype=np.float64)
+    bat  = np.asarray(arrays['battery_dispatch_pct'],              dtype=np.float64)
+    bat8 = np.asarray(arrays.get('battery8_dispatch_pct', np.zeros(N)), dtype=np.float64)
+    ldes = np.asarray(arrays['ldes_dispatch_pct'],                 dtype=np.float64)
+    h2   = np.asarray(arrays.get('h2_dispatch_pct', np.zeros(N)), dtype=np.float64)
+
+    # Exact match to _worst_hour_residual_norm ~line 519.
+    sum_hybrids = sb4 + sb8 + wb4 + wb8
+    ccs_ccgt_residual = np.maximum(
+        0.0, 100.0 - (cf + sol + wnd + hyd + osw + geo + sum_hybrids)
+    )
+
+    feat = np.empty((N, 13), dtype=np.float64)
+    feat[:, 0]  = cf + geo + ccs_ccgt_residual + hyd   # firm_clean_pct
+    feat[:, 1]  = sol
+    feat[:, 2]  = wnd
+    feat[:, 3]  = osw
+    feat[:, 4]  = sb4
+    feat[:, 5]  = sb8
+    feat[:, 6]  = wb4
+    feat[:, 7]  = wb8
+    feat[:, 8]  = bat
+    feat[:, 9]  = bat8
+    feat[:, 10] = ldes
+    feat[:, 11] = h2
+    feat[:, 12] = sol + wnd + osw + sum_hybrids         # total_vre_pct
+    return feat
+
+
 # ----------------------------------------------------------------------------
 # ELCC DIAGNOSTIC (retained per SPEC.md §24.5 for validation only).
 # ``_elcc_gas_mw`` is called by ``scripts/tmp_validate_worst_hour_sizing.py``
@@ -4199,5 +4269,49 @@ def main():
                           f"eff=${eff:.1f}/MWh match={match}%")
 
 
+def _run_surrogate_self_check():
+    """Self-check harness for _surrogate_features.
+
+    Invoked via: python scripts/step2_2a_cost_optimization.py --surrogate-test
+    """
+    from step_2_3_pathway_optimizer import load_ef_mixes
+
+    iso, threshold = 'ERCOT', 80
+    print(f"[surrogate-test] Loading EF mixes iso={iso} threshold={threshold} ...", flush=True)
+    arrays = load_ef_mixes(iso, float(threshold))
+
+    print("[surrogate-test] Building feature matrix ...", flush=True)
+    feat = _surrogate_features(arrays)
+
+    N = len(arrays['clean_firm'])
+
+    assert feat.shape[0] == N,    f"shape[0]={feat.shape[0]} != N={N}"
+    assert feat.shape[1] == 13,   f"shape[1]={feat.shape[1]} != 13"
+    assert feat.dtype == np.float64, f"dtype={feat.dtype}"
+    assert np.isfinite(feat).all(), "feat contains non-finite values"
+    assert np.all(feat[:, 12] >= feat[:, 1]), \
+        f"total_vre_pct < solar_pct in some rows (min gap={np.min(feat[:,12]-feat[:,1]):.6f})"
+    assert np.all(feat[:, 0] + feat[:, 12] <= 100.0 + 1e-6), \
+        f"firm + vre > 100 in some rows (max={np.max(feat[:,0]+feat[:,12]):.4f})"
+
+    print(f"\nPASS  shape={feat.shape}  dtype={feat.dtype}\n")
+
+    col_names = [
+        'firm_clean_pct', 'solar_pct', 'wind_pct', 'offshore_wind_pct',
+        'solar_batt4_pct', 'solar_batt8_pct', 'wind_batt4_pct', 'wind_batt8_pct',
+        'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',
+        'h2_dispatch_pct', 'total_vre_pct',
+    ]
+    print(f"{'col':<4} {'name':<25} {'min':>10} {'max':>10} {'mean':>10}")
+    print('-' * 63)
+    for k, name in enumerate(col_names):
+        col = feat[:, k]
+        print(f"{k:<4} {name:<25} {col.min():>10.4f} {col.max():>10.4f} {col.mean():>10.4f}")
+
+
 if __name__ == '__main__':
-    main()
+    import sys as _sys
+    if '--surrogate-test' in _sys.argv:
+        _run_surrogate_self_check()
+    else:
+        main()
