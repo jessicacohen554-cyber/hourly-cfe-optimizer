@@ -29,9 +29,13 @@ Usage:
 """
 
 import argparse
+import gc
 import os
+import resource
 import sys
 import time
+
+ARCHETYPE_EXPANSION_BATCH = int(os.environ.get('CFE_ARCHETYPE_BATCH', '500'))
 
 import numpy as np
 import pandas as pd
@@ -260,44 +264,64 @@ def expand_cache_for_mixes(iso, mix_infos, existing_cache=None,
     # Per-archetype progress logging so a stall inside reconstruct_hourly_dispatch
     # (plan finding H4 — no heartbeat across the missing-archetype loop) is
     # immediately visible rather than vanishing into multi-minute silence.
+    # Expansion runs in chunks of ARCHETYPE_EXPANSION_BATCH to cap peak RSS;
+    # gc.collect() between chunks releases 8760-array intermediates before the
+    # next batch allocates. Final cache dict is identical to single-batch output.
     _mix_infos_list = list(mix_infos)
     _n_mix = len(_mix_infos_list)
-    for _i, mix_info in enumerate(_mix_infos_list, start=1):
-        rp = mix_info['resource_pcts']
-        key = _archetype_key(
-            iso, rp,
-            100,  # procurement_pct pinned to 100 since cache v5
-            mix_info.get('battery_dispatch_pct', 0),
-            mix_info.get('battery8_dispatch_pct', 0),
-            mix_info.get('ldes_dispatch_pct', 0),
-        )
-        if key in cache or key in seen:
-            continue
-        seen.add(key)
+    n_batches = max(1, (_n_mix + ARCHETYPE_EXPANSION_BATCH - 1) // ARCHETYPE_EXPANSION_BATCH)
 
+    for _batch_idx in range(n_batches):
+        _chunk_start = _batch_idx * ARCHETYPE_EXPANSION_BATCH
+        _chunk_end = min(_chunk_start + ARCHETYPE_EXPANSION_BATCH, _n_mix)
+        _chunk = _mix_infos_list[_chunk_start:_chunk_end]
+
+        for _i_offset, mix_info in enumerate(_chunk):
+            _i = _chunk_start + _i_offset + 1
+            rp = mix_info['resource_pcts']
+            key = _archetype_key(
+                iso, rp,
+                100,  # procurement_pct pinned to 100 since cache v5
+                mix_info.get('battery_dispatch_pct', 0),
+                mix_info.get('battery8_dispatch_pct', 0),
+                mix_info.get('ldes_dispatch_pct', 0),
+            )
+            if key in cache or key in seen:
+                continue
+            seen.add(key)
+
+            print(
+                f"[expand] {iso}: archetype {_i}/{_n_mix} key={key[:10]}",
+                flush=True,
+            )
+            _t_expand = time.monotonic()
+            result = reconstruct_hourly_dispatch(
+                demand_norm, supply_profiles, rp,
+                100,
+                mix_info.get('battery_dispatch_pct', 0),
+                mix_info.get('battery8_dispatch_pct', 0),
+                mix_info.get('ldes_dispatch_pct', 0),
+                supply_matrix=supply_matrix,
+                detailed=True,
+                h2_dispatch_pct=mix_info.get('h2_dispatch_pct', 0),
+                resource_types=rtypes,
+            )
+            print(
+                f"[expand] {iso}: archetype {_i} reconstructed in "
+                f"{time.monotonic()-_t_expand:.2f}s",
+                flush=True,
+            )
+            cache[key] = {k: v for k, v in result.items()}
+            added += 1
+
+        gc.collect()
+        rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
         print(
-            f"[expand] {iso}: archetype {_i}/{_n_mix} key={key[:10]}",
+            f"[expand] {iso}: batch {_batch_idx + 1}/{n_batches} "
+            f"({_chunk_end}/{_n_mix}) cache={len(cache)} "
+            f"peak_rss={rss_mb:.0f}MB",
             flush=True,
         )
-        _t_expand = time.monotonic()
-        result = reconstruct_hourly_dispatch(
-            demand_norm, supply_profiles, rp,
-            100,
-            mix_info.get('battery_dispatch_pct', 0),
-            mix_info.get('battery8_dispatch_pct', 0),
-            mix_info.get('ldes_dispatch_pct', 0),
-            supply_matrix=supply_matrix,
-            detailed=True,
-            h2_dispatch_pct=mix_info.get('h2_dispatch_pct', 0),
-            resource_types=rtypes,
-        )
-        print(
-            f"[expand] {iso}: archetype {_i} reconstructed in "
-            f"{time.monotonic()-_t_expand:.2f}s",
-            flush=True,
-        )
-        cache[key] = {k: v for k, v in result.items()}
-        added += 1
 
     if added and persist:
         save_dispatch_cache(iso, cache, version=CACHE_VERSION)

@@ -326,6 +326,11 @@ _EF_CACHE_LOCK = threading.Lock()
 # per-chunk results — so chunked EFs get one memo entry.
 _SCORE_EF_CACHE: dict[tuple, np.ndarray] = {}
 
+# Cached residual-norm arrays keyed by (iso, threshold, use_surrogate).
+# Cached arrays must not be mutated by callers; downstream only multiplies by
+# demand_mwh_grown which allocates a fresh array rather than modifying in place.
+_RESID_NORM_CACHE: dict[tuple[str, float, bool], np.ndarray] = {}
+
 
 def _score_ef_cache_key(
     iso: str,
@@ -1927,12 +1932,22 @@ def score_ef_batch_with_gas(
 
     # ef is already a dict-of-ndarrays — the native format _worst_hour_residual_norm
     # expects. Skip the DataFrame-adapter layer (worst_hour_residual_per_row).
-    if getattr(pc, 'USE_SURROGATE_RESIDUAL_IN_ARGMIN', False):
-        from step2_2a_cost_optimization import _surrogate_residual_norm
-        resid_norm = _surrogate_residual_norm(iso, threshold, ef)
-    else:
-        from step2_2a_cost_optimization import _worst_hour_residual_norm
-        resid_norm = _worst_hour_residual_norm(iso, ef)
+    use_surrogate = bool(getattr(pc, 'USE_SURROGATE_RESIDUAL_IN_ARGMIN', False))
+    _rkey = (iso, float(threshold), use_surrogate)
+    with _EF_CACHE_LOCK:
+        resid_norm = _RESID_NORM_CACHE.get(_rkey)
+    if resid_norm is None:
+        if use_surrogate:
+            from step2_2a_cost_optimization import _surrogate_residual_norm
+            resid_norm = _surrogate_residual_norm(iso, threshold, ef)
+        else:
+            from step2_2a_cost_optimization import _worst_hour_residual_norm
+            resid_norm = _worst_hour_residual_norm(iso, ef)
+        with _EF_CACHE_LOCK:
+            _RESID_NORM_CACHE[_rkey] = resid_norm
+        print(f"[resid_cache] {iso} t={threshold:g} "
+              f"surrogate={use_surrogate} populated N={len(resid_norm)}",
+              flush=True)
 
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     demand_mwh_grown = demand_twh * 1.0e6
@@ -2406,6 +2421,7 @@ def solve_pathway(
         from this run's own trajectory (§24.6).
     """
     del initial_fleet  # Cross-endpoint gas-fleet seeding removed (§24.6).
+    run_start = time.monotonic()
     ledger = VintageLedger()
     # SPEC §24.8 accounting fix — pre-seed existing-fleet vintages at
     # zero locked_lcoe (sunk cost, cod_year = 2024) so every pathway
@@ -2464,8 +2480,6 @@ def solve_pathway(
             config.iso, config.pathway, year,
             config.endpoint_pct, config, pivot_state,
         )
-        print(f"[solve] {config.iso}/{config.pathway}/ep={config.endpoint_pct} year={year} cfe={_current_cfe_pct(target):.2%}", flush=True)
-
         # SPEC §24.8 — P2a / P2b / P3 are now fully exogenous: pathway
         # differentiation lives in pc.NOAK_YEAR_BY_PATHWAY (learning-curve
         # speed), not in endogenous pivot triggers. PivotState is kept as a
@@ -2531,6 +2545,13 @@ def solve_pathway(
         last_target = target
         last_cfe = cfe_this_year
         endpoint_threshold = target.get('threshold')
+        print(
+            f"[solve] {config.iso} {config.pathway}/{config.endpoint_pct:g} "
+            f"year={year} cfe={cfe_this_year * 100.0:.2f}% "
+            f"threshold={target['threshold']:g} "
+            f"elapsed={time.monotonic()-run_start:.1f}s",
+            flush=True,
+        )
 
     # ------------------------------------------------------------------
     # POST-LOOP — peak-year snapshot for the new-gas fleet (§24.6).
