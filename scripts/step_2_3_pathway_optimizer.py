@@ -9,7 +9,9 @@ per-mix-per-year dispatch-cache call that dominated v1 wall-clock.
 from __future__ import annotations
 
 import argparse
+import functools
 import json
+import multiprocessing
 import os
 import sys
 from dataclasses import dataclass, field
@@ -625,6 +627,7 @@ def gas_sizing_matrix(annual_mwh_vec: np.ndarray,
     return np.maximum(0.0, gas_needed - existing_gas_vec[:, None])
 
 
+@functools.lru_cache(maxsize=None)
 def _resource_lcoe_year(iso: str, resource: str, year: int,
                         cfg: 'RunConfig') -> float:
     """Year-adjusted $/MWh for a resource. Wright's curve for clean_firm/ccs/osw."""
@@ -659,6 +662,7 @@ def _resource_lcoe_year(iso: str, resource: str, year: int,
     return 0.0
 
 
+@functools.lru_cache(maxsize=None)
 def _resource_tx(iso: str, resource: str, tx_level: str) -> float:
     if resource in ('solar', 'wind', 'clean_firm', 'ccs_ccgt', 'offshore_wind'):
         return float(pc.get_tx(resource, tx_level, iso))
@@ -677,11 +681,13 @@ def operating_cost_matrix(ef: dict, demand_vec: np.ndarray, cfg: 'RunConfig') ->
         share = ef[r] / 100.0          # (n,)
         if share.sum() == 0:
             continue
-        for yi, year in enumerate(YEARS):
-            unit = _resource_lcoe_year(cfg.iso, r, year, cfg) + _resource_tx(cfg.iso, r, cfg.tx_level)
-            if unit == 0:
-                continue
-            out[yi] += demand_vec[yi] * 1.0e6 * share * unit
+        tx = _resource_tx(cfg.iso, r, cfg.tx_level)
+        # (N_YEARS,) lcoe+tx vector — lru_cache makes repeated calls free
+        unit_vec = np.array([_resource_lcoe_year(cfg.iso, r, yr, cfg) + tx for yr in YEARS])
+        if unit_vec.sum() == 0:
+            continue
+        # broadcast: (N_YEARS,1) * (1,n) * (N_YEARS,1) → (N_YEARS,n)
+        out += (demand_vec[:, None] * 1.0e6) * share[None, :] * unit_vec[:, None]
     # Add storage costs (annualized capacity × demand)
     storage_lcoe_keys = {'battery_dispatch_pct': 'battery', 'battery8_dispatch_pct': 'battery8',
                          'ldes_dispatch_pct': 'ldes', 'h2_dispatch_pct': 'h2'}
@@ -1189,20 +1195,42 @@ def _run_one(iso: str, pathway: str, endpoint: float) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix('.json.tmp')
     with open(tmp, 'w') as f:
-        json.dump(payload, f, indent=2)
+        json.dump(payload, f)
     os.replace(tmp, out)
     print(f"[done] {out}  fleet={result.stranding_metadata['fleet_size_mw']:.0f} MW  "
           f"cfe={result.headline['achieved_cfe_pct']:.2f}%", flush=True)
     return out
 
 
+def _prebuild_sidecar(iso_threshold: tuple) -> None:
+    iso, threshold = iso_threshold
+    _load_or_build_peakclean(iso, threshold)
+
+
+def _run_iso_all(iso: str) -> None:
+    for p in PATHWAYS:
+        for ep in ENDPOINT_TO_THRESHOLD.keys():
+            _run_one(iso, p, ep)
+
+
 def main(argv=None) -> int:
     args = build_argparser().parse_args(argv)
     if args.all:
-        for iso in ISOS:
-            for p in PATHWAYS:
-                for ep in ENDPOINT_TO_THRESHOLD.keys():
-                    _run_one(iso, p, ep)
+        # Step 1: pre-build all Stage-1 sidecars in parallel (one per iso×threshold).
+        # Each worker is read-only on the dispatch caches; safe to fork.
+        pairs = [(iso, t) for iso in ISOS for t in ENDPOINT_TO_THRESHOLD.keys()]
+        n_workers = min(len(pairs), (os.cpu_count() or 4))
+        print(f"[prebuild] building {len(pairs)} sidecars with {n_workers} workers", flush=True)
+        # Use spawn to avoid fork/numpy-thread deadlocks on Linux.
+        ctx = multiprocessing.get_context('spawn')
+        with ctx.Pool(n_workers) as pool:
+            pool.map(_prebuild_sidecar, pairs)
+        print("[prebuild] done", flush=True)
+        # Step 2: run combos per ISO in parallel (one process per ISO).
+        n_iso_workers = min(len(ISOS), (os.cpu_count() or 4))
+        print(f"[sweep] running {len(ISOS)} ISOs with {n_iso_workers} workers", flush=True)
+        with ctx.Pool(n_iso_workers) as pool:
+            pool.map(_run_iso_all, ISOS)
     else:
         if not (args.iso and args.pathway and args.endpoint):
             print('Provide --iso, --pathway, --endpoint OR --all', file=sys.stderr)
