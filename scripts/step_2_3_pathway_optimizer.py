@@ -66,6 +66,7 @@ import argparse
 import errno
 import fcntl
 import json
+import logging
 import os
 import sys
 import threading
@@ -83,6 +84,8 @@ if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
 
 import pipeline_config as pc  # noqa: E402
+
+log = logging.getLogger(__name__)
 
 try:
     import dispatch_utils as du  # noqa: E402
@@ -1696,7 +1699,19 @@ def score_ef_batch(
         parts = []
         for start in range(0, n_rows, _SCORE_EF_CHUNK):
             chunk = ef.iloc[start:start + _SCORE_EF_CHUNK]
-            parts.append(score_ef_batch(chunk, iso, year, config))
+            chunk_size = len(chunk)
+            try:
+                parts.append(score_ef_batch(chunk, iso, year, config))
+            except MemoryError as exc:
+                try:
+                    avail_mib = os.sysconf('SC_AVPHYS_PAGES') * os.sysconf('SC_PAGE_SIZE') / 1024 ** 2
+                except (ValueError, OSError):
+                    avail_mib = float('nan')
+                log.error(
+                    "score_ef_batch OOM: chunk_size=%d, avail=%.0f MiB, iso=%s, year=%s",
+                    chunk_size, avail_mib, iso, year,
+                )
+                raise MemoryError(f"score_ef_batch OOM at chunk_size={chunk_size}") from exc
         return np.concatenate(parts)
 
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
