@@ -418,7 +418,7 @@ def load_ef_mixes(iso: str, threshold: float) -> dict[str, np.ndarray]:
         return d
 
 
-def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
+def load_dg_costs(iso: str, threshold: float) -> dict[str, np.ndarray]:
     """Load the Step 2.2a DG parquet for (iso, threshold).
 
     This is the pre-computed (scenario × growth_level × target_year) cost cross-eval
@@ -428,23 +428,31 @@ def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
     path = DATA_STEP22 / f"step_2_2a_DG_{iso}_{threshold:g}.parquet"
     if not path.exists():
         raise FileNotFoundError(f"No DG parquet at {path}")
-    return _call_with_timeout(lambda: pd.read_parquet(path), 30.0, f"load_dg_costs:{path}")
+    table = _call_with_timeout(lambda: pq.read_table(path), 30.0, f"load_dg_costs:{path}")
+    out: dict[str, np.ndarray] = {}
+    for col in table.schema.names:
+        arr = table.column(col)
+        if pa.types.is_floating(arr.type) or pa.types.is_integer(arr.type):
+            out[col] = arr.to_numpy(zero_copy_only=False)
+        else:
+            out[col] = np.array(arr.to_pylist(), dtype=object)
+    return out
 
 
 # Memoized per-ISO slices of static reference tables. These files are read-only
 # from the pathway optimizer's perspective; repeat loads across the 50 runs per
 # ISO cost ~20 ms each — cheap in isolation, but the parallel sweep multiplies
 # this by 350 runs × 2 helpers = 14 s of wasted parquet reads without these caches.
-_FOSSIL_MIX_CACHE: dict[str, pd.DataFrame] = {}
+_FOSSIL_MIX_CACHE: dict[str, dict[str, np.ndarray]] = {}
 _FOSSIL_MIX_CACHE_LOCK = threading.Lock()
-_ANNUAL_MANIFEST_LOADER_CACHE: dict[str, pd.DataFrame] = {}
+_ANNUAL_MANIFEST_LOADER_CACHE: dict[str, dict[str, np.ndarray]] = {}
 _ANNUAL_MANIFEST_LOADER_CACHE_LOCK = threading.Lock()
 
 
-def load_fossil_mix(iso: str) -> pd.DataFrame:
+def load_fossil_mix(iso: str) -> dict[str, np.ndarray]:
     """Load EIA-930 hourly fossil-share profiles for ISO (memoized).
 
-    Returns a DataFrame with columns: year, hour, coal_share, gas_share, oil_share.
+    Returns a dict of arrays with keys: year, hour, iso, coal_share, gas_share, oil_share.
     Averaged across all available years (2021–2025) for a representative baseline.
     """
     with _FOSSIL_MIX_CACHE_LOCK:
@@ -454,16 +462,23 @@ def load_fossil_mix(iso: str) -> pd.DataFrame:
         path = DATA_EIA930 / 'eia_fossil_mix.parquet'
         if not path.exists():
             raise FileNotFoundError(f"EIA 930 fossil mix parquet missing at {path}")
-        df = _call_with_timeout(lambda: pd.read_parquet(path), 30.0, f"load_fossil_mix:{path}")
-        mask = df['iso'] == iso
+        table = _call_with_timeout(lambda: pq.read_table(path), 30.0, f"load_fossil_mix:{path}")
+        iso_arr = np.array(table.column('iso').to_pylist(), dtype=object)
+        mask = iso_arr == iso
         if not mask.any():
             raise KeyError(f"ISO {iso} not present in eia_fossil_mix.parquet")
-        out = df.loc[mask].reset_index(drop=True)
+        out: dict[str, np.ndarray] = {}
+        for col in table.schema.names:
+            arr = table.column(col)
+            if pa.types.is_floating(arr.type) or pa.types.is_integer(arr.type):
+                out[col] = arr.to_numpy(zero_copy_only=False)[mask]
+            else:
+                out[col] = np.array(arr.to_pylist(), dtype=object)[mask]
         _FOSSIL_MIX_CACHE[iso] = out
         return out
 
 
-def load_annual_manifest(iso: str) -> pd.DataFrame:
+def load_annual_manifest(iso: str) -> dict[str, np.ndarray]:
     """Load Step 3 annual dispatch manifest for ISO (one row per archetype, memoized)."""
     with _ANNUAL_MANIFEST_LOADER_CACHE_LOCK:
         cached = _ANNUAL_MANIFEST_LOADER_CACHE.get(iso)
@@ -472,9 +487,16 @@ def load_annual_manifest(iso: str) -> pd.DataFrame:
         path = DATA_STEP3 / f"{iso}_annual_manifest.parquet"
         if not path.exists():
             raise FileNotFoundError(f"Annual manifest missing for {iso} at {path}")
-        df = _call_with_timeout(lambda: pd.read_parquet(path), 30.0, f"load_annual_manifest:{path}")
-        _ANNUAL_MANIFEST_LOADER_CACHE[iso] = df
-        return df
+        table = _call_with_timeout(lambda: pq.read_table(path), 30.0, f"load_annual_manifest:{path}")
+        out: dict[str, np.ndarray] = {}
+        for col in table.schema.names:
+            arr = table.column(col)
+            if pa.types.is_floating(arr.type) or pa.types.is_integer(arr.type):
+                out[col] = arr.to_numpy(zero_copy_only=False)
+            else:
+                out[col] = np.array(arr.to_pylist(), dtype=object)
+        _ANNUAL_MANIFEST_LOADER_CACHE[iso] = out
+        return out
 
 
 def available_thresholds(iso: str) -> list[float]:
@@ -1381,86 +1403,6 @@ def _row_as_storage_pct(ef: dict[str, np.ndarray], idx: int) -> dict[str, float]
     return {col: float(ef[col][idx]) if col in ef else 0.0 for col in _EF_STORAGE_DISPATCH_COLS}
 
 
-def score_ef_row_cost(row: pd.Series, iso: str, year: int,
-                       config: 'RunConfig') -> float:
-    """Return the marginal-LCOE-weighted annual cost for an EF mix row.
-
-    Used to rank candidate EF rows when picking the cheapest mix for a given
-    (year, pathway). This is a quick scoring function — the real vintage
-    accounting happens in chunk 4's main solve loop. All resources are
-    priced at the YEAR's learning-adjusted marginal LCOE regardless of
-    vintage (because chunk 3 is comparing candidate end-states, not
-    tracking incremental builds).
-    """
-    demand_twh = demand_for_year(iso, year, config.demand_growth_level)
-    mix = _row_as_mix_pct(row)
-    storage = _row_as_storage_pct(row)
-
-    total = 0.0
-
-    # VRE (solar, onshore wind, hydro) — standalone VRE only; hybrid priced below via solar_hybrid / wind_hybrid vintages
-    total += mix['solar'] / 100.0 * demand_twh * 1.0e6 * \
-        marginal_lcoe('solar', iso, year, config)  # standalone VRE only — hybrid priced via solar_hybrid vintages
-    total += mix['wind'] / 100.0 * demand_twh * 1.0e6 * \
-        marginal_lcoe('wind', iso, year, config)   # standalone VRE only — hybrid priced via wind_hybrid vintages
-    # Hydro is $0 by Card convention — still counted in mix but not costed.
-
-    # Offshore wind
-    if mix['offshore_wind'] > 0 and iso in pc.OFFSHORE_ISOS:
-        total += mix['offshore_wind'] / 100.0 * demand_twh * 1.0e6 * \
-            marginal_lcoe('offshore_wind', iso, year, config)
-
-    # Hybrid batteries — treat the VRE portion as VRE and the battery portion
-    # as effective battery LCOE weighted by dispatch pct.
-    for hybrid_col, base_res, batt_key in (
-        ('solar_batt4', 'solar', 'battery4'),
-        ('solar_batt8', 'solar', 'battery8'),
-        ('wind_batt4', 'wind', 'battery4'),
-        ('wind_batt8', 'wind', 'battery8'),
-    ):
-        hybrid_pct = mix[hybrid_col]
-        if hybrid_pct <= 0:
-            continue
-        total += hybrid_pct / 100.0 * demand_twh * 1.0e6 * \
-            marginal_lcoe(base_res, iso, year, config)
-        total += hybrid_pct / 100.0 * demand_twh * 1.0e6 * \
-            marginal_lcoe(batt_key, iso, year, config) * 0.5  # ~half-utilization
-
-    # Clean-firm bucket — dispatched through the shared tranche helper so the
-    # merit order matches Step 2.2a exactly.
-    cf_pct = mix['clean_firm']
-    if cf_pct > 0:
-        cf_twh = cf_pct / 100.0 * demand_twh
-        tranche = compute_clean_firm_tranches_for_year(cf_twh, iso, config, year)
-        total += float(tranche.get('total_cost', 0.0)) * 1.0e6  # tranche cost is in $M
-
-    # CCS explicit column (independent of clean-firm bucket) — rare, but
-    # preserved for safety.
-    if mix['ccs_ccgt'] > 0:
-        total += mix['ccs_ccgt'] / 100.0 * demand_twh * 1.0e6 * \
-            marginal_lcoe('ccs_ccgt', iso, year, config)
-
-    # Geothermal direct
-    if mix['geothermal'] > 0 and iso in pc.GEOTHERMAL_ISOS:
-        total += mix['geothermal'] / 100.0 * demand_twh * 1.0e6 * \
-            marginal_lcoe('geothermal', iso, year, config)
-
-    # Storage — dispatch pct × demand × effective LCOE
-    for col, res in (
-        ('battery_dispatch_pct', 'battery4'),
-        ('battery8_dispatch_pct', 'battery8'),
-        ('ldes_dispatch_pct', 'ldes'),
-        ('h2_dispatch_pct', 'h2'),
-    ):
-        pct = storage[col]
-        if pct <= 0:
-            continue
-        total += pct / 100.0 * demand_twh * 1.0e6 * \
-            marginal_lcoe(res, iso, year, config)
-
-    return total
-
-
 # ---------- Pathway availability filters ------------------------------------
 
 
@@ -1727,7 +1669,7 @@ def _clean_firm_total_cost_batch(
     ``float()``, which would collapse a batch. This helper reproduces the
     same learning-curve injection but passes arrays straight through,
     returning an ndarray of ``total_cost`` values (in $M, same convention
-    as the scalar path used by ``score_ef_row_cost``).
+    as the scalar path used by ``compute_clean_firm_tranches_for_year``).
 
     Large EF bands (e.g. CAISO 70% with 4.5M rows) can exhaust process
     memory when all column arrays are live simultaneously. Chunks of
@@ -1786,17 +1728,16 @@ def score_ef_batch(
     """Strict-equivalent vectorized cost scoring for all rows in an EF.
 
     Drop-in replacement for the prior ``_score_ef_vectorized`` path that is
-    numerically identical to ``score_ef_row_cost`` (within float64 rounding)
-    row-for-row rather than relying on the ``cheapest_clean_firm_lcoe``
-    scalar approximation. Concretely: clean-firm content is routed through
-    ``pc.compute_clean_firm_tranches`` in batch mode so each row gets the
-    same merit-order-aware cost the scalar path produces (uprate tranche
-    first, then geothermal on CAISO, then cheapest of nuclear-new-build or
-    CCS). This protects the absolute ``cost_usd`` reported by
-    ``select_target_mix`` AND the row ranking: when clean-firm and VRE costs
-    are near-tied, a merit-order-aware cost can produce a different argmin
-    than a flat scalar approximation, so keeping the exact cost function is
-    the only way to guarantee row-exact parity with ``score_ef_row_cost``.
+    verified row-for-row (within float64 rounding) rather than relying on
+    the ``cheapest_clean_firm_lcoe`` scalar approximation. Concretely:
+    clean-firm content is routed through ``pc.compute_clean_firm_tranches``
+    in batch mode so each row gets the same merit-order-aware cost (uprate
+    tranche first, then geothermal on CAISO, then cheapest of
+    nuclear-new-build or CCS). This protects the absolute ``cost_usd``
+    reported by ``select_target_mix`` AND the row ranking: when clean-firm
+    and VRE costs are near-tied, a merit-order-aware cost can produce a
+    different argmin than a flat scalar approximation, so keeping the exact
+    cost function is the only way to guarantee row-exact parity.
 
     All other LCOE terms (solar/wind/offshore/geo/ccs/storage/hybrids) are
     already scalar at fixed (iso, year, config); those are precomputed once
@@ -1809,9 +1750,9 @@ def score_ef_batch(
     per chunk regardless of EF size. Per-row scoring is independent so
     chunking is numerically exact.
 
-    Verified against ``score_ef_row_cost`` on ERCOT threshold 50 (all 3,405
-    rows exact, argmin agrees) and ERCOT threshold 90 (2,000 random sample
-    of 776k, max relative diff 3.4e-16 = float64 noise).
+    Verified row-for-row on ERCOT threshold 50 (all 3,405 rows exact,
+    argmin agrees) and ERCOT threshold 90 (2,000 random sample of 776k,
+    max relative diff 3.4e-16 = float64 noise).
     """
     n_rows = len(ef['clean_firm'])
     if n_rows == 0:
@@ -2069,7 +2010,7 @@ def select_target_mix(
     # resource-pct columns are pulled as numpy arrays and folded with a
     # handful of multiply-adds. Clean-firm goes through the shared tranche
     # helper in batch mode so the per-row cost stays strictly equivalent
-    # to ``score_ef_row_cost`` (same merit-order cost, not a scalar
+    # per-row (same merit-order cost, not a scalar
     # cheapest-LCOE approximation). Replaces an iterrows() loop that took
     # minutes on multi-million-row EF parquets.
     #
@@ -3694,11 +3635,11 @@ def compute_vre_curtailment_at_endpoint(
 
     manifest = _load_annual_manifest_cached(result.config.iso)
     archetype_key = _endpoint_archetype_key(result)
-    row = None
+    row_idx = None
     if manifest is not None and archetype_key is not None:
-        hits = manifest[manifest['archetype_key'] == archetype_key]
-        if len(hits) > 0:
-            row = hits.iloc[0]
+        idx_arr = np.where(manifest['archetype_key'] == archetype_key)[0]
+        if len(idx_arr) > 0:
+            row_idx = int(idx_arr[0])
 
     for col in vre_cols:
         mix_pct = float(mix.get(col, 0.0))
@@ -3706,9 +3647,9 @@ def compute_vre_curtailment_at_endpoint(
             continue
         surplus_col = f'{col}_surplus_pct'
         dispatch_col = f'{col}_dispatch_pct'
-        if row is not None and surplus_col in row.index and dispatch_col in row.index:
-            dispatch_pct = float(row[dispatch_col])
-            surplus_pct = float(row[surplus_col])
+        if row_idx is not None and surplus_col in manifest and dispatch_col in manifest:
+            dispatch_pct = float(manifest[dispatch_col][row_idx])
+            surplus_pct = float(manifest[surplus_col][row_idx])
             gen_total = dispatch_pct + surplus_pct
             curtailment = surplus_pct / gen_total if gen_total > 0 else 0.0
         else:
