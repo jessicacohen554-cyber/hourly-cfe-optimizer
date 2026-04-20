@@ -76,7 +76,8 @@ def phase3():
     from step_2_3_pathway_optimizer import load_ef_mixes
     # Adapted: threshold is percent-form (80.0 == 80% CFE), not fractional 0.80.
     ef = load_ef_mixes("ERCOT", 80.0)
-    print(f"phase 3 OK ({len(ef)} rows)", flush=True)
+    n_rows = len(ef['clean_firm']) if isinstance(ef, dict) else len(ef)
+    print(f"phase 3 OK ({n_rows} rows)", flush=True)
 
 
 def phase4():
