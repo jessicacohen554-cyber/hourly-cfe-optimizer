@@ -135,6 +135,50 @@ def _load_hybrid_profiles():
 _HYBRID_PROFILES_BY_ISO = _load_hybrid_profiles()
 
 
+def _load_demand_profiles_by_iso() -> dict[str, np.ndarray]:
+    """Hourly ISO demand (MW), scaled so annual sum = REGIONAL_DEMAND_TWH * 1e6.
+
+    Reads `data/eia-930/eia_demand_profiles.parquet` directly with pyarrow
+    (schema: iso, year, hour, raw_mw, normalized). Uses the most recent
+    year per ISO and renormalizes to target annual MWh.
+    """
+    path = _ROOT / 'data' / 'eia-930' / 'eia_demand_profiles.parquet'
+    flat = np.full(HOURS_PER_YEAR, 1.0 / HOURS_PER_YEAR)
+    out: dict[str, np.ndarray] = {}
+    if not path.exists():
+        for iso in ISOS:
+            out[iso] = flat * (float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6)
+        return out
+    t = pq.read_table(path, columns=['iso', 'year', 'hour', 'normalized'])
+    iso_arr = np.asarray(t.column('iso').to_pylist())
+    year_arr = t.column('year').to_numpy()
+    hour_arr = t.column('hour').to_numpy()
+    norm_arr = t.column('normalized').to_numpy()
+    for iso in ISOS:
+        mask = iso_arr == iso
+        if not mask.any():
+            out[iso] = flat * (float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6)
+            continue
+        target_year = int(year_arr[mask].max())
+        m2 = mask & (year_arr == target_year)
+        norm = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
+        norm[hour_arr[m2].astype(np.int64)] = norm_arr[m2]
+        if norm.sum() <= 0:
+            norm = flat.copy()
+        else:
+            norm = norm / norm.sum()
+        out[iso] = norm * (float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6)
+    return out
+
+
+_DEMAND_PROFILE_BY_ISO = _load_demand_profiles_by_iso()
+
+# Stage-1 archetype-miss tracker: (iso, threshold) -> list[row_idx].
+# Stage-1 runs once per (iso, threshold), not per-year — the N_YEARS=26
+# per-year invariant is untouched.
+_STAGE1_MISSES: dict[tuple, list] = {}
+
+
 # ─── Ported from scripts/dispatch_utils.py lines 925–1051 (verbatim logic) ──
 
 def _twh_to_gw(twh_per_year: float, capacity_factor: float) -> float:
@@ -301,22 +345,115 @@ def _peakclean_path(iso: str, threshold) -> Path:
     return EF_DIR / f'step_2_1_EF_{iso}_{name}_peakclean.parquet'
 
 
-def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
-    """Stage-1: per-EF-row worst-hour clean MW (vectorized in 5K-row batches)."""
-    ef = _read_ef_table(iso, threshold)
+def _synthetic_clean_peak_fallback(iso: str, ef: pa.Table,
+                                   row_indices: np.ndarray) -> np.ndarray:
+    """Legacy synthetic P@M min path — used only for archetype-miss rows.
+
+    Preserves prior v1 behavior verbatim (ignores storage, takes .min over
+    hours). Never called on the hot path when the dispatch cache is healthy.
+    """
     profiles = _build_clean_profile_table(iso)
-    P = np.stack([profiles[r] for r in _RESOURCE_COLS], axis=0)   # (R, 8760)
+    P = np.stack([profiles[r] for r in _RESOURCE_COLS], axis=0)  # (R, 8760)
     n = ef.num_rows
     M = np.column_stack([
         ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n)
         for c in _RESOURCE_COLS
     ]).astype(np.float64)
-    base_demand_mwh = pc.REGIONAL_DEMAND_TWH[iso] * 1.0e6
+    base_demand_mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6
+    sub = (M[row_indices] / 100.0) * base_demand_mwh             # (k, R)
+    return (sub @ P).min(axis=1).astype(np.float64)
+
+
+def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
+    """Stage-1: per-EF-row worst-hour clean MW via dispatch-cache archetype lookup.
+
+    For each EF row, resolve the closest cached archetype via
+    `_archetype_for_endpoint_mix`, fetch the 8760-h `total_clean` vector
+    (includes standalone storage), and pick the hour that maximizes
+    `demand_hr - total_clean_hr` — the hour that actually drives new-gas
+    sizing. Archetype misses fall back to the v1 synthetic path.
+    """
+    ef = _read_ef_table(iso, threshold)
+    n = ef.num_rows
+    demand_hr = _DEMAND_PROFILE_BY_ISO[iso]  # (8760,) MW
+
+    cache = _DISPATCH_CACHE_BY_ISO.get(iso)
+    am = _ANNUAL_MANIFEST_BY_ISO.get(iso)
     out = np.empty(n, dtype=np.float32)
-    batch = 5000
-    for i in range(0, n, batch):
-        chunk = (M[i:i + batch] / 100.0) * base_demand_mwh        # (b, R)
-        out[i:i + batch] = (chunk @ P).min(axis=1).astype(np.float32)
+
+    if cache is None or am is None:
+        # No cache — entire table falls through to synthetic path.
+        out[:] = _synthetic_clean_peak_fallback(
+            iso, ef, np.arange(n)).astype(np.float32)
+        _STAGE1_MISSES[(iso, threshold)] = list(range(n))
+        print(f"[stage1] {iso} t={threshold}: no dispatch cache; "
+              f"synthetic fallback for all {n} rows", flush=True)
+    else:
+        # Build archetype lookup tables once.
+        # `total_clean` in the cache is stored as a fraction of annual demand
+        # (sums to ~1.0 per resource share, per step3a_build_dispatch_cache
+        # line 561 "Demand in cache is normalized to sum=1.0"). Multiply by
+        # annual MWh to compare against demand_hr (MW).
+        annual_mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1.0e6
+        cache_keys = cache.column('archetype_key').to_pylist()
+        key_to_cache_row = {k: i for i, k in enumerate(cache_keys)}
+        TC = np.stack([
+            np.asarray(cache.column('total_clean')[i].as_py(),
+                       dtype=np.float64)
+            for i in range(len(cache_keys))
+        ], axis=0) * annual_mwh  # (A_cache, 8760) in MW
+
+        mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
+                 'mix_ccs_ccgt', 'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8',
+                 'mix_wind_batt4', 'mix_wind_batt8']
+        manifest_mat = np.column_stack(
+            [am.column(c).to_numpy() for c in mcols]).astype(np.float64)  # (A_man, 10)
+        manifest_keys = am.column('archetype_key').to_pylist()
+        manifest_to_cache = np.array(
+            [key_to_cache_row.get(k, -1) for k in manifest_keys],
+            dtype=np.int64)
+
+        ef_cols = [c.replace('mix_', '') for c in mcols]
+        ef_mat = np.column_stack([
+            ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n)
+            for c in ef_cols
+        ]).astype(np.float64)  # (n, 10)
+
+        miss_rows: list[int] = []
+        hits = 0
+        batch = 5000
+        for i in range(0, n, batch):
+            eb = ef_mat[i:i + batch]                      # (b, 10)
+            dists = np.abs(eb[:, None, :] - manifest_mat[None, :, :]).sum(axis=2)
+            nn_man = np.argmin(dists, axis=1)             # (b,)
+            cache_idx = manifest_to_cache[nn_man]         # (b,)
+            hit_mask = cache_idx >= 0
+            out_batch = np.empty(eb.shape[0], dtype=np.float32)
+
+            if hit_mask.any():
+                ci = cache_idx[hit_mask]
+                tc_rows = TC[ci]                           # (h, 8760)
+                diff = demand_hr[None, :] - tc_rows        # (h, 8760)
+                h_worst = np.argmax(diff, axis=1)          # (h,)
+                clean_at_peak = tc_rows[np.arange(tc_rows.shape[0]), h_worst]
+                out_batch[np.nonzero(hit_mask)[0]] = clean_at_peak.astype(np.float32)
+
+            if (~hit_mask).any():
+                miss_b = np.nonzero(~hit_mask)[0]
+                absolute_idx = (i + miss_b).astype(np.int64)
+                miss_rows.extend(absolute_idx.tolist())
+                out_batch[miss_b] = _synthetic_clean_peak_fallback(
+                    iso, ef, absolute_idx).astype(np.float32)
+
+            out[i:i + batch] = out_batch
+            hits += int(hit_mask.sum())
+
+        _STAGE1_MISSES[(iso, threshold)] = miss_rows
+        match_rate = hits / max(1, n)
+        print(f"[stage1] {iso} t={threshold}: archetype match "
+              f"{hits}/{n} = {match_rate * 100:.1f}%  "
+              f"(misses={len(miss_rows)})", flush=True)
+
     norm = out / max(1e-9, float(pc.REGIONAL_DEMAND_TWH[iso]))
     tbl = pa.table({
         'clean_peak_hour_mw': pa.array(out),
@@ -324,16 +461,21 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
     })
     return tbl.replace_schema_metadata({
         'source_cache_version': _dispatch_cache_version(iso),
+        'stage1_version': '2',
         'iso': iso, 'threshold': str(threshold),
     })
 
 
+_STAGE1_VERSION = '2'
+
+
 def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
     sp = _peakclean_path(iso, threshold)
-    target_ver = _dispatch_cache_version(iso)
+    target_cache = _dispatch_cache_version(iso)
     if sp.exists():
         meta = pq.read_schema(sp).metadata or {}
-        if meta.get(b'source_cache_version', b'').decode() == target_ver:
+        if (meta.get(b'source_cache_version', b'').decode() == target_cache
+                and meta.get(b'stage1_version', b'').decode() == _STAGE1_VERSION):
             return pq.read_table(sp)
     print(f"[stage1] building peakclean sidecar for {iso} threshold {threshold}", flush=True)
     tbl = precompute_clean_peak_hour_mw(iso, threshold)
