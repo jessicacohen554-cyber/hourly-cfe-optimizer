@@ -358,9 +358,16 @@ def prewarm_caches(iso: str, combos: list[tuple[str, float]]) -> None:
     # 3. Load EF parquets only — no archetype expansion.
     for threshold in thresholds:
         print(f"[prewarm] {iso}: loading EF threshold={threshold}", flush=True)
+        _t0 = time.monotonic()
         try:
             load_ef_mixes(iso, threshold)
-        except FileNotFoundError:
+        except (FileNotFoundError, TimeoutError) as _exc:
+            _elapsed = time.monotonic() - _t0
+            print(
+                f"[prewarm] {iso}: skipping threshold={threshold}"
+                f" ({type(_exc).__name__}, elapsed={_elapsed:.1f}s)",
+                flush=True,
+            )
             continue
 
     # 4. Numba JIT warmup — cover _battery_loop_detailed, _ldes_loop_detailed,

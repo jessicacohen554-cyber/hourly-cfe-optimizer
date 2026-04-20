@@ -263,13 +263,16 @@ def _call_with_timeout(fn: Callable[[], _T], timeout_s: float, label: str) -> _T
     before raising so the label is visible even if an upstream broad
     ``except Exception`` swallows the TimeoutError.
     """
+    t_submit = time.monotonic()
     fut = _TIMEOUT_EXECUTOR.submit(fn)
     try:
         return fut.result(timeout=timeout_s)
     except concurrent.futures.TimeoutError:
-        print(f"[timeout] {label!r} stalled {timeout_s:.0f}s", flush=True)
+        elapsed = time.monotonic() - t_submit
+        print(f"[timeout] {label!r} stalled {timeout_s:.0f}s (wall={elapsed:.1f}s)", flush=True)
         raise TimeoutError(
             f"_call_with_timeout: {label!r} stalled after {timeout_s:.0f}s"
+            f" (wall={elapsed:.1f}s, queue-wait={(elapsed - timeout_s):.1f}s)"
         )
 
 
@@ -371,7 +374,7 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
             f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
         )
     frames = [
-        _call_with_timeout(lambda p=p: pd.read_parquet(p), 30.0, f"load_ef_mixes:{p}")
+        _call_with_timeout(lambda p=p: pd.read_parquet(p), 60.0, f"load_ef_mixes:{p}")
         for p in paths
     ]
     df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
