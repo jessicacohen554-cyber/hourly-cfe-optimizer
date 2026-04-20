@@ -318,7 +318,8 @@ _EF_CACHE_LOCK = threading.Lock()
 
 # Score memo: (iso, threshold, year, pathway, demand_growth_level,
 #              firm_cost_level, ccs_cost_level, q45, tx_level,
-#              geo_cost_level, include_gas_cost) → np.ndarray of costs.
+#              geo_cost_level, include_gas_cost,
+#              use_surrogate_residual) → np.ndarray of costs.
 # Reuses _EF_CACHE_LOCK so score lookups are serialized with EF loads,
 # preventing a race where one thread scores an EF before another has
 # finished populating it. The final aggregated array is cached — not
@@ -353,6 +354,7 @@ def _score_ef_cache_key(
         config.tx_level,
         config.geo_cost_level,
         include_gas_cost,
+        bool(getattr(pc, 'USE_SURROGATE_RESIDUAL_IN_ARGMIN', False)),
     )
 
 
@@ -1877,6 +1879,7 @@ _score_ef_vectorized = score_ef_batch
 def score_ef_batch_with_gas(
     ef: dict[str, np.ndarray],
     iso: str,
+    threshold: float,
     year: int,
     config: 'RunConfig',
 ) -> np.ndarray:
@@ -1920,14 +1923,16 @@ def score_ef_batch_with_gas(
 
     base_cost = score_ef_batch(ef, iso, year, config)
 
-    from step2_2a_cost_optimization import (
-        _worst_hour_residual_norm,
-        _gas_raw_2025_worst_hour,
-    )
+    from step2_2a_cost_optimization import _gas_raw_2025_worst_hour
 
     # ef is already a dict-of-ndarrays — the native format _worst_hour_residual_norm
     # expects. Skip the DataFrame-adapter layer (worst_hour_residual_per_row).
-    resid_norm = _worst_hour_residual_norm(iso, ef)
+    if getattr(pc, 'USE_SURROGATE_RESIDUAL_IN_ARGMIN', False):
+        from step2_2a_cost_optimization import _surrogate_residual_norm
+        resid_norm = _surrogate_residual_norm(iso, threshold, ef)
+    else:
+        from step2_2a_cost_optimization import _worst_hour_residual_norm
+        resid_norm = _worst_hour_residual_norm(iso, ef)
 
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     demand_mwh_grown = demand_twh * 1.0e6
@@ -2024,7 +2029,7 @@ def select_target_mix(
         costs = _SCORE_EF_CACHE.get(_skey)
     if costs is None:
         if _include_gas:
-            costs = score_ef_batch_with_gas(ef, iso, year, config)
+            costs = score_ef_batch_with_gas(ef, iso, threshold, year, config)
         else:
             costs = score_ef_batch(ef, iso, year, config)
         with _EF_CACHE_LOCK:
