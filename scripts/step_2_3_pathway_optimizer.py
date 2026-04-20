@@ -63,9 +63,12 @@ MANIFEST.json at analysis/reliability-tax/data/MANIFEST.json aggregates all runs
 from __future__ import annotations
 
 import argparse
+import errno
+import fcntl
 import json
 import os
 import sys
+import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -2828,6 +2831,12 @@ def compute_retirement_timeline(
 
 MANIFEST_FILENAME = 'MANIFEST.json'
 
+# append_to_manifest() serializes a 7-worker in-process sweep via an flock on
+# .manifest.lock. We use LOCK_EX|LOCK_NB with a bounded retry so a stale lock
+# from a crashed prior worker raises a clear error instead of hanging forever.
+MANIFEST_LOCK_TIMEOUT_S = 20.0
+MANIFEST_LOCK_POLL_S = 0.1
+
 
 def _run_key(config: RunConfig) -> str:
     endpoint_tag = f"{config.endpoint_pct:g}".replace('.', 'p')
@@ -2970,12 +2979,31 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
     manifest_path = root / MANIFEST_FILENAME
     lock_path = root / '.manifest.lock'
 
+    lock_fh = None
     try:
-        import fcntl
         lock_fh = open(lock_path, 'a+')
-        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
-    except Exception:
+    except OSError:
         lock_fh = None
+
+    if lock_fh is not None:
+        deadline = time.monotonic() + MANIFEST_LOCK_TIMEOUT_S
+        while True:
+            try:
+                fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.EAGAIN, errno.EACCES):
+                    lock_fh.close()
+                    raise
+                if time.monotonic() >= deadline:
+                    lock_fh.close()
+                    raise TimeoutError(
+                        f"append_to_manifest: could not acquire {lock_path} "
+                        f"within {MANIFEST_LOCK_TIMEOUT_S:.0f}s — stale lock "
+                        f"from a crashed prior worker? Remove it manually to "
+                        f"recover."
+                    )
+                time.sleep(MANIFEST_LOCK_POLL_S)
 
     try:
         if manifest_path.exists():
@@ -3000,7 +3028,6 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
     finally:
         if lock_fh is not None:
             try:
-                import fcntl
                 fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
             except Exception:
                 pass
