@@ -286,6 +286,45 @@ def _resolve_ef_paths(iso: str, threshold: float) -> list[Path]:
 _EF_CACHE: dict[tuple[str, float], pd.DataFrame] = {}
 _EF_CACHE_LOCK = threading.Lock()
 
+# Score memo: (iso, threshold, year, pathway, demand_growth_level,
+#              firm_cost_level, ccs_cost_level, q45, tx_level,
+#              geo_cost_level, include_gas_cost) → np.ndarray of costs.
+# Reuses _EF_CACHE_LOCK so score lookups are serialized with EF loads,
+# preventing a race where one thread scores an EF before another has
+# finished populating it. The final aggregated array is cached — not
+# per-chunk results — so chunked EFs get one memo entry.
+_SCORE_EF_CACHE: dict[tuple, np.ndarray] = {}
+
+
+def _score_ef_cache_key(
+    iso: str,
+    threshold: float,
+    year: int,
+    pathway: str,
+    config: 'RunConfig',
+    include_gas_cost: bool,
+) -> tuple:
+    """Deterministic key for the score_ef_batch result cache.
+
+    Captures every config field that feeds into marginal_lcoe,
+    demand_for_year, or _clean_firm_total_cost_batch so that runs with
+    identical scoring inputs share a cache entry regardless of which
+    worker thread computes them first.
+    """
+    return (
+        iso,
+        threshold,
+        year,
+        pathway,
+        config.demand_growth_level,
+        config.firm_cost_level,
+        config.ccs_cost_level,
+        config.q45,
+        config.tx_level,
+        config.geo_cost_level,
+        include_gas_cost,
+    )
+
 
 def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
     """Load the Step 2.1 efficient-frontier mixes for (iso, threshold).
@@ -1980,10 +2019,17 @@ def select_target_mix(
     # also folds expected new-gas-build capex + fuel into each row's cost
     # so pure-VRE rows with large worst-hour residuals get penalized
     # against clean-firm-heavy rows with low residuals.
-    if getattr(pc, 'INCLUDE_GAS_COST_IN_ARGMIN', False):
-        costs = score_ef_batch_with_gas(ef, iso, year, config)
-    else:
-        costs = score_ef_batch(ef, iso, year, config)
+    _include_gas = getattr(pc, 'INCLUDE_GAS_COST_IN_ARGMIN', False)
+    _skey = _score_ef_cache_key(iso, threshold, year, pathway, config, _include_gas)
+    with _EF_CACHE_LOCK:
+        costs = _SCORE_EF_CACHE.get(_skey)
+    if costs is None:
+        if _include_gas:
+            costs = score_ef_batch_with_gas(ef, iso, year, config)
+        else:
+            costs = score_ef_batch(ef, iso, year, config)
+        with _EF_CACHE_LOCK:
+            _SCORE_EF_CACHE[_skey] = costs
     if costs.size == 0 or not np.isfinite(costs).any():
         return {'infeasible': True, 'reason': 'no_finite_cost',
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
@@ -2551,6 +2597,9 @@ def solve_pathway(
             peak_vintage.annual_cf.append(round(float(gas_cf), 4))
 
         # ---- Annual cost construction (§24.6 — gross, no capacity netting).
+        # ledger.operating_cost scans V_total vintages once per year.
+        # V_total ≤ 26_years × ~10_resources ≈ 260 entries: O(26 × V) overall,
+        # not quadratic — no running-sum restructuring needed.
         gross_usd = ledger.operating_cost(year)
         new_gas_annualized_usd = active_new_gas_mw * new_gas_fom_kw_yr * 1000.0
         existing_gas_fom_usd = (
