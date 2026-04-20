@@ -2132,10 +2132,10 @@ def _derive_delta_vintages(
 
     # Hybrid VRE+storage — split into VRE half and storage half.
     hybrid_map = [
-        ('solar_batt4', 'solar', 'battery4'),
-        ('solar_batt8', 'solar', 'battery8'),
-        ('wind_batt4',  'wind',  'battery4'),
-        ('wind_batt8',  'wind',  'battery8'),
+        ('solar_batt4', 'solar_hybrid', 'battery4'),
+        ('solar_batt8', 'solar_hybrid', 'battery8'),
+        ('wind_batt4',  'wind_hybrid',  'battery4'),
+        ('wind_batt8',  'wind_hybrid',  'battery8'),
     ]
     for col, vre_res, batt_res in hybrid_map:
         pct = target['mix_pct'].get(col, 0.0)
@@ -2144,18 +2144,14 @@ def _derive_delta_vintages(
         target_twh = _twh_from_pct(pct, demand_twh)
         # VRE side — same-year floor ratchet (see energy_resources block above).
         existing_vre = ledger.capacity_twh(vre_res, year)
-        # Hybrid contributes to the same ledger key as standalone VRE — the
-        # existing check above already counts standalone solar/wind, so we
-        # only add the incremental hybrid slice.
-        inc_vre = target_twh  # treat hybrid VRE as additive; solver relies on
-        # target pct being the final operating state.
-        new_vintages.append(Vintage(
-            resource=vre_res, cod_year=year,
-            twh_per_year=max(0.0, inc_vre),
-            locked_lcoe=_vintage_lcoe_for_resource(vre_res, iso, year, config),
-            tx_adder=transmission_adder(vre_res, iso, config.tx_level),
-        ))
-        del existing_vre  # reserved for future, keeps linter quiet
+        new_twh = max(0.0, target_twh - existing_vre)
+        if new_twh > 1e-6:
+            new_vintages.append(Vintage(
+                resource=vre_res, cod_year=year,
+                twh_per_year=new_twh,
+                locked_lcoe=_vintage_lcoe_for_resource(vre_res, iso, year, config),
+                tx_adder=transmission_adder(vre_res, iso, config.tx_level),
+            ))
         # Storage side — same-year floor ratchet.
         existing_batt = ledger.capacity_twh(batt_res, year)
         inc_batt = max(0.0, target_twh * 0.5 - existing_batt)  # ~50% cycle
