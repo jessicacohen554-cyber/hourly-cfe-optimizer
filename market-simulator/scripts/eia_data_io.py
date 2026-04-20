@@ -65,17 +65,14 @@ def load_generation_profiles():
     pq = _try_parquet('eia_generation_profiles')
     if pq:
         import pandas as pd
+        print(f"[eia-io] load_generation_profiles: reading {pq}", flush=True)
         df = pd.read_parquet(pq)
+        df = df.sort_values(['iso', 'year', 'fuel', 'hour'])
+        series = df.groupby(['iso', 'year', 'fuel'])['value'].apply(lambda x: x.tolist())
         result = {}
-        for iso in df['iso'].unique():
-            result[iso] = {}
-            iso_df = df[df['iso'] == iso]
-            for year in iso_df['year'].unique():
-                year_df = iso_df[iso_df['year'] == year].sort_values('hour')
-                result[iso][str(year)] = {}
-                for fuel in year_df['fuel'].unique():
-                    vals = year_df[year_df['fuel'] == fuel]['value'].tolist()
-                    result[iso][str(year)][fuel] = vals
+        for (iso, year, fuel), vals in series.items():
+            result.setdefault(iso, {}).setdefault(str(year), {})[fuel] = vals
+        print("[eia-io] load_generation_profiles: done", flush=True)
         return result
 
     jp = _try_json('eia_generation_profiles')
@@ -95,29 +92,29 @@ def load_demand_profiles():
     meta_pq = _try_parquet('eia_demand_meta')
     if pq:
         import pandas as pd
+        print(f"[eia-io] load_demand_profiles: reading {pq}", flush=True)
         df = pd.read_parquet(pq)
         meta_df = pd.read_parquet(meta_pq) if meta_pq else None
 
+        df = df.sort_values(['iso', 'year', 'hour'])
+        raw_series = df.groupby(['iso', 'year'])['raw_mw'].apply(lambda x: x.tolist())
+        norm_series = df.groupby(['iso', 'year'])['normalized'].apply(lambda x: x.tolist())
+        if meta_df is not None:
+            meta_df = meta_df.set_index(['iso', 'year'])
         result = {}
-        for iso in df['iso'].unique():
-            result[iso] = {}
-            iso_df = df[df['iso'] == iso]
-            for year in iso_df['year'].unique():
-                year_df = iso_df[iso_df['year'] == year].sort_values('hour')
-                entry = {
-                    'raw_mw': year_df['raw_mw'].tolist(),
-                    'normalized': year_df['normalized'].tolist(),
-                }
-                # Add metadata
-                if meta_df is not None:
-                    meta_row = meta_df[(meta_df['iso'] == iso) & (meta_df['year'] == year)]
-                    if len(meta_row) > 0:
-                        row = meta_row.iloc[0]
-                        entry['total_annual_mwh'] = float(row['total_annual_mwh'])
-                        entry['peak_mw'] = float(row['peak_mw'])
-                        entry['min_mw'] = float(row['min_mw'])
-                        entry['avg_mw'] = float(row['avg_mw'])
-                result[iso][str(year)] = entry
+        for (iso, year), raw_mw in raw_series.items():
+            entry = {
+                'raw_mw': raw_mw,
+                'normalized': norm_series[(iso, year)],
+            }
+            if meta_df is not None and (iso, year) in meta_df.index:
+                row = meta_df.loc[(iso, year)]
+                entry['total_annual_mwh'] = float(row['total_annual_mwh'])
+                entry['peak_mw'] = float(row['peak_mw'])
+                entry['min_mw'] = float(row['min_mw'])
+                entry['avg_mw'] = float(row['avg_mw'])
+            result.setdefault(iso, {})[str(year)] = entry
+        print("[eia-io] load_demand_profiles: done", flush=True)
         return result
 
     jp = _try_json('eia_demand_profiles')
@@ -134,19 +131,22 @@ def load_fossil_mix():
     pq = _try_parquet('eia_fossil_mix')
     if pq:
         import pandas as pd
+        print(f"[eia-io] load_fossil_mix: reading {pq}", flush=True)
         df = pd.read_parquet(pq)
+        df = df.sort_values(['iso', 'year', 'hour'])
+        coal = df.groupby(['iso', 'year'])['coal_share'].apply(lambda x: x.tolist())
+        gas = df.groupby(['iso', 'year'])['gas_share'].apply(lambda x: x.tolist())
+        oil = df.groupby(['iso', 'year'])['oil_share'].apply(lambda x: x.tolist())
         result = {}
-        for iso in df['iso'].unique():
-            result[iso] = {}
-            iso_df = df[df['iso'] == iso]
-            for year in iso_df['year'].unique():
-                year_df = iso_df[iso_df['year'] == year].sort_values('hour')
-                result[iso][str(year)] = {
-                    'hours': list(range(1, len(year_df) + 1)),
-                    'coal_share': year_df['coal_share'].tolist(),
-                    'gas_share': year_df['gas_share'].tolist(),
-                    'oil_share': year_df['oil_share'].tolist(),
-                }
+        for (iso, year), coal_vals in coal.items():
+            n = len(coal_vals)
+            result.setdefault(iso, {})[str(year)] = {
+                'hours': list(range(1, n + 1)),
+                'coal_share': coal_vals,
+                'gas_share': gas[(iso, year)],
+                'oil_share': oil[(iso, year)],
+            }
+        print("[eia-io] load_fossil_mix: done", flush=True)
         return result
 
     jp = _try_json('eia_fossil_mix')
