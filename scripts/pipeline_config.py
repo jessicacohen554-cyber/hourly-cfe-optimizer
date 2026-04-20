@@ -1441,6 +1441,18 @@ NOAK_YEAR_BY_PATHWAY = {
 # ----------------------------------------------------------------------------
 INCLUDE_GAS_COST_IN_ARGMIN = True
 
+# ----------------------------------------------------------------------------
+# SPEC §24.5 — Surrogate residual in argmin.
+# When True, score_ef_batch_with_gas calls
+# step2_2a_cost_optimization._surrogate_residual_norm (HistGBM surrogate
+# over 13-dim mix features) in place of the true 99.97-percentile
+# dispatch in _worst_hour_residual_norm. Orders-of-magnitude faster at
+# argmin scoring time. Surrogate only affects argmin selection — the
+# final worst_hour_gas_sizing call in solve_pathway still uses true
+# dispatch, so realized gas sizing is unchanged.
+# ----------------------------------------------------------------------------
+USE_SURROGATE_RESIDUAL_IN_ARGMIN = False
+
 # Which tech keys receive the pathway-specific NOAK override. Clean-firm only
 # (nuclear, CCGT+CCS, geothermal) — battery / VRE / LDES / H2 learning curves
 # are globally driven, not US-pathway-driven.
