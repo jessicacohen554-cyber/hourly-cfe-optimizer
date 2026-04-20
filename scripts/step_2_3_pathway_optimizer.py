@@ -2073,6 +2073,8 @@ def _vintage_lcoe_for_resource(resource: str, iso: str, year: int,
     mapping = {
         'solar_batt4': 'solar', 'solar_batt8': 'solar',
         'wind_batt4': 'wind', 'wind_batt8': 'wind',
+        'solar_hybrid': 'solar',
+        'wind_hybrid': 'wind',
     }
     base = mapping.get(resource, resource)
     if base == 'hydro':
@@ -3285,10 +3287,10 @@ _VRE_CURTAILMENT_RESOURCES: tuple[tuple[str, str], ...] = (
     ('solar',         'solar'),
     ('wind',          'wind'),
     ('offshore_wind', 'offshore_wind'),
-    ('solar_batt4',   'solar'),
-    ('solar_batt8',   'solar'),
-    ('wind_batt4',    'wind'),
-    ('wind_batt8',    'wind'),
+    ('solar_batt4',   'solar_hybrid'),
+    ('solar_batt8',   'solar_hybrid'),
+    ('wind_batt4',    'wind_hybrid'),
+    ('wind_batt8',    'wind_hybrid'),
 )
 
 
