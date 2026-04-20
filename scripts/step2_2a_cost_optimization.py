@@ -299,24 +299,26 @@ def flush_expanded_cache(iso):
     return True
 
 
-def prewarm_caches(iso: str) -> None:
-    """Pre-populate all shared caches for *iso* before the threaded sweep.
+def prewarm_caches(iso: str, combos: list[tuple[str, float]]) -> None:
+    """Pre-populate dispatch cache and EF parquets for *iso* before the threaded sweep.
 
     Called once per ISO worker (single-threaded) before any ``run_pathway``
     calls.  After this returns:
 
-    * ``_WH_STATE[iso]['cache']`` contains an archetype entry for every row in
-      every available EF parquet for the ISO.
-    * ``_WH_STATE[iso]['percentile_memo']`` contains the 99.97th-percentile
-      residual norm for every one of those archetypes.
     * All demand/generation profile arrays are loaded.
     * The 2025 gas-raw baseline is computed.
-    * Every ``(iso, threshold)`` EF parquet is loaded into ``_EF_CACHE`` in
-      ``step_2_3_pathway_optimizer``.
+    * Every ``(iso, threshold)`` EF parquet the sweep will touch is loaded into
+      ``_EF_CACHE`` in ``step_2_3_pathway_optimizer``.
 
-    All 50 (pathway, endpoint) threads that follow are therefore read-only
-    against every shared cache — no locking is needed for the hot path, only
-    as a safety net for any archetype that was somehow absent.
+    Archetype expansion (``worst_hour_residual_per_row``) is intentionally
+    omitted.  ``_WH_STATE_LOCK`` at lines 268 and 513 makes concurrent lazy
+    expansion thread-safe; threads pay first-miss cost once per unique
+    archetype, which is far cheaper than pre-expanding every EF row up front.
+
+    *combos* is the ``[(pathway, endpoint_pct), ...]`` list from the sweep
+    driver.  It is used to derive the minimal set of thresholds the sweep will
+    actually load — avoiding the silent multi-minute idle that full-ISO
+    pre-expansion caused for large ISOs like CAISO.
 
     Local imports of step_2_3_pathway_optimizer are inside the function body
     to avoid the circular dependency (that module imports from this one).
@@ -325,21 +327,32 @@ def prewarm_caches(iso: str) -> None:
     _ensure_common_data(iso)
     _gas_raw_2025_worst_hour(iso)  # populates state['gas_raw_2025_norm']
 
-    # 2. Load EF parquets for all available thresholds and expand/score every row.
-    # Local import to break the circular-import cycle (step_2_3 imports from us).
-    from step_2_3_pathway_optimizer import available_thresholds, load_ef_mixes  # noqa: PLC0415
+    # 2. Derive the minimal threshold set the sweep will actually touch by
+    # replaying the same SBTi-ladder + closest-available-threshold logic used
+    # at run time.  Local import breaks the circular-import cycle.
+    from step_2_3_pathway_optimizer import (  # noqa: PLC0415
+        YEARS,
+        _closest_available_threshold,
+        available_thresholds,
+        load_ef_mixes,
+        sbti_target_for_year,
+    )
 
-    thresholds = available_thresholds(iso)
+    needed: set[float] = set()
+    for _pathway, endpoint_pct in combos:
+        for year in YEARS:
+            t = _closest_available_threshold(iso, sbti_target_for_year(year, endpoint_pct))
+            if t is not None:
+                needed.add(t)
+    thresholds = sorted(needed) if needed else available_thresholds(iso)
+
+    # 3. Load EF parquets only — no archetype expansion.
     for threshold in thresholds:
+        print(f"[prewarm] {iso}: loading EF threshold={threshold}", flush=True)
         try:
-            ef = load_ef_mixes(iso, threshold)
+            load_ef_mixes(iso, threshold)
         except FileNotFoundError:
             continue
-        # Expand missing archetypes + populate percentile_memo for all EF rows.
-        # worst_hour_residual_per_row is defined later in this module; resolved
-        # at call time so forward reference is fine.
-        # The return value is discarded — side-effects are what we need.
-        worst_hour_residual_per_row(iso, ef)
 
     t_count = len(thresholds)
     state = _WH_STATE.get(iso, {})

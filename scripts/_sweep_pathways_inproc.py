@@ -96,11 +96,10 @@ def sweep_one_iso(
     total_runs = len(combos)
     t_start = time.time()
 
-    # Prewarm: load dispatch cache, EF parquets, expand all archetypes, and
-    # compute all percentiles for this ISO before any thread is spawned.
-    # After this call, _WH_STATE[iso]['cache'] and ['percentile_memo'] are
-    # fully populated — threaded runs are read-only against shared state.
-    prewarm_caches(iso)
+    # Prewarm: load dispatch cache and EF parquets for the thresholds this
+    # sweep will actually touch.  Archetype expansion is deferred to first-miss
+    # inside each thread (thread-safe via _WH_STATE_LOCK).
+    prewarm_caches(iso, combos)
 
     # Mark the ISO state as deferred so per-run flush_expanded_cache calls
     # inside run_pathway are no-ops; we flush once in the finally block.
