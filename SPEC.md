@@ -570,7 +570,7 @@ These are load-bearing for every script, figure, and writeup in the sub-project.
    - (3) Clean firm proactive from year 1
 4. **Clean firm bucket**: Nuclear + CCGT+CCS + geothermal, subject to existing regional constraints (`CCS_CAP_TWH`, `GEOTHERMAL_ISOS = ['CAISO']`). **Offshore wind is NOT clean firm** — it is VRE, available to all pathways.
 5. **Cost basis**: Real 2025 USD. No inflation adjustment.
-6. **Cost reporting**: Undiscounted cumulative 2025–2050 plus NPV@5%, 7%, 9% real. **Objective = NPV@7%.**
+6. **Cost reporting**: Undiscounted cumulative 2025–2050 (primary — actual ratepayer outlay) plus NPV@5%, 7%, 9% real (secondary sensitivity). **Objective = undiscounted cumulative cost.**
 7. **ISO scope**: Fully ISO-parametric. Smoke-test on a single ISO, then run all 7.
 8. **Stranding scope and thresholds**:
    - Stranded fossil = **new-build gas only** with capacity factor <20% in 2050. Existing fleet is out of scope.

@@ -1,6 +1,6 @@
 # Reliability Tax — Inheritance Plan
 
-Locks which functions, classes, and constants the Reliability Tax pipeline step inherits from the existing 8-step pipeline. The new step is a **deterministic cost minimization under constraint** (pathway simulation 2025–2050, NPV@7% objective) — NOT a market prediction.
+Locks which functions, classes, and constants the Reliability Tax pipeline step inherits from the existing 8-step pipeline. The new step is a **deterministic cost minimization under constraint** (pathway simulation 2025–2050, undiscounted cumulative cost objective) — NOT a market prediction.
 
 This file is built up in three prompts:
 
@@ -139,7 +139,7 @@ Accumulated across Prompts 1B-i / ii / iii. Each question must be resolved befor
 
 5. **Band-union vs. single-band reads.** Step 2.1 stores each mix in exactly one band (highest `T ≤ score`). Recovering "all mixes qualifying for CFE ≥ T*" requires loading bands `[T*, next_T, …, 99.9]` and concatenating. For target thresholds near the tails (10–40% or 99.5–99.9%) this is cheap; near the densest point (~75–90%) it may pull 10M+ rows into memory per ISO. Does the pathway iterator need a chunked reader, or is in-memory union acceptable (pathway iteration is per-ISO, and the Reliability Tax target set is ≤90% so the worst case is bands [90, 92.5, 95, 97.5, 99, 99.5, 99.9])?
 
-6. **Pareto pre-filtering under fixed objective.** Step 2.1 intentionally skips cross-mix dominance removal because different LCOE assumptions reshuffle the cost ranking. Reliability Tax uses a *fixed* objective (NPV@7% real, 2025 USD, no inflation — invariants 5–6). Under a fixed objective, much of the EF is dominated and could be dropped upfront to shrink the candidate pool. Should Reliability Tax run a pathway-specific dominance filter at load time (post `pathway_cap_filter`), or carry the full pool through and let downstream cost minimization handle it?
+6. **Pareto pre-filtering under fixed objective.** Step 2.1 intentionally skips cross-mix dominance removal because different LCOE assumptions reshuffle the cost ranking. Reliability Tax uses a *fixed* objective (undiscounted cumulative cost, real 2025 USD, no inflation — invariants 5–6). Under a fixed objective, much of the EF is dominated and could be dropped upfront to shrink the candidate pool. Should Reliability Tax run a pathway-specific dominance filter at load time (post `pathway_cap_filter`), or carry the full pool through and let downstream cost minimization handle it?
 
 7. **`pareto_type='augmented'` mixes.** Step 2.1b fills thin bands with perturbed/interpolated candidates and tags them `pareto_type='augmented'`. They are physically valid (scored through the same Numba kernel as native mixes) but have no Step 1 provenance. Should Reliability Tax treat augmented mixes as first-class candidates, filter them out (physics-only provenance), or down-weight them (e.g., only use them as tie-breakers)? Affects the size of the thin-band candidate pools, which are exactly the ones pathways are most likely to query.
 
