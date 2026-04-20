@@ -159,6 +159,11 @@ def sweep_one_iso(
         if entry is not None:
             with manifest_lock:
                 manifest_acc[result['run_key']] = entry
+        p3_entry = result.get('_p3_manifest_entry')
+        if p3_entry is not None:
+            p3_run_key = result['pathway3_reference_run_key']
+            with manifest_lock:
+                manifest_acc[p3_run_key] = p3_entry
         return ('ok', pathway, ep, result, None)
 
     try:

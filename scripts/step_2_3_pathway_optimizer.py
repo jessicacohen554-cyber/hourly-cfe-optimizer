@@ -3777,6 +3777,7 @@ def run_pathway(
 
     try:
         # 1. Pathway 3 reference.
+        _p3_on_the_fly = None  # Set below if P3 is solved on-the-fly for stranding.
         if config.pathway == '3':
             p3_result = _solve_and_annotate(
                 config,
@@ -3796,8 +3797,10 @@ def run_pathway(
                 p3_result = _solve_and_annotate(p3_cfg)
                 p3_result.stranding_ledger = []
                 write_run_json(p3_result)
-                append_to_manifest(p3_result)
+                if not skip_manifest:
+                    append_to_manifest(p3_result)
                 p3_ledger_for_stranding = p3_result.ledger
+                _p3_on_the_fly = p3_result
             target_result = _solve_and_annotate(
                 config,
                 initial_ledger=initial_ledger,
@@ -3827,6 +3830,10 @@ def run_pathway(
             'manifest_path': str(manifest_path) if manifest_path else None,
             # Pre-built manifest entry returned for batch-write by sweep driver.
             '_manifest_entry': entry_data,
+            # P3 entry for the sweep driver to include in the end-of-ISO batch
+            # write when P3 was solved on-the-fly for this non-P3 run. Absent
+            # when the target is P3 itself or P3 was already on disk.
+            **({'_p3_manifest_entry': _manifest_entry(_p3_on_the_fly)} if _p3_on_the_fly is not None else {}),
             'pathway3_reference_run_key': _run_key(_pathway3_config_for(config)),
             'stranding_ledger_rows': len(target_result.stranding_ledger),
             'pivot': {
