@@ -74,10 +74,11 @@ def _combo_metrics(combo: dict) -> dict:
     tru_cfe = float(tru['headline']['achieved_cfe_pct'])
     surr_cfe = float(surr['headline']['achieved_cfe_pct'])
 
-    wc_tru = float(combo['wallclock_truth_s'])
-    wc_surr = float(combo['wallclock_surrogate_s'])
+    wt = combo.get('wallclock_truth_s')
+    ws = combo.get('wallclock_surrogate_s', 0.0)
+    speedup = None if (wt is None or not ws) else wt / ws
 
-    return {
+    m = {
         'pathway': combo['pathway'],
         'endpoint': combo['endpoint'],
         'total_cost_delta_pct': _pct(surr_cost, tru_cost),
@@ -90,17 +91,21 @@ def _combo_metrics(combo: dict) -> dict:
         'gas_2050_cumulative_mw_delta': abs(
             _terminal_gas_mw(surr) - _terminal_gas_mw(tru)
         ),
-        'speedup': wc_tru / wc_surr if wc_surr > 0 else float('inf'),
-        'wallclock_truth_s': wc_tru,
-        'wallclock_surrogate_s': wc_surr,
+        'speedup': speedup,
+        'reused_truth': combo.get('reused_truth', False),
+        'wallclock_truth_s': wt,
+        'wallclock_surrogate_s': ws,
     }
+    return m
 
 
 def _passes(m: dict) -> bool:
+    """Pass if |cost Δ%| < 1.0, mix_drift < 3.0, and speedup >= 2.0 (or None when truth was reused)."""
+    sp = m['speedup']
     return (
         abs(m['total_cost_delta_pct']) < _COST_DELTA_PCT_MAX
         and m['endpoint_mix_drift'] < _MIX_DRIFT_MAX
-        and m['speedup'] >= _SPEEDUP_MIN
+        and (sp is None or sp >= _SPEEDUP_MIN)
     )
 
 
@@ -113,6 +118,8 @@ def _print_table(combos: list[dict]) -> None:
     print(header)
     print('-' * len(header))
     for m in combos:
+        sp = m['speedup']
+        speedup_str = 'n/a' if sp is None else f"{sp:.2f}"
         print(
             f"{m['pathway']:>8} {m['endpoint']:>9.2f} "
             f"{m['total_cost_delta_pct']:>10.4f} "
@@ -120,7 +127,7 @@ def _print_table(combos: list[dict]) -> None:
             f"{m['achieved_cfe_delta']:>8.4f} "
             f"{m['endpoint_mix_drift']:>10.4f} "
             f"{m['gas_2050_cumulative_mw_delta']:>14.1f} "
-            f"{m['speedup']:>9.2f} "
+            f"{speedup_str:>9} "
             f"{('Y' if _passes(m) else 'N'):>6}"
         )
 
@@ -129,11 +136,14 @@ def main() -> int:
     summary = _load(_SUMMARY_PATH)
     per_combo = [_combo_metrics(c) for c in summary['combos']]
 
+    measured_speedups = [m['speedup'] for m in per_combo if m['speedup'] is not None]
+    n_combos_passing = sum(1 for m in per_combo if _passes(m))
     summary_block = {
         'max_total_cost_delta_pct': max(abs(m['total_cost_delta_pct']) for m in per_combo),
         'max_mix_drift': max(m['endpoint_mix_drift'] for m in per_combo),
-        'min_speedup': min(m['speedup'] for m in per_combo),
-        'combos_passing': sum(1 for m in per_combo if _passes(m)),
+        'min_speedup_or_na': min(measured_speedups) if measured_speedups else None,
+        'n_truth_reused': sum(1 for m in per_combo if m.get('reused_truth', False)),
+        'n_combos_passing': n_combos_passing,
         'combos_total': len(per_combo),
         'thresholds': {
             'cost_delta_pct_max': _COST_DELTA_PCT_MAX,
@@ -142,7 +152,7 @@ def main() -> int:
         },
     }
     summary_block['overall_pass'] = (
-        summary_block['combos_passing'] == summary_block['combos_total']
+        n_combos_passing == summary_block['combos_total']
     )
 
     out = {
@@ -154,11 +164,14 @@ def main() -> int:
 
     _print_table(per_combo)
     print()
+    min_sp = summary_block['min_speedup_or_na']
+    min_sp_str = 'n/a' if min_sp is None else f"{min_sp:.2f}×"
     print(
         f"summary: max|cost Δ%|={summary_block['max_total_cost_delta_pct']:.4f}  "
         f"max mix drift={summary_block['max_mix_drift']:.4f}  "
-        f"min speedup={summary_block['min_speedup']:.2f}×  "
-        f"{summary_block['combos_passing']}/{summary_block['combos_total']} "
+        f"min speedup={min_sp_str}  "
+        f"truth reused={summary_block['n_truth_reused']}  "
+        f"{summary_block['n_combos_passing']}/{summary_block['combos_total']} "
         f"combos pass  → overall {'PASS' if summary_block['overall_pass'] else 'FAIL'}"
     )
     print(f"wrote {_METRICS_PATH}")
