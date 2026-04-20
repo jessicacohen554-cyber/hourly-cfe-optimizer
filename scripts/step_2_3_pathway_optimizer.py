@@ -246,17 +246,21 @@ class ResourceBook:
 
 _T = TypeVar('_T')
 
+# Reused across all calls — avoids spawning/joining a fresh OS thread per JSON read.
+_TIMEOUT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix='cfe_timeout',
+)
+
 
 def _call_with_timeout(fn: Callable[[], _T], timeout_s: float, label: str) -> _T:
     """Run ``fn()`` in a thread and raise TimeoutError if it stalls past ``timeout_s``."""
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        fut = ex.submit(fn)
-        try:
-            return fut.result(timeout=timeout_s)
-        except concurrent.futures.TimeoutError:
-            raise TimeoutError(
-                f"_call_with_timeout: {label!r} stalled after {timeout_s:.0f}s"
-            )
+    fut = _TIMEOUT_EXECUTOR.submit(fn)
+    try:
+        return fut.result(timeout=timeout_s)
+    except concurrent.futures.TimeoutError:
+        raise TimeoutError(
+            f"_call_with_timeout: {label!r} stalled after {timeout_s:.0f}s"
+        )
 
 
 # ============================================================================
