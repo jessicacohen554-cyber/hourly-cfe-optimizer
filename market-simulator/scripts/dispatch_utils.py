@@ -1455,12 +1455,30 @@ def load_dispatch_cache(iso, require_version=None):
     Args:
         require_version: if set, returns empty dict if cache version doesn't match.
     """
+    import time
+    import concurrent.futures
     import pyarrow.parquet as pq
 
     path = _cache_path(iso)
     if os.path.exists(path):
         try:
-            table = pq.read_table(path)
+            size_mb = os.path.getsize(path) / 1e6
+            print(f"[dispatch-cache] {iso}: reading {size_mb:.1f} MB …", flush=True)
+            t0 = time.monotonic()
+
+            def _read():
+                return pq.read_table(path)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_read)
+                try:
+                    table = future.result(timeout=120)
+                except concurrent.futures.TimeoutError:
+                    elapsed = time.monotonic() - t0
+                    raise RuntimeError(
+                        f"[dispatch-cache] pq.read_table timed out after {elapsed:.0f}s: {path}"
+                    )
+
             metadata = table.schema.metadata or {}
             if require_version is not None:
                 stored = int(metadata.get(b'cache_version', b'0'))
@@ -1484,6 +1502,9 @@ def load_dispatch_cache(iso, require_version=None):
                     vals, offs = col_data[field]
                     entry[field] = vals[offs[i]:offs[i + 1]].copy()
                 cache[key] = entry
+
+            elapsed = time.monotonic() - t0
+            print(f"[dispatch-cache] {iso}: loaded {len(cache)} archetypes in {elapsed:.1f}s", flush=True)
             return cache
         except Exception:
             pass
