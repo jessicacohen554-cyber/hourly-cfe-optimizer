@@ -103,13 +103,7 @@
 
 **Resume prompt for next session:** *"Pipeline-audit sub-agent is landed at `.claude/agents/pipeline-audit-agent.md` and was hardened Apr 19 with findings-log discipline (no tool-call caps, each finding writes in ≤3 tool calls the moment it surfaces, PARTIAL only fires on hard blockers). Re-launch the audit against `scripts/step_2_3_pathway_optimizer.py` + `reliability_tax/charts/gen_section{2,3}_*.py` restricted to ERCOT + PJM at endpoints 80% / 90% / 99%. Stated intent: proactive clean-firm build (Pathway 3) + Wright's Law cost decline should yield materially less new gas than Pathway 1 in every ISO by 2050. Hypothesis: P1 and P3 should diverge at the 80% endpoint, not converge. Observed result: P1 and P3 build essentially the same gas in 6 of 7 ISOs; gas peaks at 80% then declines. Invoke with `subagent_type: \"pipeline-audit-agent\"`. Expect either Verdict B with a findings log at `reliability_tax/AUDIT_<date>_step_2_3_pathway_optimizer.md` plus a coding-session handoff prompt, Verdict A with the findings log as audit trail, or Verdict C with a mechanism explanation."*
 
-### Coding-Session Sub-Agent — LANDED (Apr 18, 2026, late evening)
-
-**What landed.** `.claude/agents/coding-session.md` — sub-agent for analysis / code tasks in this project. Enforces the three-phase workflow from `CLAUDE.md`: (1) silent orient (read `CLAUDE.md`, `SPEC.md` current status, `LESSONS.md`, `OPS.md` if heavy compute, plus every file in the code-reference table for the task category, plus the reference page from the reference-page table); (2) structured plan with mandatory sections — restated task, insertion point in the 8-step pipeline (upstream producers / downstream consumers), reference anchors, data flow including existing-cache reuse, methodology decisions flagged for approval, performance plan (vectorized kernel signature, `numba @njit` decision, expected iteration count), reuse & drift (existing utilities to import, duplicates flagged as promotion candidates), validation — then wait for explicit OK; (3) implement with TodoWrite and run the promised validation. Hard rules baked in: never loop over data arrays >1k rows (vectorize first, canonical exemplar `fleet_dispatch.py`), use `numba @njit` only when numpy can't express the kernel, load caches once and slice, grep before writing helpers, never fork a utility to add a flag, honor step boundaries in `PIPELINE.md`. Load-bearing methodology choices (capacity metric, cost basis, time-binning, dispatch ordering, retirement rule, counterfactuals, aggregation level, weather year, fuel-price trajectory) require explicit approval before code is written. Invoke with `subagent_type: "coding-session"`.
-
-**Resume prompt for next session:** *"Coding-session sub-agent landed in `.claude/agents/coding-session.md`. Invoke it for any new analysis / pipeline code via `subagent_type: \"coding-session\"`. The agent enforces a plan-then-approve-then-implement workflow, reads the code-reference table in `CLAUDE.md` to locate exemplars, and blocks on methodology approval before writing code. Next natural work: either (a) return to the reliability-tax project-infra workstream below (CLAUDE.draft migration, OPS.md creation, `/fix-prose` test-drive), or (b) take the coding-session agent for a real spin on a pipeline task."*
-
-> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG). See that file for the historical decision log.
+> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG; Apr 20 rotation moved the Apr 18 Coding-Session sub-agent block to SPEC_LOG). See that file for the historical decision log.
 ---
 
 ## 1. Model Framework
@@ -591,3 +585,28 @@ The sub-project layers on top of the existing 8-step pipeline and reuses (withou
 ### 24.3 Status
 
 Prompt 1A (discovery + README) complete. Prompts 1B+ will lock methodology and begin implementation. No scripts, no results, no dashboard page exist yet for this sub-project.
+
+### §24.9 — Argmin objective correction
+
+Design for audit card AUDIT-2026-04-20-1 Option A. Acronyms: net present value (NPV), capital recovery factor (CRF), combined-cycle gas turbine (CCGT), nth-of-a-kind (NOAK), levelized cost of energy (LCOE), efficient frontier (EF), variable renewable energy (VRE), carbon-free energy (CFE).
+
+**1. Unit audit.** `score_ef_batch` multiplies `pct × (demand_mwh/100) × $/MWh-LCOE` — one-year operating dollars. The gas leg in `score_ef_batch_with_gas` is also annual: `new_gas_mw × (NEW_CCGT_COST_KW_YR×1000 + CF×8760×price)`. Units match at the site. Realized objective in `solve_pathway` is the 26-year discounted sum via `multi_rate_npv` at 7% real (Card D, line 122). A year-T argmin sees only year-T dollars, missing that the chosen mix locks vintages through 2050. **Recommendation: convert both legs to NPV dollars.** Multiply EF cost by horizon-remaining NPV factor `NPVF(T) = Σ_{y=T..2050}(1+r)^-(y-2025)`; discount gas capex once at `(1+r)^-(T-2025)`; sum discounted fuel across `min(T+25, 2050)`.
+
+**2. Gas-baseline correction.** Replace static `_gas_raw_2025_worst_hour(iso)` with a year-aware baseline:
+
+```
+retired_mw(y) = _twh_to_gw(
+                  compute_fossil_retirement(iso, clean_pct(y), emission_rates,
+                                            fossil_mix, gf(y), y).gas_displaced_twh,
+                  _FOSSIL_CAPACITY_FACTORS['gas']) * 1000
+existing_mw(y) = gas_raw_2025_mw - Σ_{y'<=y} retired_mw(y')
+new_gas_mw(y) = max(0, gas_raw_mw(y) - existing_mw(y)) * (1 + RA_margin)
+```
+
+Candidate row's implied `clean_pct` avoids circularity; memoize per (iso, year).
+
+**3. Discount handling.** `OBJECTIVE_DISCOUNT_RATE = 0.07` real (`step_2_3_pathway_optimizer.py:122`, Card D). CRF = `r(1+r)^n / ((1+r)^n−1)` with `n = NEW_GAS_ASSET_LIFE_YEARS = 25` → CRF ≈ 0.0858. CCGT capex $1,200/kW × CRF ≈ $103/kW-yr, consistent with `NEW_CCGT_COST_KW_YR`. Capex lands in year T at `(1+r)^-(T-2025)`; fuel runs through `min(T+25, 2050)`.
+
+**4. ERCOT sensitivity.** Wind delivered ≈ $54 + $6 transmission = $60/MWh; NOAK-2035 nuclear ≈ $92/MWh. Swap margin ≈ $32/MWh. At the 90% endpoint with 5% worst-hour residual on ~80 GW peak, penalty ≈ 4 GW × NPV(CRF×$1,200/kW + fuel) ≈ $1.0B; wind-to-nuclear NPV swap ≈ $12B over 25 years. **NPV-corrected penalty does not flip ERCOT at the 90% endpoint.** At 97.5% and 99%, residual rises to 15–25% of peak; penalty reaches $3–5B; the swap flips at the 99% endpoint only.
+
+**5. MISO 80%-endpoint diagnostic.** `analysis/reliability-tax/data/MISO/pathway{1,3}_ep80.json` landed in commit `c7868df` (2026-04-18), one day before fix commit `f060d38` (2026-04-19). All 350 manifest entries share that provenance. **The +78% NPV blow-up is pre-fix latent, not caused by `INCLUDE_GAS_COST_IN_ARGMIN=True`.** Re-audit must rerun the optimizer against the fix; open question until then.

@@ -7,6 +7,14 @@
 
 ---
 
+### Coding-Session Sub-Agent — LANDED (Apr 18, 2026, late evening)
+
+**What landed.** `.claude/agents/coding-session.md` — sub-agent for analysis / code tasks in this project. Enforces the three-phase workflow from `CLAUDE.md`: (1) silent orient (read `CLAUDE.md`, `SPEC.md` current status, `LESSONS.md`, `OPS.md` if heavy compute, plus every file in the code-reference table for the task category, plus the reference page from the reference-page table); (2) structured plan with mandatory sections — restated task, insertion point in the 8-step pipeline (upstream producers / downstream consumers), reference anchors, data flow including existing-cache reuse, methodology decisions flagged for approval, performance plan (vectorized kernel signature, `numba @njit` decision, expected iteration count), reuse & drift (existing utilities to import, duplicates flagged as promotion candidates), validation — then wait for explicit OK; (3) implement with TodoWrite and run the promised validation. Hard rules baked in: never loop over data arrays >1k rows (vectorize first, canonical exemplar `fleet_dispatch.py`), use `numba @njit` only when numpy can't express the kernel, load caches once and slice, grep before writing helpers, never fork a utility to add a flag, honor step boundaries in `PIPELINE.md`. Load-bearing methodology choices (capacity metric, cost basis, time-binning, dispatch ordering, retirement rule, counterfactuals, aggregation level, weather year, fuel-price trajectory) require explicit approval before code is written. Invoke with `subagent_type: "coding-session"`.
+
+**Resume prompt for next session:** *"Coding-session sub-agent landed in `.claude/agents/coding-session.md`. Invoke it for any new analysis / pipeline code via `subagent_type: \"coding-session\"`. The agent enforces a plan-then-approve-then-implement workflow, reads the code-reference table in `CLAUDE.md` to locate exemplars, and blocks on methodology approval before writing code. Next natural work: either (a) return to the reliability-tax project-infra workstream below (CLAUDE.draft migration, OPS.md creation, `/fix-prose` test-drive), or (b) take the coding-session agent for a real spin on a pipeline task."*
+
+---
+
 ### Reliability Tax Page Redesign + Project Infra Refresh — IN PROGRESS (Apr 18, 2026, late evening)
 
 **Task context.** User rejected the prior reliability-tax page as too jargon-heavy and self-referential. Two parallel workstreams now in flight: (1) finish redesigning `dashboard/reliability-tax.html` in plain-language voice, with pathway comparisons on single plots (no toggles); (2) build durable project infrastructure that prevents the same regressions on future pages.
