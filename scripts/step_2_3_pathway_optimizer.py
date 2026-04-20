@@ -2421,6 +2421,7 @@ def solve_pathway(
         from this run's own trajectory (§24.6).
     """
     del initial_fleet  # Cross-endpoint gas-fleet seeding removed (§24.6).
+    run_start = time.monotonic()
     ledger = VintageLedger()
     # SPEC §24.8 accounting fix — pre-seed existing-fleet vintages at
     # zero locked_lcoe (sunk cost, cod_year = 2024) so every pathway
@@ -2479,8 +2480,6 @@ def solve_pathway(
             config.iso, config.pathway, year,
             config.endpoint_pct, config, pivot_state,
         )
-        print(f"[solve] {config.iso}/{config.pathway}/ep={config.endpoint_pct} year={year} cfe={_current_cfe_pct(target):.2%}", flush=True)
-
         # SPEC §24.8 — P2a / P2b / P3 are now fully exogenous: pathway
         # differentiation lives in pc.NOAK_YEAR_BY_PATHWAY (learning-curve
         # speed), not in endogenous pivot triggers. PivotState is kept as a
@@ -2546,6 +2545,13 @@ def solve_pathway(
         last_target = target
         last_cfe = cfe_this_year
         endpoint_threshold = target.get('threshold')
+        print(
+            f"[solve] {config.iso} {config.pathway}/{config.endpoint_pct:g} "
+            f"year={year} cfe={cfe_this_year * 100.0:.2f}% "
+            f"threshold={target['threshold']:g} "
+            f"elapsed={time.monotonic()-run_start:.1f}s",
+            flush=True,
+        )
 
     # ------------------------------------------------------------------
     # POST-LOOP — peak-year snapshot for the new-gas fleet (§24.6).
