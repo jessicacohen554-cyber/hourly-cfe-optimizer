@@ -339,6 +339,16 @@ class VintageLedger:
         ]
 
 
+_EP_TAG_MAP = {
+    60: 'ep60', 70: 'ep70', 75: 'ep75', 80: 'ep80', 85: 'ep85',
+    90: 'ep90', 95: 'ep95', 97.5: 'ep97p5', 99: 'ep99', 99.9: 'ep99p9',
+}
+
+
+def _ep_tag(endpoint_pct: float) -> str:
+    return _EP_TAG_MAP.get(endpoint_pct, f'ep{int(round(endpoint_pct))}')
+
+
 @dataclass(frozen=True)
 class RunConfig:
     iso: str
@@ -353,8 +363,7 @@ class RunConfig:
 
     @property
     def output_path(self) -> Path:
-        ep_int = int(round(self.endpoint_pct))
-        return OUTPUT_BASE / self.iso / f'pathway{self.pathway}_ep{ep_int}.json'
+        return OUTPUT_BASE / self.iso / f'pathway{self.pathway}_{_ep_tag(self.endpoint_pct)}.json'
 
 
 # ─── Stage-1 precompute: per-mix worst-hour clean MW (sidecar) ──────────────
@@ -1132,7 +1141,7 @@ def serialize_run_result(r: PathwayRunResult) -> dict:
 
     return {
         'schema_version': 2,
-        'run_key': f'{cfg.iso}__pathway{cfg.pathway}__ep{int(round(cfg.endpoint_pct))}',
+        'run_key': f'{cfg.iso}__pathway{cfg.pathway}__{_ep_tag(cfg.endpoint_pct)}',
         'config': {
             'iso': cfg.iso, 'pathway': cfg.pathway,
             'endpoint': cfg.endpoint, 'endpoint_pct': cfg.endpoint_pct,
