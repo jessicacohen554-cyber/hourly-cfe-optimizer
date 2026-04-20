@@ -2465,6 +2465,7 @@ def solve_pathway(
             config.iso, config.pathway, year,
             config.endpoint_pct, config, pivot_state,
         )
+        print(f"[solve] {config.iso}/{config.pathway}/ep={config.endpoint_pct} year={year} cfe={_current_cfe_pct(target):.2%}", flush=True)
 
         # SPEC §24.8 — P2a / P2b / P3 are now fully exogenous: pathway
         # differentiation lives in pc.NOAK_YEAR_BY_PATHWAY (learning-curve
