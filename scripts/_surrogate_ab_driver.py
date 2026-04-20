@@ -9,6 +9,10 @@ JSONs to a side directory, then moves the surrogate files into
 `pathway{P}_ep{EE}.surrogate.json` so the truth outputs are not
 clobbered. Records per-run wallclock for speedup comparison.
 
+Resumability: when REUSE_TRUTH_IF_COMPLETE=True (default), truth runs whose
+output JSON already exists and contains a valid achieved_cfe_pct are skipped;
+their wallclock is recorded as None and the surrogate run proceeds normally.
+
 Usage:
     python3 scripts/_surrogate_ab_driver.py
 
@@ -40,6 +44,8 @@ TRUTH_ROOT = REPO_ROOT / 'analysis' / 'reliability-tax' / 'data'
 SURR_ROOT = REPO_ROOT / 'analysis' / 'reliability-tax' / '_tmp_surrogate_ab'
 FINAL_SURR_DIR = TRUTH_ROOT / 'ERCOT'
 
+REUSE_TRUTH_IF_COMPLETE = True
+
 # Four A/B combos (pathway, endpoint).
 COMBOS = (
     ('3', 0.80),
@@ -61,8 +67,23 @@ def _run_one(pathway: str, endpoint: float, output_root: Path,
     cfg = RunConfig(iso=ISO, pathway=pathway, endpoint=endpoint,
                     output_root=output_root)
 
-    # If the target output already exists, remove it so the run is fresh
-    # (we want honest wallclock, not a skip).
+    # Reuse completed truth runs to allow resumability.
+    if (not use_surrogate and REUSE_TRUTH_IF_COMPLETE
+            and cfg.output_path.exists()):
+        try:
+            payload = json.loads(cfg.output_path.read_text())
+        except Exception:
+            payload = None
+        if payload and payload.get('headline', {}).get('achieved_cfe_pct', -1) >= 0:
+            print(f"[ab] REUSE pathway={pathway} ep={endpoint:g} "
+                  f"(truth already complete at {cfg.output_path})",
+                  flush=True)
+            return {'pathway': pathway, 'endpoint': endpoint,
+                    'wallclock_s': None,
+                    'output_path': str(cfg.output_path),
+                    'reused': True}
+
+    # Fresh run: remove stale output so we get honest wallclock.
     if cfg.output_path.exists():
         cfg.output_path.unlink()
 
@@ -81,6 +102,7 @@ def _run_one(pathway: str, endpoint: float, output_root: Path,
         'endpoint': endpoint,
         'wallclock_s': wallclock_s,
         'output_path': result['output_path'],
+        'reused': False,
     }
 
 
@@ -90,8 +112,6 @@ def main() -> int:
     FINAL_SURR_DIR.mkdir(parents=True, exist_ok=True)
 
     # Prewarm dispatch + EF caches for the two thresholds this sweep touches.
-    # Threshold-based prewarm keyed by (pathway, endpoint) — we only need
-    # the EF data for the two endpoints.
     warm_combos = [(p, ep) for p, ep in COMBOS]
     print(f"[ab] prewarming caches for {ISO} ({len(warm_combos)} combos)", flush=True)
     prewarm_caches(ISO, warm_combos)
@@ -102,17 +122,33 @@ def main() -> int:
 
     timings = {}
     try:
-        for pathway, endpoint in COMBOS:
-            truth_res = _run_one(pathway, endpoint, TRUTH_ROOT,
-                                 use_surrogate=False)
-            surr_res = _run_one(pathway, endpoint, SURR_ROOT,
-                                use_surrogate=True)
-            timings[(pathway, endpoint)] = {
-                'wallclock_truth_s': truth_res['wallclock_s'],
-                'wallclock_surrogate_s': surr_res['wallclock_s'],
-                'truth_path': truth_res['output_path'],
-                'surrogate_tmp_path': surr_res['output_path'],
-            }
+        for i, (pathway, endpoint) in enumerate(COMBOS):
+            print("=" * 60, flush=True)
+            print(f"[ab] combo {i+1}/{len(COMBOS)}  "
+                  f"pathway={pathway} endpoint={endpoint:g}", flush=True)
+            print("=" * 60, flush=True)
+            try:
+                truth_res = _run_one(pathway, endpoint, TRUTH_ROOT,
+                                     use_surrogate=False)
+                surr_res = _run_one(pathway, endpoint, SURR_ROOT,
+                                    use_surrogate=True)
+                timings[(pathway, endpoint)] = {
+                    'wallclock_truth_s': truth_res['wallclock_s'],
+                    'wallclock_surrogate_s': surr_res['wallclock_s'],
+                    'truth_path': truth_res['output_path'],
+                    'surrogate_tmp_path': surr_res['output_path'],
+                    'reused_truth': truth_res.get('reused', False),
+                }
+            except Exception as e:
+                partial = {
+                    'iso': ISO,
+                    'status': 'failed',
+                    'error': repr(e),
+                    'completed_combos': [list(k) for k in timings.keys()],
+                }
+                (SURR_ROOT / 'ab_summary.json').write_text(
+                    json.dumps(partial, indent=2, default=str))
+                raise
     finally:
         # End-of-sweep flush — one archetype-expansion write for the full sweep.
         iso_state['deferred'] = False
@@ -133,17 +169,28 @@ def main() -> int:
             'surrogate_path': str(dst),
         }
 
+    n_truth_reused = sum(
+        1 for t in timings.values() if t.get('reused_truth', False)
+    )
+
     # Emit machine-readable summary.
     summary = {
         'iso': ISO,
+        'status': 'complete',
+        'n_truth_reused': n_truth_reused,
         'combos': [
             {
                 'pathway': p,
                 'endpoint': ep,
-                'wallclock_truth_s': round(moved[(p, ep)]['wallclock_truth_s'], 3),
+                'wallclock_truth_s': (
+                    round(moved[(p, ep)]['wallclock_truth_s'], 3)
+                    if moved[(p, ep)]['wallclock_truth_s'] is not None
+                    else None
+                ),
                 'wallclock_surrogate_s': round(moved[(p, ep)]['wallclock_surrogate_s'], 3),
                 'truth_path': moved[(p, ep)]['truth_path'],
                 'surrogate_path': moved[(p, ep)]['surrogate_path'],
+                'reused_truth': moved[(p, ep)].get('reused_truth', False),
             }
             for p, ep in COMBOS
         ],
