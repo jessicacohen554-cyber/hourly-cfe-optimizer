@@ -68,6 +68,7 @@ import fcntl
 import json
 import os
 import sys
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -257,6 +258,7 @@ def _resolve_ef_paths(iso: str, threshold: float) -> list[Path]:
 # Avoids re-reading multi-million-row parquets for consecutive years that map
 # to the same threshold (e.g. the 75% EF is reused for 2036 and 2037).
 _EF_CACHE: dict[tuple[str, float], pd.DataFrame] = {}
+_EF_CACHE_LOCK = threading.Lock()
 
 
 def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
@@ -271,28 +273,29 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
     same threshold — return the same object without re-reading disk.
     """
     cache_key = (iso, threshold)
-    if cache_key in _EF_CACHE:
-        return _EF_CACHE[cache_key]
+    with _EF_CACHE_LOCK:
+        if cache_key in _EF_CACHE:
+            return _EF_CACHE[cache_key]
 
-    paths = _resolve_ef_paths(iso, threshold)
-    if not paths:
-        raise FileNotFoundError(
-            f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
-        )
-    frames = [pd.read_parquet(p) for p in paths]
-    df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
+        paths = _resolve_ef_paths(iso, threshold)
+        if not paths:
+            raise FileNotFoundError(
+                f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
+            )
+        frames = [pd.read_parquet(p) for p in paths]
+        df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
 
-    # Pad optional dims so downstream code can index them unconditionally.
-    optional_cols = {
-        'geothermal': np.int16(0),
-        'offshore_wind': np.int16(0),
-        'ccs_ccgt': np.int16(0),
-    }
-    for col, fill in optional_cols.items():
-        if col not in df.columns:
-            df[col] = fill
-    _EF_CACHE[cache_key] = df
-    return df
+        # Pad optional dims so downstream code can index them unconditionally.
+        optional_cols = {
+            'geothermal': np.int16(0),
+            'offshore_wind': np.int16(0),
+            'ccs_ccgt': np.int16(0),
+        }
+        for col, fill in optional_cols.items():
+            if col not in df.columns:
+                df[col] = fill
+        _EF_CACHE[cache_key] = df
+        return df
 
 
 def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
@@ -313,7 +316,9 @@ def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
 # ISO cost ~20 ms each — cheap in isolation, but the parallel sweep multiplies
 # this by 350 runs × 2 helpers = 14 s of wasted parquet reads without these caches.
 _FOSSIL_MIX_CACHE: dict[str, pd.DataFrame] = {}
+_FOSSIL_MIX_CACHE_LOCK = threading.Lock()
 _ANNUAL_MANIFEST_LOADER_CACHE: dict[str, pd.DataFrame] = {}
+_ANNUAL_MANIFEST_LOADER_CACHE_LOCK = threading.Lock()
 
 
 def load_fossil_mix(iso: str) -> pd.DataFrame:
@@ -322,32 +327,34 @@ def load_fossil_mix(iso: str) -> pd.DataFrame:
     Returns a DataFrame with columns: year, hour, coal_share, gas_share, oil_share.
     Averaged across all available years (2021–2025) for a representative baseline.
     """
-    cached = _FOSSIL_MIX_CACHE.get(iso)
-    if cached is not None:
-        return cached
-    path = DATA_EIA930 / 'eia_fossil_mix.parquet'
-    if not path.exists():
-        raise FileNotFoundError(f"EIA 930 fossil mix parquet missing at {path}")
-    df = pd.read_parquet(path)
-    mask = df['iso'] == iso
-    if not mask.any():
-        raise KeyError(f"ISO {iso} not present in eia_fossil_mix.parquet")
-    out = df.loc[mask].reset_index(drop=True)
-    _FOSSIL_MIX_CACHE[iso] = out
-    return out
+    with _FOSSIL_MIX_CACHE_LOCK:
+        cached = _FOSSIL_MIX_CACHE.get(iso)
+        if cached is not None:
+            return cached
+        path = DATA_EIA930 / 'eia_fossil_mix.parquet'
+        if not path.exists():
+            raise FileNotFoundError(f"EIA 930 fossil mix parquet missing at {path}")
+        df = pd.read_parquet(path)
+        mask = df['iso'] == iso
+        if not mask.any():
+            raise KeyError(f"ISO {iso} not present in eia_fossil_mix.parquet")
+        out = df.loc[mask].reset_index(drop=True)
+        _FOSSIL_MIX_CACHE[iso] = out
+        return out
 
 
 def load_annual_manifest(iso: str) -> pd.DataFrame:
     """Load Step 3 annual dispatch manifest for ISO (one row per archetype, memoized)."""
-    cached = _ANNUAL_MANIFEST_LOADER_CACHE.get(iso)
-    if cached is not None:
-        return cached
-    path = DATA_STEP3 / f"{iso}_annual_manifest.parquet"
-    if not path.exists():
-        raise FileNotFoundError(f"Annual manifest missing for {iso} at {path}")
-    df = pd.read_parquet(path)
-    _ANNUAL_MANIFEST_LOADER_CACHE[iso] = df
-    return df
+    with _ANNUAL_MANIFEST_LOADER_CACHE_LOCK:
+        cached = _ANNUAL_MANIFEST_LOADER_CACHE.get(iso)
+        if cached is not None:
+            return cached
+        path = DATA_STEP3 / f"{iso}_annual_manifest.parquet"
+        if not path.exists():
+            raise FileNotFoundError(f"Annual manifest missing for {iso} at {path}")
+        df = pd.read_parquet(path)
+        _ANNUAL_MANIFEST_LOADER_CACHE[iso] = df
+        return df
 
 
 def available_thresholds(iso: str) -> list[float]:
