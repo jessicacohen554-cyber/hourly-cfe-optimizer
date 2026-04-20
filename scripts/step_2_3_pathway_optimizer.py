@@ -80,7 +80,8 @@ from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import numpy as np
-import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 # Allow imports from scripts/ when run standalone.
 _THIS_DIR = Path(__file__).resolve().parent
@@ -297,10 +298,22 @@ def _resolve_ef_paths(iso: str, threshold: float) -> list[Path]:
     return matches
 
 
-# Module-level EF parquet cache: (iso, threshold) → DataFrame.
+# Columns projected from every EF parquet. Optional dims (offshore_wind,
+# geothermal, ccs_ccgt) are zero-padded when absent from an ISO's parquet.
+_EF_LOAD_COLS: frozenset[str] = frozenset((
+    'clean_firm', 'solar', 'wind', 'hydro',
+    'offshore_wind', 'geothermal', 'ccs_ccgt',
+    'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
+    'battery_dispatch_pct', 'battery8_dispatch_pct',
+    'ldes_dispatch_pct', 'h2_dispatch_pct',
+    'hourly_match_score',
+))
+_EF_OPTIONAL_COLS: tuple[str, ...] = ('geothermal', 'offshore_wind', 'ccs_ccgt')
+
+# Module-level EF parquet cache: (iso, threshold) → dict[str, np.ndarray].
 # Avoids re-reading multi-million-row parquets for consecutive years that map
 # to the same threshold (e.g. the 75% EF is reused for 2036 and 2037).
-_EF_CACHE: dict[tuple[str, float], pd.DataFrame] = {}
+_EF_CACHE: dict[tuple[str, float], dict[str, np.ndarray]] = {}
 _EF_CACHE_LOCK = threading.Lock()
 
 # Score memo: (iso, threshold, year, pathway, demand_growth_level,
@@ -343,21 +356,20 @@ def _score_ef_cache_key(
     )
 
 
-def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
+def load_ef_mixes(iso: str, threshold: float) -> dict[str, np.ndarray]:
     """Load the Step 2.1 efficient-frontier mixes for (iso, threshold).
 
-    Returns a DataFrame with the canonical resource-mix schema, padded to
-    include optional geothermal / offshore_wind / ccs_ccgt columns as zeros
-    when the ISO does not expose them (EF parquets omit unused dims).
+    Returns a dict mapping column name → float64 ndarray (length = N rows).
+    Optional columns absent from a particular ISO's EF (offshore_wind,
+    geothermal, ccs_ccgt) are zero-padded so downstream code can index them
+    unconditionally.
 
     Results are cached in ``_EF_CACHE`` so repeat calls for the same
     (iso, threshold) — which happen every year the SBTi ladder stays at the
     same threshold — return the same object without re-reading disk.
 
-    Concurrency note: follows the double-check-then-store pattern also used
-    for ``_SCORE_EF_CACHE`` at ~L2027. File I/O (parquet reads via
-    ``_call_with_timeout``) runs OUTSIDE ``_EF_CACHE_LOCK`` so a stalled
-    read in one worker thread cannot cascade into a multi-thread lock wait.
+    Concurrency: double-check-then-store; file I/O runs OUTSIDE
+    ``_EF_CACHE_LOCK`` so a stalled read cannot cascade into a lock wait.
     """
     cache_key = (iso, threshold)
 
@@ -373,21 +385,28 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
         raise FileNotFoundError(
             f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
         )
-    frames = [
-        _call_with_timeout(lambda p=p: pd.read_parquet(p), 60.0, f"load_ef_mixes:{p}")
+
+    def _read_one(p: Path) -> pa.Table:
+        schema = pq.read_schema(p)
+        cols = [c for c in schema.names if c in _EF_LOAD_COLS]
+        return pq.read_table(p, columns=cols)
+
+    tables = [
+        _call_with_timeout(lambda p=p: _read_one(p), 30.0, f"load_ef_mixes:{p}")
         for p in paths
     ]
-    df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
+    table = pa.concat_tables(tables) if len(tables) > 1 else tables[0]
 
-    # Pad optional dims so downstream code can index them unconditionally.
-    optional_cols = {
-        'geothermal': np.int16(0),
-        'offshore_wind': np.int16(0),
-        'ccs_ccgt': np.int16(0),
+    # Convert to dict of float64 ndarrays.
+    n = table.num_rows
+    d: dict[str, np.ndarray] = {
+        name: table.column(name).to_numpy(zero_copy_only=False).astype(np.float64, copy=False)
+        for name in table.schema.names
     }
-    for col, fill in optional_cols.items():
-        if col not in df.columns:
-            df[col] = fill
+    # Zero-pad optional dims absent from this ISO's EF.
+    for col in _EF_OPTIONAL_COLS:
+        if col not in d:
+            d[col] = np.zeros(n, dtype=np.float64)
 
     # Phase 3: re-acquire the lock, double-check in case another thread
     # populated the entry while we were reading, and insert if still missing.
@@ -395,8 +414,8 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
         existing = _EF_CACHE.get(cache_key)
         if existing is not None:
             return existing
-        _EF_CACHE[cache_key] = df
-        return df
+        _EF_CACHE[cache_key] = d
+        return d
 
 
 def load_dg_costs(iso: str, threshold: float) -> pd.DataFrame:
@@ -1353,13 +1372,13 @@ _EF_STORAGE_DISPATCH_COLS: tuple[str, ...] = (
 )
 
 
-def _row_as_mix_pct(row: pd.Series) -> dict[str, float]:
-    """Extract a resource→% dict from an EF parquet row (always padded)."""
-    return {col: float(row.get(col, 0.0)) for col in _EF_RESOURCE_COLS}
+def _row_as_mix_pct(ef: dict[str, np.ndarray], idx: int) -> dict[str, float]:
+    """Extract a resource→% dict for row ``idx`` from an EF dict-of-arrays."""
+    return {col: float(ef[col][idx]) if col in ef else 0.0 for col in _EF_RESOURCE_COLS}
 
 
-def _row_as_storage_pct(row: pd.Series) -> dict[str, float]:
-    return {col: float(row.get(col, 0.0)) for col in _EF_STORAGE_DISPATCH_COLS}
+def _row_as_storage_pct(ef: dict[str, np.ndarray], idx: int) -> dict[str, float]:
+    return {col: float(ef[col][idx]) if col in ef else 0.0 for col in _EF_STORAGE_DISPATCH_COLS}
 
 
 def score_ef_row_cost(row: pd.Series, iso: str, year: int,
@@ -1542,11 +1561,11 @@ def _seed_existing_fleet_vintages(iso: str) -> list['Vintage']:
 
 
 def _filter_pathway_1(
-    df: pd.DataFrame,
+    ef: dict[str, np.ndarray],
     iso: str | None = None,
     year: int | None = None,       # kept for backwards-compat; not used
     demand_growth_level: str = 'Medium',  # kept for backwards-compat; not used
-) -> pd.DataFrame:
+) -> dict[str, np.ndarray]:
     """Pathway 1: VRE + batteries — no NEW clean firm beyond the existing fleet.
 
     Absolute-TWh semantics (correct):
@@ -1563,24 +1582,24 @@ def _filter_pathway_1(
 
     CCS and geothermal are always hard-zero (new-build only, never existing).
     """
-    if df.empty:
-        return df
+    if len(ef.get('clean_firm', [])) == 0:
+        return ef
 
     if iso is not None:
         ceiling_pct = _existing_resource_ceiling_pct(iso, 'clean_firm')
-        mask = (df['clean_firm'] <= ceiling_pct) & (df['ccs_ccgt'] == 0)
+        mask = (ef['clean_firm'] <= ceiling_pct) & (ef['ccs_ccgt'] == 0)
     else:
-        mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
+        mask = (ef['clean_firm'] == 0) & (ef['ccs_ccgt'] == 0)
 
-    if 'geothermal' in df.columns:
-        mask &= (df['geothermal'] == 0)
-    return df.loc[mask].reset_index(drop=True)
+    if 'geothermal' in ef:
+        mask &= (ef['geothermal'] == 0)
+    return {k: v[mask] for k, v in ef.items()}
 
 
 def _filter_pathway_1a(
-    df: pd.DataFrame,
+    ef: dict[str, np.ndarray],
     iso: str | None = None,
-) -> pd.DataFrame:
+) -> dict[str, np.ndarray]:
     """Pathway 1a: onshore VRE + storage only — no offshore wind, no new clean firm.
 
     Identical to _filter_pathway_1 but also hard-zeros offshore_wind.
@@ -1589,23 +1608,23 @@ def _filter_pathway_1a(
     no nuclear_newbuild (prevented by nuclear_cap in _derive_delta_vintages),
     only existing uprates + onshore VRE + batteries.
     """
-    if df.empty:
-        return df
+    if len(ef.get('clean_firm', [])) == 0:
+        return ef
 
     if iso is not None:
         ceiling_pct = _existing_resource_ceiling_pct(iso, 'clean_firm')
-        mask = (df['clean_firm'] <= ceiling_pct) & (df['ccs_ccgt'] == 0)
+        mask = (ef['clean_firm'] <= ceiling_pct) & (ef['ccs_ccgt'] == 0)
     else:
-        mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
+        mask = (ef['clean_firm'] == 0) & (ef['ccs_ccgt'] == 0)
 
-    if 'geothermal' in df.columns:
-        mask &= (df['geothermal'] == 0)
+    if 'geothermal' in ef:
+        mask &= (ef['geothermal'] == 0)
 
     # Hard-zero offshore wind — not available in P1a (Card R).
-    if 'offshore_wind' in df.columns:
-        mask &= (df['offshore_wind'] == 0)
+    if 'offshore_wind' in ef:
+        mask &= (ef['offshore_wind'] == 0)
 
-    return df.loc[mask].reset_index(drop=True)
+    return {k: v[mask] for k, v in ef.items()}
 
 
 # SPEC §24.8 — Pathway 3 is differentiated from P1/P2 *solely* by the
@@ -1621,14 +1640,14 @@ def _filter_pathway_1a(
 
 
 def _filter_pathway_3(
-    df: pd.DataFrame,
+    ef: dict[str, np.ndarray],
     threshold_pct: float | None = None,  # accepted for call-site compat
-) -> pd.DataFrame:
+) -> dict[str, np.ndarray]:
     """Pathway 3: full EF — no floor. Clean-firm share emerges organically
     from cost optimization under ``pc.NOAK_YEAR_BY_PATHWAY['3'] = 2035``.
     """
     del threshold_pct
-    return df
+    return ef
 
 
 # ---------- Pivot state for pathways 2a / 2b --------------------------------
@@ -1759,7 +1778,7 @@ _SCORE_EF_CHUNK = 300_000  # rows per chunk — keeps peak column-array alloc ~3
 
 
 def score_ef_batch(
-    ef: 'pd.DataFrame',
+    ef: dict[str, np.ndarray],
     iso: str,
     year: int,
     config: 'RunConfig',
@@ -1794,7 +1813,7 @@ def score_ef_batch(
     rows exact, argmin agrees) and ERCOT threshold 90 (2,000 random sample
     of 776k, max relative diff 3.4e-16 = float64 noise).
     """
-    n_rows = len(ef)
+    n_rows = len(ef['clean_firm'])
     if n_rows == 0:
         return np.empty(0, dtype=np.float64)
 
@@ -1803,8 +1822,8 @@ def score_ef_batch(
     if n_rows > _SCORE_EF_CHUNK:
         parts = []
         for start in range(0, n_rows, _SCORE_EF_CHUNK):
-            chunk = ef.iloc[start:start + _SCORE_EF_CHUNK]
-            chunk_size = len(chunk)
+            chunk = {k: v[start:start + _SCORE_EF_CHUNK] for k, v in ef.items()}
+            chunk_size = len(chunk['clean_firm'])
             try:
                 parts.append(score_ef_batch(chunk, iso, year, config))
             except MemoryError as exc:
@@ -1841,8 +1860,8 @@ def score_ef_batch(
     h2_lcoe = marginal_lcoe('h2', iso, year, config)
 
     def _col_array(name: str) -> np.ndarray:
-        if name in ef.columns:
-            return ef[name].to_numpy(dtype=np.float64, copy=False)
+        if name in ef:
+            return np.asarray(ef[name], dtype=np.float64)
         return np.zeros(n_rows, dtype=np.float64)
 
     solar_arr = _col_array('solar')
@@ -1915,7 +1934,7 @@ _score_ef_vectorized = score_ef_batch
 
 
 def score_ef_batch_with_gas(
-    ef: 'pd.DataFrame',
+    ef: dict[str, np.ndarray],
     iso: str,
     year: int,
     config: 'RunConfig',
@@ -1954,18 +1973,20 @@ def score_ef_batch_with_gas(
     on-demand); the additional (1 + RA_margin) factor here is a deliberate
     planner-reserve conservatism over the raw residual.
     """
-    n_rows = len(ef)
+    n_rows = len(ef['clean_firm'])
     if n_rows == 0:
         return np.empty(0, dtype=np.float64)
 
     base_cost = score_ef_batch(ef, iso, year, config)
 
     from step2_2a_cost_optimization import (
-        worst_hour_residual_per_row,
+        _worst_hour_residual_norm,
         _gas_raw_2025_worst_hour,
     )
 
-    resid_norm = worst_hour_residual_per_row(iso, ef)
+    # ef is already a dict-of-ndarrays — the native format _worst_hour_residual_norm
+    # expects. Skip the DataFrame-adapter layer (worst_hour_residual_per_row).
+    resid_norm = _worst_hour_residual_norm(iso, ef)
 
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     demand_mwh_grown = demand_twh * 1.0e6
@@ -2038,7 +2059,7 @@ def select_target_mix(
     else:
         raise ValueError(f"select_target_mix: unknown pathway {pathway!r}")
 
-    if ef.empty:
+    if not ef or len(next(iter(ef.values()))) == 0:
         return {'infeasible': True, 'reason': f'pathway_{pathway}_filter_empty',
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
                 'score': 0.0, 'cost_usd': 0.0}
@@ -2072,15 +2093,14 @@ def select_target_mix(
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
                 'score': 0.0, 'cost_usd': 0.0}
     best_idx = int(np.nanargmin(costs))
-    winner = ef.iloc[best_idx]
 
     return {
         'infeasible': False,
         'reason': None,
         'threshold': float(threshold),
-        'mix_pct': _row_as_mix_pct(winner),
-        'storage_pct': _row_as_storage_pct(winner),
-        'score': float(winner.get('hourly_match_score', 0.0)),
+        'mix_pct': _row_as_mix_pct(ef, best_idx),
+        'storage_pct': _row_as_storage_pct(ef, best_idx),
+        'score': float(ef['hourly_match_score'][best_idx]) if 'hourly_match_score' in ef else 0.0,
         'cost_usd': float(costs[best_idx]),
     }
 
