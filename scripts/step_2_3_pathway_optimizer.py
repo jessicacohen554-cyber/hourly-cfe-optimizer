@@ -3622,69 +3622,78 @@ def run_pathway(
     del initial_fleet
     _ensure_imports_ready()
 
-    # 1. Pathway 3 reference.
-    if config.pathway == '3':
-        p3_result = _solve_and_annotate(
-            config,
-            initial_ledger=initial_ledger,
-        )
-        target_result = p3_result
-        p3_ledger_for_stranding = p3_result.ledger
-    else:
-        p3_cfg = _pathway3_config_for(config)
-        p3_out = p3_cfg.output_path
-        if p3_out.exists():
-            # P3 already on disk — load its terminal ledger for stranding
-            # instead of re-solving (which would overwrite the result).
-            p3_ledger_for_stranding = _load_ledger_from_json(p3_out)
-        else:
-            # P3 not yet computed — solve from scratch and write.
-            p3_result = _solve_and_annotate(p3_cfg)
-            p3_result.stranding_ledger = []
-            write_run_json(p3_result)
-            append_to_manifest(p3_result)
-            p3_ledger_for_stranding = p3_result.ledger
-        target_result = _solve_and_annotate(
-            config,
-            initial_ledger=initial_ledger,
-        )
-
-    # 2. Card K revised comparative stranding (vs. Pathway 3 baseline).
-    target_result.stranding_ledger = compute_stranding_ledger(
-        target_result,
-        pathway3_ledger=p3_ledger_for_stranding,
+    from step2_2a_cost_optimization import (
+        flush_expanded_cache as _flush_cache,
+        _get_worst_hour_state as _init_wh_state,
     )
+    # Enter the single-flush deferred context for this ISO. If an outer sweep
+    # context already set deferred=True, we save and restore that value — the
+    # sweep's finally block owns the actual disk write in that case.
+    _iso_state = _init_wh_state(config.iso)
+    _prior_deferred = _iso_state.get('deferred', False)
+    _iso_state['deferred'] = True
 
-    # 3. Write outputs.
-    out_path = write_run_json(target_result)
-    manifest_path = append_to_manifest(target_result)
+    try:
+        # 1. Pathway 3 reference.
+        if config.pathway == '3':
+            p3_result = _solve_and_annotate(
+                config,
+                initial_ledger=initial_ledger,
+            )
+            target_result = p3_result
+            p3_ledger_for_stranding = p3_result.ledger
+        else:
+            p3_cfg = _pathway3_config_for(config)
+            p3_out = p3_cfg.output_path
+            if p3_out.exists():
+                # P3 already on disk — load its terminal ledger for stranding
+                # instead of re-solving (which would overwrite the result).
+                p3_ledger_for_stranding = _load_ledger_from_json(p3_out)
+            else:
+                # P3 not yet computed — solve from scratch and write.
+                p3_result = _solve_and_annotate(p3_cfg)
+                p3_result.stranding_ledger = []
+                write_run_json(p3_result)
+                append_to_manifest(p3_result)
+                p3_ledger_for_stranding = p3_result.ledger
+            target_result = _solve_and_annotate(
+                config,
+                initial_ledger=initial_ledger,
+            )
 
-    # 4. Persist any archetype-cache expansions accumulated during the per-year
-    #    `worst_hour_gas_sizing` loop and the §24.9 `worst_hour_residual_per_row`
-    #    EF-scorer batches. Batched here (once per pathway run) instead of
-    #    inside `_expand_missing_archetypes` (which used to pass persist=True
-    #    on every call and rewrote the full ~100 MB parquet 26+ times per run).
-    #    Preserves SPEC §24.5 cross-session cache-inheritance. No-op if no new
-    #    archetypes were added since the last flush.
-    from step2_2a_cost_optimization import flush_expanded_cache
-    flush_expanded_cache(config.iso)
+        # 2. Card K revised comparative stranding (vs. Pathway 3 baseline).
+        target_result.stranding_ledger = compute_stranding_ledger(
+            target_result,
+            pathway3_ledger=p3_ledger_for_stranding,
+        )
 
-    return {
-        'run_key': _run_key(config),
-        'status': 'ok' if target_result.feasibility['physical'] else 'infeasible',
-        'achieved_cfe_pct': round(target_result.achieved_cfe, 4),
-        'undiscounted_cost_usd': round(target_result.undiscounted_cost_usd, 0),
-        **{k: round(v, 0) for k, v in target_result.npv_at.items()},
-        'output_path': str(out_path),
-        'manifest_path': str(manifest_path),
-        'pathway3_reference_run_key': _run_key(_pathway3_config_for(config)),
-        'stranding_ledger_rows': len(target_result.stranding_ledger),
-        'pivot': {
-            'pivoted': target_result.pivot_state.pivoted,
-            'pivot_year': target_result.pivot_state.pivot_year,
-            'pivot_reason': target_result.pivot_state.pivot_reason,
-        },
-    }
+        # 3. Write outputs.
+        out_path = write_run_json(target_result)
+        manifest_path = append_to_manifest(target_result)
+
+        return {
+            'run_key': _run_key(config),
+            'status': 'ok' if target_result.feasibility['physical'] else 'infeasible',
+            'achieved_cfe_pct': round(target_result.achieved_cfe, 4),
+            'undiscounted_cost_usd': round(target_result.undiscounted_cost_usd, 0),
+            **{k: round(v, 0) for k, v in target_result.npv_at.items()},
+            'output_path': str(out_path),
+            'manifest_path': str(manifest_path),
+            'pathway3_reference_run_key': _run_key(_pathway3_config_for(config)),
+            'stranding_ledger_rows': len(target_result.stranding_ledger),
+            'pivot': {
+                'pivoted': target_result.pivot_state.pivoted,
+                'pivot_year': target_result.pivot_state.pivot_year,
+                'pivot_reason': target_result.pivot_state.pivot_reason,
+            },
+        }
+    finally:
+        # Restore the prior deferred state. If we were the outermost deferred
+        # context (standalone run_pathway call), flush now. If an outer sweep
+        # context owns the flag, it remains True and the sweep's finally flushes.
+        _iso_state['deferred'] = _prior_deferred
+        if not _prior_deferred:
+            _flush_cache(config.iso)
 
 
 def main(argv: list[str] | None = None) -> int:

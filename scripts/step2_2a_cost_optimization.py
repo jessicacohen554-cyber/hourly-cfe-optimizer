@@ -184,6 +184,7 @@ def _get_worst_hour_state(iso):
     state = {
         'cache': cache,
         'dirty': False,                 # True when in-memory cache has archetypes not yet persisted
+        'deferred': False,              # True while a run_pathway / sweep context owns the flush
         'demand_data': None,
         'gen_profiles': None,
         'demand_norm': None,            # (8760,) normalized demand shape
@@ -209,7 +210,7 @@ def _ensure_common_data(iso):
     return state
 
 
-def _expand_missing_archetypes(iso, missing_mix_infos):
+def _expand_missing_archetypes(iso, missing_mix_infos, persist: bool = False):
     """Expand the in-memory archetype cache for ``iso``; mark state dirty.
 
     SPEC §24.5 requires that missing archetypes discovered during optimization
@@ -227,7 +228,20 @@ def _expand_missing_archetypes(iso, missing_mix_infos):
     flush once at a natural batch boundary (end of ``run_pathway`` — see
     ``flush_expanded_cache`` below). Functionally identical cross-session
     semantic to the prior code path; N× fewer parquet writes per pathway run.
+
+    The ``persist`` parameter is accepted for forward-compatibility. Passing
+    ``persist=True`` while a ``run_pathway`` / sweep context holds the deferred
+    flag raises immediately — all writes must go through ``flush_expanded_cache``.
     """
+    if persist:
+        _state = _WH_STATE.get(iso)
+        if _state is not None and _state.get('deferred'):
+            raise RuntimeError(
+                f"persist=True passed to _expand_missing_archetypes for ISO '{iso}' "
+                "while deferred mode is active (inside run_pathway or sweep context). "
+                "All archetype expansions are batched; call flush_expanded_cache() "
+                "at the sweep boundary instead."
+            )
     if not missing_mix_infos:
         return
     state = _ensure_common_data(iso)
@@ -258,10 +272,16 @@ def flush_expanded_cache(iso):
 
     Returns ``True`` if a parquet write happened, ``False`` otherwise. The
     return value is informational only — typical callers ignore it.
+
+    When the ISO state has ``deferred=True`` (set by ``run_pathway`` or a sweep
+    context in ``_sweep_pathways_inproc``), the write is suppressed — the
+    owning context will call this function again after clearing the flag.
     """
     state = _WH_STATE.get(iso)
     if state is None or not state.get('dirty'):
         return False
+    if state.get('deferred'):
+        return False  # owning sweep context will flush at batch boundary
     import dispatch_utils as _du
     _du.save_dispatch_cache(iso, state['cache'], version=_du.CACHE_VERSION)
     state['dirty'] = False

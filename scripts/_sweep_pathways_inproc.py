@@ -48,6 +48,10 @@ from step_2_3_pathway_optimizer import (
     RunConfig,
     run_pathway,
 )
+from step2_2a_cost_optimization import (
+    flush_expanded_cache as _flush_wh_cache,
+    _get_worst_hour_state as _init_wh_state,
+)
 
 # Run Pathway 3 first per SPEC §24.4 Card K' so later pathways have the
 # comparative-stranding reference. Other pathways follow alphabetically.
@@ -80,47 +84,60 @@ def sweep_one_iso(
     failed = 0
     n = 0
 
-    for pathway in pathways_sorted:
-        for ep in sorted(endpoints):
-            n += 1
-            cfg = RunConfig(
-                iso=iso,
-                pathway=pathway,
-                endpoint=ep,
-                output_root=output_root,
-            )
-            out = cfg.output_path
-            if out.exists():
-                if verbose:
+    # Prime the worst-hour state for this ISO and mark as deferred so that
+    # per-run flush_expanded_cache calls inside run_pathway are no-ops.
+    # A single end-of-ISO flush in the finally block below collapses all
+    # per-run archetype expansions into one parquet write.
+    _iso_state = _init_wh_state(iso)
+    _iso_state['deferred'] = True
+
+    try:
+        for pathway in pathways_sorted:
+            for ep in sorted(endpoints):
+                n += 1
+                cfg = RunConfig(
+                    iso=iso,
+                    pathway=pathway,
+                    endpoint=ep,
+                    output_root=output_root,
+                )
+                out = cfg.output_path
+                if out.exists():
+                    if verbose:
+                        print(
+                            f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} SKIP (exists)",
+                            flush=True,
+                        )
+                    skipped += 1
+                    continue
+
+                t0 = time.time()
+                try:
+                    result = run_pathway(cfg)  # §24.6 — no cross-endpoint seeding.
+                except Exception as exc:
+                    elapsed = time.time() - t0
                     print(
-                        f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} SKIP (exists)",
+                        f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
+                        f"FAILED in {elapsed:.2f}s: {exc!r}",
                         flush=True,
                     )
-                skipped += 1
-                continue
+                    failed += 1
+                    continue
 
-            t0 = time.time()
-            try:
-                result = run_pathway(cfg)  # §24.6 — no cross-endpoint seeding.
-            except Exception as exc:
                 elapsed = time.time() - t0
-                print(
-                    f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
-                    f"FAILED in {elapsed:.2f}s: {exc!r}",
-                    flush=True,
-                )
-                failed += 1
-                continue
-
-            elapsed = time.time() - t0
-            achieved = result.get('achieved_cfe_pct')
-            if verbose:
-                print(
-                    f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
-                    f"OK  cfe={achieved:.2f}%  in {elapsed:.2f}s",
-                    flush=True,
-                )
-            completed += 1
+                achieved = result.get('achieved_cfe_pct')
+                if verbose:
+                    print(
+                        f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
+                        f"OK  cfe={achieved:.2f}%  in {elapsed:.2f}s",
+                        flush=True,
+                    )
+                completed += 1
+    finally:
+        # Single end-of-ISO flush: clear deferred and write accumulated
+        # archetype expansions once regardless of sweep success/failure.
+        _iso_state['deferred'] = False
+        _flush_wh_cache(iso)
 
     total_elapsed = time.time() - t_start
     per_run = total_elapsed / max(1, completed)
