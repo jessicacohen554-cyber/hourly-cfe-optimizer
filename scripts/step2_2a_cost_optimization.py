@@ -104,6 +104,11 @@ except ImportError:
         stacklevel=2,
     )
 
+from sklearn.cluster import MiniBatchKMeans
+from sklearn.metrics import pairwise_distances_argmin
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+
 # ============================================================================
 # STEP3-SPECIFIC CONSTANTS (cost tables imported from pipeline_config above)
 # ============================================================================
@@ -663,6 +668,95 @@ def _surrogate_features(arrays: dict) -> np.ndarray:
     feat[:, 11] = h2
     feat[:, 12] = sol + wnd + osw + sum_hybrids         # total_vre_pct
     return feat
+
+
+def _fit_surrogate(iso: str, threshold: float,
+                   ef_arrays: dict) -> None:
+    """Fit a KNN surrogate for _worst_hour_residual_norm on (iso, threshold).
+
+    Serialized by _SURROGATE_LOCK. A second thread that finds the cache
+    populated on re-check returns immediately without refitting.
+    """
+    import dispatch_utils as _du
+
+    N = len(ef_arrays['clean_firm'])
+    cf   = np.asarray(ef_arrays['clean_firm'],                         dtype=np.float64)
+    sol  = np.asarray(ef_arrays['solar'],                              dtype=np.float64)
+    wnd  = np.asarray(ef_arrays['wind'],                               dtype=np.float64)
+    hyd  = np.asarray(ef_arrays['hydro'],                              dtype=np.float64)
+    osw  = np.asarray(ef_arrays.get('offshore_wind',   np.zeros(N)),   dtype=np.float64)
+    geo  = np.asarray(ef_arrays.get('geothermal',      np.zeros(N)),   dtype=np.float64)
+    hybrid_arrs = {ht: np.asarray(ef_arrays.get(ht, np.zeros(N)), dtype=np.float64)
+                   for ht in _du.HYBRID_TYPES}
+    bat  = np.asarray(ef_arrays['battery_dispatch_pct'],               dtype=np.float64)
+    bat8 = np.asarray(ef_arrays.get('battery8_dispatch_pct', np.zeros(N)), dtype=np.float64)
+    ldes = np.asarray(ef_arrays['ldes_dispatch_pct'],                  dtype=np.float64)
+
+    hybrid_sum = sum(hybrid_arrs[ht] for ht in _du.HYBRID_TYPES)
+    ccs_res = np.maximum(0.0, 100.0 - (cf + sol + wnd + hyd + osw + geo + hybrid_sum))
+
+    keys_full, _ = _du.archetype_keys_from_arrays(
+        iso, cf, sol, wnd, osw, ccs_res, hyd, bat, bat8, ldes,
+        hybrids=hybrid_arrs,
+    )
+    unique_keys, unique_row_idx = np.unique(keys_full, return_index=True)
+    feat_unique  = _surrogate_features({k: v[unique_row_idx] for k, v in ef_arrays.items()})
+    memo         = _get_worst_hour_state(iso)['percentile_memo']
+    free_mask    = np.fromiter((k in memo for k in unique_keys),
+                               dtype=bool, count=len(unique_keys))
+    free_idx     = np.where(free_mask)[0]
+    remaining    = np.where(~free_mask)[0]
+    target_K     = min(5000, len(unique_keys))
+    need         = max(0, target_K - len(free_idx))
+    if need > 0 and remaining.size > need:
+        scaler0      = StandardScaler().fit(feat_unique[remaining])
+        km           = MiniBatchKMeans(n_clusters=need, batch_size=1024,
+                                       n_init=3, max_iter=100,
+                                       random_state=0).fit(
+                                           scaler0.transform(feat_unique[remaining]))
+        picked_local = pairwise_distances_argmin(
+                           km.cluster_centers_,
+                           scaler0.transform(feat_unique[remaining]))
+        sampled      = np.concatenate([free_idx, remaining[picked_local]])
+    else:
+        sampled      = np.concatenate([free_idx, remaining])[:target_K]
+
+    sub_rows   = unique_row_idx[sampled]
+    sub_arrays = {k: v[sub_rows] for k, v in ef_arrays.items()}
+    targets    = _worst_hour_residual_norm(iso, sub_arrays)
+    X          = feat_unique[sampled]
+    scaler     = StandardScaler().fit(X)
+    model      = KNeighborsRegressor(n_neighbors=5, weights='distance',
+                                     algorithm='auto',
+                                     n_jobs=-1).fit(scaler.transform(X), targets)
+
+    with _SURROGATE_LOCK:
+        if (iso, threshold) in _SURROGATE_CACHE:
+            return
+        _SURROGATE_CACHE[(iso, threshold)] = {
+            'features_raw':    X,
+            'targets':         targets,
+            'scaler':          scaler,
+            'model':           model,
+            'n_unique_at_fit': int(len(unique_keys)),
+            'k_trained':       int(X.shape[0]),
+        }
+
+
+def _surrogate_residual_norm(iso: str, threshold: float,
+                              arrays: dict) -> np.ndarray:
+    """Vectorized surrogate prediction for worst-hour residual.
+
+    Fits on first call per (iso, threshold); cached thereafter.
+    Returns (N,) float64 fractions of annual demand, clipped to [0, ∞).
+    """
+    entry = _SURROGATE_CACHE.get((iso, threshold))
+    if entry is None:
+        _fit_surrogate(iso, threshold, arrays)
+        entry = _SURROGATE_CACHE[(iso, threshold)]
+    feat = _surrogate_features(arrays)
+    pred = entry['model'].predict(entry['scaler'].transform(feat))
+    return np.clip(pred, 0.0, None).astype(np.float64, copy=False)
 
 
 # ----------------------------------------------------------------------------
@@ -4305,6 +4399,32 @@ def _run_surrogate_self_check():
     for k, name in enumerate(col_names):
         col = feat[:, k]
         print(f"{k:<4} {name:<25} {col.min():>10.4f} {col.max():>10.4f} {col.mean():>10.4f}")
+
+    print(f"\n[surrogate-test] Fitting surrogate (iso={iso}, threshold={threshold}) ...",
+          flush=True)
+    t0_fit = time.perf_counter()
+    _fit_surrogate(iso, threshold, arrays)
+    t_fit = time.perf_counter() - t0_fit
+    print(f"[surrogate-test] Fit complete in {t_fit:.2f}s", flush=True)
+
+    print("[surrogate-test] Predicting surrogate residuals ...", flush=True)
+    t0_pred = time.perf_counter()
+    pred = _surrogate_residual_norm(iso, threshold, arrays)
+    t_pred = time.perf_counter() - t0_pred
+
+    assert pred.shape == (N,),        f"pred shape={pred.shape} != ({N},)"
+    assert pred.dtype == np.float64,  f"pred dtype={pred.dtype}"
+    assert np.isfinite(pred).all(),   "pred contains non-finite values"
+    assert (pred >= 0).all(),         f"pred min={pred.min():.6f} < 0"
+    assert pred.max() < 1.0,         f"pred.max()={pred.max():.6f} >= 1.0"
+
+    entry = _SURROGATE_CACHE[(iso, threshold)]
+    print(f"\nPASS  shape={pred.shape}  dtype={pred.dtype}")
+    print(f"  n_unique_at_fit : {entry['n_unique_at_fit']}")
+    print(f"  k_trained       : {entry['k_trained']}")
+    print(f"  fit time        : {t_fit:.3f}s")
+    print(f"  predict time    : {t_pred:.3f}s")
+    print(f"  pred  min={pred.min():.6f}  max={pred.max():.6f}  mean={pred.mean():.6f}")
 
 
 if __name__ == '__main__':
