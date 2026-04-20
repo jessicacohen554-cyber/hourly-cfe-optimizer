@@ -106,7 +106,7 @@ except ImportError:
 
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import pairwise_distances_argmin
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler
 
 # ============================================================================
@@ -672,7 +672,7 @@ def _surrogate_features(arrays: dict) -> np.ndarray:
 
 def _fit_surrogate(iso: str, threshold: float,
                    ef_arrays: dict) -> None:
-    """Fit a KNN surrogate for _worst_hour_residual_norm on (iso, threshold).
+    """Fit a HistGBM surrogate for _worst_hour_residual_norm on (iso, threshold).
 
     Serialized by _SURROGATE_LOCK. A second thread that finds the cache
     populated on re-check returns immediately without refitting.
@@ -726,9 +726,13 @@ def _fit_surrogate(iso: str, threshold: float,
     targets    = _worst_hour_residual_norm(iso, sub_arrays)
     X          = feat_unique[sampled]
     scaler     = StandardScaler().fit(X)
-    model      = KNeighborsRegressor(n_neighbors=5, weights='distance',
-                                     algorithm='auto',
-                                     n_jobs=-1).fit(scaler.transform(X), targets)
+    model      = HistGradientBoostingRegressor(
+                     max_iter=400,
+                     learning_rate=0.05,
+                     max_depth=6,
+                     l2_regularization=0.1,
+                     random_state=0,
+                 ).fit(scaler.transform(X), targets)
 
     with _SURROGATE_LOCK:
         if (iso, threshold) in _SURROGATE_CACHE:
