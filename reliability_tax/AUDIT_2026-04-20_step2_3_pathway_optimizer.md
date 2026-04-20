@@ -66,5 +66,84 @@
 - **Where.** `MANIFEST.json` all ISOs, ep80/ep90/ep99.
 - **What.** P3 < P1 gas by >10% at: ep80: CAISO(75%), MISO(34%), NYISO(19%), NEISO(100%) = 4/7. ep90: PJM(64%), CAISO(75%), MISO(18%), NEISO(91%) = 4/7. ep99: PJM(62%), CAISO(69%), NYISO(100%), NEISO(100%) = 4/7. P3 ≡ P1 in ERCOT at all endpoints. P3 builds MORE gas than P1 at: ERCOT ep85, SPP ep90, MISO ep95/ep99 (MISO ep99: P3=32,493 vs P1=29,746, P3 is 9% worse). The stated hypothesis requires "all major US ISOs" — ERCOT is the largest US ISO by load hours served and fails at every endpoint.
 - **Why it matters.** The hypothesis (P3 < P1 in all 7 ISOs) is not confirmed. The fix improved results vs. the pre-fix state (where ERCOT was bit-for-bit identical but now has some differentiation at ep85) but the primary claim ("all ISOs") still fails. The NPV secondary claim fails even more strongly: P3 NPV < P1 NPV at ep90 in only 3/7 ISOs vs. the stated ≥5/7 requirement.
-- **Needs follow-up in.** Phase 5 classification.
+- **No further follow-up needed — Phase 5 classification follows.**
 
+## What the code actually does (Phase 2 condensed trace)
+
+`select_target_mix` (lines 1866–1951) runs each year 2025–2050. It computes the SBTi-interpolated CFE target for the year, snaps to the nearest available EF threshold, loads the EF parquet for that (iso, threshold), applies a pathway filter (P1/P1b block new nuclear via `_filter_pathway_1`; P2a/P2b/P3 see the full EF unchanged), then scores every candidate EF row.
+
+With `INCLUDE_GAS_COST_IN_ARGMIN = True`, scoring is done by `score_ef_batch_with_gas` (lines 1790–1863). This calls `score_ef_batch` (pathway-aware: P3 gets NOAK-2035 for clean-firm LCOE; P1 gets NOAK default ~2040–2048) then adds a per-row gas penalty: `worst_hour_residual_per_row(iso, ef) × demand_mwh_grown / gaf × RA_margin × (capex_per_mw + fuel_per_mw)`. The argmin over this augmented score selects the winner.
+
+In `solve_pathway` (lines 2295–2600+), the selected mix goes through `_derive_delta_vintages` (builds the annual ledger) and `size_required_gas_mw` (computes the realized worst-hour gas sizing for the year). The gas fleet is set to `max(new_gas_required_cumulative_mw)` over all years (peak-year snapshot, §24.6).
+
+**Operation alignment vs. stated intent:**
+
+| Operation | Line range | Verdict |
+|---|---|---|
+| `INCLUDE_GAS_COST_IN_ARGMIN` flag routing | 1932–1935 | Aligned |
+| `score_ef_batch_with_gas` pathway-aware base cost | 1834 | Aligned — P3 gets cheaper clean-firm via NOAK-2035 |
+| Gas penalty formula per row | 1841–1861 | Silent assumption — static `gas_raw_2025_mw` baseline does not account for gas-fleet retirement; penalty not discounted to NPV units |
+| Argmin picks min(clean-energy-cost + gas-proxy) | 1940 | Misaligned — not the same as min(NPV); penalty miscalibrated; selects mixes worse for NPV in MISO ep80 (+78%) |
+| P3 filter: full EF, no clean-firm floor | 1903–1910 | Aligned per §24.8 design decision |
+| Gas fleet = peak-year snapshot, §24.6 | 2429–2434 | Silent assumption |
+
+## Where the design breaks
+
+**Intervention point 1 — Argmin objective mismatch** (Findings 3, 4, 5)
+
+`score_ef_batch_with_gas` minimizes `(clean-energy-cost + gas-cost-proxy)` rather than NPV. The proxy uses a static `gas_raw_2025_mw` baseline (no retirement), a flat `capex + fuel` undiscounted rate, and current-year demand. In ISOs where clean-firm rows have lower residual than VRE rows, the penalty correctly steers toward clean firm. But when the selected clean-firm row requires a large VRE complement to meet CFE, the total cost explodes (MISO ep80 P3 NPV = $1,030B vs P1 = $580B). The penalty is also insufficient to flip ERCOT's argmin (P3 ≡ P1 at 9 of 10 endpoints). Location: `scripts/step_2_3_pathway_optimizer.py:1790–1863`, `scripts/pipeline_config.py:1435–1442`.
+
+**Intervention point 2 — ERCOT gas identity persists** (Finding 1)
+
+ERCOT's argmin does not change because ERCOT wind ($52–61/MWh + $9 TX) remains cheaper than nuclear NOAK-2035 ($90/MWh + TX) even after the gas penalty. ERCOT's clean-firm baseline (~4% of demand) means residual reduction from adding clean firm is small. P3 ≡ P1 at 9/10 endpoints; at ep85 P3 selects clean firm but builds 24% MORE gas than P1. Location: `scripts/step_2_3_pathway_optimizer.py:1903–1940`.
+
+## Decision cards
+
+### AUDIT-2026-04-20-1 — Recalibrate gas-penalty magnitude to fix perverse MISO/SPP outcomes
+
+**Question:** `score_ef_batch_with_gas` uses an undiscounted, static-baseline gas proxy that over-steers MISO/SPP toward clean firm (worse NPV). Should the penalty be recalibrated?
+
+**Options:**
+- **A. Calibrate penalty to NPV-equivalent annualized cost.** Replace flat `capex_per_mw + fuel_per_mw` with an NPV-discounted annualized cost (7% real, 25-yr life, year-of-build timing). Keeps the mechanism, fixes magnitude. **Implication:** reduces MISO over-steering; preserves PJM/CAISO divergence.
+- **B. Add a penalty cap (gas-penalty <= X% of base EF cost).** Pragmatic guard, tunable. **Implication:** reduces perverse outcomes; does not fix ERCOT.
+- **C. Accept current behavior; reframe hypothesis as "P3 wins in VRE-constrained ISOs."** No code change. **Implication:** dashboard prose update only.
+
+**Recommended:** A + C. Calibration is a ~15-line change; C needed for ERCOT/SPP framing regardless.
+**Blast radius (A):** `score_ef_batch_with_gas` lines 1855–1861, re-run 350-run sweep, all chart payloads.
+
+### AUDIT-2026-04-20-2 — Is ERCOT gas identity a bug or correct VRE-physics?
+
+**Options:**
+- **A. Accept ERCOT as VRE-wins exception; document it.** ERCOT wind beats nuclear at any reasonable clean-firm cost. Correct physics. **Implication:** dashboard explicitly calls out ERCOT. Recommended.
+- **B. Increase gas penalty until ERCOT flips.** Arbitrary tuning; penalty loses physical meaning. Not recommended.
+- **C. ERCOT-specific clean-firm floor for P3.** Overrides economics; weakens scientific credibility. Not recommended.
+
+**Blast radius (A):** dashboard prose + SPEC.md only.
+
+## External-check log (Phase 4)
+
+| Parameter | Code value | External benchmark | Source | Verdict |
+|---|---|---|---|---|
+| Nuclear NOAK Medium ($/MWh) | $90–110 by ISO | NREL ATB 2024 Q2: ~$82–140; DOE Liftoff 2024 NOAK target: $66–$87; Lazard v17 2024: $141–$221 unsubsidized | NREL ATB 2024; DOE Advanced Nuclear Liftoff Sep 2024; Lazard LCOE+ June 2024 | In-range (NREL/DOE); below Lazard (Lazard excludes ITC/PTC) |
+| Nuclear FOAK ($/MWh) | $169–212 by ISO | Vogtle 3/4 realized ~$190/MWh; DOE Liftoff FOAK range $150–$250 | EIA Vogtle filings; DOE 2024 | In-range |
+| CCS+CCGT NOAK 45Q-on Medium ($/MWh) | $69–80 by ISO | NREL ATB 2024 CCGT+CCS Moderate gross ~$79–96; net of 45Q ($27.5) = $52–69 | NREL ATB 2024 fossil technologies | In-range; code $5–15/MWh above ATB net-of-45Q |
+| NOAK-2035 for P3 | FOAK 2030 → NOAK 2035 | ATB 2024 Moderate puts nuclear NOAK ~2040; DOE Liftoff requires ~10 builds | NREL ATB 2024; DOE Liftoff 2024 | Edge of range — aggressive |
+| Learning exponent 0.6 | `LEARNING_EXPONENT = 0.6` | 5–23%/doubling (Rubin et al. 2015); 0.6 on year-fraction front-loads ~80% by 1/3 of window | Rubin et al. (2015) IECM review | Aggressive shape; defensible |
+| CCGT capex annualized ($/kW-yr) | $88–114 by ISO | Lazard v17 CCGT ~$76/MWh → ~$92/kW-yr; NREL ATB 2024 CCGT OCC $1,200/kW → ~$98/kW-yr | Lazard LCOE+ 2024; NREL ATB 2024 | In-range |
+| WHOLESALE_PRICES in gas penalty | $25–42/MWh | EIA-930 2024 DA LMP weighted averages: ERCOT $27, PJM $34 | EIA-930; ISO market reports 2024 | In-range |
+| RESOURCE_ADEQUACY_MARGIN | 15% | NERC standard 15–17%; PJM 14.7% installed reserve 2025 | NERC 2024 LTRA; PJM capacity market filings | In-range |
+| Worst-hour percentile | 99.97th | LOLE 0.1 d/yr = 2.4 hrs/8760 = 99.97th pct. | NERC Resource Adequacy standard | In-range |
+
+No parameter is out-of-range. Verdict B does not arise from parameter drift.
+
+## Verdict
+
+**B — the INCLUDE_GAS_COST_IN_ARGMIN fix partially worked but its objective function is misaligned with the stated design intent.** The fix is correctly wired and activated. It moved the argmin in VRE-constrained ISOs (PJM ep90+: 64% less gas; CAISO all endpoints: 69–75% less gas; NEISO: 91% less gas). However: (1) ERCOT remains P3 ≡ P1 at 9 of 10 endpoints because ERCOT wind economics dominate the gas penalty; (2) the penalty produces perverse outcomes in MISO and SPP — P3 builds MORE gas than P1 at 3 ISO×endpoint combinations (ERCOT ep85, SPP ep90, MISO ep95) and P3 NPV is 78% higher than P1 at MISO ep80. Root cause: the argmin minimizes `(EF-cost + gas-cost-proxy)` not NPV, and the proxy is miscalibrated (no discounting, static 2025 baseline, no fleet-retirement). Primary hypothesis holds in 4/7 ISOs at ep80/90/99. NPV secondary claim holds in 3/7 ISOs at ep90 (need >=5). Clean-firm share higher for P3 in 4–6/7 ISOs (mostly holds).
+
+## Out-of-scope items
+
+- **P2a / P2b pathways** — not audited; expected between P1 and P3 given NOAK 2040/2045.
+- **P1a / P1b variants** — not audited; differences from P1 are in nuclear-cap treatment.
+- **Chart payload generators** (`gen_section2_gas_hump.py`, `gen_section3_reliability_tax.py`, etc.) — downstream consumers; per-chart logic not re-read.
+- **`reliability-tax.html` user-facing copy** — not read; needs updating per decision cards.
+- **`run_sweep_1215.py` mechanics** — if card 1 option A is taken, 350-run sweep must be re-run per `OPS.md`.
