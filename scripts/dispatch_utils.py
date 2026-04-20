@@ -667,6 +667,35 @@ def _per_resource_dispatch_njit(demand_arr, supply_matrix, resource_pcts_arr,
     return matched, surplus
 
 
+def warm_dispatch_kernels():
+    """Pre-compile all @njit(cache=True) dispatch kernels with minimal dummy arrays.
+
+    On a cold __pycache__ numba needs 40–80 s to compile all three kernels.
+    Calling this once from prewarm_caches() before any real data is loaded
+    moves that latency to a predictable, logged point in start-up rather than
+    silently inside the first worker call.  Idempotent — numba reuses the
+    on-disk cache after the first compile.
+    """
+    print("[numba] warming dispatch kernels (first-compile ~40–80 s on cold cache) …",
+          flush=True)
+
+    _z1 = np.zeros(1, dtype=np.float64)
+    _z2 = np.zeros((1, 1), dtype=np.float64)
+    _zi = np.zeros(1, dtype=np.int64)
+
+    _battery_loop(_z1.copy(), _z1.copy(), _z1.copy(),
+                  0.0, 0.0, 1.0, 1, 1)
+    _ldes_loop(_z1.copy(), _z1.copy(), _z1.copy(),
+               0.0, 0.0, 1.0, 1, 1)
+    _battery_loop_detailed(_z1.copy(), _z1.copy(), _z1.copy(), _z1.copy(),
+                           0.0, 0.0, 1.0, 1, 1)
+    _ldes_loop_detailed(_z1.copy(), _z1.copy(), _z1.copy(), _z1.copy(),
+                        0.0, 0.0, 1.0, 1, 1)
+    _per_resource_dispatch_njit(_z1.copy(), _z2.copy(), _z1.copy(), 1.0, _zi.copy())
+
+    print("[numba] dispatch kernels ready.", flush=True)
+
+
 def _compute_per_resource_dispatch(demand_arr, supply_profiles, resource_pcts,
                                     procurement_factor, supply_matrix=None,
                                     resource_types=None):

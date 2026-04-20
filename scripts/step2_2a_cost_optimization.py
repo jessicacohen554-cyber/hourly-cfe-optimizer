@@ -328,6 +328,9 @@ def prewarm_caches(iso: str, combos: list[tuple[str, float]]) -> None:
     """
     t0 = time.monotonic()
     print(f"[prewarm] {iso}: entering prewarm (loading common data + dispatch cache)", flush=True)
+    if HAS_NUMBA:
+        import dispatch_utils as _du_kernels  # noqa: PLC0415
+        _du_kernels.warm_dispatch_kernels()
     # 1. Load dispatch cache + common data + 2025 baseline.
     _ensure_common_data(iso)
     print(f"[prewarm] {iso}: common data loaded ({time.monotonic()-t0:.1f}s)", flush=True)
