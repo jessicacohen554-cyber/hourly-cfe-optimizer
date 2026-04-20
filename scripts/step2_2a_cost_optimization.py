@@ -414,6 +414,8 @@ def prewarm_caches(iso: str, combos: list[tuple[str, float]]) -> None:
         print(f"[prewarm] {iso}: numba warmup SKIPPED: {_warmup_exc!r}",
               flush=True)
 
+    warm_cost_kernels()
+
     t_count = len(thresholds)
     state = _WH_STATE.get(iso, {})
     a_count = len(state.get('cache', {}))
@@ -2260,6 +2262,28 @@ if HAS_NUMBA:
                 all_best_idxs[j, kt] = running_idx
 
         return all_best_idxs, all_best_vals
+
+
+def warm_cost_kernels() -> None:
+    """Eagerly JIT-compile the parallel cost evaluation kernels.
+
+    Both @njit(parallel=True, cache=True) functions take 80–240 s on a cold
+    JIT compile (TBB backend init + LLVM IR).  Calling this once before the
+    ThreadPoolExecutor spawns run_pathway workers moves that cost out of the
+    critical path and into the single-threaded prewarm phase.
+    """
+    if not HAS_NUMBA:
+        return
+    print("[numba] warming cost evaluation kernels (parallel JIT, ~80–240 s cold) …", flush=True)
+    _c = np.ones((1, 1), dtype=np.float64)
+    _k = np.ones(1, dtype=np.float64)
+    _p = np.ones(1, dtype=np.float64)
+    _eval_cost_numba(_c, _k, _p)
+    _pm = np.ones((1, 1), dtype=np.float64)
+    _sc = np.ones(1, dtype=np.float64)
+    _td = np.array([99.5], dtype=np.float64)
+    _batch_eval_and_argmin(_c, _k, _pm, _sc, _td)
+    print("[numba] cost kernels ready.", flush=True)
 
 
 def batch_eval_and_argmin_all(coeff_matrix, constant, price_matrix, scores, thresholds_desc):
