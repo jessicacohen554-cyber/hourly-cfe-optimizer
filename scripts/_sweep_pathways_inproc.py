@@ -99,6 +99,7 @@ def sweep_one_iso(
     # Prewarm: load dispatch cache and EF parquets for the thresholds this
     # sweep will actually touch.  Archetype expansion is deferred to first-miss
     # inside each thread (thread-safe via _WH_STATE_LOCK).
+    print(f"[sweep] {iso}: prewarming caches ({len(combos)} combos)", flush=True)
     prewarm_caches(iso, combos)
 
     # Mark the ISO state as deferred so per-run flush_expanded_cache calls

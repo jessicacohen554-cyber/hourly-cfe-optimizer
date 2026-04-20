@@ -211,7 +211,10 @@ def _ensure_common_data(iso):
     state = _get_worst_hour_state(iso)
     if state['demand_data'] is None or state['gen_profiles'] is None:
         import dispatch_utils as _du
+        print(f"[common] {iso}: loading dispatch cache + demand/gen profiles", flush=True)
         dd, gp, _, _ = _du.load_common_data()
+        n_rows = len(state['cache']) if state.get('cache') is not None else 0
+        print(f"[common] {iso}: loaded ({n_rows} cache rows)", flush=True)
         state['demand_data'] = dd
         state['gen_profiles'] = gp
         demand_norm, _ = _du.get_demand_profile(iso, dd)
@@ -323,8 +326,11 @@ def prewarm_caches(iso: str, combos: list[tuple[str, float]]) -> None:
     Local imports of step_2_3_pathway_optimizer are inside the function body
     to avoid the circular dependency (that module imports from this one).
     """
+    t0 = time.monotonic()
+    print(f"[prewarm] {iso}: entering prewarm (loading common data + dispatch cache)", flush=True)
     # 1. Load dispatch cache + common data + 2025 baseline.
     _ensure_common_data(iso)
+    print(f"[prewarm] {iso}: common data loaded ({time.monotonic()-t0:.1f}s)", flush=True)
     _gas_raw_2025_worst_hour(iso)  # populates state['gas_raw_2025_norm']
 
     # 2. Derive the minimal threshold set the sweep will actually touch by
