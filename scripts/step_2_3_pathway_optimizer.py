@@ -2980,6 +2980,7 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
     lock_path = root / '.manifest.lock'
 
     lock_fh = None
+    acquired = False
     try:
         lock_fh = open(lock_path, 'a+')
     except OSError:
@@ -2987,23 +2988,36 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
 
     if lock_fh is not None:
         deadline = time.monotonic() + MANIFEST_LOCK_TIMEOUT_S
-        while True:
-            try:
-                fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except OSError as exc:
-                if exc.errno not in (errno.EAGAIN, errno.EACCES):
-                    lock_fh.close()
-                    raise
-                if time.monotonic() >= deadline:
-                    lock_fh.close()
-                    raise TimeoutError(
-                        f"append_to_manifest: could not acquire {lock_path} "
-                        f"within {MANIFEST_LOCK_TIMEOUT_S:.0f}s — stale lock "
-                        f"from a crashed prior worker? Remove it manually to "
-                        f"recover."
-                    )
-                time.sleep(MANIFEST_LOCK_POLL_S)
+        poll_s = 0.05
+        try:
+            while True:
+                try:
+                    fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    acquired = True
+                    break
+                except OSError as exc:
+                    if exc.errno not in (errno.EAGAIN, errno.EACCES):
+                        raise  # finally below closes lock_fh before re-raise
+                    if time.monotonic() >= deadline:
+                        try:
+                            lock_mtime = os.stat(lock_path).st_mtime
+                        except OSError:
+                            lock_mtime = None
+                        raise TimeoutError(
+                            f"append_to_manifest: could not acquire {lock_path} "
+                            f"within {MANIFEST_LOCK_TIMEOUT_S:.0f}s "
+                            f"(pid={os.getpid()}, lock_mtime={lock_mtime}) — "
+                            f"stale lock from a crashed prior worker? "
+                            f"Remove it manually to recover."
+                        )
+                    time.sleep(poll_s)
+                    poll_s = min(poll_s * 1.5, 1.0)
+        finally:
+            # Close FD on every non-acquisition exit (fatal OSError, timeout,
+            # or any unexpected exception) so we never leak the descriptor.
+            if not acquired:
+                lock_fh.close()
+                lock_fh = None
 
     try:
         if manifest_path.exists():
@@ -3032,6 +3046,15 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
             except Exception:
                 pass
             lock_fh.close()
+            if acquired:
+                # Lock file is a coordination file only; unlink after release
+                # so stale files don't accumulate.  Another waiting worker
+                # holds its own open FD to the (now-deleted) inode, so flock
+                # coordination is unaffected.
+                try:
+                    os.unlink(lock_path)
+                except OSError:
+                    pass
     return manifest_path
 
 
