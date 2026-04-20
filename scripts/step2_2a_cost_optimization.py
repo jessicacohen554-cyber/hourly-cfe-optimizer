@@ -191,6 +191,12 @@ def _get_worst_hour_state(iso):
         'demand_margin_norm': None,     # (8760,) demand × (1 + RA_margin)
         'total_mwh_2025': float(REGIONAL_DEMAND_TWH[iso]) * 1.0e6,
         'gas_raw_2025_norm': None,
+        # Percentile memo: archetype_key (16-char hex) → float percentile value.
+        # Keyed by the same MD5 fingerprint used by dispatch_utils._archetype_key.
+        # Archetype profiles are immutable once computed, so entries are valid
+        # indefinitely; new archetypes added by _expand_missing_archetypes
+        # simply miss the memo and are computed on first access.
+        'percentile_memo': {},
     }
     _WH_STATE[iso] = state
     return state
@@ -427,8 +433,13 @@ def _worst_hour_residual_norm(iso, arrays):
     _ensure_common_data(iso)
     demand_margin = state['demand_margin_norm']
     p = WORST_HOUR_PERCENTILE
+    percentile_memo = state['percentile_memo']
     unique_norm = np.empty(len(unique_keys), dtype=np.float64)
     for i, k in enumerate(unique_keys):
+        cached_val = percentile_memo.get(k)
+        if cached_val is not None:
+            unique_norm[i] = cached_val
+            continue
         entry = cache.get(k)
         if entry is None:
             raise RuntimeError(
@@ -438,7 +449,9 @@ def _worst_hour_residual_norm(iso, arrays):
             )
         total_clean = np.asarray(entry['total_clean'], dtype=np.float64)
         margin_resid = np.maximum(0.0, demand_margin - total_clean)
-        unique_norm[i] = np.percentile(margin_resid, p)
+        val = float(np.percentile(margin_resid, p))
+        percentile_memo[k] = val
+        unique_norm[i] = val
 
     return unique_norm[inverse]
 
