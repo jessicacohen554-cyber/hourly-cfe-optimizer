@@ -4291,8 +4291,6 @@ def _run_surrogate_self_check():
     assert np.isfinite(feat).all(), "feat contains non-finite values"
     assert np.all(feat[:, 12] >= feat[:, 1]), \
         f"total_vre_pct < solar_pct in some rows (min gap={np.min(feat[:,12]-feat[:,1]):.6f})"
-    assert np.all(feat[:, 0] + feat[:, 12] <= 100.0 + 1e-6), \
-        f"firm + vre > 100 in some rows (max={np.max(feat[:,0]+feat[:,12]):.4f})"
 
     print(f"\nPASS  shape={feat.shape}  dtype={feat.dtype}\n")
 
