@@ -3181,6 +3181,97 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
     return manifest_path
 
 
+def _batch_append_to_manifest(output_root: Path, entries: dict[str, dict]) -> Path:
+    """Write multiple manifest entries in a single locked read-modify-write.
+
+    Used by the ThreadPoolExecutor sweep in ``_sweep_pathways_inproc`` to
+    collapse all per-run MANIFEST appends for one ISO into a single disk
+    operation.  ``entries`` maps ``run_key → _manifest_entry(result)`` dicts
+    accumulated in memory during the threaded runs.
+
+    The same fcntl lock as ``append_to_manifest`` serialises the cross-ISO
+    write so concurrent ISO workers never corrupt the shared MANIFEST.json.
+    """
+    if not entries:
+        return output_root / MANIFEST_FILENAME
+
+    root = output_root
+    root.mkdir(parents=True, exist_ok=True)
+    manifest_path = root / MANIFEST_FILENAME
+    lock_path = root / '.manifest.lock'
+
+    lock_fh = None
+    acquired = False
+    try:
+        lock_fh = open(lock_path, 'a+')
+    except OSError:
+        lock_fh = None
+
+    if lock_fh is not None:
+        deadline = time.monotonic() + MANIFEST_LOCK_TIMEOUT_S
+        poll_s = 0.05
+        try:
+            while True:
+                try:
+                    fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    acquired = True
+                    break
+                except OSError as exc:
+                    if exc.errno not in (errno.EAGAIN, errno.EACCES):
+                        raise
+                    if time.monotonic() >= deadline:
+                        try:
+                            lock_mtime = os.stat(lock_path).st_mtime
+                        except OSError:
+                            lock_mtime = None
+                        raise TimeoutError(
+                            f"_batch_append_to_manifest: could not acquire {lock_path} "
+                            f"within {MANIFEST_LOCK_TIMEOUT_S:.0f}s "
+                            f"(pid={os.getpid()}, lock_mtime={lock_mtime})"
+                        )
+                    time.sleep(poll_s)
+                    poll_s = min(poll_s * 1.5, 1.0)
+        finally:
+            if not acquired:
+                lock_fh.close()
+                lock_fh = None
+
+    try:
+        if manifest_path.exists():
+            try:
+                with open(manifest_path) as fh:
+                    manifest = _call_with_timeout(
+                        lambda: json.load(fh), 30.0, f"_batch_append_to_manifest:{manifest_path}"
+                    )
+            except Exception:
+                manifest = {}
+        else:
+            manifest = {}
+        if 'runs' not in manifest or not isinstance(manifest.get('runs'), dict):
+            manifest['runs'] = {}
+        manifest.setdefault('schema_version', 1)
+        manifest.setdefault('description',
+            'Reliability Tax pathway optimizer manifest (4 pathways × 5 endpoints × 7 ISOs).')
+        manifest['runs'].update(entries)
+        tmp = manifest_path.with_suffix(f'.json.tmp.{os.getpid()}')
+        with open(tmp, 'w') as fh:
+            json.dump(manifest, fh, indent=2, default=str)
+        os.replace(tmp, manifest_path)
+    finally:
+        if lock_fh is not None:
+            try:
+                fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+            except Exception:
+                pass
+            lock_fh.close()
+            if acquired:
+                try:
+                    os.unlink(lock_path)
+                except OSError:
+                    pass
+    return manifest_path
+
+
 # ============================================================================
 # CARD K REVISED — COMPARATIVE STRANDING LEDGER
 # ============================================================================
@@ -3651,6 +3742,8 @@ def run_pathway(
     config: RunConfig,
     initial_ledger: VintageLedger | None = None,
     initial_fleet: NewGasFleet | None = None,  # Deprecated per §24.6.
+    *,
+    skip_manifest: bool = False,
 ) -> dict[str, Any]:
     """Execute a single (iso, pathway, endpoint) run with Card K stranding.
 
@@ -3718,7 +3811,11 @@ def run_pathway(
 
         # 3. Write outputs.
         out_path = write_run_json(target_result)
-        manifest_path = append_to_manifest(target_result)
+        entry_data = _manifest_entry(target_result)
+        if not skip_manifest:
+            manifest_path = append_to_manifest(target_result)
+        else:
+            manifest_path = None
 
         return {
             'run_key': _run_key(config),
@@ -3727,7 +3824,9 @@ def run_pathway(
             'undiscounted_cost_usd': round(target_result.undiscounted_cost_usd, 0),
             **{k: round(v, 0) for k, v in target_result.npv_at.items()},
             'output_path': str(out_path),
-            'manifest_path': str(manifest_path),
+            'manifest_path': str(manifest_path) if manifest_path else None,
+            # Pre-built manifest entry returned for batch-write by sweep driver.
+            '_manifest_entry': entry_data,
             'pathway3_reference_run_key': _run_key(_pathway3_config_for(config)),
             'stranding_ledger_rows': len(target_result.stranding_ledger),
             'pivot': {

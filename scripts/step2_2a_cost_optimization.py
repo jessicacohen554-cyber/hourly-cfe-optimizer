@@ -49,6 +49,7 @@ Verify Numba is working before launching a run:
 import gc
 import json
 import os
+import threading
 import time
 import argparse
 import numpy as np
@@ -170,6 +171,9 @@ WORST_HOUR_PERCENTILE = 99.97
 # gen_profiles), and the 2025-baseline normalized residual-percentile used for
 # GAS_RAW_2025 calibration. Populated lazily by ``_get_worst_hour_state``.
 _WH_STATE = {}
+# Guards mutations to _WH_STATE[iso]['cache'], ['dirty'], and ['percentile_memo'].
+# Reads are GIL-protected; only check-then-set patterns need the lock.
+_WH_STATE_LOCK = threading.Lock()
 
 
 def _get_worst_hour_state(iso):
@@ -261,9 +265,10 @@ def _expand_missing_archetypes(iso, missing_mix_infos, persist: bool = False):
         gen_profiles=state['gen_profiles'],
         persist=False,
     )
-    state['cache'] = updated
-    if len(updated) > size_before:
-        state['dirty'] = True
+    with _WH_STATE_LOCK:
+        state['cache'] = updated
+        if len(updated) > size_before:
+            state['dirty'] = True
 
 
 def flush_expanded_cache(iso):
@@ -292,6 +297,59 @@ def flush_expanded_cache(iso):
     _du.save_dispatch_cache(iso, state['cache'], version=_du.CACHE_VERSION)
     state['dirty'] = False
     return True
+
+
+def prewarm_caches(iso: str) -> None:
+    """Pre-populate all shared caches for *iso* before the threaded sweep.
+
+    Called once per ISO worker (single-threaded) before any ``run_pathway``
+    calls.  After this returns:
+
+    * ``_WH_STATE[iso]['cache']`` contains an archetype entry for every row in
+      every available EF parquet for the ISO.
+    * ``_WH_STATE[iso]['percentile_memo']`` contains the 99.97th-percentile
+      residual norm for every one of those archetypes.
+    * All demand/generation profile arrays are loaded.
+    * The 2025 gas-raw baseline is computed.
+    * Every ``(iso, threshold)`` EF parquet is loaded into ``_EF_CACHE`` in
+      ``step_2_3_pathway_optimizer``.
+
+    All 50 (pathway, endpoint) threads that follow are therefore read-only
+    against every shared cache — no locking is needed for the hot path, only
+    as a safety net for any archetype that was somehow absent.
+
+    Local imports of step_2_3_pathway_optimizer are inside the function body
+    to avoid the circular dependency (that module imports from this one).
+    """
+    # 1. Load dispatch cache + common data + 2025 baseline.
+    _ensure_common_data(iso)
+    _gas_raw_2025_worst_hour(iso)  # populates state['gas_raw_2025_norm']
+
+    # 2. Load EF parquets for all available thresholds and expand/score every row.
+    # Local import to break the circular-import cycle (step_2_3 imports from us).
+    from step_2_3_pathway_optimizer import available_thresholds, load_ef_mixes  # noqa: PLC0415
+
+    thresholds = available_thresholds(iso)
+    for threshold in thresholds:
+        try:
+            ef = load_ef_mixes(iso, threshold)
+        except FileNotFoundError:
+            continue
+        # Expand missing archetypes + populate percentile_memo for all EF rows.
+        # worst_hour_residual_per_row is defined later in this module; resolved
+        # at call time so forward reference is fine.
+        # The return value is discarded — side-effects are what we need.
+        worst_hour_residual_per_row(iso, ef)
+
+    t_count = len(thresholds)
+    state = _WH_STATE.get(iso, {})
+    a_count = len(state.get('cache', {}))
+    p_count = len(state.get('percentile_memo', {}))
+    print(
+        f"[prewarm] {iso}: {t_count} EF thresholds, "
+        f"{a_count} archetypes, {p_count} percentiles cached",
+        flush=True,
+    )
 
 
 def _gas_raw_2025_worst_hour(iso):
@@ -450,7 +508,13 @@ def _worst_hour_residual_norm(iso, arrays):
         total_clean = np.asarray(entry['total_clean'], dtype=np.float64)
         margin_resid = np.maximum(0.0, demand_margin - total_clean)
         val = float(np.percentile(margin_resid, p))
-        percentile_memo[k] = val
+        # Lock only the write; two threads may compute the same percentile
+        # concurrently (cheap, deterministic) but only one stores it.
+        with _WH_STATE_LOCK:
+            if k not in percentile_memo:
+                percentile_memo[k] = val
+            else:
+                val = percentile_memo[k]
         unique_norm[i] = val
 
     return unique_norm[inverse]

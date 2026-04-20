@@ -20,12 +20,21 @@ Design (post SPEC §24.6 — each run independent)
   ``initial_ledger`` and ``initial_fleet`` are both unused here.
 - Pathway 3 runs first (SPEC §24.4 Card K' — comparative-to-P3 stranding
   requires the P3 run to exist when the 1/1a/2a/2b ``run_pathway`` call
-  reads it back for the stranding-ledger computation).
-- MANIFEST.json is written atomically by ``run_pathway`` after each run,
-  so a sandbox-kill mid-sweep is recoverable: re-running picks up at the
-  first missing run_key. Any existing output JSON is treated as done
-  and skipped (no --force here; pass ``--force`` to the parent sweep
-  orchestrator if you need to overwrite).
+  reads it back for the stranding-ledger computation). P3 runs are
+  submitted to the ThreadPool first; other pathways are submitted only
+  after all P3 futures resolve, ensuring P3 files are on disk.
+- Per-run JSON files are written atomically by ``write_run_json`` so a
+  sandbox-kill mid-sweep is recoverable: re-running picks up at the first
+  missing output file. Any existing output JSON is treated as done and
+  skipped.
+- MANIFEST.json is written ONCE per ISO worker at the end of the sweep
+  (``_batch_append_to_manifest``), collapsing all per-run fcntl RMW
+  operations into one locked write. The fcntl lock still serialises
+  concurrent ISO workers so the cross-ISO MANIFEST is never corrupted.
+- Within an ISO worker, 4 threads run concurrently via ThreadPoolExecutor.
+  Caches (_WH_STATE, _EF_CACHE) are shared in-memory; prewarm_caches()
+  fully populates them single-threaded before any thread is spawned so
+  threaded runs are read-only against the hot path.
 - 7 ISOs parallelise by launching 7 copies of this driver concurrently
   from the outer shell; each worker is independent (no shared memory,
   no contention beyond the git-backed dispatch-cache parquets which
@@ -34,7 +43,9 @@ Design (post SPEC §24.6 — each run independent)
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -46,11 +57,13 @@ from step_2_3_pathway_optimizer import (
     ENDPOINTS as ALL_ENDPOINTS,
     PATHWAYS as _PATHWAYS_ALL,
     RunConfig,
+    _batch_append_to_manifest,
     run_pathway,
 )
 from step2_2a_cost_optimization import (
     flush_expanded_cache as _flush_wh_cache,
     _get_worst_hour_state as _init_wh_state,
+    prewarm_caches,
 )
 
 # Run Pathway 3 first per SPEC §24.4 Card K' so later pathways have the
@@ -77,67 +90,115 @@ def sweep_one_iso(
     pathways = tuple(pathways or _PATHWAYS_ALL)
     pathways_sorted = tuple(p for p in _PATHWAY_ORDER if p in pathways)
 
-    total_runs = len(pathways_sorted) * len(endpoints)
+    # Pre-assign sequential display indices so threaded prints are informative.
+    combos = [(pw, ep) for pw in pathways_sorted for ep in sorted(endpoints)]
+    n_by_combo = {(pw, ep): i + 1 for i, (pw, ep) in enumerate(combos)}
+    total_runs = len(combos)
     t_start = time.time()
-    completed = 0
-    skipped = 0
-    failed = 0
-    n = 0
 
-    # Prime the worst-hour state for this ISO and mark as deferred so that
-    # per-run flush_expanded_cache calls inside run_pathway are no-ops.
-    # A single end-of-ISO flush in the finally block below collapses all
-    # per-run archetype expansions into one parquet write.
+    # Prewarm: load dispatch cache, EF parquets, expand all archetypes, and
+    # compute all percentiles for this ISO before any thread is spawned.
+    # After this call, _WH_STATE[iso]['cache'] and ['percentile_memo'] are
+    # fully populated — threaded runs are read-only against shared state.
+    prewarm_caches(iso)
+
+    # Mark the ISO state as deferred so per-run flush_expanded_cache calls
+    # inside run_pathway are no-ops; we flush once in the finally block.
     _iso_state = _init_wh_state(iso)
     _iso_state['deferred'] = True
 
-    try:
-        for pathway in pathways_sorted:
-            for ep in sorted(endpoints):
-                n += 1
-                cfg = RunConfig(
-                    iso=iso,
-                    pathway=pathway,
-                    endpoint=ep,
-                    output_root=output_root,
+    # Accumulate manifest entries in-memory; one locked disk write per ISO.
+    manifest_acc: dict[str, dict] = {}
+    manifest_lock = threading.Lock()
+
+    # Counters — written only from the main thread after futures resolve.
+    completed = 0
+    skipped = 0
+    failed = 0
+
+    def _run_one(pathway: str, ep: float) -> tuple[str, str, float, dict | None, Exception | None]:
+        """Execute one (pathway, endpoint) run; return (status, pathway, ep, result, exc)."""
+        n = n_by_combo[(pathway, ep)]
+        cfg = RunConfig(
+            iso=iso,
+            pathway=pathway,
+            endpoint=ep,
+            output_root=output_root,
+        )
+        if cfg.output_path.exists():
+            if verbose:
+                print(
+                    f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} SKIP (exists)",
+                    flush=True,
                 )
-                out = cfg.output_path
-                if out.exists():
-                    if verbose:
-                        print(
-                            f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} SKIP (exists)",
-                            flush=True,
-                        )
+            return ('skip', pathway, ep, None, None)
+
+        t0 = time.time()
+        try:
+            # skip_manifest=True: suppress per-run fcntl RMW; we batch-write
+            # all ISO entries once at end of this function.  §24.6 — no cross-
+            # endpoint seeding.
+            result = run_pathway(cfg, skip_manifest=True)
+        except Exception as exc:
+            elapsed = time.time() - t0
+            print(
+                f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
+                f"FAILED in {elapsed:.2f}s: {exc!r}",
+                flush=True,
+            )
+            return ('fail', pathway, ep, None, exc)
+
+        elapsed = time.time() - t0
+        achieved = result.get('achieved_cfe_pct')
+        if verbose:
+            print(
+                f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
+                f"OK  cfe={achieved:.2f}%  in {elapsed:.2f}s",
+                flush=True,
+            )
+        entry = result.get('_manifest_entry')
+        if entry is not None:
+            with manifest_lock:
+                manifest_acc[result['run_key']] = entry
+        return ('ok', pathway, ep, result, None)
+
+    try:
+        # Phase 1 — Pathway 3 runs (must land on disk before other pathways
+        # can read them back for comparative-stranding via _load_ledger_from_json).
+        p3_combos = [(pw, ep) for pw, ep in combos if pw == '3']
+        other_combos = [(pw, ep) for pw, ep in combos if pw != '3']
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+            # Submit P3 runs first and wait for all to complete.
+            p3_futures = [pool.submit(_run_one, pw, ep) for pw, ep in p3_combos]
+            for fut in concurrent.futures.as_completed(p3_futures):
+                status, pw, ep, _, _ = fut.result()
+                if status == 'ok':
+                    completed += 1
+                elif status == 'skip':
                     skipped += 1
-                    continue
-
-                t0 = time.time()
-                try:
-                    result = run_pathway(cfg)  # §24.6 — no cross-endpoint seeding.
-                except Exception as exc:
-                    elapsed = time.time() - t0
-                    print(
-                        f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
-                        f"FAILED in {elapsed:.2f}s: {exc!r}",
-                        flush=True,
-                    )
+                else:
                     failed += 1
-                    continue
 
-                elapsed = time.time() - t0
-                achieved = result.get('achieved_cfe_pct')
-                if verbose:
-                    print(
-                        f"[{iso}] [{n}/{total_runs}] {pathway}@{ep:g} "
-                        f"OK  cfe={achieved:.2f}%  in {elapsed:.2f}s",
-                        flush=True,
-                    )
-                completed += 1
+            # Submit remaining pathways now that P3 results are on disk.
+            other_futures = [pool.submit(_run_one, pw, ep) for pw, ep in other_combos]
+            for fut in concurrent.futures.as_completed(other_futures):
+                status, pw, ep, _, _ = fut.result()
+                if status == 'ok':
+                    completed += 1
+                elif status == 'skip':
+                    skipped += 1
+                else:
+                    failed += 1
+
     finally:
-        # Single end-of-ISO flush: clear deferred and write accumulated
-        # archetype expansions once regardless of sweep success/failure.
+        # Single end-of-ISO flush: clear deferred and persist any new
+        # archetype expansions accumulated during the threaded runs.
         _iso_state['deferred'] = False
         _flush_wh_cache(iso)
+        # Batch-write all accumulated manifest entries in one locked RMW.
+        if manifest_acc:
+            _batch_append_to_manifest(output_root, manifest_acc)
 
     total_elapsed = time.time() - t_start
     per_run = total_elapsed / max(1, completed)
