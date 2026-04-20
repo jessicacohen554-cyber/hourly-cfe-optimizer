@@ -85,13 +85,70 @@ BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_common_data():
-    """Load all shared data files: demand, gen profiles, emission rates, fossil mix."""
+    """Load all shared data files: demand, gen profiles, emission rates, fossil mix.
+
+    Each of the four reads is wrapped in a ``_call_with_timeout(..., 60s, label=...)``
+    guard and sandwiched between ``[common-io] ...`` banners that print the
+    resolved file path, approximate size (MB), and elapsed seconds. The timeout
+    helper is imported locally from ``step_2_3_pathway_optimizer`` to avoid the
+    circular import that top-level import would create.
+    """
+    import time as _time
+
     from eia_data_io import load_generation_profiles, load_demand_profiles, load_fossil_mix
-    demand_data = load_demand_profiles()
-    gen_profiles = load_generation_profiles()
-    with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
-        emission_rates = json.load(f)
-    fossil_mix = load_fossil_mix()
+    # Local import to dodge the eia_data_io -> dispatch_utils -> step_2_3 cycle.
+    from step_2_3_pathway_optimizer import _call_with_timeout  # noqa: PLC0415
+
+    eia_dir = os.path.join(DATA_DIR, 'eia-930')
+
+    def _size_mb(path: str) -> float:
+        try:
+            return os.path.getsize(path) / (1024.0 * 1024.0)
+        except OSError:
+            return 0.0
+
+    # 1. Demand profiles (eia_demand_profiles.parquet + eia_demand_meta.parquet).
+    demand_path = os.path.join(eia_dir, 'eia_demand_profiles.parquet')
+    demand_mb = _size_mb(demand_path) + _size_mb(os.path.join(eia_dir, 'eia_demand_meta.parquet'))
+    print(f"[common-io] {demand_path} size={demand_mb:.1f}MB", flush=True)
+    _t0 = _time.monotonic()
+    demand_data = _call_with_timeout(load_demand_profiles, 60.0,
+                                     label=f"load_demand_profiles:{demand_path}")
+    print(f"[common-io] {demand_path} loaded in {_time.monotonic()-_t0:.2f}s",
+          flush=True)
+
+    # 2. Generation profiles (eia_generation_profiles.parquet).
+    gen_path = os.path.join(eia_dir, 'eia_generation_profiles.parquet')
+    print(f"[common-io] {gen_path} size={_size_mb(gen_path):.1f}MB", flush=True)
+    _t0 = _time.monotonic()
+    gen_profiles = _call_with_timeout(load_generation_profiles, 60.0,
+                                      label=f"load_generation_profiles:{gen_path}")
+    print(f"[common-io] {gen_path} loaded in {_time.monotonic()-_t0:.2f}s",
+          flush=True)
+
+    # 3. eGRID emission rates JSON.
+    egrid_path = os.path.join(DATA_DIR, 'egrid_emission_rates.json')
+    print(f"[common-io] {egrid_path} size={_size_mb(egrid_path):.1f}MB", flush=True)
+    _t0 = _time.monotonic()
+
+    def _load_egrid():
+        with open(egrid_path) as f:
+            return json.load(f)
+
+    emission_rates = _call_with_timeout(_load_egrid, 60.0,
+                                        label=f"load_egrid_emission_rates:{egrid_path}")
+    print(f"[common-io] {egrid_path} loaded in {_time.monotonic()-_t0:.2f}s",
+          flush=True)
+
+    # 4. Fossil mix (eia_fossil_mix.parquet).
+    fossil_path = os.path.join(eia_dir, 'eia_fossil_mix.parquet')
+    print(f"[common-io] {fossil_path} size={_size_mb(fossil_path):.1f}MB", flush=True)
+    _t0 = _time.monotonic()
+    fossil_mix = _call_with_timeout(load_fossil_mix, 60.0,
+                                    label=f"load_fossil_mix:{fossil_path}")
+    print(f"[common-io] {fossil_path} loaded in {_time.monotonic()-_t0:.2f}s",
+          flush=True)
+
     return demand_data, gen_profiles, emission_rates, fossil_mix
 
 
@@ -1142,11 +1199,21 @@ def load_dispatch_cache(iso, require_version=None):
         require_version: if set, returns empty dict if cache version doesn't match.
     """
     import pyarrow.parquet as pq
+    import time as _time
+
+    # Local import — same rationale as load_common_data above.
+    from step_2_3_pathway_optimizer import _call_with_timeout  # noqa: PLC0415
 
     path = _cache_path(iso)
     if os.path.exists(path):
         try:
-            table = pq.read_table(path)
+            size_mb = os.path.getsize(path) / (1024.0 * 1024.0)
+            print(f"[common-io] {path} size={size_mb:.1f}MB", flush=True)
+            _t0 = _time.monotonic()
+            table = _call_with_timeout(lambda: pq.read_table(path), 60.0,
+                                       label=f"load_dispatch_cache:{path}")
+            print(f"[common-io] {path} loaded in {_time.monotonic()-_t0:.2f}s",
+                  flush=True)
             metadata = table.schema.metadata or {}
             if require_version is not None:
                 stored = int(metadata.get(b'cache_version', b'0'))
@@ -1171,6 +1238,8 @@ def load_dispatch_cache(iso, require_version=None):
                     entry[field] = vals[offs[i]:offs[i + 1]].copy()
                 cache[key] = entry
             return cache
+        except TimeoutError:
+            raise
         except Exception:
             pass
 

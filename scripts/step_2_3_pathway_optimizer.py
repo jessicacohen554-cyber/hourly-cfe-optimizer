@@ -93,6 +93,8 @@ log = logging.getLogger(__name__)
 
 try:
     import dispatch_utils as du  # noqa: E402
+except TimeoutError:
+    raise
 except Exception as _du_err:  # pragma: no cover — defer hard failure to use-site
     du = None
     _DU_IMPORT_ERROR: Exception | None = _du_err
@@ -101,6 +103,8 @@ else:
 
 try:
     import step6_1_smartargets as s6  # noqa: E402
+except TimeoutError:
+    raise
 except Exception as _s6_err:  # pragma: no cover — defer hard failure to use-site
     s6 = None
     _S6_IMPORT_ERROR: Exception | None = _s6_err
@@ -253,11 +257,17 @@ _TIMEOUT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
 
 
 def _call_with_timeout(fn: Callable[[], _T], timeout_s: float, label: str) -> _T:
-    """Run ``fn()`` in a thread and raise TimeoutError if it stalls past ``timeout_s``."""
+    """Run ``fn()`` in a thread and raise TimeoutError if it stalls past ``timeout_s``.
+
+    On stall, prints a ``[timeout] {label!r} stalled {timeout_s:.0f}s`` banner
+    before raising so the label is visible even if an upstream broad
+    ``except Exception`` swallows the TimeoutError.
+    """
     fut = _TIMEOUT_EXECUTOR.submit(fn)
     try:
         return fut.result(timeout=timeout_s)
     except concurrent.futures.TimeoutError:
+        print(f"[timeout] {label!r} stalled {timeout_s:.0f}s", flush=True)
         raise TimeoutError(
             f"_call_with_timeout: {label!r} stalled after {timeout_s:.0f}s"
         )
@@ -340,32 +350,48 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
     Results are cached in ``_EF_CACHE`` so repeat calls for the same
     (iso, threshold) — which happen every year the SBTi ladder stays at the
     same threshold — return the same object without re-reading disk.
+
+    Concurrency note: follows the double-check-then-store pattern also used
+    for ``_SCORE_EF_CACHE`` at ~L2027. File I/O (parquet reads via
+    ``_call_with_timeout``) runs OUTSIDE ``_EF_CACHE_LOCK`` so a stalled
+    read in one worker thread cannot cascade into a multi-thread lock wait.
     """
     cache_key = (iso, threshold)
+
+    # Phase 1: check cache under the lock. If present, return immediately.
     with _EF_CACHE_LOCK:
-        if cache_key in _EF_CACHE:
-            return _EF_CACHE[cache_key]
+        cached = _EF_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
 
-        paths = _resolve_ef_paths(iso, threshold)
-        if not paths:
-            raise FileNotFoundError(
-                f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
-            )
-        frames = [
-            _call_with_timeout(lambda p=p: pd.read_parquet(p), 30.0, f"load_ef_mixes:{p}")
-            for p in paths
-        ]
-        df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
+    # Phase 2: resolve paths and read parquet files WITHOUT holding the lock.
+    paths = _resolve_ef_paths(iso, threshold)
+    if not paths:
+        raise FileNotFoundError(
+            f"No EF parquet for iso={iso} threshold={threshold} under {DATA_STEP21}"
+        )
+    frames = [
+        _call_with_timeout(lambda p=p: pd.read_parquet(p), 30.0, f"load_ef_mixes:{p}")
+        for p in paths
+    ]
+    df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
 
-        # Pad optional dims so downstream code can index them unconditionally.
-        optional_cols = {
-            'geothermal': np.int16(0),
-            'offshore_wind': np.int16(0),
-            'ccs_ccgt': np.int16(0),
-        }
-        for col, fill in optional_cols.items():
-            if col not in df.columns:
-                df[col] = fill
+    # Pad optional dims so downstream code can index them unconditionally.
+    optional_cols = {
+        'geothermal': np.int16(0),
+        'offshore_wind': np.int16(0),
+        'ccs_ccgt': np.int16(0),
+    }
+    for col, fill in optional_cols.items():
+        if col not in df.columns:
+            df[col] = fill
+
+    # Phase 3: re-acquire the lock, double-check in case another thread
+    # populated the entry while we were reading, and insert if still missing.
+    with _EF_CACHE_LOCK:
+        existing = _EF_CACHE.get(cache_key)
+        if existing is not None:
+            return existing
         _EF_CACHE[cache_key] = df
         return df
 
@@ -1103,6 +1129,8 @@ def _load_ledger_from_json(path: Path) -> VintageLedger | None:
         if raw is None:
             return None
         return ledger_from_json(raw)
+    except TimeoutError:
+        raise
     except Exception:
         return None
 
@@ -1118,6 +1146,8 @@ def _load_fleet_from_json(path: Path, iso: str) -> NewGasFleet | None:
         fleet = fleet_from_json(raw)
         fleet.iso = iso
         return fleet
+    except TimeoutError:
+        raise
     except Exception:
         return None
 
@@ -2882,6 +2912,8 @@ def compute_retirement_timeline(
     try:
         emission_rates = _load_emission_rates()
         fossil_mix = load_fossil_mix(iso)
+    except TimeoutError:
+        raise
     except Exception:
         return []
 
@@ -2916,6 +2948,8 @@ def compute_retirement_timeline(
                 ),
                 60.0, f"compute_fossil_retirement(iso={iso}, year={year})",
             )
+        except TimeoutError:
+            raise
         except Exception:
             log.warning("compute_fossil_retirement failed for %s/%s", iso, year)
             continue
@@ -3152,6 +3186,8 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
                     manifest = _call_with_timeout(
                         lambda: json.load(fh), 30.0, f"append_to_manifest:{manifest_path}"
                     )
+            except TimeoutError:
+                raise
             except Exception:
                 manifest = {}
         else:
@@ -3248,6 +3284,8 @@ def _batch_append_to_manifest(output_root: Path, entries: dict[str, dict]) -> Pa
                     manifest = _call_with_timeout(
                         lambda: json.load(fh), 30.0, f"_batch_append_to_manifest:{manifest_path}"
                     )
+            except TimeoutError:
+                raise
             except Exception:
                 manifest = {}
         else:
@@ -3428,6 +3466,8 @@ def _load_annual_manifest_cached(iso: str):
     if iso not in _MANIFEST_CACHE:
         try:
             _MANIFEST_CACHE[iso] = load_annual_manifest(iso)
+        except TimeoutError:
+            raise
         except Exception:
             _MANIFEST_CACHE[iso] = None
     return _MANIFEST_CACHE[iso]
@@ -3519,12 +3559,16 @@ def _get_dispatch_cache_for_iso(iso: str) -> dict:
         cache = _get_worst_hour_state(iso).get('cache')
         if cache is not None:
             return cache
+    except TimeoutError:
+        raise
     except Exception:
         pass
     cache = _DISK_DISPATCH_CACHE.get(iso)
     if cache is None:
         try:
             cache = du.load_dispatch_cache(iso, require_version=du.CACHE_VERSION) or {}
+        except TimeoutError:
+            raise
         except Exception:
             cache = {}
         _DISK_DISPATCH_CACHE[iso] = cache

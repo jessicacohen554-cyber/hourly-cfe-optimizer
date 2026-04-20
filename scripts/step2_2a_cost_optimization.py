@@ -360,6 +360,50 @@ def prewarm_caches(iso: str, combos: list[tuple[str, float]]) -> None:
         except FileNotFoundError:
             continue
 
+    # 4. Numba JIT warmup — cover _battery_loop_detailed, _ldes_loop_detailed,
+    # and _per_resource_dispatch_njit so the first threaded run doesn't pay the
+    # cold-compile cost inside a worker (plan finding H3). Also probe whether
+    # the dispatch_utils __pycache__ directory is writable so cold JIT vs.
+    # warm-cache miss is distinguishable in the probe output.
+    import dispatch_utils as _du_warm  # noqa: PLC0415
+    try:
+        cache_dir = os.path.join(os.path.dirname(_du_warm.__file__), '__pycache__')
+        cache_writable = os.access(cache_dir, os.W_OK)
+    except Exception:
+        cache_writable = False
+    print(f"[prewarm] {iso}: numba cache_writable={bool(cache_writable)}", flush=True)
+
+    try:
+        _state = _WH_STATE.get(iso) or {}
+        _demand_norm = _state.get('demand_norm')
+        _gen_profiles = _state.get('gen_profiles')
+        if _demand_norm is None or _gen_profiles is None:
+            raise RuntimeError("common data not populated before numba warmup")
+        _supply_profiles = _du_warm.get_supply_profiles(iso, _gen_profiles)
+        # Minimal mix with non-zero battery4/battery8/ldes so all three @njit
+        # kernels actually execute (if dispatch_pct=0 the helper short-circuits
+        # before entering the compiled loop). Tiny pct values — the warmup
+        # output is thrown away.
+        _resource_pcts = {'clean_firm': 10.0, 'solar': 45.0, 'wind': 45.0}
+        _t_warm = time.monotonic()
+        _du_warm.reconstruct_hourly_dispatch(
+            _demand_norm, _supply_profiles, _resource_pcts,
+            procurement_pct=100,
+            battery_dispatch_pct=0.01,
+            battery8_dispatch_pct=0.01,
+            ldes_dispatch_pct=0.01,
+            detailed=True,
+        )
+        print(
+            f"[prewarm] {iso}: numba warmup done in "
+            f"{time.monotonic()-_t_warm:.2f}s",
+            flush=True,
+        )
+    except Exception as _warmup_exc:
+        # Numba warmup failures must not block the sweep — log and continue.
+        print(f"[prewarm] {iso}: numba warmup SKIPPED: {_warmup_exc!r}",
+              flush=True)
+
     t_count = len(thresholds)
     state = _WH_STATE.get(iso, {})
     a_count = len(state.get('cache', {}))

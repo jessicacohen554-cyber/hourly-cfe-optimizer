@@ -257,7 +257,12 @@ def expand_cache_for_mixes(iso, mix_infos, existing_cache=None,
     added = 0
     seen = set()
 
-    for mix_info in mix_infos:
+    # Per-archetype progress logging so a stall inside reconstruct_hourly_dispatch
+    # (plan finding H4 — no heartbeat across the missing-archetype loop) is
+    # immediately visible rather than vanishing into multi-minute silence.
+    _mix_infos_list = list(mix_infos)
+    _n_mix = len(_mix_infos_list)
+    for _i, mix_info in enumerate(_mix_infos_list, start=1):
         rp = mix_info['resource_pcts']
         key = _archetype_key(
             iso, rp,
@@ -270,6 +275,11 @@ def expand_cache_for_mixes(iso, mix_infos, existing_cache=None,
             continue
         seen.add(key)
 
+        print(
+            f"[expand] {iso}: archetype {_i}/{_n_mix} key={key[:10]}",
+            flush=True,
+        )
+        _t_expand = time.monotonic()
         result = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, rp,
             100,
@@ -280,6 +290,11 @@ def expand_cache_for_mixes(iso, mix_infos, existing_cache=None,
             detailed=True,
             h2_dispatch_pct=mix_info.get('h2_dispatch_pct', 0),
             resource_types=rtypes,
+        )
+        print(
+            f"[expand] {iso}: archetype {_i} reconstructed in "
+            f"{time.monotonic()-_t_expand:.2f}s",
+            flush=True,
         )
         cache[key] = {k: v for k, v in result.items()}
         added += 1
