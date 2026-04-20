@@ -916,7 +916,10 @@ def size_required_gas_mw(
     from step2_2a_cost_optimization import worst_hour_gas_sizing
     mix = target.get('mix_pct', {}) or {}
     storage = target.get('storage_pct', {}) or {}
-    result = worst_hour_gas_sizing(iso, mix, storage, float(demand_twh), float(gf))
+    result = _call_with_timeout(
+        lambda: worst_hour_gas_sizing(iso, mix, storage, float(demand_twh), float(gf)),
+        60.0, f"worst_hour_gas_sizing(iso={iso})",
+    )
 
     # Back-compat diagnostic fields. "total_clean_peak_mw" is defined here as
     # the grown peak minus the worst-hour residual, so callers that log it
@@ -2834,11 +2837,15 @@ def compute_retirement_timeline(
             iso, year, run_result.config.demand_growth_level,
         )
         try:
-            _, info = du.compute_fossil_retirement(
-                iso, clean_pct, emission_rates, fossil_mix,
-                demand_growth_factor=gf, year=year,
+            _, info = _call_with_timeout(
+                lambda: du.compute_fossil_retirement(
+                    iso, clean_pct, emission_rates, fossil_mix,
+                    demand_growth_factor=gf, year=year,
+                ),
+                60.0, f"compute_fossil_retirement(iso={iso}, year={year})",
             )
         except Exception:
+            log.warning("compute_fossil_retirement failed for %s/%s", iso, year)
             continue
         coal_remaining = float(info.get('coal_remaining_twh',
                                          info.get('coal_displaced_twh', 0.0)))
