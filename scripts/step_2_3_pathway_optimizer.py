@@ -252,7 +252,7 @@ _T = TypeVar('_T')
 
 # Reused across all calls — avoids spawning/joining a fresh OS thread per JSON read.
 _TIMEOUT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
-    max_workers=2, thread_name_prefix='cfe_timeout',
+    max_workers=8, thread_name_prefix='cfe_timeout',
 )
 
 
@@ -990,7 +990,7 @@ def size_required_gas_mw(
     storage = target.get('storage_pct', {}) or {}
     result = _call_with_timeout(
         lambda: worst_hour_gas_sizing(iso, mix, storage, float(demand_twh), float(gf)),
-        60.0, f"worst_hour_gas_sizing(iso={iso})",
+        180.0, f"worst_hour_gas_sizing(iso={iso})",
     )
 
     # Back-compat diagnostic fields. "total_clean_peak_mw" is defined here as
