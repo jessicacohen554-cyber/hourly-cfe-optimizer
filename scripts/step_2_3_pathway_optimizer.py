@@ -1303,11 +1303,11 @@ def score_ef_row_cost(row: pd.Series, iso: str, year: int,
 
     total = 0.0
 
-    # VRE (solar, onshore wind, hydro)
+    # VRE (solar, onshore wind, hydro) — standalone VRE only; hybrid priced below via solar_hybrid / wind_hybrid vintages
     total += mix['solar'] / 100.0 * demand_twh * 1.0e6 * \
-        marginal_lcoe('solar', iso, year, config)
+        marginal_lcoe('solar', iso, year, config)  # standalone VRE only — hybrid priced via solar_hybrid vintages
     total += mix['wind'] / 100.0 * demand_twh * 1.0e6 * \
-        marginal_lcoe('wind', iso, year, config)
+        marginal_lcoe('wind', iso, year, config)   # standalone VRE only — hybrid priced via wind_hybrid vintages
     # Hydro is $0 by Card convention — still counted in mix but not costed.
 
     # Offshore wind
@@ -1785,9 +1785,9 @@ def score_ef_batch(
     ldes_disp_arr = _col_array('ldes_dispatch_pct')
     h2_disp_arr = _col_array('h2_dispatch_pct')
 
-    # VRE base contributions (hydro is $0 by Card convention).
-    total = solar_arr * (scale * solar_lcoe)
-    total += wind_arr * (scale * wind_lcoe)
+    # VRE base contributions (hydro $0 by Card convention) — standalone VRE only; hybrid priced via solar_hybrid vintages
+    total = solar_arr * (scale * solar_lcoe)   # standalone VRE only — hybrid priced via solar_hybrid vintages
+    total += wind_arr * (scale * wind_lcoe)    # standalone VRE only — hybrid priced via wind_hybrid vintages
 
     # Offshore wind — only counted for OFFSHORE_ISOS, matching scalar path.
     if iso in pc.OFFSHORE_ISOS:
@@ -2012,7 +2012,7 @@ def marginal_vre_usd_per_cfe_pct(iso: str, year: int,
     EF-row delta comparison.
     """
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
-    solar_cost = marginal_lcoe('solar', iso, year, config)
+    solar_cost = marginal_lcoe('solar', iso, year, config)  # standalone VRE only — hybrid priced via solar_hybrid vintages
     bat_cost = marginal_lcoe('battery4', iso, year, config)
     # Adding 1% of demand as solar+battery4 shaves ~1% of CFE at the margin.
     # Cost = 1% * demand_mwh * (solar_lcoe + bat_lcoe * 0.5_util)
@@ -2095,13 +2095,30 @@ def _derive_delta_vintages(
 ) -> list[Vintage]:
     """Produce per-resource Vintage entries for new-build in ``year``.
 
+    Ledger key composition after hybrid-key split (commits 632b17e / 6184d11):
+
+      EF parquet column  →  VRE ledger key   +  storage ledger key
+      ─────────────────────────────────────────────────────────────
+      'solar'            →  'solar'           (no storage; standalone)
+      'wind'             →  'wind'            (no storage; standalone)
+      'solar_batt4'      →  'solar_hybrid'    + 'battery4'
+      'solar_batt8'      →  'solar_hybrid'    + 'battery8'
+      'wind_batt4'       →  'wind_hybrid'     + 'battery4'
+      'wind_batt8'       →  'wind_hybrid'     + 'battery8'
+
+    Legacy 'solar' / 'wind' ledger keys are standalone VRE only.
+    Total physical solar installed = ledger('solar') + ledger('solar_hybrid').
+    Total physical wind installed  = ledger('wind')  + ledger('wind_hybrid').
+    Cost sites price each key at its locked_lcoe (hybrid uses
+    _vintage_lcoe_for_resource which routes solar_hybrid -> standalone solar LCOE).
+
     Compares target mix TWh vs. cumulative ledger TWh by resource; anything
     positive is a new vintage locked at this year's LCOE.
 
     nuclear_cap_twh: if finite, caps the clean-firm target TWh at this value.
         Set to existing_cf_twh for Pathway 1 and pre-pivot Pathway 2a/2b so
         that the cost model never credits more nuclear than the existing fleet
-        produces — regardless of demand growth scaling.
+        produces, regardless of demand growth scaling.
     """
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     new_vintages: list[Vintage] = []
@@ -3138,6 +3155,16 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
 
 
 STRANDING_RESOURCES = (
+    # PHYSICAL INSTALLED CAPACITY — standalone VRE only (deliberate).
+    # 'solar_hybrid' and 'wind_hybrid' are NOT included here.
+    # Rationale: this tuple drives the cross-pathway comparison
+    # compute_stranding_ledger() compares pathway-A 'solar' TWh vs
+    # pathway-3 'solar' TWh. Merging standalone + hybrid into a single
+    # 'solar' key before that comparison changes the P3-vs-P1 stranding
+    # narrative (see AUDIT_2026-04-19, Finding 5). Adding these keys
+    # requires a deliberate dashboard decision — STOP AND ASK first.
+    # If added, gen_sankey.py and section5_stranding_sankey.json schema
+    # must be updated in the same commit to avoid silent field addition.
     'solar', 'wind', 'offshore_wind',
     'battery4', 'battery8', 'ldes', 'h2',
     'new_gas',  # post-2025 gas (not yet built in the solver, placeholder)
@@ -3159,7 +3186,12 @@ _ASSET_LIFE_YEARS = {
 def _total_twh_by_resource(
     ledger: 'VintageLedger', at_year: int = END_YEAR,
 ) -> dict[str, float]:
-    """Sum all active vintages at ``at_year`` grouped by resource."""
+    """Sum all active vintages at ``at_year`` grouped by resource.
+
+    Keys match ledger resource names exactly: 'solar' = standalone only,
+    'solar_hybrid' = hybrid solar+battery. Callers that need total physical
+    VRE installed capacity must sum both keys.
+    """
     out: dict[str, float] = {}
     for v in ledger.active(at_year):
         out[v.resource] = out.get(v.resource, 0.0) + v.twh_per_year
