@@ -1878,6 +1878,18 @@ def _run_one(iso: str, pathway: str, endpoint: float) -> Path:
     with open(tmp, 'w') as f:
         json.dump(payload, f)
     os.replace(tmp, out)
+    # Phase B sidecar (memo §7 Phase B): colocated with the main payload.
+    # Only written when solve_pathway populated result.foresight_preview
+    # (P3 runs at the 4 canonical endpoints); skipped otherwise.
+    if result.foresight_preview is not None:
+        sidecar_out = out.with_name(
+            f'pathway{cfg.pathway}_{_ep_tag(cfg.endpoint_pct)}'
+            f'_foresight_preview.json'
+        )
+        sidecar_tmp = sidecar_out.with_suffix('.json.tmp')
+        with open(sidecar_tmp, 'w') as f:
+            json.dump(result.foresight_preview, f)
+        os.replace(sidecar_tmp, sidecar_out)
     print(f"[done] {out}  fleet={result.stranding_metadata['fleet_size_mw']:.0f} MW  "
           f"cfe={result.headline['achieved_cfe_pct']:.2f}%", flush=True)
     return out
