@@ -969,6 +969,34 @@ _CLEAN_FIRM_TRANCHE_TX = {
 # 15-dim share vector basis: 11 _RESOURCE_COLS + 4 non-existing CF tranches
 # (uprate/geo/nuke_new/ccs). The "existing" CF tranche is omitted — it is
 # always the GRID_MIX_SHARES baseline and offers no steering handle.
+#
+# ───────────────────────────────────────────────────────────────────────────
+# PHASE B EXIT-GATE RESULT — READ BEFORE WRITING PHASE C
+# ───────────────────────────────────────────────────────────────────────────
+# The 28-cell diagnostic sweep (7 ISOs × 4 canonical endpoints, P3, all in
+# analysis/reliability-tax/data/<ISO>/pathway3_ep*_foresight_preview.json)
+# produced ZERO interior-year divergence between myopic and foresight
+# winners at every λ ∈ {0.05, 0.15, 0.5}. Every cell. Every endpoint.
+# Mean share_distance-to-target ranged 0.23–1.05, so target_shares are
+# meaningfully different from the myopic mixes — the penalty just cannot
+# move the argmin.
+#
+# Root cause is dimensional. Memo §5.2 specifies
+#     score_y[m] = myopic_score_y[m] + λ · w(y) · ‖shares[m] − target‖²
+# with λ as a bare scalar. But row_score in solve_pathway is in USD
+# (order 1e10), while ‖shares − target‖² is in fraction² (order 1). For
+# literal λ ∈ {0.05, 0.15, 0.5} the penalty is at most ~0.5 USD against
+# cross-candidate row_score variation of ~1e8 USD — ten orders of
+# magnitude too small to steer.
+#
+# PHASE C MUST DECIDE BEFORE WRITING solve_pathway_with_foresight:
+#   Option 1 — scale λ to USD units (λ ~ 1e6..1e9), sweep per-ISO.
+#   Option 2 — normalize row_score by (endpoint_demand_TWh × reference_LCOE
+#              × 1e6) to a dimensionless magnitude, keep λ in memo's
+#              {0.05, 0.15, 0.5} band.
+# Option 2 is cleaner (memo stays literal; λ stays intuitive); option 1 is
+# faster (no row_score refactor). Ask the user before coding.
+# ───────────────────────────────────────────────────────────────────────────
 
 _FORESIGHT_SHARE_KEYS = _RESOURCE_COLS + (
     'cf_uprate', 'cf_geo', 'cf_nuke_new', 'cf_ccs',
