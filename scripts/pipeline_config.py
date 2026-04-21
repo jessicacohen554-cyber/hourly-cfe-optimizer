@@ -1276,6 +1276,18 @@ EXISTING_GAS_FOM_KW_YR = {
     'MISO': 14, 'SPP': 13,
 }
 
+# New-build CCGT fixed O&M ($/kW-yr).
+# Source: NREL ATB 2024, CCGT-Advanced, 2025 Moderate scenario baseline
+# (~$22/kW-yr). Per-ISO uplifts for high-labor-cost regions (CAISO, NYISO,
+# NEISO) follow the same pattern as EXISTING_GAS_FOM_KW_YR. Used by step 2.3
+# pathway optimizer so the ratcheted new-gas fleet carries FOM alongside
+# annualized capex — the v2 optimizer hard-coded FOM to zero, undercounting
+# the reliability-tax contribution of new gas by ~$3–5B per ISO.
+NEW_CCGT_FOM_KW_YR = {
+    'CAISO': 25, 'ERCOT': 22, 'PJM': 22, 'NYISO': 25,
+    'NEISO': 24, 'MISO': 22, 'SPP': 22,
+}
+
 # New-build gas LCOE ($/MWh, annualized all-in including capital recovery)
 # Sources: Lazard v17-18, EIA AEO 2024, NREL ATB 2024.
 # CCGT: baseload combined cycle, 85% CF. CT: peaker combustion turbine, 15-25% CF.

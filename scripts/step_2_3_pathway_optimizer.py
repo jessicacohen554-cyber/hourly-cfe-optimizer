@@ -793,6 +793,134 @@ def _cfe_target_for_year(year: int, endpoint_pct: float) -> float:
     return endpoint_pct
 
 
+# ─── Clean-firm merit-order tranche decomposition ───────────────────────────
+
+# Pathway → first year the non-uprate tranches (geo, new nuclear, CCS retrofit)
+# become available. `None` = the pathway never unlocks those tranches, so only
+# existing-nuclear uprates (Tranche 1) are available all 26 years.
+_PATHWAY_TRANCHE_UNLOCK_YEAR = {
+    '1':  None, '1a': None, '1b': None,
+    '2a': pc.NOAK_YEAR_BY_PATHWAY.get('2a', 2045) - 5,
+    '2b': pc.NOAK_YEAR_BY_PATHWAY.get('2b', 2040) - 5,
+    '3':  pc.NOAK_YEAR_BY_PATHWAY.get('3',  2035) - 5,
+}
+
+
+def decompose_clean_firm_tranches(
+    cf_pct: np.ndarray,
+    iso: str,
+    pathway: str,
+    annual_mwh_vec: np.ndarray,
+    cfg: 'RunConfig',
+) -> dict:
+    """Merit-order decomposition of the per-mix clean_firm share into tranches.
+
+    For each (year, mix) pair, fill the clean_firm target (TWh = share × demand)
+    greedily at year-y Wright's-Law-adjusted costs:
+
+      Tranche 1: existing-nuclear uprates          — always on, capped per ISO
+      Tranche 2: geothermal                        — CAISO only, capped at 39 TWh
+      Tranche 3: cheaper of new nuclear vs. CCS    — new nuke uncapped, CCS per ISO
+
+    Tranches 2 and 3 are gated by pathway × year via
+    `_PATHWAY_TRANCHE_UNLOCK_YEAR`. P1/P1a/P1b never unlock; P2a/P2b/P3 unlock
+    at ``NOAK_YEAR_BY_PATHWAY[pw] - 5``. Pre-unlock years collapse to uprate-
+    only — infeasible if the target exceeds ``UPRATE_CAP_TWH[iso]``.
+
+    Wraps ``pc.compute_clean_firm_tranches`` (which handles merit-order fill
+    and numpy array inputs) with pathway gating and a per-year learning-
+    curve callback. The outer iteration is over ``N_YEARS = 26`` years only —
+    the inner helper operates on the full ``(n_mixes,)`` vector at once, so
+    no Python loop touches the mix dimension.
+
+    Args:
+        cf_pct:           (n_mixes,) clean_firm share in percent (0–100).
+        iso:              ISO name.
+        pathway:          '1', '1a', '2a', '2b', or '3'.
+        annual_mwh_vec:   (N_YEARS,) annual demand in MWh, one per year in YEARS.
+        cfg:              RunConfig — supplies firm_cost_level, ccs_cost_level,
+                          tx_level, geo_cost_level.
+
+    Returns dict with (N_YEARS, n_mixes) arrays:
+        blended_lcoe:  $/MWh, TWh-weighted mean of tranche LCOEs.
+        feasible:      bool — False when the target cannot be filled (only
+                       possible in locked years with target > uprate cap).
+        uprate_twh, geo_twh, nuke_twh, ccs_twh: TWh filled by each tranche.
+    """
+    n = len(cf_pct)
+    annual_twh_vec = annual_mwh_vec / 1.0e6                       # (N_YEARS,)
+    target = (cf_pct[None, :] / 100.0) * annual_twh_vec[:, None]  # (Y, n) TWh
+
+    firm_lev = cfg.firm_cost_level
+    ccs_lev  = cfg.ccs_cost_level
+    tx_name  = cfg.tx_level
+    # 45Q-on matches _resource_lcoe_year's FOAK_CCS_45Q_ON selection at
+    # scripts/step_2_3_pathway_optimizer.py:679.
+    q45      = '1'
+    geo_lev  = cfg.geo_cost_level or ('M' if iso == 'CAISO' else None)
+
+    unlock_year = _PATHWAY_TRANCHE_UNLOCK_YEAR.get(pathway, None)
+    years_arr   = np.array(YEARS, dtype=np.int32)                  # (N_YEARS,)
+    unlocked_y  = (years_arr >= unlock_year) if unlock_year is not None \
+                  else np.zeros(N_YEARS, dtype=bool)
+
+    # ── Locked branch: uprate-only, capped per ISO ──
+    uprate_cap    = float(pc.UPRATE_CAP_TWH[iso])
+    uprate_lcoe_l = float(pc.UPRATE_LCOE[firm_lev])
+    uprate_twh_locked     = np.minimum(target, uprate_cap)
+    blended_lcoe_locked   = np.full_like(target, uprate_lcoe_l, dtype=np.float64)
+    feasible_locked       = target <= (uprate_cap + 1.0e-9)
+
+    # ── Unlocked branch: full merit order via pc.compute_clean_firm_tranches ──
+    # Year-dependent LCOE via the pipeline_config Wright's-Law kernel. The
+    # helper expects a callable of the form fn(base, foak, noak, tech, level, year).
+    def _learning_curve_fn(base, foak, noak, tech, level, year):
+        foak_s, noak_y = pc.get_pathway_noak_window(tech, level, pathway)
+        return pc.year_adjusted_cost(foak, noak, year, foak_s, noak_y)
+
+    blended_lcoe_unlocked = np.zeros_like(target, dtype=np.float64)
+    uprate_twh_unlocked   = np.zeros_like(target, dtype=np.float64)
+    geo_twh_unlocked      = np.zeros_like(target, dtype=np.float64)
+    nuke_twh_unlocked     = np.zeros_like(target, dtype=np.float64)
+    ccs_twh_unlocked      = np.zeros_like(target, dtype=np.float64)
+    # New-nuclear is uncapped in config, so unlocked rows are always feasible.
+    feasible_unlocked     = np.ones_like(target, dtype=bool)
+
+    for yi in range(N_YEARS):
+        if not unlocked_y[yi]:
+            continue
+        y = int(years_arr[yi])
+        tgt_y = target[yi]                                        # (n,) TWh
+        res = pc.compute_clean_firm_tranches(
+            tgt_y, iso, firm_lev, ccs_lev, q45, tx_name,
+            geo_lev=geo_lev,
+            learning_curve_fn=_learning_curve_fn,
+            target_year=y,
+        )
+        uprate_twh_unlocked[yi] = res['uprate_twh']
+        geo_twh_unlocked[yi]    = res['geo_twh']
+        nuke_twh_unlocked[yi]   = res['nuclear_twh']
+        ccs_twh_unlocked[yi]    = res['ccs_tranche_twh']
+        total_twh = (uprate_twh_unlocked[yi] + geo_twh_unlocked[yi]
+                     + nuke_twh_unlocked[yi] + ccs_twh_unlocked[yi])
+        blended_lcoe_unlocked[yi] = np.where(
+            total_twh > 1.0e-9,
+            res['total_cost'] / np.maximum(total_twh, 1.0e-9),
+            0.0,
+        )
+
+    # ── Merge locked and unlocked per year ──
+    ul = unlocked_y[:, None]                                       # (Y, 1) bool
+    return {
+        'blended_lcoe': np.where(ul, blended_lcoe_unlocked, blended_lcoe_locked),
+        'feasible':     np.where(ul, feasible_unlocked,     feasible_locked),
+        'uprate_twh':   np.where(ul, uprate_twh_unlocked,   uprate_twh_locked),
+        'geo_twh':      np.where(ul, geo_twh_unlocked,      0.0),
+        'nuke_twh':     np.where(ul, nuke_twh_unlocked,     0.0),
+        'ccs_twh':      np.where(ul, ccs_twh_unlocked,      0.0),
+    }
+
+
 # ─── Phase A: per-year argmin solver ─────────────────────────────────────────
 
 @dataclass
