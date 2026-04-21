@@ -478,4 +478,40 @@ P1's forcing mechanism is being revised in a separate session. Current P1 cache 
 
 ---
 
-*§9 pending in subsequent commit.*
+## 9. What to delete from the prompt pack
+
+The prompt pack at `analysis/reliability-tax/reliability-tax_prompt-pack.md` (275 lines) was authored before the research premise was clarified. Specific sections are stale, misleading, or inconsistent with this memo's architecture. Rather than patch the prompt pack in place, delete the listed items and keep only those prompts that remain useful as prompt templates (the code-audit prompt and the regression-test prompt).
+
+### 9.1 Stale / invented file references
+
+- **L17 — `[SAMPLE_OUTPUTS]` (e.g. `pathway3_ep99.json.md`).** This file does not exist and has never existed. No `*.json.md` artifacts are produced by the pipeline. The actual sample-output convention is `dashboard/data/pathway_{iso}_ep{pct}.json`. Delete the reference.
+
+### 9.2 Misleading code references
+
+- **L13 — `step2_2a_cost_optimization.py`** cited as the file to audit for the trajectory solver. The file exists at `scripts/step2_2a_cost_optimization.py` but it is a 4,444-line **single-year 2025-snapshot cost optimizer**, not the trajectory solver. The trajectory solver is `scripts/step_2_3_pathway_optimizer.py`. Every "edit step2_2a_cost_optimization.py" instruction in the prompt pack should target `step_2_3_pathway_optimizer.py` instead.
+- **L65–67** — "In step2_2a_cost_optimization.py, identify the single-year 'evaluate all mixes → select cheapest' logic that could be reused conceptually for endpoint candidate selection" — the single-year logic in that file is not reusable for the trajectory solver. It uses a different candidate-generation path (single-year snapshot with no vintage ledger). The scorer pattern in `step_2_3_pathway_optimizer.py:1122–1131` is the actual reference.
+
+### 9.3 Framing that commits to the wrong algorithm
+
+- **L4, L84, L135 — "minimal-change edits" / "minimal diffs".** Endpoint-aware solver mode is additive net-new functionality, not a diff-minimizing refactor. Framing it as minimal underestimates the design surface (algorithm choice per §4, `endpoint_target_shares` heuristic per §8.3, λ calibration per §8.2, new `solve_pathway_with_foresight` function per §3, new schema fields per §6.4, diagnostic sidecar per §6.4). §3 and §4 treat this as a principled additive feature with an explicit architecture decision and an explicit algorithm selection, not a small edit.
+- **L84 — "terminal-candidate membership planning"** locks the prompt's proposal to algorithm (d) (terminal-constraint pre-commit) by construction. §4 explicitly rejects (d) as brittle against the fallback cascade. The more general framing is "endpoint-aware solver mode" which admits (a)–(e) on equal footing. Replace the prompt-pack's frame with this memo's frame.
+- **L89–93 — "terminal candidate generation," "endpoint year demand alignment," "deterministic tie-breaking for terminal candidates"** are implementation details for algorithm (d). Not applicable to recommended (b), which has no terminal-candidate set and no tie-breaking problem at the endpoint (the penalty defines an ordering).
+- **L146, L154, L208, L244 — "terminal candidate selection"** references throughout the prompt-pack's Prompt 2 (implementation) and Prompt 3 (regression tests). These all refer to algorithm (d)'s data structures. Under (b), replace with "foresight-penalty scorer" references.
+
+### 9.4 Stale defaults
+
+- **L139 — "`endpoint_year`: int (default 2050)".** Under the 4-endpoint collapse `{(2040, 90), (2045, 95), (2050, 99), (2050, 99.9)}`, `endpoint_year` takes values `{2040, 2045, 2050}` per-endpoint. There is no single default. Replace with "per-endpoint required field, one of `{2040, 2045, 2050}`."
+- **L103–107** — The 4-endpoint list is *correct* in the prompt pack (unlike the scoping mismatch in earlier sessions). Keep this content; it is the same set §3–§7 of this memo operate on.
+
+### 9.5 What's worth keeping
+
+- **L36–72 — Prompt 0 (code audit).** The audit prompt itself is a useful template for onboarding a fresh session onto `step_2_3_pathway_optimizer.py`. Keep, but replace every `step2_2a_cost_optimization.py` mention with `step_2_3_pathway_optimizer.py`.
+- **L220–275 — Prompt 3 (regression tests).** The regression-test scaffolding (bit-identical myopic output; schema back-compat check; cascade behavior diffed) is directly applicable to Phase C's exit gate (§7). Keep, but replace "terminal candidate logic stable across runs" with "foresight scorer output deterministic given (λ, `endpoint_target_shares`)."
+
+### 9.6 Recommended action
+
+Move `reliability-tax_prompt-pack.md` to `analysis/reliability-tax/_archive/reliability-tax_prompt-pack_v1.md` with a header note pointing to this memo. Do not delete — keep for provenance. This memo becomes the active design artifact; the prompt pack's audit and regression-test scaffolds are excerpted as the basis for Phase B and Phase C handoff prompts in `SPEC.md`.
+
+---
+
+*End of memo. §§1-9 complete.*
