@@ -4,7 +4,13 @@
 >
 > **Scope.** Design only. No code changes.
 >
-> **Out of scope.** P1 clean-firm forcing mechanism (separate session).
+> **P1 context.** The P1 clean-firm forcing mechanism landed on master (commits `b342947` + `3a22a06`: floor-ratchet skip for pathway '1' only, so P1 now reflects the true myopic-no-clean-firm BAU counterfactual). P1 cache is the stable comparison baseline for this memo.
+>
+> **Decisions locked in (user answers to §8 cards, back-propagated 2026-04-21):**
+> - **Q1 (algorithm):** (b) Single-pass argmin with lookahead penalty. See §4(b).
+> - **Q3 (target mix):** Cheapest-cumulative-path argmin. See §5.6 and §8 Q3.
+> - **Q4 (P1 comparison):** Publish both within-P3 and P1-vs-foresight-P3 headlines using the current (post-`3a22a06`) P1 cache. See §6.
+> - **Q2 (λ tuning) and Q5 (schema versioning):** Pending follow-up.
 
 ---
 
@@ -38,7 +44,7 @@ Four candidate architectures for where the foresight layer lives:
 
 **Option (iv) — runtime overlay.**
 
-1. **Zero regression risk on myopic.** The cached 350-run matrix is the null-state baseline and must not drift.
+1. **Zero regression risk on myopic.** The cached output for every `(ISO, endpoint, myopic)` cell is the null-state baseline and must not drift under foresight landing. The existing cache is the 10-endpoint sweep (350 runs across 5 pathways); after the 4-endpoint collapse (§6) the comparable cache is 28 `(ISO, endpoint)` myopic cells. Neither count should shift numerical outputs — only schema adds fields (§6.4).
 2. **The premise implies P3 *is* the planned pathway.** Myopic-P3 is a diagnostic; foresight-P3 is the canonical production pathway. `solver_mode` flag makes this explicit.
 3. **The foresight algorithm will iterate.** §4 enumerates five candidates. Option (iv) lets iteration happen in one file without touching shared code.
 4. **P2a/P2b need foresight variants too, eventually.** Same overlay wraps them with a one-line dispatch change.
@@ -79,7 +85,7 @@ score_y[m]  =  myopic_score_y[m]
              +  λ · w(y, endpoint_year) · ‖ shares[m] − endpoint_target_shares ‖₂²
 ```
 
-where `shares[m]` is the resource-share vector implied by mix `m` projected to `endpoint_year`, `endpoint_target_shares` is a static reference mix chosen once per run (see §8 open question iii), and the time-weight
+where `shares[m]` is the resource-share vector implied by mix `m` projected to `endpoint_year`, `endpoint_target_shares` is a static reference mix chosen once per run (see §8 Q3), and the time-weight
 
 ```
 w(y, endpoint_year)  =  (endpoint_year − y) / (endpoint_year − start_year)
@@ -98,7 +104,7 @@ The prompt pack's original form used `/25` (fixed 2050 horizon). Under the 4-end
 
 **P3 divergence from current-P3.** Interior trajectory shifts clean-firm commits earlier than the NOAK-2035 crossover would on its own. Endpoint mix at (2040,90) / (2045,95) / (2050,99) / (2050,99.9) converges on `endpoint_target_shares` up to the ratchet's post-hoc enforcement. Current-P3 *is* myopic-P3 even though P3 has NOAK=2035 — the argmin is year-by-year myopic and sees only the current-year cost; NOAK just shifts *when* the myopic crossover happens. Foresight-P3 additionally steers by endpoint proximity and hits the endpoint via a different interior trajectory.
 
-**Degenerate case.** λ = 0 → recovers myopic exactly. λ → ∞ → single-year snap-to-endpoint (pathological, triggers cascade). Moderate λ (swept in §8 open question ii) is the production setting.
+**Degenerate case.** λ = 0 → recovers myopic exactly. λ → ∞ → single-year snap-to-endpoint (pathological, triggers cascade). Moderate λ (swept in §8 Q2) is the production setting.
 
 **Why this one.** O(1) additional cost per candidate per year. No rollouts, no fixed-point iteration. Fully compatible with the existing `_score_year_sunk_cost` factoring. Runs on the full 56-run matrix in the same wall time as myopic.
 
@@ -159,7 +165,7 @@ The prompt pack's original form used `/25` (fixed 2050 horizon). Under the 4-end
 
 Reasoning:
 1. Zero interaction risk with the sunk-cost scorer, ratchet, and cascade — the penalty is additive to an existing scalar score.
-2. Wall-time identical to myopic — the 56-run matrix (4 endpoints × {P1, P3} × 7 ISOs) runs in the same budget.
+2. Wall-time identical to myopic — the 28 foresight-P3 runs (4 endpoints × 7 ISOs) complete in the same budget as the 28 paired myopic-P3 runs. (P1 runs in this memo reuse the existing cache; see §6.)
 3. Tunable via a single λ and a time-weight `w(y, endpoint_year)`; sensitivity is inspectable.
 4. Degenerate at λ = 0 to exactly myopic-P3 — the null-state baseline is preserved as a free by-product of the same code path.
 5. Compounds with P3's existing `NOAK_YEAR=2035` Wright's Law advantage rather than competing with it.
@@ -230,9 +236,15 @@ def _score_year_with_endpoint(mix, floors, twh_total, year, pathway, λ, target_
 
 **Today.** Given a candidate mix, `decompose_clean_firm_tranches` splits clean-firm TWh into the five tranche classes (`existing`, `uprate`, `geo`, `nuke_new`, `ccs`) based on pathway rules and year. The vintage ledger is keyed on these tranche classes.
 
-**Foresight hook.** `_project_shares_to_endpoint(mix, endpoint_year)` — a new helper — extrapolates the candidate mix forward to `endpoint_year` total demand and computes per-tranche shares. For candidates that respect the ratchet at year `y`, the projection assumes no further commits (so the projected share for `m` is `(committed_before_y + delta_y[m]) / twh_total(endpoint_year)`). This is a cheap linear projection, not a forward solve; it answers "if we commit `m` today and freeze, what shares land at `endpoint_year`?"
+**Foresight hook — two helpers.**
 
-**Why linear-freeze rather than continue-forward.** The penalty is a steering term, not a forecast. What we need is a gradient — "does committing `m` at year `y` move us toward or away from the endpoint?" The linear-freeze projection gives the right sign and monotonicity without requiring a nested solve. If forward-projection quality matters, algorithm (a) or (c) is the right upgrade.
+1. `_project_shares_to_endpoint(mix, endpoint_year)` — extrapolates a candidate mix forward to `endpoint_year` total demand and computes per-tranche shares. For candidates that respect the ratchet at year `y`, the projection assumes no further commits (so the projected share for `m` is `(committed_before_y + delta_y[m]) / twh_total(endpoint_year)`). This is a cheap linear projection, not a forward solve; it answers "if we commit `m` today and freeze, what shares land at `endpoint_year`?"
+
+2. `_compute_endpoint_target_shares(iso, endpoint_year, endpoint_pct, pathway)` — one-shot preprocessing helper that produces `endpoint_target_shares` per the user-selected heuristic (§8 Q3 → **cheapest-cumulative-path argmin**). Solves a small DP or MILP once per `(ISO, endpoint)` cell to find the minimum-cumulative-cost trajectory that hits `endpoint_pct` at `endpoint_year`; returns the share vector at `endpoint_year` along that path. Result is cached to `dashboard/data/endpoint_target_shares_{iso}_ep{pct}.json` and reused across λ sweeps. Phase C scope includes this helper; Phase D calibration reads its cached output.
+
+**Why linear-freeze rather than continue-forward inside the penalty.** The penalty is a steering term, not a forecast. What we need is a gradient — "does committing `m` at year `y` move us toward or away from the endpoint?" The linear-freeze projection gives the right sign and monotonicity without requiring a nested solve inside the inner loop. The expensive cumulative-path solve runs *once* per cell as preprocessing (helper #2 above), not per-candidate per-year.
+
+**Scope expansion note.** The user's Q3 answer (cheapest-cumulative-path argmin over replacement-cost argmin) re-introduces a mini version of algorithm (c)/(e) as a preprocessing step. This is a principled scope expansion because the preprocessing result is static per `(ISO, endpoint)` cell — 28 preprocessing solves total, one-time cost. If the preprocessing solve proves expensive, fallback is the replacement-cost argmin (simpler, no nested solve).
 
 ### 5.7 `_pathway_mask` (L727) and `solve_pathway` (L991–1195)
 
@@ -250,11 +262,11 @@ The framework compares three solver modes at each of the 4 endpoints × 7 ISOs =
 
 | Mode | What it represents | Current status |
 |---|---|---|
-| **P1 (myopic)** | Year-by-year least-cost with no endpoint awareness. The BAU counterfactual. | Cached (current `pathway1_*.json`). Forcing mechanism for P1 being revised in a separate session. |
+| **P1 (myopic)** | Year-by-year least-cost with no endpoint awareness. The BAU counterfactual. | Cached (current `pathway1_*.json`). Forcing mechanism landed on master: `b342947` + `3a22a06` skip the clean-firm floor ratchet for pathway '1' only, so P1 truly reflects myopic-no-proactive-clean-firm. Stable. |
 | **Myopic-P3** | Current P3: argmin year-by-year; NOAK=2035 but no endpoint steering. | Cached (current `pathway3_*.json`), equivalent to foresight (b) with λ = 0. |
 | **Foresight-P3** | Recommended algorithm (b): penalized argmin that steers toward `endpoint_target_shares`. | New. Produced by `solve_pathway_with_foresight`. |
 
-The within-P3 comparison (myopic-P3 vs foresight-P3) is the *direct product* of this memo. The P1-vs-foresight-P3 comparison is the *downstream headline* that surfaces once P1 is revised.
+Both comparisons ship together: the within-P3 comparison (myopic-P3 vs foresight-P3) is the direct methodological headline; the P1-vs-foresight-P3 comparison is the reliability-tax headline that the premise in §2 was built around. Both are published with the same Phase-E run matrix since P1 cache is stable post-`3a22a06`.
 
 ### 6.1 Per-year plots (one panel per `(endpoint, ISO)` cell)
 
@@ -301,7 +313,7 @@ Expected sign: positive. A positive value means myopic-P3 is more expensive cumu
 - Negative values mean the penalty parameterization is wrong (λ too high, or `endpoint_target_shares` poorly chosen). Sensitivity sweep (§7 phase D) calibrates λ to keep this positive across all 28 cells.
 - Undiscounted is the headline; discounted is reported in tables as a sensitivity.
 
-Secondary headlines (once P1 forcing is live and out-of-scope exits):
+Co-primary headlines (P1 forcing is live on master per `3a22a06`; both comparisons ship together per §8 Q4):
 
 ```
 p1_penalty_vs_foresight  =  (cum_undisc_cost_p1  −  cum_undisc_cost_foresight_p3)
@@ -311,6 +323,8 @@ p1_penalty_vs_foresight  =  (cum_undisc_cost_p1  −  cum_undisc_cost_foresight_
 ```
 p1_reliability_tax_premium  =  reliability_tax_p1  −  reliability_tax_foresight_p3
 ```
+
+Expected sign: both positive. A positive `p1_penalty_vs_foresight` is the reliability-tax dollar headline from §2. A positive `p1_reliability_tax_premium` is the $/MWh-yr premium of the BAU counterfactual. These surface as co-primary alongside `foresight_penalty_vs_myopic`.
 
 ### 6.4 Schema changes
 
@@ -365,8 +379,8 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 **Artifact.** `analysis/reliability-tax/P3_FORESIGHT_DESIGN_MEMO.md` (sections 1-9, consistency-reviewed).
 
 **Exit gate.**
-- User answers the §8 open-question cards.
-- §8 answers back-propagated into §4 (algorithm parameterization) and §6 (schema names) before closing the memo.
+- User answers the §8 open-question cards (Q1–Q5).
+- §8 answers back-propagated into §4 (algorithm parameterization from Q1), §6 (schema names from Q5), and §7 Phase B/C/D (λ strategy from Q2, target-shares heuristic from Q3, P1 comparison scope from Q4) before closing the memo.
 - Memo committed + pushed to `claude/p3-foresight-sections-4-9-qn9uO`.
 
 ### Phase B — Read-only foresight instrumentation
@@ -392,6 +406,7 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 - Refactor sunk-cost scorer inner body into `_score_year_sunk_cost(...)` per §5.2 (touches `solve_pathway` but preserves output).
 - Add `solve_pathway_with_foresight(cfg)` that owns its year loop and calls `_score_year_with_endpoint` in place of `_score_year_sunk_cost`.
 - Reuse `_finalize_run`, `_build_ledger`, ratchet, and cascade unchanged.
+- Add `_compute_endpoint_target_shares(iso, endpoint_year, endpoint_pct, pathway)` preprocessing helper per §5.6 (cheapest-cumulative-path argmin per user Q3 answer). Result cached per `(ISO, endpoint)` cell; reused across λ sweeps.
 - Add `RunConfig.solver_mode`, `RunConfig.foresight_lambda`, `RunConfig.endpoint_target_shares`, `RunConfig.endpoint_year`, `RunConfig.endpoint_pct` fields.
 - Emit schema fields per §6.4.
 
@@ -420,9 +435,9 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 **Artifact.** Complete `(endpoint, ISO, mode)` matrix, dashboard section, written analysis.
 
 **Scope.**
-- Run matrix: 7 ISOs × 4 endpoints × 2 modes (myopic, foresight) = 56 runs. Myopic runs hit cache on hit; foresight runs are fresh.
-- Plus legacy P1 runs (re-used; forcing-mechanism revision is out of scope here — use current `pathway1_*.json`).
-- Generate §6.1 per-year plots and §6.2 tables for all 28 cells.
+- Run matrix: 7 ISOs × 4 endpoints × 2 P3 modes (myopic, foresight) = 56 P3 runs. Myopic runs hit cache; foresight runs are fresh.
+- Plus 7 ISOs × 4 endpoints = 28 P1 runs (use current `pathway1_*.json` cache post-`3a22a06`; forcing mechanism is final).
+- Generate §6.1 per-year plots and §6.2 tables for all 28 cells, including the co-primary P1-vs-foresight-P3 headlines per §6.3.
 - Build dashboard section in `dashboard/` anchored to `abatement_dashboard.html` (scrollytell analysis page, per `CLAUDE.md` reference table).
 - Update `SPEC.md` current status; archive the prior current status to `SPEC_LOG.md`.
 
@@ -435,18 +450,17 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 
 ## 8. Open questions
 
-Five decisions require user sign-off before Phase B starts. These ship as `AskUserQuestion` cards at the end of this session.
+Five decisions required user sign-off before Phase B starts. Q1, Q3, Q4 answered 2026-04-21 and back-propagated into §§3–7. Q2 and Q5 pending follow-up.
 
-### Q1 — Algorithm choice
+### Q1 — Algorithm choice — **Answered: (b)**
 
-§4 recommends (b) single-pass argmin with lookahead penalty. Confirm or override.
+§4 recommended (b) single-pass argmin with lookahead penalty. **User chose (b).** Back-propagated into §4 (algorithm) and §7 Phase C (`solve_pathway_with_foresight` is the (b) implementation).
 
-- **(b) Single-pass argmin with lookahead penalty (recommended).** Cheap, additive, compounds cleanly with NOAK, degenerates to myopic at λ = 0. Ships in Phase C.
-- **(a) Terminal-anchored rollouts.** Prompt pack's choice. Expensive (~93 hr wall-clock on the 56-run matrix) but more-faithful lookahead.
-- **(c) Receding-horizon DP.** Provably optimal within discretization; engineering cost dominates value at this stage.
-- **Other.** User specifies.
+- **(b) Single-pass argmin with lookahead penalty** ← chosen.
+- ~~(a) Terminal-anchored rollouts~~ — rejected (~93 hr wall-clock).
+- ~~(c) Receding-horizon DP~~ — rejected (state-space explosion).
 
-### Q2 — λ tuning strategy
+### Q2 — λ tuning strategy — **Pending follow-up**
 
 Three options for how to choose λ:
 
@@ -454,28 +468,59 @@ Three options for how to choose λ:
 - **Fixed default λ = 0.15.** No calibration; ship a reasonable default. Document as the chosen reference. Pro: simplest; no calibration burden. Con: arbitrary.
 - **Swept and reported.** Run all 28 cells × 5 λ values = 140 runs. Dashboard shows λ-sensitivity per cell. Pro: transparency. Con: 2.5× compute; dashboard complexity.
 
-### Q3 — `endpoint_target_shares` heuristic
+### Q3 — `endpoint_target_shares` heuristic — **Answered: cheapest-cumulative-path argmin**
 
-The penalty term measures distance from a reference mix. That reference has to be specified. Three options:
+User chose the cheapest-cumulative-path argmin over the recommended replacement-cost argmin. Back-propagated into §5.6 (adds `_compute_endpoint_target_shares` preprocessing helper running a mini DP/MILP once per `(ISO, endpoint)` cell) and §7 Phase C scope.
 
-- **Replacement-cost argmin at `endpoint_year`.** Solve a single-year cost minimization at `endpoint_year` prices (with NOAK fully matured) to hit `endpoint_pct`. Use the resulting mix as the target. Pro: locally cost-optimal at the endpoint. Con: doesn't account for getting there.
-- **Cheapest-cumulative-path argmin.** Solve a smaller-state DP or MILP once per `(ISO, endpoint)` cell to find the minimum-cumulative-cost mix that hits `endpoint_pct` at `endpoint_year`. Use the mix at `endpoint_year` along that path as the target. Pro: actually "where we're going." Con: we've introduced a mini version of algorithm (c) or (e) as a preprocessing step. If we can solve that, why not solve it outright?
-- **User-provided reference mix** (e.g. an AEO 2026 reference case, or the NREL 2050 Standard Scenarios near-zero-carbon mix). Document the choice. Pro: external grounding. Con: imported assumptions.
+- ~~Replacement-cost argmin at `endpoint_year`~~ — simpler fallback if the cumulative-path solve proves expensive.
+- **Cheapest-cumulative-path argmin** ← chosen. 28 preprocessing solves (one per cell), results cached, reused across λ sweeps.
+- ~~User-provided reference mix~~ — not chosen; avoids imported assumptions.
 
-### Q4 — P1 comparison during the P1 forcing-mechanism revision
+### Q4 — P1 comparison — **Answered: P1 forcing mechanism has landed on master**
 
-P1's forcing mechanism is being revised in a separate session. Current P1 cache is the myopic-no-clean-firm counterfactual. Options:
+User confirmed P1 forcing revision landed (`b342947` + `3a22a06`: floor-ratchet skip for pathway '1' only). P1 cache is stable. Back-propagated into §6 (table P1 row updated; P1-vs-foresight-P3 headlines promoted from "secondary once P1 live" to "co-primary"), §7 Phase E (P1 cache reusable without caveat), and memo frontmatter.
 
-- **Report both myopic-P3 and foresight-P3 vs P1-current.** Publish the within-P3 comparison *and* the P1-vs-foresight-P3 comparison using the current P1 cache. Re-run the P1 comparison once the forcing-mechanism revision lands.
-- **Wait for P1 revision.** Publish only the within-P3 comparison; hold the P1-vs-foresight-P3 headline until P1 is final. Pro: avoids publishing a headline that will change. Con: delays the reliability-tax narrative.
-
-### Q5 — Schema versioning
-
-§6.4 proposes additive v2 changes. Options:
+### Q5 — Schema versioning — **Pending follow-up**
 
 - **Stay v2 additive.** New fields are optional with sensible defaults for absent values. Existing consumers read cleanly. `PATHWAY_OUTPUT_SCHEMA.md` gets a "v2.1" note listing the additive fields.
 - **Bump to v3.** Breaking schema version. Every consumer updates. Pro: cleaner long-term. Con: forces updates to every dashboard-side reader in the same PR.
 
 ---
 
-*§9 pending in subsequent commit.*
+## 9. What to delete from the prompt pack
+
+The prompt pack at `analysis/reliability-tax/reliability-tax_prompt-pack.md` (275 lines) was authored before the research premise was clarified. Specific sections are stale, misleading, or inconsistent with this memo's architecture. Rather than patch the prompt pack in place, delete the listed items and keep only those prompts that remain useful as prompt templates (the code-audit prompt and the regression-test prompt).
+
+### 9.1 Stale / invented file references
+
+- **L17 — `[SAMPLE_OUTPUTS]` (e.g. `pathway3_ep99.json.md`).** This file does not exist and has never existed. No `*.json.md` artifacts are produced by the pipeline. The actual sample-output convention is `dashboard/data/pathway_{iso}_ep{pct}.json`. Delete the reference.
+
+### 9.2 Misleading code references
+
+- **L13 — `step2_2a_cost_optimization.py`** cited as the file to audit for the trajectory solver. The file exists at `scripts/step2_2a_cost_optimization.py` but it is a 4,444-line **single-year 2025-snapshot cost optimizer**, not the trajectory solver. The trajectory solver is `scripts/step_2_3_pathway_optimizer.py`. Every "edit step2_2a_cost_optimization.py" instruction in the prompt pack should target `step_2_3_pathway_optimizer.py` instead.
+- **L65–67** — "In step2_2a_cost_optimization.py, identify the single-year 'evaluate all mixes → select cheapest' logic that could be reused conceptually for endpoint candidate selection" — the single-year logic in that file is not reusable for the trajectory solver. It uses a different candidate-generation path (single-year snapshot with no vintage ledger). The scorer pattern in `step_2_3_pathway_optimizer.py:1122–1131` is the actual reference.
+
+### 9.3 Framing that commits to the wrong algorithm
+
+- **L4, L84, L135 — "minimal-change edits" / "minimal diffs".** Endpoint-aware solver mode is additive net-new functionality, not a diff-minimizing refactor. Framing it as minimal underestimates the design surface (algorithm choice per §4, `endpoint_target_shares` heuristic per §8.3, λ calibration per §8.2, new `solve_pathway_with_foresight` function per §3, new schema fields per §6.4, diagnostic sidecar per §6.4). §3 and §4 treat this as a principled additive feature with an explicit architecture decision and an explicit algorithm selection, not a small edit.
+- **L84 — "terminal-candidate membership planning"** locks the prompt's proposal to algorithm (d) (terminal-constraint pre-commit) by construction. §4 explicitly rejects (d) as brittle against the fallback cascade. The more general framing is "endpoint-aware solver mode" which admits (a)–(e) on equal footing. Replace the prompt-pack's frame with this memo's frame.
+- **L89–93 — "terminal candidate generation," "endpoint year demand alignment," "deterministic tie-breaking for terminal candidates"** are implementation details for algorithm (d). Not applicable to recommended (b), which has no terminal-candidate set and no tie-breaking problem at the endpoint (the penalty defines an ordering).
+- **L146, L154, L208, L244 — "terminal candidate selection"** references throughout the prompt-pack's Prompt 2 (implementation) and Prompt 3 (regression tests). These all refer to algorithm (d)'s data structures. Under (b), replace with "foresight-penalty scorer" references.
+
+### 9.4 Stale defaults
+
+- **L139 — "`endpoint_year`: int (default 2050)".** Under the 4-endpoint collapse `{(2040, 90), (2045, 95), (2050, 99), (2050, 99.9)}`, `endpoint_year` takes values `{2040, 2045, 2050}` per-endpoint. There is no single default. Replace with "per-endpoint required field, one of `{2040, 2045, 2050}`."
+- **L103–107** — The 4-endpoint list is *correct* in the prompt pack (unlike the scoping mismatch in earlier sessions). Keep this content; it is the same set §3–§7 of this memo operate on.
+
+### 9.5 What's worth keeping
+
+- **L36–72 — Prompt 0 (code audit).** The audit prompt itself is a useful template for onboarding a fresh session onto `step_2_3_pathway_optimizer.py`. Keep, but replace every `step2_2a_cost_optimization.py` mention with `step_2_3_pathway_optimizer.py`.
+- **L220–275 — Prompt 3 (regression tests).** The regression-test scaffolding (bit-identical myopic output; schema back-compat check; cascade behavior diffed) is directly applicable to Phase C's exit gate (§7). Keep, but replace "terminal candidate logic stable across runs" with "foresight scorer output deterministic given (λ, `endpoint_target_shares`)."
+
+### 9.6 Recommended action
+
+Move `reliability-tax_prompt-pack.md` to `analysis/reliability-tax/_archive/reliability-tax_prompt-pack_v1.md` with a header note pointing to this memo. Do not delete — keep for provenance. This memo becomes the active design artifact; the prompt pack's audit and regression-test scaffolds are excerpted as the basis for Phase B and Phase C handoff prompts in `SPEC.md`.
+
+---
+
+*End of memo. §§1-9 complete.*
