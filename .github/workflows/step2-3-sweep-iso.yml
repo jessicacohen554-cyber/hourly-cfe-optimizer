@@ -73,7 +73,16 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install numpy pyarrow
+        run: |
+          pip install --upgrade pip
+          pip install \
+            numpy \
+            pandas \
+            pyarrow \
+            scipy \
+            numba \
+            tqdm \
+            requests
 
       - name: Ensure output dir
         run: mkdir -p analysis/reliability-tax/data/${{ inputs.iso }}
