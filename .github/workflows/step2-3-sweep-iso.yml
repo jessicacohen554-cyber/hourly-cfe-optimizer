@@ -1,8 +1,10 @@
 name: "Step 2.3 v2: Sweep Single ISO"
 
 # Runs the v2 pathway optimizer for one ISO at a time.
-# Each dispatch creates its own branch + draft PR so runs for different ISOs
-# never touch the same files in git.
+# Each dispatch pushes its own auto/* branch so runs for different ISOs
+# never touch the same files in git. The branch follows the naming convention
+# consumed by .github/workflows/squash-pipeline-branches.yml — run that
+# workflow after a batch of ISO sweeps to consolidate them into master.
 #
 # Outputs per run:
 #   analysis/reliability-tax/data/<ISO>/pathway*_ep*.json   (50 combos)
@@ -57,7 +59,6 @@ jobs:
     timeout-minutes: 180
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout
@@ -157,9 +158,9 @@ jobs:
       - name: Commit + push to per-ISO branch
         env:
           ISO: ${{ inputs.iso }}
-          RUN_ID: ${{ github.run_id }}
         run: |
-          branch="sweep/${ISO}-${RUN_ID}"
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-step2-3-sweep-${ISO}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "${branch}"
@@ -169,30 +170,36 @@ jobs:
           git add "data/step2.1-ef/" 2>/dev/null || true
           count=$(ls "analysis/reliability-tax/data/${ISO}/"pathway*_ep*.json 2>/dev/null | wc -l)
           git commit -m "step 2.3 — ${ISO} v2 sweep (${count} combos)"
-          git push origin "${branch}"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "${branch}" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
           echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
           echo "COMBO_COUNT=${count}" >> "${GITHUB_ENV}"
 
-      - name: Create draft PR
+      - name: Summary
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISO: ${{ inputs.iso }}
         run: |
-          gh pr create \
-            --draft \
-            --base "${{ inputs.base_branch }}" \
-            --head "${BRANCH}" \
-            --title "step 2.3 — ${ISO} v2 sweep (${COMBO_COUNT} combos)" \
-            --body "Single-ISO sweep output for **${ISO}**.
-
-          **Contents**
-          - ${COMBO_COUNT}/50 JSON payloads under \`analysis/reliability-tax/data/${ISO}/\`
-          - \`analysis/reliability-tax/data/MANIFEST_${ISO}.parquet\` (aggregation shard)
-          - Stage-1 peakclean sidecars under \`data/step2.1-ef/\` (if newly built)
-
-          **To merge:** review, mark ready, squash-merge to \`${{ inputs.base_branch }}\`.
-
-          After all 7 ISO PRs land, rebuild the global MANIFEST locally from the per-ISO shards — see the header of \`.github/workflows/step2-3-sweep-iso.yml\` for the one-liner."
+          {
+            echo "## step 2.3 — ${ISO} v2 sweep"
+            echo ""
+            echo "- Branch: \`${BRANCH}\`"
+            echo "- Combos: ${COMBO_COUNT}/50 JSON payloads"
+            echo "- Manifest shard: \`analysis/reliability-tax/data/MANIFEST_${ISO}.parquet\`"
+            echo ""
+            echo "Run the **Squash Pipeline Branches** workflow with pattern \`auto/.*step2-3-sweep\` to consolidate all ISO runs into master."
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload artifact backup
         uses: actions/upload-artifact@v4
