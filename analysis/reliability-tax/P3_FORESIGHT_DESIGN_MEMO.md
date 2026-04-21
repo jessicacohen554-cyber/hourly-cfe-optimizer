@@ -244,4 +244,116 @@ def _score_year_with_endpoint(mix, floors, twh_total, year, pathway, λ, target_
 
 ---
 
-*§§6-9 pending in subsequent commits.*
+## 6. Comparison framework
+
+The framework compares three solver modes at each of the 4 endpoints × 7 ISOs = 28 `(endpoint, ISO)` cells:
+
+| Mode | What it represents | Current status |
+|---|---|---|
+| **P1 (myopic)** | Year-by-year least-cost with no endpoint awareness. The BAU counterfactual. | Cached (current `pathway1_*.json`). Forcing mechanism for P1 being revised in a separate session. |
+| **Myopic-P3** | Current P3: argmin year-by-year; NOAK=2035 but no endpoint steering. | Cached (current `pathway3_*.json`), equivalent to foresight (b) with λ = 0. |
+| **Foresight-P3** | Recommended algorithm (b): penalized argmin that steers toward `endpoint_target_shares`. | New. Produced by `solve_pathway_with_foresight`. |
+
+The within-P3 comparison (myopic-P3 vs foresight-P3) is the *direct product* of this memo. The P1-vs-foresight-P3 comparison is the *downstream headline* that surfaces once P1 is revised.
+
+### 6.1 Per-year plots (one panel per `(endpoint, ISO)` cell)
+
+For each cell, four stacked-panel time series over `[start_year, endpoint_year]`:
+
+1. **Achieved CFE share** — line per mode. Shows trajectory to endpoint.
+2. **Gas fleet MW (existing + new, total)** — line per mode. Shows whether foresight avoids gas buildout.
+3. **System cost $/MWh (undiscounted, levelized to annual demand)** — line per mode. Shows year-by-year cost differences.
+4. **Resource stack (TWh) — stacked area** — one panel per mode (three panels side by side). Shows composition differences directly.
+
+Scrollytell section in the dashboard presents one cell at a time with mode toggles.
+
+### 6.2 Tables — per `(endpoint, ISO)` cell
+
+| Metric | P1 | Myopic-P3 | Foresight-P3 | Δ (myopic → foresight) |
+|---|---|---|---|---|
+| Cumulative undiscounted cost ($B) | … | … | … | … |
+| Cumulative discounted cost ($B, r=0.07) | … | … | … | … |
+| Reliability tax ($/MWh-yr, averaged) | … | … | … | … |
+| Gas fleet peak MW | … | … | … | … |
+| Stranded gas capex ($B) | … | … | … | … |
+| Time-to-90% CFE (year) | … | … | … | … |
+| Endpoint mix — existing clean (%) | … | … | … | … |
+| Endpoint mix — new clean firm (%) | … | … | … | … |
+| Endpoint mix — new VRE + storage (%) | … | … | … | … |
+| Endpoint mix — gas firming (%) | … | … | … | … |
+| Cascade activations (count) | … | … | … | … |
+
+**Note on time-to-90%.** At endpoint `(2040, 90)` this metric equals `endpoint_year` by construction for any feasible run. At endpoints `(2045, 95)`, `(2050, 99)`, `(2050, 99.9)` it's informative — foresight-P3 should hit 90% earlier than myopic-P3 if the steering is working.
+
+### 6.3 Headline metric
+
+Primary headline (within-P3 foresight penalty):
+
+```
+foresight_penalty_vs_myopic  =  (cum_undisc_cost_myopic  −  cum_undisc_cost_foresight)
+                               /  cum_undisc_cost_foresight
+```
+
+Expected sign: positive. A positive value means myopic-P3 is more expensive cumulatively than foresight-P3 — the foresight-planner wins on total cost by spending more early to avoid paying more late.
+
+**Interpretation notes.**
+- Magnitude is expected to be small on ERCOT at `(2040, 90)` — the endpoint is close and the ratchet does most of the enforcement work. Larger on `(2050, 99)` and `(2050, 99.9)` where foresight has more years to front-load cheap avoidance.
+- Negative values mean the penalty parameterization is wrong (λ too high, or `endpoint_target_shares` poorly chosen). Sensitivity sweep (§7 phase D) calibrates λ to keep this positive across all 28 cells.
+- Undiscounted is the headline; discounted is reported in tables as a sensitivity.
+
+Secondary headlines (once P1 forcing is live and out-of-scope exits):
+
+```
+p1_penalty_vs_foresight  =  (cum_undisc_cost_p1  −  cum_undisc_cost_foresight_p3)
+                            /  cum_undisc_cost_foresight_p3
+```
+
+```
+p1_reliability_tax_premium  =  reliability_tax_p1  −  reliability_tax_foresight_p3
+```
+
+### 6.4 Schema changes
+
+Backward-compatible additive on the v2 schema frozen 2026-04-20 (per `reliability_tax/PATHWAY_OUTPUT_SCHEMA.md`). No breaking changes.
+
+**New fields in `config` block:**
+
+```json
+{
+  "config": {
+    "solver_mode": "foresight",              // NEW. One of {"myopic", "foresight"}. Default "myopic" if absent (back-compat).
+    "foresight_lambda": 0.15,                // NEW. Null if solver_mode = "myopic".
+    "endpoint_year": 2045,                   // NEW. Per-endpoint; replaces implicit 2050.
+    "endpoint_pct": 95.0,                    // NEW. Per-endpoint.
+    "endpoint_target_shares": { ... },       // NEW. The reference mix used as penalty target. Null if myopic.
+    ...existing fields unchanged...
+  }
+}
+```
+
+**New fields in `headline` block:**
+
+```json
+{
+  "headline": {
+    "foresight_penalty_vs_myopic": 0.042,    // NEW. Null if no paired myopic run.
+    "time_to_90pct": 2041,                   // NEW. Integer year; null if never hit.
+    "cascade_activations": 2,                // NEW. Counter; also in diagnostics.
+    ...existing fields unchanged...
+  }
+}
+```
+
+**Diagnostic sidecar (new, optional):** `pathway_{iso}_ep{pct}_{mode}_foresight_diagnostics.json` with per-year `share_distance_to_endpoint`, `penalty_component`, `sunk_cost_component`, `cascade_tier_activated`, `selected_mix_candidate_rank_among_feasible`. Emitted only when `solver_mode == "foresight"`.
+
+### 6.5 Endpoint semantics and post-endpoint behavior
+
+Under the 4-endpoint collapse, `endpoint_year` ∈ {2040, 2045, 2050}. The solver simulates `[start_year, endpoint_year]` inclusive and stops. Post-endpoint behavior (e.g. 2041–2050 for an ep90 run) is **not** simulated — the ledger, cost accumulation, and cascade counters all terminate at `endpoint_year`.
+
+**Rationale.** The research question is "what does planning to endpoint `(ey, pct)` cost?" not "what happens after you arrive." Post-endpoint simulation adds cost to all runs equally without resolving the planning question.
+
+**P1 comparison rule.** P1 runs its own `endpoint_year`, matching the P3 pair. Cumulative-cost comparisons at `(endpoint_year, endpoint_pct)` are apples-to-apples because both solvers cover the same years.
+
+---
+
+*§§7-9 pending in subsequent commits.*
