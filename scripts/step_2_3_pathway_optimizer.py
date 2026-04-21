@@ -715,9 +715,20 @@ def operating_cost_matrix(ef: dict, demand_vec: np.ndarray, cfg: 'RunConfig') ->
     """Per-year-per-mix operating cost (USD). Resource share × LCOE_at_y × demand."""
     n = len(ef['hourly_match_score'])
     out = np.zeros((N_YEARS, n), dtype=np.float64)
+    annual_mwh_vec = demand_vec * 1.0e6
     for r in _RESOURCE_COLS:
         share = ef[r] / 100.0          # (n,)
         if share.sum() == 0:
+            continue
+        if r == 'clean_firm':
+            # Merit-order blend across uprate → geo → cheaper(new-nuke|CCS).
+            # Tranche 1 (uprate) carries no TX (grid-connected); tranches 2-4
+            # already include TX inside pc.compute_clean_firm_tranches. Output
+            # is (N_YEARS, n) $/MWh — no scalar TX addition here.
+            tranches = decompose_clean_firm_tranches(
+                ef[r], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
+            blended_yn = tranches['blended_lcoe']             # (Y, n)
+            out += annual_mwh_vec[:, None] * share[None, :] * blended_yn
             continue
         tx = _resource_tx(cfg.iso, r, cfg.tx_level)
         # (N_YEARS,) lcoe+tx vector — lru_cache makes repeated calls free
@@ -761,8 +772,19 @@ def _pathway_mask(ef: dict, cfg: 'RunConfig') -> np.ndarray:
     no_ccs = ccs <= 0.5
     mask = np.zeros((N_YEARS, n), dtype=bool)
     if cfg.pathway in ('1', '1a'):
-        eligible = no_clean_firm & no_ccs
-        mask[:] = eligible
+        # P1/P1a — no new nuclear, no CCS, but existing-nuclear UPRATES are
+        # still allowed. Allow mixes up to baseline clean_firm + uprate-cap
+        # fraction (UPRATE_CAP_TWH / annual demand). The tranche decomposer
+        # (uprate-only locked branch) flags over-cap targets as
+        # feasible=False; Phase 4 propagates that to ∞ cost so they lose
+        # the argmin. For Phase 3 the cost signal alone does the work.
+        uprate_cap_twh = float(pc.UPRATE_CAP_TWH[cfg.iso])
+        demand_twh_y = demand_twh_vec(cfg.iso, cfg.demand_growth_level)
+        uprate_cap_pct_y = uprate_cap_twh / np.maximum(demand_twh_y, 1e-6) * 100.0
+        # (Y, n) bool — mix's clean_firm share ≤ baseline + uprate-cap (+0.5 pct
+        # slack to admit the nearest integer EF bucket above the cap).
+        cf_allowed = cf[None, :] <= (floor + uprate_cap_pct_y[:, None] + 0.5)
+        mask[:] = cf_allowed & no_ccs[None, :]
     else:
         if cfg.pathway == '3':
             unlock_year = pc.NOAK_YEAR_BY_PATHWAY['3'] - 5
@@ -978,12 +1000,19 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     fuel_unit = pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso]['Medium']
     gas_fuel = gas_fuel_cost_matrix(ef, demand_vec, fuel_unit)
 
-    # Argmin needs the ratchet: active_new_gas_fleet[y] = max over y' <= y.
-    # Approximate by using gas_required directly in cost; ratchet applied in Phase B.
-    new_gas_capex_y = (pc.NEW_CCGT_COST_KW_YR[cfg.iso] * 1000.0) * gas_required
+    # Ratcheted new-gas fleet: once n MW are built in year y, those MW stay
+    # on the books for all subsequent years and carry annualized capex + FOM.
+    # The previous v2 used per-year gas_required directly, which lets a mix
+    # "drop" its gas in a year where clean_pct is temporarily high — an
+    # artifact that biased the argmin toward gas-heavy early mixes vs.
+    # clean-dominant early mixes. Take the cumulative max along axis=0 (years)
+    # so fleet_y[y, n] = max over y' ≤ y of gas_required[y', n].
+    ratchet_fleet_y = np.maximum.accumulate(gas_required, axis=0)
+    new_gas_capex_y = (pc.NEW_CCGT_COST_KW_YR[cfg.iso] * 1000.0) * ratchet_fleet_y
+    new_gas_fom_y   = (pc.NEW_CCGT_FOM_KW_YR[cfg.iso]  * 1000.0) * ratchet_fleet_y
     existing_fom = (float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
                     * pc.EXISTING_GAS_FOM_KW_YR[cfg.iso] * 1000.0)
-    cost_matrix = op_cost + new_gas_capex_y + gas_fuel + existing_fom
+    cost_matrix = op_cost + new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom
     valid = pmask & cfe_mask
     cost_matrix = np.where(valid, cost_matrix, np.inf)
 
@@ -992,8 +1021,9 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         if not np.isfinite(cost_matrix[yi]).any():
             # No feasible mix this year; relax cfe constraint
             relaxed = pmask[yi] & (score_vec >= cfe_targets[yi] - 5.0)
-            row = np.where(relaxed, op_cost[yi] + new_gas_capex_y[yi] + gas_fuel[yi]
-                           + existing_fom, np.inf)
+            row = np.where(relaxed,
+                           op_cost[yi] + new_gas_capex_y[yi] + new_gas_fom_y[yi]
+                           + gas_fuel[yi] + existing_fom, np.inf)
             winners[yi] = int(np.argmin(row))
         else:
             winners[yi] = int(np.argmin(cost_matrix[yi]))
@@ -1163,6 +1193,7 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
     ledger = _build_ledger(ef, winners, cfg)
     priced_curt_vec = _priced_vre_curtailment_vec(ef, winners, demand_vec, cfg)
     new_gas_annualized = active_fleet * pc.NEW_CCGT_COST_KW_YR[cfg.iso] * 1000.0
+    new_gas_fom_y_out  = active_fleet * pc.NEW_CCGT_FOM_KW_YR[cfg.iso]  * 1000.0
     existing_fom = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso]) * pc.EXISTING_GAS_FOM_KW_YR[cfg.iso] * 1000.0
     fuel_unit = pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso]['Medium']
     gas_fuel_y = np.maximum(0.0, 1.0 - achieved_cfe / 100.0) * demand_vec * 1.0e6 * fuel_unit
@@ -1172,11 +1203,12 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
         active_v = [v for v in ledger.entries if v.cod_year <= year and (v.retire_year is None or v.retire_year > year)]
         gross_op = sum(v.twh_per_year * 1.0e6 * (v.locked_lcoe + v.tx_adder) for v in active_v) \
                    * (demand_vec[yi] / max(1e-6, demand_vec[0]))  # scale by demand growth
-        net = gross_op + new_gas_annualized[yi] + existing_fom + gas_fuel_y[yi] + priced_curt_vec[yi]
+        new_gas_annualized_plus_fom = float(new_gas_annualized[yi] + new_gas_fom_y_out[yi])
+        net = gross_op + new_gas_annualized_plus_fom + existing_fom + gas_fuel_y[yi] + priced_curt_vec[yi]
         annual_rows.append({
             'year': year, 'demand_twh': round(float(demand_vec[yi]), 3),
             'gross_operating_usd': round(gross_op, 2),
-            'new_gas_annualized_capex_fom_usd': round(float(new_gas_annualized[yi]), 2),
+            'new_gas_annualized_capex_fom_usd': round(new_gas_annualized_plus_fom, 2),
             'existing_gas_fom_carried_usd': round(existing_fom, 2),
             'gas_fuel_usd': round(float(gas_fuel_y[yi]), 2),
             'capacity_rev_netted_usd': 0.0,
@@ -1201,7 +1233,7 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
 
     rt_components = {
         'new_gas_capex_annualized_usd': round(float(new_gas_annualized.sum()), 2),
-        'new_gas_fom_usd': 0.0,
+        'new_gas_fom_usd': round(float(new_gas_fom_y_out.sum()), 2),
         'existing_gas_fom_carried_usd': round(existing_fom * N_YEARS, 2),
         'priced_vre_curtailment_usd': round(float(priced_curt_vec.sum()), 2),
         'vre_storage_overbuild_capex_usd': 0.0,
