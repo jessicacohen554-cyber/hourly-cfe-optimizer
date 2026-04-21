@@ -1160,7 +1160,13 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
 
         # Update floors from the winning mix (monotone non-decreasing).
         floor_twh_r    = np.maximum(floor_twh_r, target_twh_nr[w])
-        floor_twh_cf   = max(floor_twh_cf,   float(target_twh_cf_n[w]))
+        # P1: total-CF floor stays frozen at existing 2025 CF TWh (= share
+        # floor that declines as demand grows). No new-CF tranche unlocks
+        # beyond the fixed UPRATE_CAP_TWH, so ratcheting the floor would
+        # force later years to carry prior winners' peak absolute CF with no
+        # buildable tranche to cover the gap. P1a keeps the ratchet.
+        if cfg.pathway != '1':
+            floor_twh_cf = max(floor_twh_cf, float(target_twh_cf_n[w]))
         floor_uprate   = max(floor_uprate,   float(uprate_twh_yn[yi, w]))
         floor_geo      = max(floor_geo,      float(geo_twh_yn[yi, w]))
         floor_nuke_new = max(floor_nuke_new, float(nuke_new_twh_yn[yi, w]))
