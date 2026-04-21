@@ -8,9 +8,10 @@
 >
 > **Decisions locked in (user answers to §8 cards, back-propagated 2026-04-21):**
 > - **Q1 (algorithm):** (b) Single-pass argmin with lookahead penalty. See §4(b).
+> - **Q2 (λ tuning):** Per-ISO λ. Phase D calibrates λ independently for each of the 7 ISOs (7 × 5 candidate values = 35 calibration runs). Each ISO's chosen λ applies across all 4 endpoints for that ISO. See §7 Phase D.
 > - **Q3 (target mix):** Cheapest-cumulative-path argmin. See §5.6 and §8 Q3.
 > - **Q4 (P1 comparison):** Publish both within-P3 and P1-vs-foresight-P3 headlines using the current (post-`3a22a06`) P1 cache. See §6.
-> - **Q2 (λ tuning) and Q5 (schema versioning):** Pending follow-up.
+> - **Q5 (schema):** Breaking v3 bump. All dashboard-side consumers update in lockstep with Phase E. See §6.4.
 
 ---
 
