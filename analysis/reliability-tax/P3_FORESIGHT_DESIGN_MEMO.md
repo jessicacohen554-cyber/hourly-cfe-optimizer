@@ -8,10 +8,10 @@
 >
 > **Decisions locked in (user answers to §8 cards, back-propagated 2026-04-21):**
 > - **Q1 (algorithm):** (b) Single-pass argmin with lookahead penalty. See §4(b).
-> - **Q2 (λ tuning):** Per-ISO λ. Phase D calibrates λ independently for each of the 7 ISOs (7 × 5 candidate values = 35 calibration runs). Each ISO's chosen λ applies across all 4 endpoints for that ISO. See §7 Phase D.
-> - **Q3 (target mix):** Cheapest-cumulative-path argmin. See §5.6 and §8 Q3.
+> - **Q2 (λ tuning):** Per-ISO λ, calibrated and reported at the same endpoint — (2050, 99) chosen as the calibration endpoint. Phase D runs 7 ISOs × 5 candidate λ values = 35 calibration runs. Each ISO's chosen λ applies across all 4 endpoints for that ISO. See §7 Phase D.
+> - **Q3 (target mix):** Cheapest-cumulative-path argmin. See §5.6.
 > - **Q4 (P1 comparison):** Publish both within-P3 and P1-vs-foresight-P3 headlines using the current (post-`3a22a06`) P1 cache. See §6.
-> - **Q5 (schema):** Breaking v3 bump. All dashboard-side consumers update in lockstep with Phase E. See §6.4.
+> - **Q5 (schema):** Breaking v3 bump. All dashboard-side consumers update in lockstep with Phase E's pipeline PR. See §6.4.
 
 ---
 
@@ -329,18 +329,27 @@ Expected sign: both positive. A positive `p1_penalty_vs_foresight` is the reliab
 
 ### 6.4 Schema changes
 
-Backward-compatible additive on the v2 schema frozen 2026-04-20 (per `reliability_tax/PATHWAY_OUTPUT_SCHEMA.md`). No breaking changes.
+**Breaking v3 bump** per §8 Q5. v2 → v3 version bump; every dashboard-side consumer of `pathway_*.json` updates in lockstep with Phase E's pipeline PR. No back-compat shim — old v2 cached outputs are regenerated under v3 during Phase E or read through a one-time migration script (Phase E deliverable).
+
+**Explicit version field (new at top level):**
+
+```json
+{
+  "schema_version": "3.0.0",   // NEW. Required. Readers MUST check and refuse to parse lower versions.
+  ...
+}
+```
 
 **New fields in `config` block:**
 
 ```json
 {
   "config": {
-    "solver_mode": "foresight",              // NEW. One of {"myopic", "foresight"}. Default "myopic" if absent (back-compat).
-    "foresight_lambda": 0.15,                // NEW. Null if solver_mode = "myopic".
-    "endpoint_year": 2045,                   // NEW. Per-endpoint; replaces implicit 2050.
-    "endpoint_pct": 95.0,                    // NEW. Per-endpoint.
-    "endpoint_target_shares": { ... },       // NEW. The reference mix used as penalty target. Null if myopic.
+    "solver_mode": "foresight",              // Required. One of {"myopic", "foresight"}.
+    "foresight_lambda": 0.12,                // Required when solver_mode = "foresight"; null otherwise. Per-ISO value (see §7 Phase D).
+    "endpoint_year": 2045,                   // Required. One of {2040, 2045, 2050}. Replaces implicit 2050.
+    "endpoint_pct": 95.0,                    // Required. One of {90.0, 95.0, 99.0, 99.9}.
+    "endpoint_target_shares": { ... },       // Required when solver_mode = "foresight"; null otherwise. Produced by _compute_endpoint_target_shares per §5.6.
     ...existing fields unchanged...
   }
 }
@@ -352,6 +361,8 @@ Backward-compatible additive on the v2 schema frozen 2026-04-20 (per `reliabilit
 {
   "headline": {
     "foresight_penalty_vs_myopic": 0.042,    // NEW. Null if no paired myopic run.
+    "p1_penalty_vs_foresight": 0.087,        // NEW. Null if no paired P1 run.
+    "p1_reliability_tax_premium": 3.1,       // NEW. $/MWh-yr. Null if no paired P1 run.
     "time_to_90pct": 2041,                   // NEW. Integer year; null if never hit.
     "cascade_activations": 2,                // NEW. Counter; also in diagnostics.
     ...existing fields unchanged...
@@ -359,7 +370,11 @@ Backward-compatible additive on the v2 schema frozen 2026-04-20 (per `reliabilit
 }
 ```
 
-**Diagnostic sidecar (new, optional):** `pathway_{iso}_ep{pct}_{mode}_foresight_diagnostics.json` with per-year `share_distance_to_endpoint`, `penalty_component`, `sunk_cost_component`, `cascade_tier_activated`, `selected_mix_candidate_rank_among_feasible`. Emitted only when `solver_mode == "foresight"`.
+**Diagnostic sidecar (new):** `pathway_{iso}_ep{pct}_{mode}_foresight_diagnostics.json` with per-year `share_distance_to_endpoint`, `penalty_component`, `sunk_cost_component`, `cascade_tier_activated`, `selected_mix_candidate_rank_among_feasible`. Emitted only when `solver_mode == "foresight"`.
+
+**Endpoint-target-shares cache (new):** `dashboard/data/endpoint_target_shares_{iso}_ep{pct}.json`. One file per `(ISO, endpoint)` cell. Output of `_compute_endpoint_target_shares` preprocessing (§5.6). Schema is a flat object mapping tranche class → share fraction.
+
+**Phase E dashboard-PR coupling.** v3 breaking means the Phase E PR touches: `scripts/step_2_3_pathway_optimizer.py` (pipeline), `reliability_tax/PATHWAY_OUTPUT_SCHEMA.md` (docs), every `dashboard/*.html` that reads `pathway_*.json`, and the `dashboard/js/*.js` loaders. No field rename is gratuitous — each `schema_version` check guards against silent version mismatch after the PR lands.
 
 ### 6.5 Endpoint semantics and post-endpoint behavior
 
@@ -379,10 +394,11 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 
 **Artifact.** `analysis/reliability-tax/P3_FORESIGHT_DESIGN_MEMO.md` (sections 1-9, consistency-reviewed).
 
-**Exit gate.**
-- User answers the §8 open-question cards (Q1–Q5).
-- §8 answers back-propagated into §4 (algorithm parameterization from Q1), §6 (schema names from Q5), and §7 Phase B/C/D (λ strategy from Q2, target-shares heuristic from Q3, P1 comparison scope from Q4) before closing the memo.
-- Memo committed + pushed to `claude/p3-foresight-sections-4-9-qn9uO`.
+**Exit gate.** *Met as of 2026-04-21.*
+- User answered all §8 cards (Q1–Q5). ✓
+- Answers back-propagated into frontmatter, §4 (algorithm from Q1), §5.6 (target-shares heuristic from Q3), §6 (P1 comparison scope from Q4), §6.4 (schema v3 from Q5), §7 Phase D (per-ISO λ from Q2), and §8 answer blocks. ✓
+- Memo committed + pushed to `claude/p3-foresight-sections-4-9-qn9uO`. ✓
+- Ready to hand off to Phase B.
 
 ### Phase B — Read-only foresight instrumentation
 
@@ -416,42 +432,48 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 - Unit test on a synthetic 5-year, 3-resource toy problem: known-solution check where hand-computed λ > 0 forces the same argmin as `endpoint_target_shares`.
 - Phase B sidecar's foresight-winner predictions match Phase C's actual-winner decisions at λ = 0.15 (sanity check that Phase B instrumentation was correctly implementing the same algorithm).
 
-### Phase D — ERCOT calibration run (2 cells)
+### Phase D — Per-ISO λ calibration at `(2050, 99)` (35 runs)
 
-**Artifact.** Full foresight-P3 runs on ERCOT at endpoints `(2040, 90)` and `(2050, 99)`. λ swept across {0.0, 0.05, 0.15, 0.5, 1.5}.
+**Artifact.** Per-ISO λ calibration sweep at the `(2050, 99)` endpoint across all 7 ISOs. λ swept across `{0.0, 0.05, 0.15, 0.5, 1.5}` per §8 Q2 answer.
 
 **Scope.**
-- Run matrix: 1 ISO × 2 endpoints × 1 mode (foresight) × 5 λ values = 10 runs.
-- For each run, compare to the existing myopic-P3 cache for the same `(endpoint, ISO)`.
-- Produce the §6.3 headline metric per run.
-- Produce the §6.2 table for ERCOT-(2040,90) and ERCOT-(2050,99).
+- Run matrix: 7 ISOs × 1 endpoint (`(2050, 99)`) × 1 mode (foresight) × 5 λ values = 35 calibration runs.
+- For each run, compare to the existing myopic-P3 cache for ISO-(2050, 99).
+- Per ISO, select the λ that maximizes `foresight_penalty_vs_myopic` without inflating cascade activations above the myopic baseline by more than 1 event.
+- Emit 7 chosen λ values — one per ISO — to `dashboard/data/foresight_lambda_by_iso.json`. Phase E reads this.
+- Per §8 Q2 decision, `(2050, 99)` serves as both calibration and reporting endpoint. User acknowledged the mild circularity of same-endpoint calibration-and-evaluation; no held-out endpoint protocol.
 
 **Exit gate.**
-- `foresight_penalty_vs_myopic > 0` for at least one λ value on `(2050, 99)`. If all λ values give negative penalty, re-tune `endpoint_target_shares` (see §8 open question iii) before proceeding.
-- Cascade activation count at the chosen λ is within ±1 of myopic cascade count. If foresight inflates cascade firing, either λ is too aggressive or the ratchet is under-constraining something subtle — debug before Phase E.
-- User picks production λ based on the penalty sweep and cascade behavior.
+- All 7 ISOs produce a chosen λ with `foresight_penalty_vs_myopic > 0`. If any ISO has all-negative penalties across the λ sweep, `endpoint_target_shares` is miscalibrated for that ISO — re-run the preprocessing helper (§5.6) with the replacement-cost-argmin fallback before proceeding.
+- For the chosen per-ISO λ, cascade activation count is within myopic_count + 1 for that ISO.
+- User approves the 7 chosen λ values before Phase E launches.
 
-### Phase E — Full 7-ISO × 4-endpoint sweep + dashboard
+### Phase E — Full 7-ISO × 4-endpoint sweep + dashboard + schema v3 lockstep
 
-**Artifact.** Complete `(endpoint, ISO, mode)` matrix, dashboard section, written analysis.
+**Artifact.** Complete `(endpoint, ISO, mode)` matrix, dashboard section, written analysis, schema v3 cutover.
 
 **Scope.**
-- Run matrix: 7 ISOs × 4 endpoints × 2 P3 modes (myopic, foresight) = 56 P3 runs. Myopic runs hit cache; foresight runs are fresh.
-- Plus 7 ISOs × 4 endpoints = 28 P1 runs (use current `pathway1_*.json` cache post-`3a22a06`; forcing mechanism is final).
+- Run matrix: 7 ISOs × 4 endpoints × 2 P3 modes (myopic, foresight) = 56 P3 runs. Myopic runs regenerate under v3 schema; foresight runs are fresh. Each foresight run uses the per-ISO λ from Phase D's `foresight_lambda_by_iso.json`.
+- Plus 7 ISOs × 4 endpoints = 28 P1 runs (regenerate `pathway1_*.json` under v3 schema; forcing mechanism is final post-`3a22a06`).
+- Run the migration script once to convert any retained legacy v2 outputs → v3 (or drop them — Phase E discussion).
 - Generate §6.1 per-year plots and §6.2 tables for all 28 cells, including the co-primary P1-vs-foresight-P3 headlines per §6.3.
 - Build dashboard section in `dashboard/` anchored to `abatement_dashboard.html` (scrollytell analysis page, per `CLAUDE.md` reference table).
+- Update every `dashboard/*.html` + `dashboard/js/*.js` that reads `pathway_*.json` to honor `schema_version == "3.0.0"` and the new field names. v3 breaking coupling per §6.4.
+- Update `reliability_tax/PATHWAY_OUTPUT_SCHEMA.md` — replace v2 frozen-2026-04-20 with v3 frozen-Phase-E-date.
 - Update `SPEC.md` current status; archive the prior current status to `SPEC_LOG.md`.
 
 **Exit gate.**
-- All 56 foresight runs complete; 28 paired penalty metrics computed.
-- Dashboard renders cleanly on all cells; `/fix-prose` passes on the written analysis.
+- All 56 foresight runs complete; 28 paired `foresight_penalty_vs_myopic` and 28 paired `p1_penalty_vs_foresight` metrics computed.
+- Every dashboard consumer of `pathway_*.json` updated to v3 in the same PR. CI renders all dashboard pages without console errors.
+- `/fix-prose` passes on the written analysis.
+- `PATHWAY_OUTPUT_SCHEMA.md` v3 doc committed.
 - `LESSONS.md` gets the "what we'd do differently next time" line.
 
 ---
 
 ## 8. Open questions
 
-Five decisions required user sign-off before Phase B starts. Q1, Q3, Q4 answered 2026-04-21 and back-propagated into §§3–7. Q2 and Q5 pending follow-up.
+Five decisions required user sign-off before Phase B starts. All five answered 2026-04-21 and back-propagated into §§3–7 + frontmatter. Questions are preserved below as provenance.
 
 ### Q1 — Algorithm choice — **Answered: (b)**
 
@@ -461,13 +483,13 @@ Five decisions required user sign-off before Phase B starts. Q1, Q3, Q4 answered
 - ~~(a) Terminal-anchored rollouts~~ — rejected (~93 hr wall-clock).
 - ~~(c) Receding-horizon DP~~ — rejected (state-space explosion).
 
-### Q2 — λ tuning strategy — **Pending follow-up**
+### Q2 — λ tuning strategy — **Answered: per-ISO λ at `(2050, 99)`, same-endpoint calibration-and-evaluation**
 
-Three options for how to choose λ:
+User chose per-ISO λ over the recommended single ERCOT-calibrated λ. Reasoning: ISOs have genuinely different physics (hydro-heavy MISO ≠ gas-heavy ERCOT ≠ WECC-wide CAISO), so one global λ would over- or under-steer. User additionally decided to skip the held-out-endpoint protocol — calibration and reporting both happen at `(2050, 99)`, accepting mild circularity for protocol simplicity. Back-propagated into §7 Phase D (7 ISOs × 5 candidate values = 35 calibration runs at `(2050, 99)`; output `foresight_lambda_by_iso.json` feeds Phase E).
 
-- **Per-cell calibration.** Phase D sweeps λ ∈ {0.0, 0.05, 0.15, 0.5, 1.5} on ERCOT-(2050,99); pick the λ that maximizes `foresight_penalty_vs_myopic` without inflating cascade activations. Apply that single λ to all 28 cells. Pro: one number, comparable across cells. Con: ERCOT-calibrated λ may be wrong for smaller/larger ISOs.
-- **Fixed default λ = 0.15.** No calibration; ship a reasonable default. Document as the chosen reference. Pro: simplest; no calibration burden. Con: arbitrary.
-- **Swept and reported.** Run all 28 cells × 5 λ values = 140 runs. Dashboard shows λ-sensitivity per cell. Pro: transparency. Con: 2.5× compute; dashboard complexity.
+- ~~Fixed default λ = 0.15~~ — not chosen.
+- ~~Per-cell calibration (one λ all cells)~~ — not chosen.
+- **Per-ISO calibration at `(2050, 99)`** ← chosen.
 
 ### Q3 — `endpoint_target_shares` heuristic — **Answered: cheapest-cumulative-path argmin**
 
@@ -481,10 +503,12 @@ User chose the cheapest-cumulative-path argmin over the recommended replacement-
 
 User confirmed P1 forcing revision landed (`b342947` + `3a22a06`: floor-ratchet skip for pathway '1' only). P1 cache is stable. Back-propagated into §6 (table P1 row updated; P1-vs-foresight-P3 headlines promoted from "secondary once P1 live" to "co-primary"), §7 Phase E (P1 cache reusable without caveat), and memo frontmatter.
 
-### Q5 — Schema versioning — **Pending follow-up**
+### Q5 — Schema versioning — **Answered: breaking v3 bump**
 
-- **Stay v2 additive.** New fields are optional with sensible defaults for absent values. Existing consumers read cleanly. `PATHWAY_OUTPUT_SCHEMA.md` gets a "v2.1" note listing the additive fields.
-- **Bump to v3.** Breaking schema version. Every consumer updates. Pro: cleaner long-term. Con: forces updates to every dashboard-side reader in the same PR.
+User chose the breaking v3 bump over the recommended v2 additive. Reasoning: user preferred to do the dashboard-side update work upfront for a cleaner long-term schema. Back-propagated into §6.4 (top-level `schema_version` field required; new fields required rather than optional; no back-compat shim) and §7 Phase E exit gate (every dashboard consumer updates in the same PR; `PATHWAY_OUTPUT_SCHEMA.md` cutover to v3; migration script for any retained legacy v2 outputs).
+
+- ~~Stay v2 additive~~ — not chosen.
+- **Bump to v3 breaking** ← chosen. Pipeline + schema doc + every dashboard reader + migration script land as one Phase E PR.
 
 ---
 
