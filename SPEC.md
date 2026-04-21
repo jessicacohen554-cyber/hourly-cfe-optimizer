@@ -3,7 +3,50 @@
 > Historical decisions and landed workstreams live in `SPEC_LOG.md`.
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-04-21.
+> Last updated: 2026-04-21 (late — vintage-scaling fix).
+
+## Current Status (Apr 21, 2026 — late)
+
+### Step 2.3 — Vintage-scaling bug fix — LANDED on `claude/fix-vintage-scaling-bug-dbwdI`
+
+**What shipped (commits `b381824` code + `7f5f590` regenerated ERCOT JSONs).** Replaced the per-year share-delta ledger + demand-scaled gross_op with a sequential absolute-TWh build model. Five coupled changes in one commit to `scripts/step_2_3_pathway_optimizer.py` (+207/−144 lines):
+
+1. **`solve_pathway` inline sunk-cost-aware scorer (Interpretation B).** The pre-built `operating_cost_matrix` is gone. Each year's argmin sees `score[m] = Σ_r max(0, target_twh_r[m] − floor_twh_r) × LCOE_r_y` over 10 non-CF resources + 4 CF tranches, plus the existing gas/storage cost buckets. Prior-built capacity is sunk — it prices to $0 in the scorer.
+2. **Absolute-TWh floor ratchet.** Per-resource floors grow monotonically. Year-y argmin is restricted to mixes whose target TWh ≥ floor for every resource. Demand growth at constant share mechanically produces new vintages covering the gap (existing TWh stays frozen at its locked LCOE).
+3. **4-tier fallback cascade.** Tier 1 = ratchet ∩ pmask ∩ cfe ∩ cf_feasible → Tier 2 = relax CFE ±5 pts → Tier 3 = drop cf_feasible, flag `feasibility.physical = False` → Tier 4 emergency = drop ratchet, flag `ratchet_violated`. Notes surface in `feasibility.notes`.
+4. **Ledger + serializer rewrite.** `_build_ledger` and `serialize_run_result` both track absolute-TWh floors for non-CF and CF tranches. Baseline existing vintages stay frozen at `base_demand × grid_share / 100` with `locked_lcoe = 0`. New deltas are `target_twh_y − floor` (not `share_delta × demand_y`).
+5. **`_finalize_run` drops `× (demand_vec[yi] / demand_vec[0])` on `gross_operating_usd`.** Under the new ledger semantics that multiplier double-scaled new-build vintages (already carrying `(1+g)^yi` in `twh_per_year`) and wrongly inflated the LCOE=0 baseline.
+
+Removed: `operating_cost_matrix` (no callers under B).
+
+**Before-fix witness (cached ERCOT P3@ep99).** 2050 `gross_operating_usd` = $282.6B decomposed as $29.7B baseline + $89.9B new-build, both inflated 2.36× by `demand_2050/demand_2025`. Under the fix the new-build portion prices at its absolute locked-LCOE value and baseline contributes $0.
+
+**Delta report (ERCOT {P1, P2a, P3} × {ep90, ep99}, 6 combos, all `feasibility.physical=True`, no fallback notes):**
+
+| Combo | undisc Δ vs 1a50ade | fleet Δ | rt Δ | cfe |
+|---|---|---|---|---|
+| P1@ep90 | +73.1% ($+755B) | −28% (−39GW) | +79.5% | 90.07→90.20 |
+| P1@ep99 | +20.8% ($+332B) | +0.8% | +54.0% | 99.06→99.06 |
+| P2a@ep90 | +61.9% ($+684B) | −22% | +91.4% | 90.02→90.20 |
+| **P2a@ep99** | **−40.7% (−$1,325B)** | +50% (+40GW) | +195.8% | 99.00→99.06 |
+| P3@ep90 | +52.2% ($+613B) | −22% | +104.1% | 90.02→90.20 |
+| **P3@ep99** | **−50.5% (−$1,968B)** | +50% | +310.3% | 99.00→99.06 |
+
+The two extreme pre-fix outliers ($3.3T P2a@ep99, $3.9T P3@ep99) collapse to $1.9T — consistent with removing the double-scale. ep90 combos move UP because the B scorer now picks genuinely different (and, over the 26-year integration window, more expensive) winners once demand-growth isn't implicitly free. Fleet swings cascade into `reliability_tax` components.
+
+**P1/P2a/P3 winners converge at each endpoint under B.** P3's new-nuke unlock goes unused because incremental VRE+storage builds are cheaper at year-y LCOE than new-build nuclear in ERCOT. This is the intended methodology behavior — pathways differ only where the argmin genuinely finds different cost-minimal solutions, not because of per-year replacement-cost repricing artifacts. Worth auditing whether this holds outside ERCOT (VRE-rich); PJM / NYISO / NEISO may yield genuine P1≠P3 divergence once the full sweep runs.
+
+**Threshold audit (hardcoded $T/$B captions).** Two caption sites reference pre-fix data and will need regeneration in Phase 5: `reliability_tax/charts/section1_narratives.json` (per-ISO "95%→99% adds $X.XXT" steps) and `dashboard/reliability-tax.html` + `reliability-tax-4.6.html` L577/L544 ("PJM 90% clean: $7.17T → $2.39T"). Both are cross-ISO / non-ERCOT; out of scope for this fix. Other $-values in the codebase (Google-Intersect, 45U PTC, Vogtle, AUM figures, etc.) are external facts unrelated to the vintage-scaling bug.
+
+**Branch-state notes for the next session.**
+- `scripts/_sweep_pathways_inproc.py` is broken on this branch — imports `ENDPOINTS`, `run_pathway`, `_batch_append_to_manifest` from `step_2_3_pathway_optimizer` (none exist) and `flush_expanded_cache`/`_get_worst_hour_state`/`prewarm_caches` from `step2_2a_cost_optimization` (module doesn't exist; was in the deleted `market-simulator/`). The driver was written against a planned refactor that didn't land. For this session's 6-combo rerun I called `step_2_3_pathway_optimizer._run_one()` directly in one Python process — same cold-start amortization without resurrecting the stale driver. Either delete the driver or rewrite it; leaving it as dead code for now.
+- `market-simulator/` deletion is fine for the reliability-tax pipeline — `step_2_3_pathway_optimizer.py` is fully self-contained.
+
+**Phase 5 gated behind user sign-off.** Full 350-combo sweep + chart-payload regeneration for all 7 ISOs is NOT started this session per the resume-prompt's explicit "BLOCKED" directive. Awaiting user review of the 6-combo ERCOT delta report before proceeding.
+
+**Separate future workstream flagged (NOT this fix).** User mentioned a later-session item: implement a "work-backwards from the cheapest 95–99% mix" foresight-driven argmin for Pathway 3 only, so P3 represents strategic planning (vs. market-myopic P1). That's additive to the ratchet model — this session's fix is about correctness of the forward-simulation; P3-foresight is about adding a lookahead layer on top of it for one pathway.
+
+**Resume prompt for next session.** *"Vintage-scaling fix landed (commits `b381824` + `7f5f590`) on `claude/fix-vintage-scaling-bug-dbwdI`. All 6 ERCOT combos regenerated and feasibility.physical=True with no fallback notes. Two extreme outliers (P2a/P3 @ ep99) collapsed from $3.3T/$3.9T to $1.9T; ep90 combos moved UP by 52–73% because the B scorer now picks genuinely different winners. P1/P2a/P3 converge at each endpoint in ERCOT — audit whether this holds in PJM/NYISO/NEISO. Next steps: (a) user review the delta report; (b) if approved, regenerate the 6 non-ERCOT ISOs' 50 combos each via the same `_run_one` direct-call pattern (the `_sweep_pathways_inproc.py` driver is broken on this branch — imports a stale API from a deleted `market-simulator/`); (c) regenerate 12 chart payloads in `reliability_tax/charts/` + the two flagged dashboard captions; (d) run `/fix-prose` across the regenerated dashboards. Deferred separately: the P3 foresight-driven argmin (lookahead layer on top of the ratchet model, P3 only)."*
 
 ## Current Status (Apr 21, 2026)
 
@@ -29,100 +72,6 @@
 ## Current Status (Apr 20, 2026)
 
 - **AUDIT (2026-04-20):** Verdict B — INCLUDE_GAS_COST_IN_ARGMIN fix partially worked (PJM/CAISO/NEISO now show P3 < P1 gas) but ERCOT remains P3 ≡ P1 at 9/10 endpoints and MISO ep80 shows P3 NPV 78% higher than P1; argmin objective mismatch (minimizes EF-cost + undiscounted-gas-proxy, not NPV) is the root cause. See `reliability_tax/AUDIT_2026-04-20_step2_3_pathway_optimizer.md`.
-
-## Current Status (Apr 19, 2026)
-
-### Endogenize new-gas-build cost in argmin — ROOT-CAUSE IDENTIFIED / fix PENDING (Apr 19, 2026)
-
-**Root cause of the "idling" probe runs (FOUND this session via code-only exploration).** `run_pathway(cfg)` → `solve_pathway` → `for year in YEARS:` (26 iterations, `scripts/step_2_3_pathway_optimizer.py:2344`) → `size_required_gas_mw` → `worst_hour_gas_sizing` (`scripts/step2_2a_cost_optimization.py:432`) → `_worst_hour_residual_norm` (`:277`) → `_expand_missing_archetypes` (`:357`) → `expand_cache_for_mixes(..., persist=True)` → `save_dispatch_cache(iso, cache, ...)` at `scripts/step3a_build_dispatch_cache.py:287–288` writes the **entire ~100 MB dispatch-cache parquet to disk every time a novel archetype appears in a given year**. That happens up to 26 times per `run_pathway` call. Fingerprint confirms: the ERCOT parquet grew 47 MB → 110 MB just during import side-effects this session. This is invisible to the user (no stdout inside `solve_pathway`) — runs look idle but are actually mid-parquet-write. Secondary cost (~50–200 ms per novel archetype) comes from `reconstruct_hourly_dispatch` reconstructing 8760-hr profiles in `step3a_build_dispatch_cache.py:273–284`, but the parquet write dominates.
-
-**Why this bloats the v2 sweep 5–10× (and the probe 1.5–3×).** 350 runs × up-to-26 writes = up to 9,100 full-parquet serializations for the full sweep. At 0.1–0.3s per write on the 110 MB ERCOT cache, that's 15–45 minutes of pure disk I/O per ISO on top of the compute — regression introduced by the cache-expansion path, not by §24.9 endogenization.
-
-**Caches that ARE hot across runs (verified).** `_EF_CACHE` (`step_2_3_pathway_optimizer.py:256`), `_DISK_DISPATCH_CACHE` (`:3218`), `_WH_STATE` in step2_2a (imported `:234`). None are invalidated inside `run_pathway`. The in-proc driver's claim that "caches stay resident across pathway/endpoint combos for one ISO" is correct — the regression is only inside the solve loop, not across runs.
-
-**Fix plan locked this session (option 1, user preferred).** Thread a `persist=False` override through `_expand_missing_archetypes` and `expand_cache_for_mixes` during the `run_pathway` call; collect every novel archetype in-memory; invoke `save_dispatch_cache(iso, cache, ...)` exactly **once** at the end of `run_pathway`. Same on-disk result, ~1 write per run instead of up to 26. Also patches the v2-sweep regression automatically (once per run × 350 runs = 350 writes instead of up to 9,100). Alternative options considered: (2) pre-expand all 26 years' archetypes before entering the solve loop — more invasive, fine for a future refactor; (3) `persist=False` everywhere for probe-only — fastest but discards the cache growth the full sweep needs.
-
-**What landed before the regression was found (from prior sessions).** SPEC §24.9 implementation (`f060d38`), WHOLESALE_PRICES fix (`fd89c22`), parity probe OFF-branch bit-for-bit on ERCOT P1 ep80 + PJM P3 ep90. ON-branch still unexercised (Lesson 8 rule unmet — see `LESSONS.md`). `scripts/_sweep_pathways_inproc.py` is the right driver shape vs. `run_pathway_sweep.py:227`'s subprocess-per-config loop.
-
-**Pending.**
-1. **Implement option 1 (batched persist).** Plan the exact diff:
-   - `step3a_build_dispatch_cache.py`: confirm `save_dispatch_cache` is the single persist site (grep).
-   - `step2_2a_cost_optimization.py::_expand_missing_archetypes(...)`: accept a `persist=True` kwarg, plumb to `expand_cache_for_mixes`.
-   - `step2_2a_cost_optimization.py::expand_cache_for_mixes(...)`: already takes `persist=True` (verified in the exploration). Pass-through.
-   - `step_2_3_pathway_optimizer.py::run_pathway` (or `solve_pathway`): wrap the year loop with `persist=False`; after the loop, call `save_dispatch_cache(iso, cache)` once if any archetypes were added.
-   - Parity check: flag=OFF probe from §24.9 must still reproduce bit-for-bit after the fix.
-   - Hot-path check: time ONE `ERCOT P3 @0.90` run and confirm it's in the 1–3s range, not 10–30s.
-2. Re-run the 12-config sanity probe once the fix is verified.
-3. Everything else in the §24.9 backlog (extract `stranding_metadata.fleet_size_mw`, P3-vs-P1 delta table, full 350-run v2 sweep, chart-payload regen, dashboard gate, methodogy.md §24.9 entry).
-4. After probe + full sweep land: patch `run_pathway_sweep.py:227` to call the in-proc driver (remaining subprocess regression).
-
-**Open questions.** None blocking. If anything, verify `save_dispatch_cache` is thread-safe enough that a single write at end-of-run is OK even if the process is killed mid-solve (probably fine — cold-start will re-expand the missing archetypes, just slower once).
-
-**Resume prompt for next session:** *"SPEC §24.9 code landed (f060d38, fd89c22) but the probe hasn't run because there's a per-year parquet-rewrite regression in the solve loop that makes every run look idle. Root cause (found this session, code-read only): `scripts/step_2_3_pathway_optimizer.py::solve_pathway` `for year in YEARS:` at line 2344 → `size_required_gas_mw` → `worst_hour_gas_sizing` (step2_2a:432) → `_worst_hour_residual_norm` (:277) → `_expand_missing_archetypes` (:357) → `expand_cache_for_mixes(..., persist=True)` → `save_dispatch_cache` (step3a:287–288) writes the full ~100 MB parquet to disk up to 26× per `run_pathway` call. Fix is option 1 (batched persist): thread `persist=False` through `_expand_missing_archetypes` + `expand_cache_for_mixes` during the year loop, call `save_dispatch_cache(iso, cache)` exactly once at end of `run_pathway` if any archetypes were added. Same on-disk result, ~1 write per run. Same regression bloats the v2 350-run sweep, so the fix is doubly load-bearing. Before coding: (a) grep-confirm `save_dispatch_cache` is the only persist site; (b) grep every `persist=` / `expand_cache_for_mixes` call site to make sure threading is correct; (c) run the §24.9 flag=OFF parity probe (ERCOT P1 ep80 + PJM P3 ep90) after the patch — must reproduce bit-for-bit; (d) time ONE `ERCOT P3 @0.90` run post-fix to confirm it's 1–3s, not 10–30s. Only then relaunch the 12-config sanity probe (`pip install pandas && for iso in ERCOT PJM; do python3 scripts/_sweep_pathways_inproc.py --iso $iso --pathways 1,3 --endpoints 0.80,0.90,0.99 --output-root /tmp/reliability_probe_sanity; done`). ERCOT dispatch parquet is gitignored (`.gitignore:69`) and must NOT be committed — it regenerates to >100 MB on every run and will fail GitHub's push limit. Audit memo at `reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md` Locked-Decisions remains binding. Lesson 8 (flag-ON parity probe) still pending from §24.9."*
-
-**Prior §24.9 background (full detail in `SPEC_LOG.md`).** SPEC §24.9 implementation (audit-driven fix from `reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md` Locked-Decisions):
-- `scripts/pipeline_config.py` — new flag `INCLUDE_GAS_COST_IN_ARGMIN = True` (defaults True; flip to False to reproduce pre-change outputs).
-- `scripts/step2_2a_cost_optimization.py` — new vectorized adapter `worst_hour_residual_per_row(iso, ef)` (~40 lines). Wraps existing batch `_worst_hour_residual_norm`; pulls EF DataFrame columns into the `arrays` dict shape that function already expects. Returns `(N,)` fractions of annual demand. No Python row loop.
-- `scripts/step_2_3_pathway_optimizer.py` — new sibling scorer `score_ef_batch_with_gas(ef, iso, year, config)` (~70 lines). Per-row cost = `row_ef_cost + new_gas_mw × (capex_per_mw + fuel_per_mw)` where `new_gas_mw = max(0, gas_raw_mw − gas_raw_2025_mw) × (1 + RESOURCE_ADEQUACY_MARGIN)`. RA-margin multiplier applied per user's explicit directive. Uses the SAME constants `tax_components_cumulative` uses downstream: `NEW_CCGT_COST_KW_YR[iso]`, `WHOLESALE_PRICES[iso]['Medium']`, `NEW_GAS_REFERENCE_CF = 0.85`. `select_target_mix` call site gated on the flag.
-
-**Parity probe passed.** Flag=FALSE reproduces pre-change cached JSON bit-for-bit on both probes:
-- `ERCOT/pathway1_ep80.json` (`run_key=ERCOT__pathway1__ep80`, cost $1,104 B) — identical.
-- `PJM/pathway3_ep90.json` (`run_key=PJM__pathway3__ep90`, cost $2,390 B) — identical.
-
-**In progress when session wrapped.** WHOLESALE_PRICES blocker is **fixed and committed** (`fd89c22`) — `score_ef_batch_with_gas` now reads `float(pc.WHOLESALE_PRICES[iso]) + float(pc.FUEL_ADJUSTMENTS[iso].get('Medium', 0.0))`. Numerically equivalent to the base scalar today (Medium adjustments are 0 across all ISOs), but the form preserves the task-brief sensitivity-level intent and survives any future non-zero Medium delta. User picked this form via `AskUserQuestion` over the pure-scalar alternative. Lesson 8 added to LESSONS.md (`cb5c3a0`): parity probes must exercise both branches of a flag-gated rollout.
-
-**Sanity probe — STILL NOT EXECUTED.** Three attempts this session, all failed:
-- Attempt 1 (pre-fix): single ERCOT P1 ep80 smoke run crashed in `score_ef_batch_with_gas` on the WHOLESALE_PRICES bug.
-- Attempt 2 (post-fix): launched the full 12-config probe via `bash /tmp/run_probe.sh` in background. Bash wrapper started, logged the first run header (`=== START ERCOT pw=3 ep=0.80 ===`), then was reaped at the turn boundary. Zero JSONs written. Background subprocesses do not survive turn boundaries in this environment.
-- Attempt 3 (post-fix, foreground): aborted before launch after the user challenged the "10–20 min" time estimate. Investigation revealed the estimate was based on the wrong probe shape — see "Orchestrator regression" below.
-
-**Orchestrator regression — in-proc driver exists but is orphaned (Apr 19, 2026).** The planned probe shape was 12 separate `python3 scripts/step_2_3_pathway_optimizer.py ...` invocations, which pays the 8.3s Python-startup + module-import tax per run (~100s) AND reloads the dispatch-cache parquet per run (5–10s ERCOT, much worse PJM). There is already an in-process driver at `scripts/_sweep_pathways_inproc.py` that keeps the interpreter hot across all (pathway, endpoint) combos for one ISO — its own docstring documents a profiled cost of ~0.5–1s per run after cold-start. But `scripts/run_pathway_sweep.py:227` still uses `subprocess.run` to fork the optimizer per config, never calls the in-proc driver. For the 12-config probe, the correct shape is two invocations of `python3 scripts/_sweep_pathways_inproc.py --iso <ISO> --pathways 1,3 --endpoints 0.80,0.90,0.99 --output-root /tmp/reliability_probe_sanity` (one for ERCOT, one for PJM). Revised cost estimate: **~1–1.5 min total** (vs. the original "10–20 min"). Gas-cost layering was inspected for a loop regression — the per-year `for year in YEARS:` loop at `step_2_3_pathway_optimizer.py:2344` is 26 iterations and the gas-cost math in `score_ef_batch_with_gas` (`:1843–1858`) is vectorized (`np.maximum`, scalar arithmetic on `(N,)` arrays). No regression from §24.9.
-
-**Dispatch cache.** `data/step3-dispatch/ERCOT_dispatch_cache.parquet` regenerated to 106 MB during attempt 2 (matches task-brief expected size) and re-grew to 110 MB during this session's import side-effects. Reverted at session wrap — exceeds GitHub's 100 MB limit, will regenerate again next probe attempt (~1–2 min on first ISO touch).
-
-**Environment note.** Web container's SessionStart hook installs numpy / pyarrow / numba but not pandas; `step_2_3_pathway_optimizer.py` imports pandas. Manual `pip install pandas` was required this session — will be required again on a fresh container until the hook is updated.
-
-**Pending.**
-1. **Re-launch the probe via the in-proc driver.** Single turn, foreground, ~1–1.5 min total:
-   ```bash
-   pip install pandas
-   for iso in ERCOT PJM; do
-     python3 scripts/_sweep_pathways_inproc.py \
-       --iso $iso --pathways 1,3 --endpoints 0.80,0.90,0.99 \
-       --output-root /tmp/reliability_probe_sanity
-   done
-   ```
-   Logs per-run timing to stdout (`[ISO] [n/N] pathway@ep OK cfe=X.XX% in Ts`). Fully self-contained within one turn — no background-subprocess survival problem.
-   Separate follow-up (not blocking the probe): patch `run_pathway_sweep.py` to call the in-proc driver for the full 350-run v2 sweep instead of the subprocess-per-config loop.
-2. Extract `stranding_metadata.fleet_size_mw` from each of the 12 JSONs.
-3. Build the P3-vs-P1 gas-fleet delta table per ISO per endpoint.
-4. Present results, wait for user approval before full sweep.
-5. Full 350-run v2 sweep re-run per `OPS.md` pre-run gate.
-6. Regenerate 12 chart payloads in `reliability_tax/charts/`.
-7. Dashboard-gate check: P3 new-gas < P1 in every ISO at ep90 or ep99 minimum; gap widens ep80→ep99; hump visible; §4 tax in $4–18/MWh range.
-8. Append §24.9 entry to `reliability_tax/methodogy.md` documenting the change. Do NOT frame as reversal of §24.8 (§24.8 no-floor stands).
-
-**Key design decisions locked this session.**
-- Expected CF for new-gas fuel term in argmin = `NEW_GAS_REFERENCE_CF = 0.85` (user-selected via AskUserQuestion). Tunable knob — flag if probe penalty looks too large/small.
-- `(1 + RESOURCE_ADEQUACY_MARGIN) = 1.15` multiplier on `new_gas_mw` is a deliberate planner-reserve conservatism ON TOP of §24.5's margin-on-demand residual. User directed this explicitly in-session.
-- §24.8 no-floor for Pathway 3 stands. `_filter_pathway_3` unchanged. `should_pivot_2a` / `should_pivot_2b` stay dead — endogenization is expected to produce pivot-like behavior via economics.
-- Hump narrative stays (§24.5 descending-side monotonicity is a claim about ep80→ep99 only; ascending side ep0→ep80 carries the hump).
-
-**Open questions.** None blocking. If the 12-config probe shows ERCOT P3 ≥ P1 at every endpoint, the penalty magnitude is too small — candidates to tune: drop `NEW_GAS_REFERENCE_CF` to 0.30–0.40, or raise RA multiplier. Defer tuning until the probe lands.
-
-### Pipeline-Audit Sub-Agent — HARDENED (Apr 19, 2026) / live re-run PENDING
-
-**What landed (Apr 18).** `.claude/agents/pipeline-audit-agent.md` — sub-agent for systematic, third-party audits of pipeline code against a plain-language statement of design intent. Workflow: Phase 1 silent reads (`CLAUDE.md`, `SPEC.md` Current Status, every file in the code-reference table for the task, the target file in full, the local methodology doc, ≥3 cached output files); Phase 2 code-vs-intent trace marking each operation Aligned / Silent-assumption / Misaligned / Outside-scope; Phase 3 hypothesis-vs-data trace re-derived directly from cached JSONs (never trusts manifest summaries or README claims); Phase 4 mandatory external sanity checks against NREL ATB, Lazard, EIA AEO, BNEF, IEA, SBTi for every load-bearing parameter; Phase 5 verdict via fixed decision tree producing exactly one of three outcomes — A (sound design + sound results), B (fundamentally flawed methodology), C (sound design but hypothesis does not hold). Invoke with `subagent_type: "pipeline-audit-agent"`.
-
-**Live test outcome (Apr 18 night).** Agent was launched against the full chain (`scripts/step_2_3_pathway_optimizer.py` + `reliability_tax/charts/gen_section{2,3}_*.py` + `dashboard/reliability-tax.html`) and ran past the tool-call budget mid-Phase-4 with no memo written, producing no usable artifact.
-
-**Hardening (Apr 19, this session).** Rewrote Phase 0 around a **running findings log** instead of end-of-run memo dumps. New discipline: (a) open `<feature_dir>/AUDIT_<date>_<target>.md` immediately before Phase 1 with a `## Findings` section header; (b) append a Finding block (`Where` / `What` / `Why it matters` / `Needs follow-up in`) the moment any material observation surfaces — function that misaligns with intent, price-table cell out of range against its cited source, cached number that contradicts the hypothesis, timing constant that creates a mechanism inconsistent with intent, code path that silently changes the counterfactual, stale upstream input; (c) each Finding write is ≤3 tool calls (Read memo, Edit append, optional TodoWrite); (d) keep running after each Finding — writing is not a stopping decision; (e) no tool-call caps — audit runs full rigor across Phases 1-5; (f) PARTIAL path is now only for **hard blockers** (missing cached outputs, unreachable Phase-4 source, missing reference files), not for time-based escape. Verdict A/B/C sections append to the same findings log at the end — no rename step. Communication-style and Hard-rules sections reconciled with the new model.
-
-**Pending for next session.** Re-launch the audit on the narrower-scope slice the user selected earlier: `scripts/step_2_3_pathway_optimizer.py` + `reliability_tax/charts/gen_section{2,3}_*.py` across ERCOT + PJM at endpoints 80% / 90% / 99%, no dashboard HTML in scope. Stated intent and hypothesis are the same as the aborted run: proactive clean-firm build (Pathway 3) plus Wright's Law cost decline should yield materially less new gas than Pathway 1 in every ISO by 2050; observed result is P1 and P3 build essentially the same gas in 6 of 7 ISOs with gas peaking at the 80% endpoint then declining. Suspected sources: SBTi target-year trajectory + NOAK-in-2035 timing, or a bug in `_filter_pathway_3` / `solve_pathway` / `compute_clean_firm_tranches_for_year` / `size_required_gas_mw`.
-
-**AUDIT (2026-04-19):** Verdict B with user-locked fix — endogenize new-gas-build cost (capex + fuel) into `select_target_mix`'s argmin cost function. Current argmin (at `scripts/step_2_3_pathway_optimizer.py:1853`, `nanargmin(costs)`) is EF-row-cost-only; gas is sized downstream in the per-year loop via `size_required_gas_mw`, so the optimizer never "sees" that a pure-VRE row requires 134 GW of new gas in ERCOT. Folding expected new-gas-build cost into each candidate row's score should let P3's NOAK-2035 clean-firm rows naturally beat P1's NOAK-2045 pure-VRE rows in VRE-rich ISOs without hard-wiring a floor. §24.8's no-floor decision STAYS. Hump storyline STAYS (Finding 7 was incomplete — hump lives on the ep0→ep80 ascending side, not violated by the audited ep80→ep99 descending side). Add §24.9 entry documenting the endogenization. P2a/P2b pivot logic stays dead — endogenization is expected to produce pivot-like behavior via economics. See `reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md` Locked-decisions section for full direction. Next step: coding-session handoff. Findings log at `reliability_tax/AUDIT_2026-04-19_step2_3_pathway_optimizer.md` (114 lines) captured Phase 1-4 in full: Phase 2 code trace (3 HIGH-severity findings on P3 having no clean-firm forcing mechanism — `_filter_pathway_3` is a no-op, P2a/P2b/P3 differ only in NOAK year, SBTi year-snap lock-steps P1 and P3 onto the same EF band); Phase 3 data re-derivation from ERCOT + PJM cached JSONs confirming P1 ≡ P1a ≡ P3 bit-for-bit in ERCOT at every endpoint and P3 ≡ P1 in PJM at ep80 but diverging at ep90/ep99; Phase 4 external checks finding cost/learning parameters in-range (aggressive end of ATB/Lazard but defensible). Two compounding methodology issues surfaced: (A) no forcing mechanism makes P3 build clean firm proactively — it only sees cheaper clean firm via NOAK-2035 and declines to use it in VRE-rich ISOs; (B) worst-hour gas sizing per SPEC §24.5 is monotone-decreasing by construction, so the "gas hump" storyline on the dashboard contradicts what the code is actually designed to produce. These are the intervention points for a Verdict B memo, but the agent never emitted the formal decision-cards / handoff-prompt section. **Pending next session: either (i) re-launch the agent with a tiny continuation prompt to do Phase 5 classification + Phase 6 output on the existing findings log, or (ii) hand the findings directly to a `subagent_type: coding-session` as the intervention list.**
-
-**Resume prompt for next session:** *"Pipeline-audit sub-agent is landed at `.claude/agents/pipeline-audit-agent.md` and was hardened Apr 19 with findings-log discipline (no tool-call caps, each finding writes in ≤3 tool calls the moment it surfaces, PARTIAL only fires on hard blockers). Re-launch the audit against `scripts/step_2_3_pathway_optimizer.py` + `reliability_tax/charts/gen_section{2,3}_*.py` restricted to ERCOT + PJM at endpoints 80% / 90% / 99%. Stated intent: proactive clean-firm build (Pathway 3) + Wright's Law cost decline should yield materially less new gas than Pathway 1 in every ISO by 2050. Hypothesis: P1 and P3 should diverge at the 80% endpoint, not converge. Observed result: P1 and P3 build essentially the same gas in 6 of 7 ISOs; gas peaks at 80% then declines. Invoke with `subagent_type: \"pipeline-audit-agent\"`. Expect either Verdict B with a findings log at `reliability_tax/AUDIT_<date>_step_2_3_pathway_optimizer.md` plus a coding-session handoff prompt, Verdict A with the findings log as audit trail, or Verdict C with a mechanism explanation."*
 
 > Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG; Apr 20 rotation moved the Apr 18 Coding-Session sub-agent block to SPEC_LOG). See that file for the historical decision log.
 ---
