@@ -987,10 +987,11 @@ def _foresight_endpoint_year(endpoint_pct: float) -> int:
 
 
 def _project_shares_to_endpoint(
-    shares_nr: np.ndarray,      # (N, R) non-CF resource shares, fraction
-    cf_share: np.ndarray,       # (N,)   clean_firm share, fraction
+    shares_non_cf: np.ndarray,  # (N, 10) non-CF resource shares, fraction
+    non_cf_keys: tuple,         # column order of shares_non_cf (matches non_cf)
+    cf_share: np.ndarray,       # (N,)    clean_firm share, fraction
     tg: dict,                   # decompose_clean_firm_tranches output
-    demand_vec: np.ndarray,     # (Y,)   TWh per year
+    demand_vec: np.ndarray,     # (Y,)    TWh per year
     yi: int,                    # current year index
     endpoint_yi: int,           # endpoint year index
 ) -> np.ndarray:                # (N, 15) frozen-projection share vector per mix
@@ -998,16 +999,22 @@ def _project_shares_to_endpoint(
     (memo §5.6). If mix m is committed at year yi and no further commits are
     made, what resource-share vector do we land at, at endpoint_yi's demand?
 
-    Fully vectorized — no Python loops over candidate mixes.
+    Assembles an 11-col resource matrix in _RESOURCE_COLS order from the
+    caller's 10-col non-CF matrix + cf_share, then appends the 4 CF tranche
+    shares. Fully vectorized — no Python loops over candidate mixes.
     """
     ratio = float(demand_vec[yi]) / float(demand_vec[endpoint_yi])
-    resource_shares = shares_nr * ratio                           # (N, R=11)
-    # clean_firm column — rebuild from cf_share to stay consistent with the
-    # tranche totals below (shares_nr's clean_firm column already matches,
-    # but this makes the invariant explicit).
-    cf_col = _RESOURCE_COLS.index('clean_firm')
-    resource_shares = resource_shares.copy()
-    resource_shares[:, cf_col] = cf_share * ratio
+    n = shares_non_cf.shape[0]
+    # Rebuild full 11-col resource matrix in _RESOURCE_COLS order so the
+    # output column order matches _FORESIGHT_SHARE_KEYS[:11] regardless of
+    # which non-CF column layout the caller used.
+    resource_shares = np.empty((n, len(_RESOURCE_COLS)), dtype=np.float64)
+    non_cf_idx = {r: i for i, r in enumerate(non_cf_keys)}
+    for j, r in enumerate(_RESOURCE_COLS):
+        if r == 'clean_firm':
+            resource_shares[:, j] = cf_share * ratio
+        else:
+            resource_shares[:, j] = shares_non_cf[:, non_cf_idx[r]] * ratio
 
     denom = float(demand_vec[endpoint_yi])
     uprate_shr   = tg['uprate_twh'][yi]   / denom                 # (N,)
@@ -1040,11 +1047,12 @@ def _score_year_with_endpoint(
 
 
 def _placeholder_endpoint_target_shares(
-    shares_nr: np.ndarray,        # (N, R)
+    shares_non_cf: np.ndarray,    # (N, 10) non-CF shares
+    non_cf_keys: tuple,           # column order of shares_non_cf
     cf_share: np.ndarray,         # (N,)
     tg: dict,
     demand_vec: np.ndarray,       # (Y,)
-    delivered_yr: np.ndarray,     # (Y, R)
+    delivered_yr: np.ndarray,     # (Y, 10) delivered LCOE (matches non_cf_keys)
     storage_cost_yn: np.ndarray,  # (Y, N)
     gas_fixed_y: np.ndarray,      # (Y, N)
     cf_feasible_yn: np.ndarray,   # (Y, N) bool
@@ -1060,7 +1068,7 @@ def _placeholder_endpoint_target_shares(
     (all TWh priced at endpoint LCOE, no sunk-cost discount), subject to
     endpoint-year feasibility. Argmin → that mix's 15-dim share vector.
     """
-    target_twh_nr = shares_nr * float(demand_vec[endpoint_yi])    # (N, R)
+    target_twh_nr = shares_non_cf * float(demand_vec[endpoint_yi])  # (N, 10)
     score_nonCF = (target_twh_nr * delivered_yr[endpoint_yi][None, :]
                    ).sum(axis=1) * 1.0e6
     score_cf = (
@@ -1082,7 +1090,7 @@ def _placeholder_endpoint_target_shares(
 
     # Identity projection (endpoint → endpoint, ratio = 1).
     proj = _project_shares_to_endpoint(
-        shares_nr, cf_share, tg, demand_vec,
+        shares_non_cf, non_cf_keys, cf_share, tg, demand_vec,
         yi=endpoint_yi, endpoint_yi=endpoint_yi,
     )
     return proj[w]
@@ -1230,6 +1238,31 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     winner_feasible   = np.ones(N_YEARS, dtype=bool)
     ratchet_violated  = np.zeros(N_YEARS, dtype=bool)
 
+    # ── Phase B foresight preview setup (memo §5.2, §7 Phase B) ──────────
+    # Read-only diagnostic: for P3 runs at the 4 canonical endpoints, collect
+    # what algorithm (b) would pick each year under λ ∈ {0.05, 0.15, 0.5}.
+    # Does NOT mutate winner selection, floors, or any existing cached field.
+    _foresight_active = (
+        cfg.pathway == '3'
+        and float(cfg.endpoint_pct) in _FORESIGHT_ENDPOINT_PCTS
+    )
+    _foresight_preview_rows: list = []
+    _foresight_target_shares = None
+    _foresight_endpoint_year_val = None
+    _foresight_endpoint_yi = None
+    if _foresight_active:
+        _foresight_endpoint_year_val = _foresight_endpoint_year(
+            float(cfg.endpoint_pct))
+        _foresight_endpoint_yi = YEARS.index(_foresight_endpoint_year_val)
+        _foresight_target_shares = _placeholder_endpoint_target_shares(
+            shares_non_cf=shares_nr, non_cf_keys=non_cf,
+            cf_share=cf_share, tg=tg,
+            demand_vec=demand_vec, delivered_yr=delivered_yr,
+            storage_cost_yn=storage_cost_yn, gas_fixed_y=gas_fixed_y,
+            cf_feasible_yn=cf_feasible_yn, pmask=pmask, cfe_mask=cfe_mask,
+            endpoint_yi=_foresight_endpoint_yi,
+        )
+
     RATCHET_TOL_TWH = 1.0e-6
     for yi in range(N_YEARS):
         # Target TWh per (mix, non-CF resource) at year-y grown demand.
@@ -1291,6 +1324,45 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         if winner_feasible[yi]:
             winner_feasible[yi] = bool(cf_feasible_yn[yi, w])
 
+        # ── Phase B foresight-preview capture (read-only) ───────────────
+        # Runs on the same `valid` mask and `row_score` that myopic argmin
+        # used above. Floors update below is unaffected.
+        if _foresight_active and yi <= _foresight_endpoint_yi:
+            _fy = int(YEARS[yi])
+            _fw_weight = max(
+                0.0,
+                (_foresight_endpoint_year_val - _fy)
+                / (_foresight_endpoint_year_val - BASE_YEAR),
+            )
+            _proj = _project_shares_to_endpoint(
+                shares_nr, non_cf, cf_share, tg, demand_vec,
+                yi=yi, endpoint_yi=_foresight_endpoint_yi,
+            )
+            _m_diff = _proj[w] - _foresight_target_shares
+            _m_dist = float(np.sqrt(np.sum(_m_diff * _m_diff)))
+            _lambda_rows = {}
+            for _lam in _FORESIGHT_LAMBDAS:
+                _f_score = _score_year_with_endpoint(
+                    row_score, _proj, _foresight_target_shares,
+                    _lam, _fw_weight)
+                _f_masked = np.where(valid, _f_score, np.inf)
+                _f_w = int(np.argmin(_f_masked))
+                _fd = _proj[_f_w] - _foresight_target_shares
+                _fd_dist = float(np.sqrt(np.sum(_fd * _fd)))
+                _lambda_rows[f"{_lam:g}"] = {
+                    "mix_idx": _f_w,
+                    "score_usd": float(_f_score[_f_w]),
+                    "share_distance": round(_fd_dist, 6),
+                }
+            _foresight_preview_rows.append({
+                "year": _fy,
+                "feasible_candidates": int(valid.sum()),
+                "myopic_winner_idx": int(w),
+                "myopic_score_usd": float(row_score[w]),
+                "share_distance_to_target_at_myopic_winner": round(_m_dist, 6),
+                "foresight_winners_by_lambda": _lambda_rows,
+            })
+
         # Update floors from the winning mix (monotone non-decreasing).
         floor_twh_r    = np.maximum(floor_twh_r, target_twh_nr[w])
         # P1: total-CF floor stays frozen at existing 2025 CF TWh (= share
@@ -1328,10 +1400,30 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     gas_needed_winner = np.maximum(0.0, existing_base + gas_raw_winner - gas_raw_2025)
     existing_gas_used = np.minimum(existing_gas_vec_real, gas_needed_winner)
     clean_arr_diag = ef['clean_peak_hour_mw']
-    return _finalize_run(cfg, ef, winners, peak_vec, demand_vec,
-                         achieved_cfe, existing_gas_vec_real, existing_gas_used,
-                         cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
-                         clean_arr_diag, winner_feasible, ratchet_violated)
+    result = _finalize_run(cfg, ef, winners, peak_vec, demand_vec,
+                           achieved_cfe, existing_gas_vec_real, existing_gas_used,
+                           cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
+                           clean_arr_diag, winner_feasible, ratchet_violated)
+    if _foresight_active:
+        result.foresight_preview = {
+            "iso": cfg.iso,
+            "pathway": cfg.pathway,
+            "endpoint_pct": float(cfg.endpoint_pct),
+            "endpoint_year": int(_foresight_endpoint_year_val),
+            "schema_note": ("Phase B diagnostic sidecar. Not a pipeline "
+                            "artifact. Placeholder target_shares — see "
+                            "target_shares_method."),
+            "target_shares_method":
+                "placeholder_replacement_cost_argmin_endpoint_year",
+            "target_shares": {
+                k: round(float(v), 6)
+                for k, v in zip(
+                    _FORESIGHT_SHARE_KEYS, _foresight_target_shares)
+            },
+            "lambda_values": [float(x) for x in _FORESIGHT_LAMBDAS],
+            "per_year": _foresight_preview_rows,
+        }
+    return result
 
 
 # ─── Output-side helpers ─────────────────────────────────────────────────────
