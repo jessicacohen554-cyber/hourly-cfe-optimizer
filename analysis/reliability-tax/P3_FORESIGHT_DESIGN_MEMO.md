@@ -38,7 +38,7 @@ Four candidate architectures for where the foresight layer lives:
 
 **Option (iv) — runtime overlay.**
 
-1. **Zero regression risk on myopic.** The cached 350-run matrix is the null-state baseline and must not drift.
+1. **Zero regression risk on myopic.** The cached output for every `(ISO, endpoint, myopic)` cell is the null-state baseline and must not drift under foresight landing. The existing cache is the 10-endpoint sweep (350 runs across 5 pathways); after the 4-endpoint collapse (§6) the comparable cache is 28 `(ISO, endpoint)` myopic cells. Neither count should shift numerical outputs — only schema adds fields (§6.4).
 2. **The premise implies P3 *is* the planned pathway.** Myopic-P3 is a diagnostic; foresight-P3 is the canonical production pathway. `solver_mode` flag makes this explicit.
 3. **The foresight algorithm will iterate.** §4 enumerates five candidates. Option (iv) lets iteration happen in one file without touching shared code.
 4. **P2a/P2b need foresight variants too, eventually.** Same overlay wraps them with a one-line dispatch change.
@@ -79,7 +79,7 @@ score_y[m]  =  myopic_score_y[m]
              +  λ · w(y, endpoint_year) · ‖ shares[m] − endpoint_target_shares ‖₂²
 ```
 
-where `shares[m]` is the resource-share vector implied by mix `m` projected to `endpoint_year`, `endpoint_target_shares` is a static reference mix chosen once per run (see §8 open question iii), and the time-weight
+where `shares[m]` is the resource-share vector implied by mix `m` projected to `endpoint_year`, `endpoint_target_shares` is a static reference mix chosen once per run (see §8 Q3), and the time-weight
 
 ```
 w(y, endpoint_year)  =  (endpoint_year − y) / (endpoint_year − start_year)
@@ -98,7 +98,7 @@ The prompt pack's original form used `/25` (fixed 2050 horizon). Under the 4-end
 
 **P3 divergence from current-P3.** Interior trajectory shifts clean-firm commits earlier than the NOAK-2035 crossover would on its own. Endpoint mix at (2040,90) / (2045,95) / (2050,99) / (2050,99.9) converges on `endpoint_target_shares` up to the ratchet's post-hoc enforcement. Current-P3 *is* myopic-P3 even though P3 has NOAK=2035 — the argmin is year-by-year myopic and sees only the current-year cost; NOAK just shifts *when* the myopic crossover happens. Foresight-P3 additionally steers by endpoint proximity and hits the endpoint via a different interior trajectory.
 
-**Degenerate case.** λ = 0 → recovers myopic exactly. λ → ∞ → single-year snap-to-endpoint (pathological, triggers cascade). Moderate λ (swept in §8 open question ii) is the production setting.
+**Degenerate case.** λ = 0 → recovers myopic exactly. λ → ∞ → single-year snap-to-endpoint (pathological, triggers cascade). Moderate λ (swept in §8 Q2) is the production setting.
 
 **Why this one.** O(1) additional cost per candidate per year. No rollouts, no fixed-point iteration. Fully compatible with the existing `_score_year_sunk_cost` factoring. Runs on the full 56-run matrix in the same wall time as myopic.
 
@@ -159,7 +159,7 @@ The prompt pack's original form used `/25` (fixed 2050 horizon). Under the 4-end
 
 Reasoning:
 1. Zero interaction risk with the sunk-cost scorer, ratchet, and cascade — the penalty is additive to an existing scalar score.
-2. Wall-time identical to myopic — the 56-run matrix (4 endpoints × {P1, P3} × 7 ISOs) runs in the same budget.
+2. Wall-time identical to myopic — the 28 foresight-P3 runs (4 endpoints × 7 ISOs) complete in the same budget as the 28 paired myopic-P3 runs. (P1 runs in this memo reuse the existing cache; see §6.)
 3. Tunable via a single λ and a time-weight `w(y, endpoint_year)`; sensitivity is inspectable.
 4. Degenerate at λ = 0 to exactly myopic-P3 — the null-state baseline is preserved as a free by-product of the same code path.
 5. Compounds with P3's existing `NOAK_YEAR=2035` Wright's Law advantage rather than competing with it.
@@ -365,8 +365,8 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 **Artifact.** `analysis/reliability-tax/P3_FORESIGHT_DESIGN_MEMO.md` (sections 1-9, consistency-reviewed).
 
 **Exit gate.**
-- User answers the §8 open-question cards.
-- §8 answers back-propagated into §4 (algorithm parameterization) and §6 (schema names) before closing the memo.
+- User answers the §8 open-question cards (Q1–Q5).
+- §8 answers back-propagated into §4 (algorithm parameterization from Q1), §6 (schema names from Q5), and §7 Phase B/C/D (λ strategy from Q2, target-shares heuristic from Q3, P1 comparison scope from Q4) before closing the memo.
 - Memo committed + pushed to `claude/p3-foresight-sections-4-9-qn9uO`.
 
 ### Phase B — Read-only foresight instrumentation
