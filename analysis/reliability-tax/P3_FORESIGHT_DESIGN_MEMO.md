@@ -356,4 +356,81 @@ Under the 4-endpoint collapse, `endpoint_year` ∈ {2040, 2045, 2050}. The solve
 
 ---
 
-*§§7-9 pending in subsequent commits.*
+## 7. Implementation sequence
+
+Five phases, each with an exit gate. No phase starts until the prior phase's gate passes.
+
+### Phase A — This memo
+
+**Artifact.** `analysis/reliability-tax/P3_FORESIGHT_DESIGN_MEMO.md` (sections 1-9, consistency-reviewed).
+
+**Exit gate.**
+- User answers the §8 open-question cards.
+- §8 answers back-propagated into §4 (algorithm parameterization) and §6 (schema names) before closing the memo.
+- Memo committed + pushed to `claude/p3-foresight-sections-4-9-qn9uO`.
+
+### Phase B — Read-only foresight instrumentation
+
+**Artifact.** Non-invasive diagnostic that runs *alongside* the existing myopic solver. At each year `y`, compute what foresight algorithm (b) *would* pick given the current myopic-ledger state and emit to a sidecar. Do not alter the selected mix. Do not touch `solve_pathway` control flow.
+
+**Scope.**
+- Add `_score_year_with_endpoint(...)` (per §5.2) — pure function, no side effects on the solver.
+- Add `_project_shares_to_endpoint(...)` (per §5.6) — pure function.
+- In `solve_pathway`, after the myopic scorer picks its winner, call the foresight scorer on the same feasible candidate set and log: (candidate set, myopic winner, foresight winner under λ ∈ {0.05, 0.15, 0.5}, share-distance to a placeholder `endpoint_target_shares`).
+- Output sidecar: `pathway3_{iso}_ep{pct}_foresight_preview.json`.
+
+**Exit gate.**
+- Sidecar produced for all 28 `(endpoint, ISO)` cells.
+- Human review confirms: foresight winner differs from myopic winner in interior years for `(2050, 99)` and `(2050, 99.9)` runs (otherwise foresight is not steering at all — a red flag before Phase C).
+- Myopic output bit-identical to pre-Phase-B cache. Regression test: diff every cached `pathway3_*.json` against Phase-B output; zero differences outside the new sidecar.
+
+### Phase C — Implement `solve_pathway_with_foresight`
+
+**Artifact.** New function in `scripts/step_2_3_pathway_optimizer.py` per §3 option (iv). Shares primitives with `solve_pathway`. Dispatched via `cfg.solver_mode == "foresight"` from `_run_one`.
+
+**Scope.**
+- Refactor sunk-cost scorer inner body into `_score_year_sunk_cost(...)` per §5.2 (touches `solve_pathway` but preserves output).
+- Add `solve_pathway_with_foresight(cfg)` that owns its year loop and calls `_score_year_with_endpoint` in place of `_score_year_sunk_cost`.
+- Reuse `_finalize_run`, `_build_ledger`, ratchet, and cascade unchanged.
+- Add `RunConfig.solver_mode`, `RunConfig.foresight_lambda`, `RunConfig.endpoint_target_shares`, `RunConfig.endpoint_year`, `RunConfig.endpoint_pct` fields.
+- Emit schema fields per §6.4.
+
+**Exit gate.**
+- Regression test: `solve_pathway_with_foresight(cfg_lambda_0)` produces bit-identical output to `solve_pathway(cfg)` for identical underlying inputs. This is the load-bearing invariant.
+- Unit test on a synthetic 5-year, 3-resource toy problem: known-solution check where hand-computed λ > 0 forces the same argmin as `endpoint_target_shares`.
+- Phase B sidecar's foresight-winner predictions match Phase C's actual-winner decisions at λ = 0.15 (sanity check that Phase B instrumentation was correctly implementing the same algorithm).
+
+### Phase D — ERCOT calibration run (2 cells)
+
+**Artifact.** Full foresight-P3 runs on ERCOT at endpoints `(2040, 90)` and `(2050, 99)`. λ swept across {0.0, 0.05, 0.15, 0.5, 1.5}.
+
+**Scope.**
+- Run matrix: 1 ISO × 2 endpoints × 1 mode (foresight) × 5 λ values = 10 runs.
+- For each run, compare to the existing myopic-P3 cache for the same `(endpoint, ISO)`.
+- Produce the §6.3 headline metric per run.
+- Produce the §6.2 table for ERCOT-(2040,90) and ERCOT-(2050,99).
+
+**Exit gate.**
+- `foresight_penalty_vs_myopic > 0` for at least one λ value on `(2050, 99)`. If all λ values give negative penalty, re-tune `endpoint_target_shares` (see §8 open question iii) before proceeding.
+- Cascade activation count at the chosen λ is within ±1 of myopic cascade count. If foresight inflates cascade firing, either λ is too aggressive or the ratchet is under-constraining something subtle — debug before Phase E.
+- User picks production λ based on the penalty sweep and cascade behavior.
+
+### Phase E — Full 7-ISO × 4-endpoint sweep + dashboard
+
+**Artifact.** Complete `(endpoint, ISO, mode)` matrix, dashboard section, written analysis.
+
+**Scope.**
+- Run matrix: 7 ISOs × 4 endpoints × 2 modes (myopic, foresight) = 56 runs. Myopic runs hit cache on hit; foresight runs are fresh.
+- Plus legacy P1 runs (re-used; forcing-mechanism revision is out of scope here — use current `pathway1_*.json`).
+- Generate §6.1 per-year plots and §6.2 tables for all 28 cells.
+- Build dashboard section in `dashboard/` anchored to `abatement_dashboard.html` (scrollytell analysis page, per `CLAUDE.md` reference table).
+- Update `SPEC.md` current status; archive the prior current status to `SPEC_LOG.md`.
+
+**Exit gate.**
+- All 56 foresight runs complete; 28 paired penalty metrics computed.
+- Dashboard renders cleanly on all cells; `/fix-prose` passes on the written analysis.
+- `LESSONS.md` gets the "what we'd do differently next time" line.
+
+---
+
+*§§8-9 pending in subsequent commits.*
