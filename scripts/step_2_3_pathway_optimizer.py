@@ -460,20 +460,31 @@ def _per_archetype_resid_norm(iso: str, cache: pa.Table) -> np.ndarray:
 def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
     """Stage-1: per-EF-row 99.97th-percentile residual-gap fraction.
 
-    For each EF row, resolve the closest cached archetype via
-    `_archetype_for_endpoint_mix` and return that archetype's
-    99.97th-percentile margin-on-demand residual (fraction of annual demand).
-    Stage-2 multiplies this by per-year annual MWh to get the gas gap.
-    Archetype misses fall back to a worst-case `resid_norm = RA_margin`
-    (treats them as if all clean were zero at peak — conservative).
+    v3 rewrite — preserves v2's nearest-archetype semantics exactly while
+    restructuring the L1 search for ~2x throughput and adding a defensive
+    ``hourly_match_score`` filter:
 
-    Output columns:
-      - `resid_norm_p9997`  : float32, fraction of annual demand, the
-                              canonical Stage-2 input.
-      - `clean_peak_hour_mw`: float32, diagnostic MW value computed as
-                              `(1 - resid_norm_p9997) * PEAK_DEMAND_MW`,
-                              kept for downstream display at line ~1029
-                              (not consumed by gas sizing anymore).
+    1. L1 nearest-neighbor via iterate-over-archetypes in int32 space.
+       The v2 implementation used ``np.abs(eb[:,None,:] - mm[None,:,:]).sum(2)``
+       in float64 on 5k-row batches, allocating ~25 MB intermediates per
+       batch. v3 iterates the ~63 manifest archetypes, computing ``np.abs(ef
+       - manifest[a]).sum(axis=1)`` per archetype and tracking a running
+       best — O(n) memory, int32 arithmetic, and no Python-level batching
+       loop. Semantics unchanged (argmin of L1 distance to manifest).
+
+    2. Secondary ``hourly_match_score`` defensive floor. Rows whose score
+       is more than ``SCORE_FLOOR_PCT`` below the threshold are assigned
+       ``+inf`` residual, which Stage-2's argmin auto-excludes via
+       ``np.isfinite``. No-op on correctly-produced per-threshold EF
+       files (score band is upstream-narrow already).
+
+    Output columns (unchanged vs. v2):
+      - ``resid_norm_p9997``  : float32, fraction of annual demand (or
+                                ``+inf`` for score-outside-window rows).
+      - ``clean_peak_hour_mw``: float32, diagnostic MW value. Infinities
+                                are replaced with 0 before the
+                                ``(1 - resid) * peak`` computation so the
+                                column stays finite.
     """
     ef = _read_ef_table(iso, threshold)
     n = ef.num_rows
@@ -482,9 +493,11 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
     cache = _DISPATCH_CACHE_BY_ISO.get(iso)
     am = _ANNUAL_MANIFEST_BY_ISO.get(iso)
 
+    miss_resid = np.float32(float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR)
+
     if cache is None or am is None:
         # No cache — conservative fallback: treat as full residual (all RA).
-        resid_out[:] = float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR
+        resid_out[:] = miss_resid
         _STAGE1_MISSES[(iso, threshold)] = list(range(n))
         print(f"[stage1] {iso} t={threshold}: no dispatch cache; "
               f"conservative fallback for all {n} rows", flush=True)
@@ -499,7 +512,7 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
                  'mix_ccs_ccgt', 'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8',
                  'mix_wind_batt4', 'mix_wind_batt8']
         manifest_mat = np.column_stack(
-            [am.column(c).to_numpy() for c in mcols]).astype(np.float64)  # (A_man, 10)
+            [am.column(c).to_numpy() for c in mcols]).astype(np.int32)  # (A_man, 10)
         manifest_keys = am.column('archetype_key').to_pylist()
         manifest_to_cache = np.array(
             [key_to_cache_row.get(k, -1) for k in manifest_keys],
@@ -509,48 +522,61 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
         ef_mat = np.column_stack([
             ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n)
             for c in ef_cols
-        ]).astype(np.float64)  # (n, 10)
+        ]).astype(np.int32)  # (n, 10)
 
-        miss_rows: list[int] = []
-        hits = 0
-        batch = 5000
-        # Conservative miss value: RA fraction per hour (uniformly bad).
-        miss_resid = np.float32(float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR)
-        for i in range(0, n, batch):
-            eb = ef_mat[i:i + batch]                      # (b, 10)
-            dists = np.abs(eb[:, None, :] - manifest_mat[None, :, :]).sum(axis=2)
-            nn_man = np.argmin(dists, axis=1)             # (b,)
-            cache_idx = manifest_to_cache[nn_man]         # (b,)
-            hit_mask = cache_idx >= 0
-            out_batch = np.full(eb.shape[0], miss_resid, dtype=np.float32)
-            if hit_mask.any():
-                out_batch[hit_mask] = resid_per_arch[cache_idx[hit_mask]]
-            if (~hit_mask).any():
-                miss_rows.extend((i + np.nonzero(~hit_mask)[0]).tolist())
-            resid_out[i:i + batch] = out_batch
-            hits += int(hit_mask.sum())
+        # L1-NN by iterating over A_man archetypes with a running argmin —
+        # O(n * A_man * D) time, O(n) memory, int32 throughout.
+        if n > 0 and len(manifest_mat) > 0:
+            best_dist = np.full(n, np.iinfo(np.int32).max, dtype=np.int32)
+            best_arch = np.zeros(n, dtype=np.int32)
+            for a in range(len(manifest_mat)):
+                d = np.abs(ef_mat - manifest_mat[a]).sum(axis=1)
+                imp = d < best_dist
+                best_dist[imp] = d[imp]
+                best_arch[imp] = a
+            cache_idx = manifest_to_cache[best_arch]
+        else:
+            cache_idx = np.empty(n, dtype=np.int64)
+
+        hit_mask = cache_idx >= 0
+        safe_idx = np.where(hit_mask, cache_idx, 0)
+        resid_out[:] = np.where(hit_mask, resid_per_arch[safe_idx], miss_resid
+                                ).astype(np.float32)
+        miss_rows = np.nonzero(~hit_mask)[0].tolist()
 
         _STAGE1_MISSES[(iso, threshold)] = miss_rows
+        hits = n - len(miss_rows)
         match_rate = hits / max(1, n)
         print(f"[stage1] {iso} t={threshold}: archetype match "
               f"{hits}/{n} = {match_rate * 100:.1f}%  "
               f"(misses={len(miss_rows)})", flush=True)
 
+    # Secondary defensive filter: rows with hourly_match_score far below the
+    # threshold get +inf resid, excluding them from the Stage-2 argmin.
+    # No-op on correctly-produced per-threshold EF files.
+    SCORE_FLOOR_PCT = 10.0
+    if 'hourly_match_score' in ef.column_names:
+        score_vec = ef.column('hourly_match_score').to_numpy()
+        outside = score_vec < (float(threshold) - SCORE_FLOOR_PCT)
+        if outside.any():
+            resid_out[outside] = np.float32(np.inf)
+
     # Diagnostic MW value for display (line ~1029). Not consumed by Stage-2.
     peak_mw = float(pc.PEAK_DEMAND_MW[iso])
-    clean_peak_diag = (1.0 - resid_out.astype(np.float64)) * peak_mw
+    resid_safe = np.where(np.isfinite(resid_out), resid_out, 0.0).astype(np.float64)
+    clean_peak_diag = (1.0 - resid_safe) * peak_mw
     tbl = pa.table({
         'resid_norm_p9997': pa.array(resid_out),
         'clean_peak_hour_mw': pa.array(clean_peak_diag.astype(np.float32)),
     })
     return tbl.replace_schema_metadata({
         'source_cache_version': _dispatch_cache_version(iso),
-        'stage1_version': '2',
+        'stage1_version': '3',
         'iso': iso, 'threshold': str(threshold),
     })
 
 
-_STAGE1_VERSION = '2'
+_STAGE1_VERSION = '3'
 
 
 def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
