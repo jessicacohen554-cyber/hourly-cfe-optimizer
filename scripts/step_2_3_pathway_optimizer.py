@@ -711,55 +711,6 @@ def _resource_tx(iso: str, resource: str, tx_level: str) -> float:
     return 0.0
 
 
-def operating_cost_matrix(ef: dict, demand_vec: np.ndarray,
-                          cfg: 'RunConfig') -> tuple:
-    """Per-year-per-mix operating cost (USD) + clean_firm feasibility mask.
-
-    Clean_firm is disaggregated into 5 merit-order tranches and each
-    tranche's $ contribution is summed directly — no blended LCOE, no
-    averaging. The existing-nuclear tranche contributes $0 by construction
-    so the argmin no longer over-penalizes mixes for carrying their
-    baseline. All other resources use their scalar Wright's-Law LCOE + TX
-    as before. Returns (op_cost, feasible_yn); feasible_yn is False where
-    the pathway's locked tranches can't fill the mix's clean_firm target.
-    """
-    n = len(ef['hourly_match_score'])
-    out = np.zeros((N_YEARS, n), dtype=np.float64)
-    annual_mwh_vec = demand_vec * 1.0e6
-    feasible_yn = np.ones((N_YEARS, n), dtype=bool)
-    for r in _RESOURCE_COLS:
-        share = ef[r] / 100.0          # (n,)
-        if share.sum() == 0:
-            continue
-        if r == 'clean_firm':
-            tg = decompose_clean_firm_tranches(
-                ef[r], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
-            # Direct sum: TWh × $/MWh × 1e6 → $. existing tranche LCOE = 0.
-            out += tg['uprate_twh']   * tg['uprate_eff_lcoe'][:, None]   * 1.0e6
-            out += tg['geo_twh']      * tg['geo_eff_lcoe'][:, None]      * 1.0e6
-            out += tg['nuke_new_twh'] * tg['nuke_new_eff_lcoe'][:, None] * 1.0e6
-            out += tg['ccs_twh']      * tg['ccs_eff_lcoe'][:, None]      * 1.0e6
-            feasible_yn &= tg['feasible']
-            continue
-        tx = _resource_tx(cfg.iso, r, cfg.tx_level)
-        # (N_YEARS,) lcoe+tx vector — lru_cache makes repeated calls free
-        unit_vec = np.array([_resource_lcoe_year(cfg.iso, r, yr, cfg) + tx for yr in YEARS])
-        if unit_vec.sum() == 0:
-            continue
-        # broadcast: (N_YEARS,1) * (1,n) * (N_YEARS,1) → (N_YEARS,n)
-        out += (demand_vec[:, None] * 1.0e6) * share[None, :] * unit_vec[:, None]
-    # Add storage costs (annualized capacity × demand)
-    storage_lcoe_keys = {'battery_dispatch_pct': 'battery', 'battery8_dispatch_pct': 'battery8',
-                         'ldes_dispatch_pct': 'ldes', 'h2_dispatch_pct': 'h2'}
-    for sc, lk in storage_lcoe_keys.items():
-        share = ef[sc] / 100.0
-        if share.sum() == 0:
-            continue
-        unit = pc.LCOE_TABLES[lk]['Medium'][cfg.iso]
-        out += demand_vec[:, None] * 1.0e6 * share[None, :] * unit / 1.0e6
-    return out, feasible_yn
-
-
 def gas_fuel_cost_matrix(ef: dict, demand_vec: np.ndarray, fuel_price: float) -> np.ndarray:
     """Per-year-per-mix gas-fuel cost: (1 - cfe/100) × demand × $/MWh."""
     score = ef['hourly_match_score']                         # (n,)
@@ -1064,46 +1015,148 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     existing_gas_vec = existing_gas_available_vec(cfg.iso, cfe_targets, cfg.demand_growth_level)
     gas_required = gas_sizing_matrix(annual_mwh_vec, existing_gas_vec, resid_arr,
                                      gas_raw_2025, existing_base, gaf)
-    op_cost, cf_feasible = operating_cost_matrix(ef, demand_vec, cfg)
     fuel_unit = pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso]['Medium']
     gas_fuel = gas_fuel_cost_matrix(ef, demand_vec, fuel_unit)
 
     # Ratcheted new-gas fleet: once n MW are built in year y, those MW stay
     # on the books for all subsequent years and carry annualized capex + FOM.
-    # The previous v2 used per-year gas_required directly, which lets a mix
-    # "drop" its gas in a year where clean_pct is temporarily high — an
-    # artifact that biased the argmin toward gas-heavy early mixes vs.
-    # clean-dominant early mixes. Take the cumulative max along axis=0 (years)
-    # so fleet_y[y, n] = max over y' ≤ y of gas_required[y', n].
     ratchet_fleet_y = np.maximum.accumulate(gas_required, axis=0)
     new_gas_capex_y = (pc.NEW_CCGT_COST_KW_YR[cfg.iso] * 1000.0) * ratchet_fleet_y
     new_gas_fom_y   = (pc.NEW_CCGT_FOM_KW_YR[cfg.iso]  * 1000.0) * ratchet_fleet_y
     existing_fom = (float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
                     * pc.EXISTING_GAS_FOM_KW_YR[cfg.iso] * 1000.0)
-    cost_matrix = op_cost + new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom
-    # ∞-mask (a) mixes outside the pathway mask / cfe target and (b) mixes whose
-    # clean_firm target exceeds what the pathway's available tranches can fill.
-    valid = pmask & cfe_mask & cf_feasible
-    cost_matrix = np.where(valid, cost_matrix, np.inf)
 
-    winners = np.empty(N_YEARS, dtype=np.int64)
+    # --- Sunk-cost-aware inline scorer (Interpretation B) + floor-ratchet ---
+    # Build:
+    #   * non-CF (N, R) share matrix and (Y, R) delivered LCOE for every resource
+    #     that carries a ledger vintage.
+    #   * CF-tranche (Y, N) TWh grids plus per-year effective LCOEs from the
+    #     clean-firm decomposer (single call — same cost as the old per-mix path
+    #     but reused for scoring, ratcheting, and feasibility).
+    #   * Standalone-storage per-year utility cost (Y, N) — unvintaged, treated
+    #     as an annualized capacity cost at current demand (pre-fix semantics).
+    # The solver then walks years forward, maintaining absolute-TWh floors per
+    # non-CF resource and per CF tranche. Winners are chosen as the mix that
+    # minimizes the INCREMENTAL new-build cost at year-y LCOE given those
+    # floors — prior-built capacity is sunk and prices to $0 in the scorer.
+    non_cf = tuple(r for r in _RESOURCE_COLS if r != 'clean_firm')
+    R = len(non_cf)
+    tx_r = np.array(
+        [_resource_tx(cfg.iso, r, cfg.tx_level) for r in non_cf],
+        dtype=np.float64,
+    )
+    lcoe_yr = np.empty((N_YEARS, R), dtype=np.float64)
+    for ri, r in enumerate(non_cf):
+        for yi, y in enumerate(YEARS):
+            lcoe_yr[yi, ri] = _resource_lcoe_year(cfg.iso, r, y, cfg)
+    delivered_yr = lcoe_yr + tx_r[None, :]                            # (Y, R)
+    shares_nr = np.stack([ef[r] for r in non_cf], axis=1).astype(np.float64) / 100.0  # (N, R)
+
+    tg = decompose_clean_firm_tranches(
+        ef['clean_firm'], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
+    uprate_twh_yn   = tg['uprate_twh']                                # (Y, N)
+    geo_twh_yn      = tg['geo_twh']
+    nuke_new_twh_yn = tg['nuke_new_twh']
+    ccs_twh_yn      = tg['ccs_twh']
+    cf_feasible_yn  = tg['feasible']                                  # (Y, N) bool
+    uprate_eff      = tg['uprate_eff_lcoe']                           # (Y,)
+    geo_eff         = tg['geo_eff_lcoe']
+    nuke_new_eff    = tg['nuke_new_eff_lcoe']
+    ccs_eff         = tg['ccs_eff_lcoe']
+
+    # Standalone-storage per-year cost (unvintaged; demand-scaled utility cost).
+    storage_lcoe_keys = {
+        'battery_dispatch_pct': 'battery', 'battery8_dispatch_pct': 'battery8',
+        'ldes_dispatch_pct': 'ldes', 'h2_dispatch_pct': 'h2',
+    }
+    storage_cost_yn = np.zeros((N_YEARS, n_mixes), dtype=np.float64)
+    for sc, lk in storage_lcoe_keys.items():
+        share = ef[sc] / 100.0
+        if share.sum() == 0:
+            continue
+        unit = pc.LCOE_TABLES[lk]['Medium'][cfg.iso]
+        storage_cost_yn += demand_vec[:, None] * 1.0e6 * share[None, :] * unit / 1.0e6
+
+    gas_fixed_y = new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom  # (Y, N)
+
+    # Absolute-TWh floors. Non-CF initial floor = baseline grid-share TWh at
+    # base-year demand; tranche floors start at 0 (existing-CF baseline is
+    # separate and priced at $0 in the ledger).
+    grid = pc.GRID_MIX_SHARES[cfg.iso]
+    base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
+    floor_twh_r    = np.array(
+        [base_demand * grid.get(r, 0.0) / 100.0 for r in non_cf],
+        dtype=np.float64,
+    )
+    floor_uprate   = 0.0
+    floor_geo      = 0.0
+    floor_nuke_new = 0.0
+    floor_ccs      = 0.0
+
+    winners           = np.empty(N_YEARS, dtype=np.int64)
+    winner_feasible   = np.ones(N_YEARS, dtype=bool)
+    ratchet_violated  = np.zeros(N_YEARS, dtype=bool)
+
+    RATCHET_TOL_TWH = 1.0e-6
     for yi in range(N_YEARS):
-        if not np.isfinite(cost_matrix[yi]).any():
-            # No feasible mix this year; relax cfe constraint (keep tranche
-            # feasibility — we won't pick a clean_firm-infeasible mix).
-            relaxed = pmask[yi] & cf_feasible[yi] & (score_vec >= cfe_targets[yi] - 5.0)
-            row = np.where(relaxed,
-                           op_cost[yi] + new_gas_capex_y[yi] + new_gas_fom_y[yi]
-                           + gas_fuel[yi] + existing_fom, np.inf)
-            if not np.isfinite(row).any():
-                # Last-resort fallback: drop tranche feasibility to avoid a
-                # SystemError from argmin over all-inf. Flag via feasibility.
-                row = np.where(pmask[yi],
-                               op_cost[yi] + new_gas_capex_y[yi] + new_gas_fom_y[yi]
-                               + gas_fuel[yi] + existing_fom, np.inf)
-            winners[yi] = int(np.argmin(row))
-        else:
-            winners[yi] = int(np.argmin(cost_matrix[yi]))
+        # Target TWh per (mix, non-CF resource) at year-y grown demand.
+        target_twh_nr = shares_nr * float(demand_vec[yi])             # (N, R)
+        # Ratchet masks: a mix is admissible only if every already-committed
+        # resource's year-y TWh claim ≥ its running-max floor.
+        ratchet_nonCF = np.all(
+            target_twh_nr >= (floor_twh_r[None, :] - RATCHET_TOL_TWH), axis=1)
+        ratchet_uprate = uprate_twh_yn[yi]   >= (floor_uprate   - RATCHET_TOL_TWH)
+        ratchet_geo    = geo_twh_yn[yi]      >= (floor_geo      - RATCHET_TOL_TWH)
+        ratchet_nuke   = nuke_new_twh_yn[yi] >= (floor_nuke_new - RATCHET_TOL_TWH)
+        ratchet_ccs    = ccs_twh_yn[yi]      >= (floor_ccs      - RATCHET_TOL_TWH)
+        ratchet_mask_y = (ratchet_nonCF & ratchet_uprate & ratchet_geo
+                          & ratchet_nuke & ratchet_ccs)
+
+        # Sunk-cost scorer: only the NEW TWh above each floor prices at year-y LCOE.
+        incr_nonCF    = np.maximum(0.0, target_twh_nr - floor_twh_r[None, :])  # (N, R)
+        score_nonCF   = (incr_nonCF * delivered_yr[yi][None, :]).sum(axis=1) * 1.0e6  # (N,)
+        score_cf      = (
+              np.maximum(0.0, uprate_twh_yn[yi]   - floor_uprate)   * uprate_eff[yi]
+            + np.maximum(0.0, geo_twh_yn[yi]      - floor_geo)      * geo_eff[yi]
+            + np.maximum(0.0, nuke_new_twh_yn[yi] - floor_nuke_new) * nuke_new_eff[yi]
+            + np.maximum(0.0, ccs_twh_yn[yi]      - floor_ccs)      * ccs_eff[yi]
+        ) * 1.0e6
+        row_score = score_nonCF + score_cf + storage_cost_yn[yi] + gas_fixed_y[yi]
+
+        # Fallback cascade. Ratchet is non-negotiable except under the Tier-4
+        # emergency case (all-infeasible even without cfe and cf_feasible).
+        valid = ratchet_mask_y & pmask[yi] & cfe_mask[yi] & cf_feasible_yn[yi]
+        if not valid.any():
+            # Tier 2: relax CFE ±5 pts (keep ratchet + pmask + cf_feasible).
+            relaxed_cfe = score_vec >= cfe_targets[yi] - 5.0
+            valid = ratchet_mask_y & pmask[yi] & relaxed_cfe & cf_feasible_yn[yi]
+            if not valid.any():
+                # Tier 3: drop cf_feasible (ratchet still respected). Year flagged
+                # as physically infeasible — mix reported cost is right, but it
+                # can't actually be built by the available clean_firm tranches.
+                valid = ratchet_mask_y & pmask[yi]
+                winner_feasible[yi] = False
+                if not valid.any():
+                    # Tier 4 emergency: drop ratchet too. Flag for review.
+                    valid = pmask[yi].copy()
+                    ratchet_violated[yi] = True
+                    if not valid.any():
+                        valid = np.ones(n_mixes, dtype=bool)
+
+        masked_score = np.where(valid, row_score, np.inf)
+        w = int(np.argmin(masked_score))
+        winners[yi] = w
+        # If we landed via Tier-1/2, winner_feasible still reflects the mask's
+        # cf_feasible membership; reassert it explicitly for safety.
+        if winner_feasible[yi]:
+            winner_feasible[yi] = bool(cf_feasible_yn[yi, w])
+
+        # Update floors from the winning mix (monotone non-decreasing).
+        floor_twh_r    = np.maximum(floor_twh_r, target_twh_nr[w])
+        floor_uprate   = max(floor_uprate,   float(uprate_twh_yn[yi, w]))
+        floor_geo      = max(floor_geo,      float(geo_twh_yn[yi, w]))
+        floor_nuke_new = max(floor_nuke_new, float(nuke_new_twh_yn[yi, w]))
+        floor_ccs      = max(floor_ccs,      float(ccs_twh_yn[yi, w]))
 
     # Phase B: realized clean_pct from winners → re-run existing_gas_vec, apply ratchet
     achieved_cfe = score_vec[winners]
@@ -1123,19 +1176,15 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
                       np.minimum(1.0, gas_gen_mwh / (total_gas_mw * HOURS_PER_YEAR)), 0.0)
 
     # Existing gas used = min(gas_needed_at_winner, existing_gas_available).
-    # gas_needed[y, winner] = existing_base + gas_raw[y, winner] - gas_raw_2025
     gap_mwh_winner = resid_arr[winners] * annual_mwh_vec
     gas_raw_winner = gap_mwh_winner / max(1e-9, gaf)
     gas_needed_winner = np.maximum(0.0, existing_base + gas_raw_winner - gas_raw_2025)
     existing_gas_used = np.minimum(existing_gas_vec_real, gas_needed_winner)
-    # Diagnostic "clean at worst hour" MW (display only, not used in sizing).
     clean_arr_diag = ef['clean_peak_hour_mw']
-    # Per-year feasibility trace on the winning path (for feasibility.physical).
-    winner_feasible = cf_feasible[np.arange(N_YEARS), winners]
     return _finalize_run(cfg, ef, winners, peak_vec, demand_vec,
                          achieved_cfe, existing_gas_vec_real, existing_gas_used,
                          cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
-                         clean_arr_diag, winner_feasible)
+                         clean_arr_diag, winner_feasible, ratchet_violated)
 
 
 # ─── Output-side helpers ─────────────────────────────────────────────────────
@@ -1237,19 +1286,25 @@ def _priced_vre_curtailment_vec(ef: dict, winners: np.ndarray, demand_vec: np.nd
 def _build_ledger(ef: dict, winners: np.ndarray, cfg: 'RunConfig') -> VintageLedger:
     """Existing-fleet entries + per-year delta vintages with locked LCOE.
 
+    Every vintage carries an ABSOLUTE TWh claim at its locked LCOE — no demand
+    scaling anywhere. Baseline existing vintages sit at BASE_YEAR with
+    twh = base_demand × grid_share / 100 and locked_lcoe = 0. Each new year,
+    the winner's year-y absolute-TWh target per resource is compared against
+    a running-max floor; the positive delta (if any) becomes a new vintage at
+    that year's LCOE. Floors are absolute TWh, so demand growth at constant
+    share mechanically produces NEW vintages covering the gap (existing
+    vintages don't scale with demand — they stay frozen at their locked TWh).
     Clean_firm is disaggregated: the baseline `clean_firm_existing` vintage
-    at BASE_YEAR sits at locked_lcoe=0 (already-paid fleet), then each year
-    any positive delta in the uprate / geo / nuke_new / ccs tranches becomes
-    its own tranche-tagged vintage with the year's effective LCOE from the
-    decomposer. All non-clean_firm resources keep the v2 single-vintage
-    behavior with the scalar `_resource_lcoe_year` path.
+    at BASE_YEAR sits at locked_lcoe=0, then each year any positive tranche
+    delta (uprate / geo / nuke_new / ccs) becomes its own tranche-tagged
+    vintage with the year's effective LCOE.
     """
     led = VintageLedger()
     base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
     grid = pc.GRID_MIX_SHARES[cfg.iso]
+    g = pc.DEMAND_GROWTH_RATES[cfg.iso][cfg.demand_growth_level]
 
-    # ── Base-year existing vintages ──
-    # Clean_firm baseline enters as a single clean_firm_existing line at $0.
+    # ── Base-year existing vintages (absolute TWh, locked_lcoe = 0) ──
     for r, share in grid.items():
         if share <= 0:
             continue
@@ -1258,65 +1313,56 @@ def _build_ledger(ef: dict, winners: np.ndarray, cfg: 'RunConfig') -> VintageLed
                         twh_per_year=base_demand * share / 100.0,
                         locked_lcoe=0.0, tx_adder=0.0, retire_year=None))
 
-    # ── Per-year delta vintages (non-clean_firm resources) ──
+    # ── Per-year delta vintages (non-clean_firm resources) — absolute-TWh floor ──
     non_cf_resources = tuple(r for r in _RESOURCE_COLS if r != 'clean_firm')
-    prev_share = {r: 0.0 for r in non_cf_resources}
+    floor_twh = {r: base_demand * grid.get(r, 0.0) / 100.0 for r in non_cf_resources}
     for yi, year in enumerate(YEARS):
         w = int(winners[yi])
-        gf = (1.0 + pc.DEMAND_GROWTH_RATES[cfg.iso][cfg.demand_growth_level]) ** yi
-        demand_y_twh = base_demand * gf
+        demand_y_twh = base_demand * (1.0 + g) ** yi
         for r in non_cf_resources:
-            cur = float(ef[r][w])
-            baseline = grid.get(r, 0.0)
-            delta = cur - max(prev_share[r], baseline)
-            if delta > 0.5:
+            target_twh = demand_y_twh * float(ef[r][w]) / 100.0
+            delta = target_twh - floor_twh[r]
+            if delta > 0.005:  # 5 GWh floor
                 lcoe = _resource_lcoe_year(cfg.iso, r, year, cfg)
                 tx = _resource_tx(cfg.iso, r, cfg.tx_level)
                 led.add(Vintage(resource=r, cod_year=year,
-                                twh_per_year=demand_y_twh * delta / 100.0,
+                                twh_per_year=delta,
                                 locked_lcoe=lcoe, tx_adder=tx, retire_year=None))
-            prev_share[r] = max(prev_share[r], cur)
+            if target_twh > floor_twh[r]:
+                floor_twh[r] = target_twh
 
-    # ── Per-year delta vintages (clean_firm tranches) ──
-    # Run the decomposer once over the full mix table, then slice by winners.
-    # Tranche TWh for the winning mix at each year; deltas vs. running max
-    # become new vintages at that year's tranche LCOE.
+    # ── Per-year delta vintages (clean_firm tranches) — absolute-TWh floor ──
     annual_mwh_vec = np.array(
-        [base_demand * (1.0 + pc.DEMAND_GROWTH_RATES[cfg.iso][cfg.demand_growth_level]) ** i
-         * 1.0e6 for i in range(N_YEARS)],
+        [base_demand * (1.0 + g) ** i * 1.0e6 for i in range(N_YEARS)],
         dtype=np.float64,
     )
     tg = decompose_clean_firm_tranches(
         ef['clean_firm'], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
     idx = np.arange(N_YEARS)
-    uprate_twh_y   = tg['uprate_twh'][idx, winners]
-    geo_twh_y      = tg['geo_twh'][idx, winners]
-    nuke_new_twh_y = tg['nuke_new_twh'][idx, winners]
-    ccs_twh_y      = tg['ccs_twh'][idx, winners]
-
     tranche_series = (
-        ('uprate',   uprate_twh_y,   tg['uprate_eff_lcoe']),
-        ('geo',      geo_twh_y,      tg['geo_eff_lcoe']),
-        ('nuke_new', nuke_new_twh_y, tg['nuke_new_eff_lcoe']),
-        ('ccs',      ccs_twh_y,      tg['ccs_eff_lcoe']),
+        ('uprate',   tg['uprate_twh'][idx, winners],   tg['uprate_eff_lcoe']),
+        ('geo',      tg['geo_twh'][idx, winners],      tg['geo_eff_lcoe']),
+        ('nuke_new', tg['nuke_new_twh'][idx, winners], tg['nuke_new_eff_lcoe']),
+        ('ccs',      tg['ccs_twh'][idx, winners],      tg['ccs_eff_lcoe']),
     )
     for tranche_name, twh_y, eff_lcoe_y in tranche_series:
-        prev = 0.0
+        floor = 0.0
         key = _CLEAN_FIRM_TRANCHE_VINTAGE_KEY[tranche_name]
         for yi, year in enumerate(YEARS):
             cur = float(twh_y[yi])
-            delta = cur - prev
-            if delta > 0.005:  # 5 GWh floor — mirror the non-CF 0.5-pct floor
+            delta = cur - floor
+            if delta > 0.005:  # 5 GWh floor
                 led.add(Vintage(
                     resource=key, cod_year=year,
                     twh_per_year=delta,
-                    # TX is already baked into eff_lcoe for geo/nuke_new/ccs;
-                    # uprate has TX=0 by design. So tx_adder=0 here — the
-                    # vintage's delivered cost is (locked_lcoe + 0) × twh.
+                    # TX is baked into eff_lcoe for geo/nuke_new/ccs; uprate
+                    # has TX=0 by design — the vintage's delivered cost is
+                    # (locked_lcoe + 0) × twh.
                     locked_lcoe=float(eff_lcoe_y[yi]), tx_adder=0.0,
                     retire_year=None,
                 ))
-            prev = max(prev, cur)
+            if cur > floor:
+                floor = cur
     return led
 
 
@@ -1324,7 +1370,8 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
                   peak_vec, demand_vec, achieved_cfe, existing_gas_vec_real,
                   existing_gas_used, cum_new_gas, active_fleet, gas_cf,
                   fleet_size_mw, peak_year, clean_arr,
-                  winner_feasible: np.ndarray) -> PathwayRunResult:
+                  winner_feasible: np.ndarray,
+                  ratchet_violated: np.ndarray) -> PathwayRunResult:
     ledger = _build_ledger(ef, winners, cfg)
     priced_curt_vec = _priced_vre_curtailment_vec(ef, winners, demand_vec, cfg)
     new_gas_annualized = active_fleet * pc.NEW_CCGT_COST_KW_YR[cfg.iso] * 1000.0
@@ -1332,12 +1379,12 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
     existing_fom = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso]) * pc.EXISTING_GAS_FOM_KW_YR[cfg.iso] * 1000.0
     fuel_unit = pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso]['Medium']
     gas_fuel_y = np.maximum(0.0, 1.0 - achieved_cfe / 100.0) * demand_vec * 1.0e6 * fuel_unit
-    # gross operating cost: sum of vintage LCOE × twh, ledger sub-set active at year y
+    # Gross operating cost: sum of active vintages' absolute twh × locked LCOE.
+    # Vintages carry absolute TWh claims — no demand scaling at readout time.
     annual_rows = []
     for yi, year in enumerate(YEARS):
         active_v = [v for v in ledger.entries if v.cod_year <= year and (v.retire_year is None or v.retire_year > year)]
-        gross_op = sum(v.twh_per_year * 1.0e6 * (v.locked_lcoe + v.tx_adder) for v in active_v) \
-                   * (demand_vec[yi] / max(1e-6, demand_vec[0]))  # scale by demand growth
+        gross_op = sum(v.twh_per_year * 1.0e6 * (v.locked_lcoe + v.tx_adder) for v in active_v)
         new_gas_annualized_plus_fom = float(new_gas_annualized[yi] + new_gas_fom_y_out[yi])
         net = gross_op + new_gas_annualized_plus_fom + existing_fom + gas_fuel_y[yi] + priced_curt_vec[yi]
         annual_rows.append({
@@ -1413,18 +1460,28 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
     }
 
     rt_timeline = _retirement_timeline(cfg.iso, achieved_cfe, cfg.demand_growth_level)
-    # feasibility.physical: True only if every winning year's mix could be
-    # physically filled by the available clean_firm tranches (baseline +
-    # uprate + geo + nuke_new + ccs, with pathway gating). False years mean
-    # the argmin fell through to the infeasible-relaxation branch — the mix
-    # reports the right cost but couldn't actually be built.
-    infeasible_years = [int(YEARS[i]) for i in range(N_YEARS)
-                        if not bool(winner_feasible[i])]
+    # feasibility.physical: True iff every year's winning mix could be physically
+    # filled by the available clean_firm tranches AND the sequential ratchet was
+    # never violated. False when either:
+    #   (a) the argmin fell through to Tier 3 (dropped cf_feasible) because no
+    #       ratchet-respecting + cfe-respecting mix could actually be built —
+    #       reported cost is right but clean_firm target exceeds tranche budget;
+    #   (b) the argmin fell through to Tier 4 emergency (dropped ratchet) —
+    #       the sequential-build model couldn't keep a prior commitment.
+    infeasible_years     = [int(YEARS[i]) for i in range(N_YEARS)
+                            if not bool(winner_feasible[i])]
+    ratchet_violated_yrs = [int(YEARS[i]) for i in range(N_YEARS)
+                            if bool(ratchet_violated[i])]
+    notes = []
+    if infeasible_years:
+        notes.append("clean_firm target exceeds available tranche budget in: "
+                     f"{infeasible_years}")
+    if ratchet_violated_yrs:
+        notes.append("ratchet relaxed (Tier-4 emergency) in: "
+                     f"{ratchet_violated_yrs}")
     feasibility = {
-        'physical': len(infeasible_years) == 0,
-        'notes': ([] if not infeasible_years
-                  else [f"clean_firm target exceeds available tranche budget in: "
-                        f"{infeasible_years}"]),
+        'physical': not infeasible_years and not ratchet_violated_yrs,
+        'notes': notes,
     }
 
     return PathwayRunResult(
@@ -1470,22 +1527,27 @@ def serialize_run_result(r: PathwayRunResult) -> dict:
     }
     prev_tranche_twh = {name: 0.0 for name in tranche_twh_by_name}
     non_cf_resources = tuple(res for res in _RESOURCE_COLS if res != 'clean_firm')
-    prev_share = {res: 0.0 for res in non_cf_resources}
+    # Mirror _build_ledger's absolute-TWh floor: new vintages price the
+    # incremental TWh above the running-max target for each resource at
+    # year-y LCOE. Initial floor = baseline grid-share TWh at base demand.
+    floor_twh = {res: base_demand * grid.get(res, 0.0) / 100.0
+                 for res in non_cf_resources}
     for yi, year in enumerate(YEARS):
         w = int(r.winners[yi])
+        demand_y_twh = float(r.demand_vec[yi])
         new_v = []
         for res in non_cf_resources:
-            cur = float(r.ef[res][w])
-            baseline = grid.get(res, 0.0)
-            delta = cur - max(prev_share[res], baseline)
-            if delta > 0.5:
+            target_twh = demand_y_twh * float(r.ef[res][w]) / 100.0
+            delta = target_twh - floor_twh[res]
+            if delta > 0.005:  # 5 GWh floor
                 new_v.append({
                     'resource': res,
-                    'twh_per_year': round(r.demand_vec[yi] * delta / 100.0, 4),
+                    'twh_per_year': round(delta, 4),
                     'locked_lcoe_usd_per_mwh': round(_resource_lcoe_year(cfg.iso, res, year, cfg), 2),
                     'tx_adder_usd_per_mwh': round(_resource_tx(cfg.iso, res, cfg.tx_level), 2),
                 })
-            prev_share[res] = max(prev_share[res], cur)
+            if target_twh > floor_twh[res]:
+                floor_twh[res] = target_twh
         for tranche_name, twh_y in tranche_twh_by_name.items():
             cur = float(twh_y[yi])
             delta = cur - prev_tranche_twh[tranche_name]
@@ -1499,7 +1561,8 @@ def serialize_run_result(r: PathwayRunResult) -> dict:
                     # is TX-free by design — so the adder is always 0 here.
                     'tx_adder_usd_per_mwh': 0.0,
                 })
-            prev_tranche_twh[tranche_name] = max(prev_tranche_twh[tranche_name], cur)
+            if cur > prev_tranche_twh[tranche_name]:
+                prev_tranche_twh[tranche_name] = cur
         is_peak = (year == r.stranding_metadata['peak_year'])
         annual_buildout.append({
             'year': year, 'new_vintages': new_v,
