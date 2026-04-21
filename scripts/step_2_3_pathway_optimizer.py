@@ -1115,6 +1115,10 @@ class PathwayRunResult:
     ef: dict
     clean_pct_vec: np.ndarray
     priced_vre_curtailment_vec: np.ndarray
+    # Phase B diagnostic sidecar payload — populated only for P3 runs at the
+    # 4 canonical endpoints ({90, 95, 99, 99.9}); None otherwise. Does not
+    # affect winner selection, ledger, or any existing cached field.
+    foresight_preview: Optional[dict] = None
 
 
 def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
