@@ -49,4 +49,433 @@ Mitigation for the duplicated year-loop: factor the sunk-cost-scorer inner body 
 
 ---
 
-*§§4-9 pending in subsequent commits. See next-session handoff prompt.*
+## 4. Algorithm design
+
+The foresight layer has to change the year-by-year argmin so that the decision at year `y` depends on a target endpoint `(endpoint_year, endpoint_pct)` rather than only on year-`y` cost. Five candidate algorithms, ordered from expensive-exact to cheap-heuristic.
+
+### (a) Terminal-anchored rollouts (prompt pack's choice)
+
+**Planner methodology.** Lookahead via forward simulation. At each year `y` and each candidate mix `m`, simulate the full trajectory `y+1 → endpoint_year` under the current rules (ratchet, cascade, sunk-cost scorer) assuming `m` is chosen this year. Score `m` by the cumulative discounted cost of the entire rollout, not just year-`y` cost. Pick the `m` that minimizes the path integral.
+
+**Interaction with existing semantics.**
+- *Absolute-TWh vintages.* Clean. Each rollout carries its own provisional ledger forward; the outer loop commits only the chosen `m`'s year-`y` tranches.
+- *Sunk-cost B scorer.* Each rollout year uses the scorer; forward-year scorer calls re-price the (so-far provisional) capacity at $0 once committed inside that rollout.
+- *Floor ratchet.* Rollouts must honor the ratchet forward; decisions that would violate the ratchet at any future year are infeasible.
+- *Fallback cascade.* The 4-tier cascade fires inside rollouts wherever target-pct is infeasible at cost-binding physical mins.
+- *Pathway NOAK window.* The year-by-year cost used in rollouts respects `NOAK_YEAR_BY_PATHWAY[pathway]`, so P3 rollouts see cheaper clean-firm new-build after 2035 than P2b rollouts see after 2040.
+
+**P3 divergence from current-P3.** Interior trajectory changes dramatically: clean-firm commits move forward in time to pre-empt stranded gas that the rollout can see coming. Endpoint (2040/2045/2050) mix changes modestly — the ratchet already forces the physical minimum at endpoint — but the *cost composition* of getting there is very different.
+
+**Degenerate case.** Set the rollout discount rate to infinity (or rollout horizon to 1 year) → only year-`y` cost matters → recovers myopic.
+
+**Why not this one.** Rollout cost is roughly O(|candidates| × horizon × year_loop_cost). With ~100 candidates per year × ~25-year horizon × ~100 ms per scorer call = ~4 minutes per ISO-endpoint per outer year, times ~25 outer years times 56 runs → ~93 hours of wall-clock serial. Parallelizable, but the per-rollout cost also has to re-run the feasibility cascade, which is itself a fixed-point loop. Cost-per-iteration is the blocker, not cost-per-run.
+
+### (b) Single-pass argmin with lookahead penalty (recommended)
+
+**Planner methodology.** Augment the myopic scorer with a penalty that measures distance from a precomputed `endpoint_target_shares` vector. The year-`y` score for candidate mix `m` becomes:
+
+```
+score_y[m]  =  myopic_score_y[m]
+             +  λ · w(y, endpoint_year) · ‖ shares[m] − endpoint_target_shares ‖₂²
+```
+
+where `shares[m]` is the resource-share vector implied by mix `m` projected to `endpoint_year`, `endpoint_target_shares` is a static reference mix chosen once per run (see §8 open question iii), and the time-weight
+
+```
+w(y, endpoint_year)  =  (endpoint_year − y) / (endpoint_year − start_year)
+```
+
+is 1 at `start_year` and 0 at `endpoint_year`. This biases early-year investment to move toward the endpoint mix — which is when the investment has the most leverage — and relaxes as the ratchet starts doing the enforcement work late in the horizon.
+
+The prompt pack's original form used `/25` (fixed 2050 horizon). Under the 4-endpoint collapse — `{(2040,90), (2045,95), (2050,99), (2050,99.9)}` — the horizon is per-endpoint, so the divisor generalizes to `(endpoint_year − start_year)`.
+
+**Interaction with existing semantics.**
+- *Absolute-TWh vintages.* Fully compatible. Penalty is added to the scorer; ledger accumulation is unchanged.
+- *Sunk-cost B scorer.* Additive. The penalty does not interact with sunk-cost pricing; committed vintages still price to $0 in the myopic term, and the penalty operates on share distance independent of sunk-cost state.
+- *Floor ratchet.* Untouched. The ratchet enforces non-degrading cumulative clean share year-over-year. Penalty changes *which* feasible mix is picked from among ratchet-compatible candidates; infeasible mixes are still discarded.
+- *Fallback cascade.* Untouched. Penalty is evaluated only on cascade-surviving candidates. When the cascade forces retreat to a physical-minimum mix, the penalty is computed but does not change the outcome (single candidate).
+- *Pathway NOAK window.* Compounds cleanly. P3's `NOAK_YEAR=2035` already makes clean-firm cheaper on the myopic term after 2035; the penalty *additionally* steers clean-firm in earlier (pre-2035) years where the myopic term alone doesn't. The effect is P3 pulls clean firm *forward* past the point where NOAK pricing alone would.
+
+**P3 divergence from current-P3.** Interior trajectory shifts clean-firm commits earlier than the NOAK-2035 crossover would on its own. Endpoint mix at (2040,90) / (2045,95) / (2050,99) / (2050,99.9) converges on `endpoint_target_shares` up to the ratchet's post-hoc enforcement. Current-P3 *is* myopic-P3 even though P3 has NOAK=2035 — the argmin is year-by-year myopic and sees only the current-year cost; NOAK just shifts *when* the myopic crossover happens. Foresight-P3 additionally steers by endpoint proximity and hits the endpoint via a different interior trajectory.
+
+**Degenerate case.** λ = 0 → recovers myopic exactly. λ → ∞ → single-year snap-to-endpoint (pathological, triggers cascade). Moderate λ (swept in §8 open question ii) is the production setting.
+
+**Why this one.** O(1) additional cost per candidate per year. No rollouts, no fixed-point iteration. Fully compatible with the existing `_score_year_sunk_cost` factoring. Runs on the full 56-run matrix in the same wall time as myopic.
+
+### (c) Receding-horizon dynamic programming
+
+**Planner methodology.** Backward induction from `endpoint_year`. State vector: cumulative committed absolute-TWh per resource class + year. Value function: minimum cumulative cost from state `s` at year `y` to reach `endpoint_pct` at `endpoint_year`. Policy: at each `(s, y)`, the decision that minimizes `cost_y + V(s', y+1)`.
+
+**Interaction with existing semantics.**
+- *Absolute-TWh vintages.* State space is continuous over resource TWh accumulations — requires discretization. Binning granularity trades policy quality vs. state-space size.
+- *Sunk-cost B scorer.* DP cost function can encode sunk-cost pricing inside `cost_y`, but the state has to carry enough vintage information to know what's already committed. Substantially enlarges the state vector.
+- *Floor ratchet.* DP transitions are restricted to ratchet-compatible successors. Tractable but prunes the action space.
+- *Fallback cascade.* Disjunctive fallback rules don't fit cleanly into DP; each cascade tier becomes a separate transition class.
+- *Pathway NOAK window.* Encoded in year-`y` cost function.
+
+**P3 divergence from current-P3.** Provably optimal within the discretization — the benchmark against which heuristic (b) is compared.
+
+**Degenerate case.** Horizon = 1 → recovers myopic.
+
+**Why not this one.** State-space explosion with continuous TWh accumulations + disjunctive cascade. Engineering cost dominates value for a design memo; if (b) proves insufficient we revisit DP as the principled upgrade.
+
+### (d) Terminal-constraint pre-commit / inverse-ratchet
+
+**Planner methodology.** Backcast. Fix a required cumulative build schedule `target_twh_r(y)` for each resource class `r` over `y ∈ [start_year, endpoint_year]`, such that endpoint constraints are met and year-over-year deltas are monotone. Treat these as an *additional* set of floors injected above the existing ratchet floors.
+
+**Interaction with existing semantics.**
+- *Absolute-TWh vintages.* Compatible — additional floors act directly on the cumulative TWh ledger.
+- *Sunk-cost B scorer.* Unchanged; scorer sees the injected floors as the new binding constraint.
+- *Floor ratchet.* The injected floors replace the usual "non-degrading" ratchet floor with a stricter schedule; ratchet semantics still apply.
+- *Fallback cascade.* Heavily stressed. Injected floors may be infeasible in early years at cost-binding physical mins → cascade fires often → results are cascade-driven, not foresight-driven.
+- *Pathway NOAK window.* Interacts poorly — the backcast is computed against endpoint prices, so early-year NOAK-expensive commits are forced before NOAK pricing arrives.
+
+**P3 divergence from current-P3.** Aggressive early clean-firm commits. But brittle: the backcast schedule is itself a search problem, and miscalibration triggers frequent cascade retreat.
+
+**Degenerate case.** Pre-commit schedule identical to the existing ratchet → recovers myopic.
+
+**Why not this one.** Backcast calibration is a research problem of its own, and the interaction with the fallback cascade is unpredictable. We would be replacing one heuristic with another while adding fragility.
+
+### (e) MILP over trajectories
+
+**Planner methodology.** Mixed-integer linear program over the full `(year × resource × tranche)` decision matrix, with endpoint constraints, ratchet constraints, and feasibility constraints expressed as linear inequalities. Solve to global optimum.
+
+**Interaction with existing semantics.**
+- *Absolute-TWh vintages.* The ledger's nonlinear feasibility checks (VRE contribution caps, ELCC curves, hybrid dispatch bounds) don't linearize without substantial approximation.
+- *Sunk-cost B scorer.* Sunk-cost-$0 pricing for committed vintages is piecewise-linear and can be encoded with auxiliary binaries — expensive but feasible.
+- *Floor ratchet.* Linear.
+- *Fallback cascade.* Disjunctive (4-tier) — requires big-M or SOS1 encoding, both of which slow the solve.
+- *Pathway NOAK window.* Piecewise-linear year-cost — encodable.
+
+**P3 divergence from current-P3.** Provably optimal.
+
+**Degenerate case.** Remove endpoint constraint → recovers myopic (year-decoupled LP).
+
+**Why not this one.** Encoding the full feasibility cascade + ELCC nonlinearities + absolute-TWh semantics as MILP is an 8–12 week research project. Out of scope.
+
+### Recommendation
+
+**(b) Single-pass argmin with lookahead penalty.**
+
+Reasoning:
+1. Zero interaction risk with the sunk-cost scorer, ratchet, and cascade — the penalty is additive to an existing scalar score.
+2. Wall-time identical to myopic — the 56-run matrix (4 endpoints × {P1, P3} × 7 ISOs) runs in the same budget.
+3. Tunable via a single λ and a time-weight `w(y, endpoint_year)`; sensitivity is inspectable.
+4. Degenerate at λ = 0 to exactly myopic-P3 — the null-state baseline is preserved as a free by-product of the same code path.
+5. Compounds with P3's existing `NOAK_YEAR=2035` Wright's Law advantage rather than competing with it.
+
+**Note on P3's current state.** P3 already has a foothold toward endpoint-awareness via `NOAK_YEAR_BY_PATHWAY['3']=2035` (vs. P2b=2040, P2a=2045) in `scripts/pipeline_config.py:1440`. That sets earlier Wright's Law maturation for clean-firm new-build. But the argmin at each year is still myopic — it picks the cheapest current-year mix, and NOAK only changes *which year* clean firm becomes cheapest. Foresight (b) adds a steering term on top, independent of the NOAK schedule, that biases early-year investment toward the endpoint mix regardless of current-year crossover timing.
+
+---
+
+## 5. Interaction with existing semantics
+
+Code-level reconciliation for the recommended algorithm (b). Each subsection names the existing mechanism, what it does today, and where foresight plugs in.
+
+### 5.1 Absolute-TWh vintage ledger — `_build_ledger` (L1294–1374)
+
+**Today.** `_build_ledger` accumulates clean-firm tranches per-vintage-year in absolute TWh, not shares. Each year's solve adds tranches to the ledger; the ledger is the source of truth for "what has already been committed." Subsequent scorer calls read absolute committed TWh by (resource, vintage) and use it for sunk-cost pricing.
+
+**Foresight hook.** None required in the ledger itself. Foresight operates on the *candidate* mix `m` *before* it's added to the ledger. `shares[m]` is computed by projecting the hypothetical-post-`m` ledger state to `endpoint_year`'s total TWh demand and dividing per-resource TWh into resource shares. The ledger's commit semantics are unchanged — only the argmin that decides *which* `m` gets committed is rewritten.
+
+**Invariant preserved.** `_build_ledger` output is bit-identical when λ = 0.
+
+### 5.2 Sunk-cost B scorer (L1122–1131)
+
+**Today.** `score[m] = Σ_r max(0, target_twh_r[m] − floor_twh_r) × LCOE_r_y`. Only the *incremental* TWh above the ratchet floor is priced; already-committed vintages price to $0 (sunk-cost Interpretation B). `LCOE_r_y` comes from `year_adjusted_cost(r, y, pathway)` which honors the pathway-specific NOAK window.
+
+**Foresight hook.** Additive. `score_y[m] = score_sunk_cost[m] + λ · w(y, endpoint_year) · ‖ shares[m] − endpoint_target_shares ‖₂²`. The sunk-cost term is untouched; the penalty is a second scalar added after the existing Σ.
+
+**Code surface.** §3 already calls for factoring the L1122–1131 inner body into `_score_year_sunk_cost(mix, floors, twh_total, year, pathway) → score`. Foresight adds `_score_year_with_endpoint(mix, floors, twh_total, year, pathway, λ, target_shares) → score` that wraps it:
+
+```
+def _score_year_with_endpoint(mix, floors, twh_total, year, pathway, λ, target_shares, endpoint_year, start_year):
+    sunk = _score_year_sunk_cost(mix, floors, twh_total, year, pathway)
+    shares = _project_shares_to_endpoint(mix, endpoint_year)   # §5.6
+    w = (endpoint_year - year) / (endpoint_year - start_year)
+    return sunk + λ * w * np.sum((shares - target_shares) ** 2)
+```
+
+**Invariant preserved.** λ = 0 → identical numerical score.
+
+### 5.3 Floor ratchet (L1082–1167)
+
+**Today.** At each year `y`, a floor is computed per resource as `max(prior_year_committed_twh, minimum_physical_twh_for_target_pct)`. The ratchet enforces non-degrading cumulative commits year-over-year. Candidate mixes that fall below the floor for any resource are infeasible.
+
+**Foresight hook.** None. The ratchet acts as a feasibility filter on candidates *before* the scorer is called. Foresight runs on the surviving candidate set. Any mix that the penalty would prefer but the ratchet rejects is discarded, same as under myopic.
+
+**Invariant preserved.** Feasibility set at each year is identical to myopic. Foresight only re-ranks the feasible set.
+
+**Watch item.** If the penalty pushes the solver into a mix whose year-`y+1` ratchet floor cannot be met with a feasible mix, the cascade (§5.4) activates. Sensitivity testing at high λ must confirm the cascade fires no more often than under myopic — otherwise we're trading foresight for cascade-driven retreat, which is not the design intent.
+
+### 5.4 4-tier fallback cascade (L1133–1151)
+
+**Today.** If the target-pct is infeasible at cost-binding physical mins, the cascade retreats in order: (i) relax clean-firm dispatch floor, (ii) allow gas firming, (iii) allow existing-gas CF expansion, (iv) allow target-pct relaxation down to the ratchet's minimum achievable.
+
+**Foresight hook.** None in the cascade itself. Foresight re-ranks among tier-(0) feasible candidates; when the cascade fires, tier-(i) … tier-(iv) each produce a single forced mix (or a tiny set), and the penalty evaluates on that set without materially changing the outcome. The cascade retains its role as the feasibility-retreat mechanism.
+
+**Invariant preserved.** Cascade activation triggers are unchanged; cascade output under λ = 0 matches myopic cascade output.
+
+**Diagnostic.** Emit `cascade_activations_by_year` in the schema so we can confirm foresight does not inflate cascade firing rate versus myopic.
+
+### 5.5 Pathway-specific NOAK windows — `pipeline_config.py:1440`
+
+**Today.** `NOAK_YEAR_BY_PATHWAY = {'1': 2045, '2a': 2045, '2b': 2040, '3': 2035}`. `year_adjusted_cost(r, y, pathway)` applies Wright's Law learning curves referenced to `NOAK_YEAR_BY_PATHWAY[pathway]`, so P3 sees cheaper clean-firm new-build starting in 2035 while P2b waits until 2040.
+
+**Foresight hook.** None. The sunk-cost term picks up NOAK pricing via `year_adjusted_cost`; the penalty term is cost-dimensionless (share distance, scaled by λ). Foresight and NOAK operate on orthogonal axes: NOAK changes the *cost* component, foresight changes the *steering* component.
+
+**Compounding behavior.** Before 2035, only foresight steers P3 toward endpoint shares — the NOAK term offers no discount yet. From 2035 onward, the sunk-cost term alone already favors clean-firm (NOAK cheaper); the penalty's remaining work is to push past the point where NOAK pricing would stop before hitting `endpoint_target_shares`. This is why foresight-P3 will diverge from myopic-P3 more in the pre-2035 years than in the post-2035 years.
+
+### 5.6 Tranche decomposition — `decompose_clean_firm_tranches` (L787)
+
+**Today.** Given a candidate mix, `decompose_clean_firm_tranches` splits clean-firm TWh into the five tranche classes (`existing`, `uprate`, `geo`, `nuke_new`, `ccs`) based on pathway rules and year. The vintage ledger is keyed on these tranche classes.
+
+**Foresight hook.** `_project_shares_to_endpoint(mix, endpoint_year)` — a new helper — extrapolates the candidate mix forward to `endpoint_year` total demand and computes per-tranche shares. For candidates that respect the ratchet at year `y`, the projection assumes no further commits (so the projected share for `m` is `(committed_before_y + delta_y[m]) / twh_total(endpoint_year)`). This is a cheap linear projection, not a forward solve; it answers "if we commit `m` today and freeze, what shares land at `endpoint_year`?"
+
+**Why linear-freeze rather than continue-forward.** The penalty is a steering term, not a forecast. What we need is a gradient — "does committing `m` at year `y` move us toward or away from the endpoint?" The linear-freeze projection gives the right sign and monotonicity without requiring a nested solve. If forward-projection quality matters, algorithm (a) or (c) is the right upgrade.
+
+### 5.7 `_pathway_mask` (L727) and `solve_pathway` (L991–1195)
+
+**Today.** `_pathway_mask` filters the candidate mix set to those permissible for the pathway (e.g. P1 excludes nuclear new-build in early years). `solve_pathway` owns the year loop and calls the scorer + ratchet + cascade.
+
+**Foresight hook.** `solve_pathway_with_foresight(cfg)` (new, per §3 option iv) duplicates the year-loop skeleton and swaps the scorer call for `_score_year_with_endpoint`. `_pathway_mask` is unchanged — foresight does not alter which mixes are pathway-permissible.
+
+**Invariant preserved.** Under λ = 0, `solve_pathway_with_foresight` produces bit-identical output to `solve_pathway` for the same `cfg`. This is an explicit regression test (§7 exit gate).
+
+---
+
+## 6. Comparison framework
+
+The framework compares three solver modes at each of the 4 endpoints × 7 ISOs = 28 `(endpoint, ISO)` cells:
+
+| Mode | What it represents | Current status |
+|---|---|---|
+| **P1 (myopic)** | Year-by-year least-cost with no endpoint awareness. The BAU counterfactual. | Cached (current `pathway1_*.json`). Forcing mechanism for P1 being revised in a separate session. |
+| **Myopic-P3** | Current P3: argmin year-by-year; NOAK=2035 but no endpoint steering. | Cached (current `pathway3_*.json`), equivalent to foresight (b) with λ = 0. |
+| **Foresight-P3** | Recommended algorithm (b): penalized argmin that steers toward `endpoint_target_shares`. | New. Produced by `solve_pathway_with_foresight`. |
+
+The within-P3 comparison (myopic-P3 vs foresight-P3) is the *direct product* of this memo. The P1-vs-foresight-P3 comparison is the *downstream headline* that surfaces once P1 is revised.
+
+### 6.1 Per-year plots (one panel per `(endpoint, ISO)` cell)
+
+For each cell, four stacked-panel time series over `[start_year, endpoint_year]`:
+
+1. **Achieved CFE share** — line per mode. Shows trajectory to endpoint.
+2. **Gas fleet MW (existing + new, total)** — line per mode. Shows whether foresight avoids gas buildout.
+3. **System cost $/MWh (undiscounted, levelized to annual demand)** — line per mode. Shows year-by-year cost differences.
+4. **Resource stack (TWh) — stacked area** — one panel per mode (three panels side by side). Shows composition differences directly.
+
+Scrollytell section in the dashboard presents one cell at a time with mode toggles.
+
+### 6.2 Tables — per `(endpoint, ISO)` cell
+
+| Metric | P1 | Myopic-P3 | Foresight-P3 | Δ (myopic → foresight) |
+|---|---|---|---|---|
+| Cumulative undiscounted cost ($B) | … | … | … | … |
+| Cumulative discounted cost ($B, r=0.07) | … | … | … | … |
+| Reliability tax ($/MWh-yr, averaged) | … | … | … | … |
+| Gas fleet peak MW | … | … | … | … |
+| Stranded gas capex ($B) | … | … | … | … |
+| Time-to-90% CFE (year) | … | … | … | … |
+| Endpoint mix — existing clean (%) | … | … | … | … |
+| Endpoint mix — new clean firm (%) | … | … | … | … |
+| Endpoint mix — new VRE + storage (%) | … | … | … | … |
+| Endpoint mix — gas firming (%) | … | … | … | … |
+| Cascade activations (count) | … | … | … | … |
+
+**Note on time-to-90%.** At endpoint `(2040, 90)` this metric equals `endpoint_year` by construction for any feasible run. At endpoints `(2045, 95)`, `(2050, 99)`, `(2050, 99.9)` it's informative — foresight-P3 should hit 90% earlier than myopic-P3 if the steering is working.
+
+### 6.3 Headline metric
+
+Primary headline (within-P3 foresight penalty):
+
+```
+foresight_penalty_vs_myopic  =  (cum_undisc_cost_myopic  −  cum_undisc_cost_foresight)
+                               /  cum_undisc_cost_foresight
+```
+
+Expected sign: positive. A positive value means myopic-P3 is more expensive cumulatively than foresight-P3 — the foresight-planner wins on total cost by spending more early to avoid paying more late.
+
+**Interpretation notes.**
+- Magnitude is expected to be small on ERCOT at `(2040, 90)` — the endpoint is close and the ratchet does most of the enforcement work. Larger on `(2050, 99)` and `(2050, 99.9)` where foresight has more years to front-load cheap avoidance.
+- Negative values mean the penalty parameterization is wrong (λ too high, or `endpoint_target_shares` poorly chosen). Sensitivity sweep (§7 phase D) calibrates λ to keep this positive across all 28 cells.
+- Undiscounted is the headline; discounted is reported in tables as a sensitivity.
+
+Secondary headlines (once P1 forcing is live and out-of-scope exits):
+
+```
+p1_penalty_vs_foresight  =  (cum_undisc_cost_p1  −  cum_undisc_cost_foresight_p3)
+                            /  cum_undisc_cost_foresight_p3
+```
+
+```
+p1_reliability_tax_premium  =  reliability_tax_p1  −  reliability_tax_foresight_p3
+```
+
+### 6.4 Schema changes
+
+Backward-compatible additive on the v2 schema frozen 2026-04-20 (per `reliability_tax/PATHWAY_OUTPUT_SCHEMA.md`). No breaking changes.
+
+**New fields in `config` block:**
+
+```json
+{
+  "config": {
+    "solver_mode": "foresight",              // NEW. One of {"myopic", "foresight"}. Default "myopic" if absent (back-compat).
+    "foresight_lambda": 0.15,                // NEW. Null if solver_mode = "myopic".
+    "endpoint_year": 2045,                   // NEW. Per-endpoint; replaces implicit 2050.
+    "endpoint_pct": 95.0,                    // NEW. Per-endpoint.
+    "endpoint_target_shares": { ... },       // NEW. The reference mix used as penalty target. Null if myopic.
+    ...existing fields unchanged...
+  }
+}
+```
+
+**New fields in `headline` block:**
+
+```json
+{
+  "headline": {
+    "foresight_penalty_vs_myopic": 0.042,    // NEW. Null if no paired myopic run.
+    "time_to_90pct": 2041,                   // NEW. Integer year; null if never hit.
+    "cascade_activations": 2,                // NEW. Counter; also in diagnostics.
+    ...existing fields unchanged...
+  }
+}
+```
+
+**Diagnostic sidecar (new, optional):** `pathway_{iso}_ep{pct}_{mode}_foresight_diagnostics.json` with per-year `share_distance_to_endpoint`, `penalty_component`, `sunk_cost_component`, `cascade_tier_activated`, `selected_mix_candidate_rank_among_feasible`. Emitted only when `solver_mode == "foresight"`.
+
+### 6.5 Endpoint semantics and post-endpoint behavior
+
+Under the 4-endpoint collapse, `endpoint_year` ∈ {2040, 2045, 2050}. The solver simulates `[start_year, endpoint_year]` inclusive and stops. Post-endpoint behavior (e.g. 2041–2050 for an ep90 run) is **not** simulated — the ledger, cost accumulation, and cascade counters all terminate at `endpoint_year`.
+
+**Rationale.** The research question is "what does planning to endpoint `(ey, pct)` cost?" not "what happens after you arrive." Post-endpoint simulation adds cost to all runs equally without resolving the planning question.
+
+**P1 comparison rule.** P1 runs its own `endpoint_year`, matching the P3 pair. Cumulative-cost comparisons at `(endpoint_year, endpoint_pct)` are apples-to-apples because both solvers cover the same years.
+
+---
+
+## 7. Implementation sequence
+
+Five phases, each with an exit gate. No phase starts until the prior phase's gate passes.
+
+### Phase A — This memo
+
+**Artifact.** `analysis/reliability-tax/P3_FORESIGHT_DESIGN_MEMO.md` (sections 1-9, consistency-reviewed).
+
+**Exit gate.**
+- User answers the §8 open-question cards.
+- §8 answers back-propagated into §4 (algorithm parameterization) and §6 (schema names) before closing the memo.
+- Memo committed + pushed to `claude/p3-foresight-sections-4-9-qn9uO`.
+
+### Phase B — Read-only foresight instrumentation
+
+**Artifact.** Non-invasive diagnostic that runs *alongside* the existing myopic solver. At each year `y`, compute what foresight algorithm (b) *would* pick given the current myopic-ledger state and emit to a sidecar. Do not alter the selected mix. Do not touch `solve_pathway` control flow.
+
+**Scope.**
+- Add `_score_year_with_endpoint(...)` (per §5.2) — pure function, no side effects on the solver.
+- Add `_project_shares_to_endpoint(...)` (per §5.6) — pure function.
+- In `solve_pathway`, after the myopic scorer picks its winner, call the foresight scorer on the same feasible candidate set and log: (candidate set, myopic winner, foresight winner under λ ∈ {0.05, 0.15, 0.5}, share-distance to a placeholder `endpoint_target_shares`).
+- Output sidecar: `pathway3_{iso}_ep{pct}_foresight_preview.json`.
+
+**Exit gate.**
+- Sidecar produced for all 28 `(endpoint, ISO)` cells.
+- Human review confirms: foresight winner differs from myopic winner in interior years for `(2050, 99)` and `(2050, 99.9)` runs (otherwise foresight is not steering at all — a red flag before Phase C).
+- Myopic output bit-identical to pre-Phase-B cache. Regression test: diff every cached `pathway3_*.json` against Phase-B output; zero differences outside the new sidecar.
+
+### Phase C — Implement `solve_pathway_with_foresight`
+
+**Artifact.** New function in `scripts/step_2_3_pathway_optimizer.py` per §3 option (iv). Shares primitives with `solve_pathway`. Dispatched via `cfg.solver_mode == "foresight"` from `_run_one`.
+
+**Scope.**
+- Refactor sunk-cost scorer inner body into `_score_year_sunk_cost(...)` per §5.2 (touches `solve_pathway` but preserves output).
+- Add `solve_pathway_with_foresight(cfg)` that owns its year loop and calls `_score_year_with_endpoint` in place of `_score_year_sunk_cost`.
+- Reuse `_finalize_run`, `_build_ledger`, ratchet, and cascade unchanged.
+- Add `RunConfig.solver_mode`, `RunConfig.foresight_lambda`, `RunConfig.endpoint_target_shares`, `RunConfig.endpoint_year`, `RunConfig.endpoint_pct` fields.
+- Emit schema fields per §6.4.
+
+**Exit gate.**
+- Regression test: `solve_pathway_with_foresight(cfg_lambda_0)` produces bit-identical output to `solve_pathway(cfg)` for identical underlying inputs. This is the load-bearing invariant.
+- Unit test on a synthetic 5-year, 3-resource toy problem: known-solution check where hand-computed λ > 0 forces the same argmin as `endpoint_target_shares`.
+- Phase B sidecar's foresight-winner predictions match Phase C's actual-winner decisions at λ = 0.15 (sanity check that Phase B instrumentation was correctly implementing the same algorithm).
+
+### Phase D — ERCOT calibration run (2 cells)
+
+**Artifact.** Full foresight-P3 runs on ERCOT at endpoints `(2040, 90)` and `(2050, 99)`. λ swept across {0.0, 0.05, 0.15, 0.5, 1.5}.
+
+**Scope.**
+- Run matrix: 1 ISO × 2 endpoints × 1 mode (foresight) × 5 λ values = 10 runs.
+- For each run, compare to the existing myopic-P3 cache for the same `(endpoint, ISO)`.
+- Produce the §6.3 headline metric per run.
+- Produce the §6.2 table for ERCOT-(2040,90) and ERCOT-(2050,99).
+
+**Exit gate.**
+- `foresight_penalty_vs_myopic > 0` for at least one λ value on `(2050, 99)`. If all λ values give negative penalty, re-tune `endpoint_target_shares` (see §8 open question iii) before proceeding.
+- Cascade activation count at the chosen λ is within ±1 of myopic cascade count. If foresight inflates cascade firing, either λ is too aggressive or the ratchet is under-constraining something subtle — debug before Phase E.
+- User picks production λ based on the penalty sweep and cascade behavior.
+
+### Phase E — Full 7-ISO × 4-endpoint sweep + dashboard
+
+**Artifact.** Complete `(endpoint, ISO, mode)` matrix, dashboard section, written analysis.
+
+**Scope.**
+- Run matrix: 7 ISOs × 4 endpoints × 2 modes (myopic, foresight) = 56 runs. Myopic runs hit cache on hit; foresight runs are fresh.
+- Plus legacy P1 runs (re-used; forcing-mechanism revision is out of scope here — use current `pathway1_*.json`).
+- Generate §6.1 per-year plots and §6.2 tables for all 28 cells.
+- Build dashboard section in `dashboard/` anchored to `abatement_dashboard.html` (scrollytell analysis page, per `CLAUDE.md` reference table).
+- Update `SPEC.md` current status; archive the prior current status to `SPEC_LOG.md`.
+
+**Exit gate.**
+- All 56 foresight runs complete; 28 paired penalty metrics computed.
+- Dashboard renders cleanly on all cells; `/fix-prose` passes on the written analysis.
+- `LESSONS.md` gets the "what we'd do differently next time" line.
+
+---
+
+## 8. Open questions
+
+Five decisions require user sign-off before Phase B starts. These ship as `AskUserQuestion` cards at the end of this session.
+
+### Q1 — Algorithm choice
+
+§4 recommends (b) single-pass argmin with lookahead penalty. Confirm or override.
+
+- **(b) Single-pass argmin with lookahead penalty (recommended).** Cheap, additive, compounds cleanly with NOAK, degenerates to myopic at λ = 0. Ships in Phase C.
+- **(a) Terminal-anchored rollouts.** Prompt pack's choice. Expensive (~93 hr wall-clock on the 56-run matrix) but more-faithful lookahead.
+- **(c) Receding-horizon DP.** Provably optimal within discretization; engineering cost dominates value at this stage.
+- **Other.** User specifies.
+
+### Q2 — λ tuning strategy
+
+Three options for how to choose λ:
+
+- **Per-cell calibration.** Phase D sweeps λ ∈ {0.0, 0.05, 0.15, 0.5, 1.5} on ERCOT-(2050,99); pick the λ that maximizes `foresight_penalty_vs_myopic` without inflating cascade activations. Apply that single λ to all 28 cells. Pro: one number, comparable across cells. Con: ERCOT-calibrated λ may be wrong for smaller/larger ISOs.
+- **Fixed default λ = 0.15.** No calibration; ship a reasonable default. Document as the chosen reference. Pro: simplest; no calibration burden. Con: arbitrary.
+- **Swept and reported.** Run all 28 cells × 5 λ values = 140 runs. Dashboard shows λ-sensitivity per cell. Pro: transparency. Con: 2.5× compute; dashboard complexity.
+
+### Q3 — `endpoint_target_shares` heuristic
+
+The penalty term measures distance from a reference mix. That reference has to be specified. Three options:
+
+- **Replacement-cost argmin at `endpoint_year`.** Solve a single-year cost minimization at `endpoint_year` prices (with NOAK fully matured) to hit `endpoint_pct`. Use the resulting mix as the target. Pro: locally cost-optimal at the endpoint. Con: doesn't account for getting there.
+- **Cheapest-cumulative-path argmin.** Solve a smaller-state DP or MILP once per `(ISO, endpoint)` cell to find the minimum-cumulative-cost mix that hits `endpoint_pct` at `endpoint_year`. Use the mix at `endpoint_year` along that path as the target. Pro: actually "where we're going." Con: we've introduced a mini version of algorithm (c) or (e) as a preprocessing step. If we can solve that, why not solve it outright?
+- **User-provided reference mix** (e.g. an AEO 2026 reference case, or the NREL 2050 Standard Scenarios near-zero-carbon mix). Document the choice. Pro: external grounding. Con: imported assumptions.
+
+### Q4 — P1 comparison during the P1 forcing-mechanism revision
+
+P1's forcing mechanism is being revised in a separate session. Current P1 cache is the myopic-no-clean-firm counterfactual. Options:
+
+- **Report both myopic-P3 and foresight-P3 vs P1-current.** Publish the within-P3 comparison *and* the P1-vs-foresight-P3 comparison using the current P1 cache. Re-run the P1 comparison once the forcing-mechanism revision lands.
+- **Wait for P1 revision.** Publish only the within-P3 comparison; hold the P1-vs-foresight-P3 headline until P1 is final. Pro: avoids publishing a headline that will change. Con: delays the reliability-tax narrative.
+
+### Q5 — Schema versioning
+
+§6.4 proposes additive v2 changes. Options:
+
+- **Stay v2 additive.** New fields are optional with sensible defaults for absent values. Existing consumers read cleanly. `PATHWAY_OUTPUT_SCHEMA.md` gets a "v2.1" note listing the additive fields.
+- **Bump to v3.** Breaking schema version. Every consumer updates. Pro: cleaner long-term. Con: forces updates to every dashboard-side reader in the same PR.
+
+---
+
+*§9 pending in subsequent commit.*
