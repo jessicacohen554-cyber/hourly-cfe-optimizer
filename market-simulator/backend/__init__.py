@@ -1,1 +1,0 @@
-# Market Simulator backend package
