@@ -748,18 +748,11 @@ def _pathway_mask(ef: dict, cfg: 'RunConfig') -> np.ndarray:
         cf_allowed = cf[None, :] <= (floor + uprate_cap_pct_y[:, None] + 0.5)
         mask[:] = cf_allowed & no_ccs[None, :]
     else:
-        if cfg.pathway == '3':
-            unlock_year = pc.NOAK_YEAR_BY_PATHWAY['3'] - 5
-        elif cfg.pathway == '2b':
-            unlock_year = pc.NOAK_YEAR_BY_PATHWAY['2b'] - 5
-        else:
-            unlock_year = pc.NOAK_YEAR_BY_PATHWAY['2a'] - 5
-        unlock_idx = max(0, unlock_year - BASE_YEAR)
-        for yi in range(N_YEARS):
-            if yi < unlock_idx:
-                mask[yi] = no_clean_firm & no_ccs
-            else:
-                mask[yi] = np.ones(n, dtype=bool)
+        # P2a/P2b/P3 — admit all mixes in every year. The tranche decomposer
+        # prices any pre-FOAK new-nuke/CCS/geo at FOAK LCOE (Wright's curve),
+        # so the argmin self-penalizes early deployment on cost rather than
+        # being hard-blocked. No pre-NOAK pmask ceiling.
+        mask[:] = np.ones((N_YEARS, n), dtype=bool)
     return mask
 
 
@@ -779,14 +772,15 @@ def _cfe_target_for_year(year: int, endpoint_pct: float) -> float:
 
 # ─── Clean-firm merit-order tranche decomposition ───────────────────────────
 
-# Pathway → first year the non-uprate tranches (geo, new nuclear, CCS retrofit)
-# become available. `None` = the pathway never unlocks those tranches, so only
-# existing-nuclear uprates (Tranche 1) are available all 26 years.
-_PATHWAY_TRANCHE_UNLOCK_YEAR = {
-    '1':  None, '1a': None, '1b': None,
-    '2a': pc.NOAK_YEAR_BY_PATHWAY.get('2a', 2045) - 5,
-    '2b': pc.NOAK_YEAR_BY_PATHWAY.get('2b', 2040) - 5,
-    '3':  pc.NOAK_YEAR_BY_PATHWAY.get('3',  2035) - 5,
+# Pathway → whether non-uprate tranches (geo, new nuclear, CCS retrofit) are
+# ever allowed. `None` = never (P1 family — existing-nuclear uprates only).
+# `True` = always buildable; the year-adjusted LCOE returns FOAK cost in
+# pre-FOAK years, so the argmin naturally avoids them until they're cheap
+# enough to win on cost. No hard pre-FOAK lock — pre-NOAK build is a cost
+# question, not a feasibility question.
+_PATHWAY_TRANCHES_AVAILABLE = {
+    '1': False, '1a': False, '1b': False,
+    '2a': True, '2b': True, '3': True,
 }
 
 
@@ -852,12 +846,10 @@ def decompose_clean_firm_tranches(
     existing_twh = np.minimum(target_yn, baseline_twh_y[:, None])    # (Y, n)
     remaining    = target_yn - existing_twh                          # (Y, n), ≥ 0
 
-    # Pathway unlock window
-    unlock_year = _PATHWAY_TRANCHE_UNLOCK_YEAR.get(pathway, None)
-    years_arr   = np.array(YEARS, dtype=np.int32)
-    unlocked_y  = ((years_arr >= unlock_year)
-                   if unlock_year is not None
-                   else np.zeros(N_YEARS, dtype=bool))
+    # Pathway new-tranche eligibility. P1 family: never. Others: always —
+    # pre-FOAK build is priced at FOAK LCOE, so the argmin naturally won't
+    # pick it until it's cheap enough to win on cost.
+    tranches_available = _PATHWAY_TRANCHES_AVAILABLE.get(pathway, False)
 
     firm_lev = cfg.firm_cost_level
     ccs_lev  = cfg.ccs_cost_level
@@ -873,9 +865,13 @@ def decompose_clean_firm_tranches(
     remaining       = remaining - uprate_twh                          # (Y, n)
     uprate_eff_lcoe = np.full(N_YEARS, uprate_lcoe_val, dtype=np.float64)
 
-    # Feasibility: locked year AND remaining > ε ⇒ infeasible.
-    locked_y      = ~unlocked_y                                      # (Y,)
-    feasible_yn   = ~(locked_y[:, None] & (remaining > 1.0e-9))      # (Y, n)
+    # Feasibility: P1 family with remaining > uprate_cap ⇒ infeasible (no
+    # new-nuke/CCS/geo ever available). All other pathways: always feasible
+    # since the 2-4 tranches are always buildable at their year-adjusted LCOE.
+    if tranches_available:
+        feasible_yn = np.ones_like(target_yn, dtype=bool)
+    else:
+        feasible_yn = ~(remaining > 1.0e-9)                          # (Y, n)
 
     # ── Per-year effective LCOEs (Wright's-Law-adjusted) for tranches 2-4 ──
     nuke_eff_lcoe     = np.zeros(N_YEARS, dtype=np.float64)
@@ -908,31 +904,32 @@ def decompose_clean_firm_tranches(
                 y, foak_s, noak_y,
             ) + tx_cf
 
-    # ── Tranches 2-4: only filled in unlocked years ──
+    # ── Tranches 2-4: filled in ALL years when tranches_available. In
+    # pre-FOAK years the effective LCOE is the FOAK cost (Wright's curve
+    # returns FOAK before foak_start), so these tranches self-price out of
+    # the argmin until they're competitive. For P1 family (no new firm), the
+    # whole block is skipped and remaining>ε shows up as feasible_yn=False.
     geo_twh      = np.zeros_like(target_yn)
     nuke_new_twh = np.zeros_like(target_yn)
     ccs_twh      = np.zeros_like(target_yn)
     ccs_cap      = float(pc.CCS_CAP_TWH.get(iso, 9999.0))
     geo_cap_twh  = float(pc.GEOTHERMAL_CAP_TWH) if (iso == 'CAISO' and geo_lev) else 0.0
 
-    for yi in range(N_YEARS):
-        if not unlocked_y[yi]:
-            continue  # locked year — remaining above uprate_cap is infeasible, not filled
-        rem_y = remaining[yi].copy()                                  # (n,)
-        # Tranche 2 — Geothermal (CAISO only).
-        if geo_cap_twh > 0:
-            geo_fill = np.minimum(rem_y, geo_cap_twh)
-            geo_twh[yi] = geo_fill
-            rem_y = rem_y - geo_fill
-        # Tranches 3 & 4 — merit-order new-nuke vs CCS.
-        if nuke_eff_lcoe[yi] <= ccs_eff_lcoe[yi] or ccs_cap <= 0:
-            # Nuke wins: fill all remaining at nuke LCOE.
-            nuke_new_twh[yi] = rem_y
-        else:
-            # CCS wins up to its cap; nuke picks up the leftover.
-            ccs_fill = np.minimum(rem_y, ccs_cap)
-            ccs_twh[yi] = ccs_fill
-            nuke_new_twh[yi] = rem_y - ccs_fill
+    if tranches_available:
+        for yi in range(N_YEARS):
+            rem_y = remaining[yi].copy()                              # (n,)
+            # Tranche 2 — Geothermal (CAISO only).
+            if geo_cap_twh > 0:
+                geo_fill = np.minimum(rem_y, geo_cap_twh)
+                geo_twh[yi] = geo_fill
+                rem_y = rem_y - geo_fill
+            # Tranches 3 & 4 — merit-order new-nuke vs CCS at year-y LCOE.
+            if nuke_eff_lcoe[yi] <= ccs_eff_lcoe[yi] or ccs_cap <= 0:
+                nuke_new_twh[yi] = rem_y
+            else:
+                ccs_fill = np.minimum(rem_y, ccs_cap)
+                ccs_twh[yi] = ccs_fill
+                nuke_new_twh[yi] = rem_y - ccs_fill
 
     return {
         'existing_twh':      existing_twh,
