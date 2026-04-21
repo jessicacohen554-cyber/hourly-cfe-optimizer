@@ -129,3 +129,33 @@ work (not fixes, just documentation upgrades):
   one-line comment explaining why (to allow EF rows that sit at exactly
   the grid-mix share, which otherwise would be filtered out by floating
   point). Not urgent.
+
+## Addendum — Phase-1 probe (2026-04-21)
+
+A follow-up session re-opened the question under the hypothesis that the
+collapse might happen *downstream* of the argmin (i.e. optimizer picks
+different mixes per pathway, but a serializer helper flattens them). The
+hypothesis was falsified by a 2-combo probe: temporary prints added to
+`solve_pathway` around the `winners` array, run with `ISO_FILTER=ERCOT`
+for P1 and P3 at ep90:
+
+```
+ERCOT P1 ep90:  winners_sum=3219398  end_w=123823  fleet=139982.81 MW
+                winners[0..5]=[123823,123823,123823,123823,123823,123823]
+                archetype_key=2312f832ee754584
+ERCOT P3 ep90:  winners_sum=3219398  end_w=123823  fleet=139982.81 MW
+                winners[0..5]=[123823,123823,123823,123823,123823,123823]
+                archetype_key=2312f832ee754584
+```
+
+Both pathways argmin to **the same EF row (123823) every year**
+(`winners_sum` is identical to the byte). Row 123823 is the
+`[0% clean_firm | 20% solar | 80% wind]` mix — P1-compliant, P3-optimal
+unconstrained. The archetype lookup, gas-sizing pass, ledger build, and
+JSON writer all receive identical inputs, so they emit identical outputs
+by construction. There is no downstream flattening.
+
+**Conclusion reaffirmed:** verdict B. The ERCOT "5 pathways → same
+headline" pattern originates at the argmin, not downstream of it. No
+code fix applies. The landed JSONs for ERCOT/SPP/NYISO at endpoints
+where the pathway mask doesn't bind are correct.
