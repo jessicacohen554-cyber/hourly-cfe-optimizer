@@ -1,0 +1,203 @@
+name: "Step 2.3 v2: Sweep Single ISO"
+
+# Runs the v2 pathway optimizer for one ISO at a time.
+# Each dispatch creates its own branch + draft PR so runs for different ISOs
+# never touch the same files in git.
+#
+# Outputs per run:
+#   analysis/reliability-tax/data/<ISO>/pathway*_ep*.json   (50 combos)
+#   analysis/reliability-tax/data/MANIFEST_<ISO>.parquet    (one per ISO)
+#   data/step2.1-ef/step_2_1_EF_<ISO>_*_peakclean.parquet   (Stage-1 sidecars)
+#
+# The global MANIFEST.json is NOT touched — rebuild it locally from the
+# per-ISO shards after all 7 runs land:
+#
+#   python -c "
+#   import json, glob, pyarrow.parquet as pq
+#   rows = []
+#   for p in sorted(glob.glob('analysis/reliability-tax/data/MANIFEST_*.parquet')):
+#       rows.extend(pq.read_table(p).to_pylist())
+#   json.dump({'count': len(rows), 'rows': rows},
+#             open('analysis/reliability-tax/data/MANIFEST.json','w'), indent=2)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO to sweep (50 combos = 5 pathways × 10 endpoints)'
+        required: true
+        type: choice
+        options:
+          - ERCOT
+          - CAISO
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      base_branch:
+        description: 'Branch to check out (defaults to master)'
+        required: false
+        default: 'master'
+        type: string
+
+# One queue per ISO — prevents accidental double-dispatch of the same ISO.
+# Different ISOs run in parallel because their concurrency groups differ.
+concurrency:
+  group: step2-3-sweep-${{ inputs.iso }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  sweep:
+    name: "Sweep ${{ inputs.iso }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            numpy \
+            pandas \
+            pyarrow \
+            scipy \
+            numba \
+            tqdm \
+            requests
+
+      - name: Ensure output dir
+        run: mkdir -p analysis/reliability-tax/data/${{ inputs.iso }}
+
+      - name: Run sweep (all 50 combos, one Python process)
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          python - <<'PY'
+          import os, sys, time
+          sys.path.insert(0, 'scripts')
+          from step_2_3_pathway_optimizer import _run_iso_all
+          iso = os.environ['ISO']
+          t0 = time.time()
+          _run_iso_all(iso)
+          print(f'[sweep] {iso} done in {time.time()-t0:.1f}s', flush=True)
+          PY
+
+      - name: Verify combo count
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          count=$(ls analysis/reliability-tax/data/${ISO}/pathway*_ep*.json 2>/dev/null | wc -l)
+          echo "[verify] ${ISO}: ${count}/50 JSONs"
+          if [ "${count}" -lt 50 ]; then
+            echo "::warning::${ISO} wrote ${count}/50 combos — investigate before merging"
+          fi
+
+      - name: Build MANIFEST_<ISO>.parquet shard
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          python - <<'PY'
+          import glob, json, os
+          import pyarrow as pa
+          import pyarrow.parquet as pq
+
+          iso = os.environ['ISO']
+          rows = []
+          for p in sorted(glob.glob(f'analysis/reliability-tax/data/{iso}/pathway*_ep*.json')):
+              with open(p) as f:
+                  d = json.load(f)
+              cfg = d['config']
+              rows.append({
+                  'iso':                        cfg['iso'],
+                  'pathway':                    cfg['pathway'],
+                  'endpoint':                   float(cfg['endpoint']),
+                  'endpoint_pct':               float(cfg['endpoint_pct']),
+                  'schema_version':             int(d['schema_version']),
+                  'feasibility_physical':       bool(d['feasibility']['physical']),
+                  'achieved_cfe_pct':           float(d['headline']['achieved_cfe_pct']),
+                  'undiscounted_cost_usd':      float(d['headline']['undiscounted_cost_usd']),
+                  'npv_at_5pct':                float(d['headline']['npv_at_5pct']),
+                  'npv_at_7pct':                float(d['headline']['npv_at_7pct']),
+                  'npv_at_9pct':                float(d['headline']['npv_at_9pct']),
+                  'reliability_tax_total_usd':  float(d['reliability_tax']['total_usd']),
+                  'reliability_tax_usd_per_mwh':float(d['reliability_tax']['usd_per_mwh']),
+                  'fleet_size_mw':              float(d['stranding_metadata']['fleet_size_mw']),
+                  'peak_year':                  int(d['stranding_metadata']['peak_year']),
+                  'stranded_mw_at_2050':        float(d['stranding_metadata']['stranded_mw_at_2050']),
+                  'total_stranded_capex_usd':   float(d['stranding_metadata']['total_stranded_capex_usd']),
+              })
+
+          out = f'analysis/reliability-tax/data/MANIFEST_{iso}.parquet'
+          pq.write_table(pa.Table.from_pylist(rows), out)
+          print(f'[manifest] wrote {out} with {len(rows)} rows', flush=True)
+          PY
+
+      - name: Commit + push to per-ISO branch
+        env:
+          ISO: ${{ inputs.iso }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          branch="sweep/${ISO}-${RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${branch}"
+          git add "analysis/reliability-tax/data/${ISO}/" \
+                  "analysis/reliability-tax/data/MANIFEST_${ISO}.parquet"
+          # Sidecars may or may not exist (already committed in prior runs) — add if new
+          git add "data/step2.1-ef/" 2>/dev/null || true
+          count=$(ls "analysis/reliability-tax/data/${ISO}/"pathway*_ep*.json 2>/dev/null | wc -l)
+          git commit -m "step 2.3 — ${ISO} v2 sweep (${count} combos)"
+          git push origin "${branch}"
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+          echo "COMBO_COUNT=${count}" >> "${GITHUB_ENV}"
+
+      - name: Create draft PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISO: ${{ inputs.iso }}
+        run: |
+          gh pr create \
+            --draft \
+            --base "${{ inputs.base_branch }}" \
+            --head "${BRANCH}" \
+            --title "step 2.3 — ${ISO} v2 sweep (${COMBO_COUNT} combos)" \
+            --body "Single-ISO sweep output for **${ISO}**.
+
+          **Contents**
+          - ${COMBO_COUNT}/50 JSON payloads under \`analysis/reliability-tax/data/${ISO}/\`
+          - \`analysis/reliability-tax/data/MANIFEST_${ISO}.parquet\` (aggregation shard)
+          - Stage-1 peakclean sidecars under \`data/step2.1-ef/\` (if newly built)
+
+          **To merge:** review, mark ready, squash-merge to \`${{ inputs.base_branch }}\`.
+
+          After all 7 ISO PRs land, rebuild the global MANIFEST locally from the per-ISO shards — see the header of \`.github/workflows/step2-3-sweep-iso.yml\` for the one-liner."
+
+      - name: Upload artifact backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-${{ inputs.iso }}-${{ github.run_id }}
+          path: |
+            analysis/reliability-tax/data/${{ inputs.iso }}/pathway*_ep*.json
+            analysis/reliability-tax/data/MANIFEST_${{ inputs.iso }}.parquet
+            data/step2.1-ef/step_2_1_EF_${{ inputs.iso }}_*_peakclean.parquet
+          retention-days: 30
+          if-no-files-found: warn
