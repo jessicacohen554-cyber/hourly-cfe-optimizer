@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import gc
 import json
 import multiprocessing
 import os
@@ -1222,6 +1223,12 @@ def _run_iso_all(iso: str) -> None:
     for p in PATHWAYS:
         for ep in ENDPOINT_TO_THRESHOLD.keys():
             _run_one(iso, p, ep)
+            # Combos reuse module-level tables but the LCOE/tx lru_caches grow
+            # unbounded — clear them plus any ephemeral numpy arrays so we
+            # don't blow the runner's memory mid-sweep.
+            _resource_lcoe_year.cache_clear()
+            _resource_tx.cache_clear()
+            gc.collect()
 
 
 def main(argv=None) -> int:
