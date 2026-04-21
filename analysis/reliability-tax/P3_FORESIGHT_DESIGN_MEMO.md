@@ -168,4 +168,80 @@ Reasoning:
 
 ---
 
-*§§5-9 pending in subsequent commits.*
+## 5. Interaction with existing semantics
+
+Code-level reconciliation for the recommended algorithm (b). Each subsection names the existing mechanism, what it does today, and where foresight plugs in.
+
+### 5.1 Absolute-TWh vintage ledger — `_build_ledger` (L1294–1374)
+
+**Today.** `_build_ledger` accumulates clean-firm tranches per-vintage-year in absolute TWh, not shares. Each year's solve adds tranches to the ledger; the ledger is the source of truth for "what has already been committed." Subsequent scorer calls read absolute committed TWh by (resource, vintage) and use it for sunk-cost pricing.
+
+**Foresight hook.** None required in the ledger itself. Foresight operates on the *candidate* mix `m` *before* it's added to the ledger. `shares[m]` is computed by projecting the hypothetical-post-`m` ledger state to `endpoint_year`'s total TWh demand and dividing per-resource TWh into resource shares. The ledger's commit semantics are unchanged — only the argmin that decides *which* `m` gets committed is rewritten.
+
+**Invariant preserved.** `_build_ledger` output is bit-identical when λ = 0.
+
+### 5.2 Sunk-cost B scorer (L1122–1131)
+
+**Today.** `score[m] = Σ_r max(0, target_twh_r[m] − floor_twh_r) × LCOE_r_y`. Only the *incremental* TWh above the ratchet floor is priced; already-committed vintages price to $0 (sunk-cost Interpretation B). `LCOE_r_y` comes from `year_adjusted_cost(r, y, pathway)` which honors the pathway-specific NOAK window.
+
+**Foresight hook.** Additive. `score_y[m] = score_sunk_cost[m] + λ · w(y, endpoint_year) · ‖ shares[m] − endpoint_target_shares ‖₂²`. The sunk-cost term is untouched; the penalty is a second scalar added after the existing Σ.
+
+**Code surface.** §3 already calls for factoring the L1122–1131 inner body into `_score_year_sunk_cost(mix, floors, twh_total, year, pathway) → score`. Foresight adds `_score_year_with_endpoint(mix, floors, twh_total, year, pathway, λ, target_shares) → score` that wraps it:
+
+```
+def _score_year_with_endpoint(mix, floors, twh_total, year, pathway, λ, target_shares, endpoint_year, start_year):
+    sunk = _score_year_sunk_cost(mix, floors, twh_total, year, pathway)
+    shares = _project_shares_to_endpoint(mix, endpoint_year)   # §5.6
+    w = (endpoint_year - year) / (endpoint_year - start_year)
+    return sunk + λ * w * np.sum((shares - target_shares) ** 2)
+```
+
+**Invariant preserved.** λ = 0 → identical numerical score.
+
+### 5.3 Floor ratchet (L1082–1167)
+
+**Today.** At each year `y`, a floor is computed per resource as `max(prior_year_committed_twh, minimum_physical_twh_for_target_pct)`. The ratchet enforces non-degrading cumulative commits year-over-year. Candidate mixes that fall below the floor for any resource are infeasible.
+
+**Foresight hook.** None. The ratchet acts as a feasibility filter on candidates *before* the scorer is called. Foresight runs on the surviving candidate set. Any mix that the penalty would prefer but the ratchet rejects is discarded, same as under myopic.
+
+**Invariant preserved.** Feasibility set at each year is identical to myopic. Foresight only re-ranks the feasible set.
+
+**Watch item.** If the penalty pushes the solver into a mix whose year-`y+1` ratchet floor cannot be met with a feasible mix, the cascade (§5.4) activates. Sensitivity testing at high λ must confirm the cascade fires no more often than under myopic — otherwise we're trading foresight for cascade-driven retreat, which is not the design intent.
+
+### 5.4 4-tier fallback cascade (L1133–1151)
+
+**Today.** If the target-pct is infeasible at cost-binding physical mins, the cascade retreats in order: (i) relax clean-firm dispatch floor, (ii) allow gas firming, (iii) allow existing-gas CF expansion, (iv) allow target-pct relaxation down to the ratchet's minimum achievable.
+
+**Foresight hook.** None in the cascade itself. Foresight re-ranks among tier-(0) feasible candidates; when the cascade fires, tier-(i) … tier-(iv) each produce a single forced mix (or a tiny set), and the penalty evaluates on that set without materially changing the outcome. The cascade retains its role as the feasibility-retreat mechanism.
+
+**Invariant preserved.** Cascade activation triggers are unchanged; cascade output under λ = 0 matches myopic cascade output.
+
+**Diagnostic.** Emit `cascade_activations_by_year` in the schema so we can confirm foresight does not inflate cascade firing rate versus myopic.
+
+### 5.5 Pathway-specific NOAK windows — `pipeline_config.py:1440`
+
+**Today.** `NOAK_YEAR_BY_PATHWAY = {'1': 2045, '2a': 2045, '2b': 2040, '3': 2035}`. `year_adjusted_cost(r, y, pathway)` applies Wright's Law learning curves referenced to `NOAK_YEAR_BY_PATHWAY[pathway]`, so P3 sees cheaper clean-firm new-build starting in 2035 while P2b waits until 2040.
+
+**Foresight hook.** None. The sunk-cost term picks up NOAK pricing via `year_adjusted_cost`; the penalty term is cost-dimensionless (share distance, scaled by λ). Foresight and NOAK operate on orthogonal axes: NOAK changes the *cost* component, foresight changes the *steering* component.
+
+**Compounding behavior.** Before 2035, only foresight steers P3 toward endpoint shares — the NOAK term offers no discount yet. From 2035 onward, the sunk-cost term alone already favors clean-firm (NOAK cheaper); the penalty's remaining work is to push past the point where NOAK pricing would stop before hitting `endpoint_target_shares`. This is why foresight-P3 will diverge from myopic-P3 more in the pre-2035 years than in the post-2035 years.
+
+### 5.6 Tranche decomposition — `decompose_clean_firm_tranches` (L787)
+
+**Today.** Given a candidate mix, `decompose_clean_firm_tranches` splits clean-firm TWh into the five tranche classes (`existing`, `uprate`, `geo`, `nuke_new`, `ccs`) based on pathway rules and year. The vintage ledger is keyed on these tranche classes.
+
+**Foresight hook.** `_project_shares_to_endpoint(mix, endpoint_year)` — a new helper — extrapolates the candidate mix forward to `endpoint_year` total demand and computes per-tranche shares. For candidates that respect the ratchet at year `y`, the projection assumes no further commits (so the projected share for `m` is `(committed_before_y + delta_y[m]) / twh_total(endpoint_year)`). This is a cheap linear projection, not a forward solve; it answers "if we commit `m` today and freeze, what shares land at `endpoint_year`?"
+
+**Why linear-freeze rather than continue-forward.** The penalty is a steering term, not a forecast. What we need is a gradient — "does committing `m` at year `y` move us toward or away from the endpoint?" The linear-freeze projection gives the right sign and monotonicity without requiring a nested solve. If forward-projection quality matters, algorithm (a) or (c) is the right upgrade.
+
+### 5.7 `_pathway_mask` (L727) and `solve_pathway` (L991–1195)
+
+**Today.** `_pathway_mask` filters the candidate mix set to those permissible for the pathway (e.g. P1 excludes nuclear new-build in early years). `solve_pathway` owns the year loop and calls the scorer + ratchet + cascade.
+
+**Foresight hook.** `solve_pathway_with_foresight(cfg)` (new, per §3 option iv) duplicates the year-loop skeleton and swaps the scorer call for `_score_year_with_endpoint`. `_pathway_mask` is unchanged — foresight does not alter which mixes are pathway-permissible.
+
+**Invariant preserved.** Under λ = 0, `solve_pathway_with_foresight` produces bit-identical output to `solve_pathway` for the same `cfg`. This is an explicit regression test (§7 exit gate).
+
+---
+
+*§§6-9 pending in subsequent commits.*
