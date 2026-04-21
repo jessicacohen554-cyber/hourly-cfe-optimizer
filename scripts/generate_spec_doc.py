@@ -10,7 +10,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 
-# Constellation brand colors
 BLUE = RGBColor(35, 114, 185)    # #2372B9
 ORANGE = RGBColor(244, 123, 32)  # #F47B27
 GREEN = RGBColor(107, 165, 67)   # #6BA543
@@ -140,7 +139,7 @@ def build_document():
     add_brand_bar(doc)
 
     meta_lines = [
-        'Constellation Energy — Commercial Strategy & Analytics',
+        'IPP Market Analytics',
         'Document Version: 1.0 | Model Version: Pipeline v1.0.0',
         'Base Year: 2025 (Snapshot Model)',
         'Date: June 2025',
@@ -1060,7 +1059,7 @@ def year_adjusted_cost(foak_cost, noak_cost, year, foak_start, noak_year):
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run('Constellation Energy — Commercial Strategy & Analytics\n'
+    run = p.add_run('IPP Market Analytics\n'
                      'Model Version 1.0.0 | Pipeline v1.0.0 | Base Year 2025')
     run.font.size = Pt(9)
     run.font.color.rgb = GRAY
