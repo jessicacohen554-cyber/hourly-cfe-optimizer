@@ -433,4 +433,49 @@ Five phases, each with an exit gate. No phase starts until the prior phase's gat
 
 ---
 
-*§§8-9 pending in subsequent commits.*
+## 8. Open questions
+
+Five decisions require user sign-off before Phase B starts. These ship as `AskUserQuestion` cards at the end of this session.
+
+### Q1 — Algorithm choice
+
+§4 recommends (b) single-pass argmin with lookahead penalty. Confirm or override.
+
+- **(b) Single-pass argmin with lookahead penalty (recommended).** Cheap, additive, compounds cleanly with NOAK, degenerates to myopic at λ = 0. Ships in Phase C.
+- **(a) Terminal-anchored rollouts.** Prompt pack's choice. Expensive (~93 hr wall-clock on the 56-run matrix) but more-faithful lookahead.
+- **(c) Receding-horizon DP.** Provably optimal within discretization; engineering cost dominates value at this stage.
+- **Other.** User specifies.
+
+### Q2 — λ tuning strategy
+
+Three options for how to choose λ:
+
+- **Per-cell calibration.** Phase D sweeps λ ∈ {0.0, 0.05, 0.15, 0.5, 1.5} on ERCOT-(2050,99); pick the λ that maximizes `foresight_penalty_vs_myopic` without inflating cascade activations. Apply that single λ to all 28 cells. Pro: one number, comparable across cells. Con: ERCOT-calibrated λ may be wrong for smaller/larger ISOs.
+- **Fixed default λ = 0.15.** No calibration; ship a reasonable default. Document as the chosen reference. Pro: simplest; no calibration burden. Con: arbitrary.
+- **Swept and reported.** Run all 28 cells × 5 λ values = 140 runs. Dashboard shows λ-sensitivity per cell. Pro: transparency. Con: 2.5× compute; dashboard complexity.
+
+### Q3 — `endpoint_target_shares` heuristic
+
+The penalty term measures distance from a reference mix. That reference has to be specified. Three options:
+
+- **Replacement-cost argmin at `endpoint_year`.** Solve a single-year cost minimization at `endpoint_year` prices (with NOAK fully matured) to hit `endpoint_pct`. Use the resulting mix as the target. Pro: locally cost-optimal at the endpoint. Con: doesn't account for getting there.
+- **Cheapest-cumulative-path argmin.** Solve a smaller-state DP or MILP once per `(ISO, endpoint)` cell to find the minimum-cumulative-cost mix that hits `endpoint_pct` at `endpoint_year`. Use the mix at `endpoint_year` along that path as the target. Pro: actually "where we're going." Con: we've introduced a mini version of algorithm (c) or (e) as a preprocessing step. If we can solve that, why not solve it outright?
+- **User-provided reference mix** (e.g. an AEO 2026 reference case, or the NREL 2050 Standard Scenarios near-zero-carbon mix). Document the choice. Pro: external grounding. Con: imported assumptions.
+
+### Q4 — P1 comparison during the P1 forcing-mechanism revision
+
+P1's forcing mechanism is being revised in a separate session. Current P1 cache is the myopic-no-clean-firm counterfactual. Options:
+
+- **Report both myopic-P3 and foresight-P3 vs P1-current.** Publish the within-P3 comparison *and* the P1-vs-foresight-P3 comparison using the current P1 cache. Re-run the P1 comparison once the forcing-mechanism revision lands.
+- **Wait for P1 revision.** Publish only the within-P3 comparison; hold the P1-vs-foresight-P3 headline until P1 is final. Pro: avoids publishing a headline that will change. Con: delays the reliability-tax narrative.
+
+### Q5 — Schema versioning
+
+§6.4 proposes additive v2 changes. Options:
+
+- **Stay v2 additive.** New fields are optional with sensible defaults for absent values. Existing consumers read cleanly. `PATHWAY_OUTPUT_SCHEMA.md` gets a "v2.1" note listing the additive fields.
+- **Bump to v3.** Breaking schema version. Every consumer updates. Pro: cleaner long-term. Con: forces updates to every dashboard-side reader in the same PR.
+
+---
+
+*§9 pending in subsequent commit.*
