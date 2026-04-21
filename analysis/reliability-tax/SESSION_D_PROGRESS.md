@@ -60,3 +60,32 @@ differentiation is apparently not expressed in any of the headline metrics
 the MANIFEST will aggregate. Proceeding under the brief's scope (run the
 sweep, flag out-of-band runs); leaving the pathway-differentiation
 investigation to a separate task.
+
+## Phase 3a — CAISO + PJM sweeps (Session 3a)
+
+Branch: `claude/caiso-pjm-full-sweep-n98d1`
+Starting HEAD: `e47753e`
+
+### PJM size-check decision
+
+Ran parquet row-count probe across all PJM threshold files:
+
+| threshold | rows |
+|---|---|
+| 60 | 158,714 |
+| 70 | 275,270 |
+| 75 | 318,211 |
+| 80 | 218,039 |
+| 85 | 40,136 |
+| 87.5 | 65,422 |
+| 90 | 4,814 |
+| 92.5 | 54,436 |
+| 95 | 249,818 |
+| 97.5 | 296,464 |
+| 99 | 257,282 |
+| 99.5 | 400,177 |
+| 99.9 | 628,172 |
+
+**Decision: PJM is FAT.** PJM_99.9 has 628k rows, exceeding the 500k
+threshold. Running PJM via per-combo subprocess (same loop shape as CAISO)
+so memory fully resets between combos.
