@@ -1080,14 +1080,17 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     gas_fixed_y = new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom  # (Y, N)
 
     # Absolute-TWh floors. Non-CF initial floor = baseline grid-share TWh at
-    # base-year demand; tranche floors start at 0 (existing-CF baseline is
-    # separate and priced at $0 in the ledger).
+    # base-year demand; CF-total floor = clean_firm baseline TWh (can't shrink
+    # existing nuclear below its locked absolute claim); CF-tranche floors
+    # start at 0 (the tranche decomposer handles the internal merit order).
     grid = pc.GRID_MIX_SHARES[cfg.iso]
     base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
     floor_twh_r    = np.array(
         [base_demand * grid.get(r, 0.0) / 100.0 for r in non_cf],
         dtype=np.float64,
     )
+    floor_twh_cf   = base_demand * grid.get('clean_firm', 0.0) / 100.0
+    cf_share       = ef['clean_firm'].astype(np.float64) / 100.0   # (N,) fraction
     floor_uprate   = 0.0
     floor_geo      = 0.0
     floor_nuke_new = 0.0
@@ -1105,12 +1108,19 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         # resource's year-y TWh claim ≥ its running-max floor.
         ratchet_nonCF = np.all(
             target_twh_nr >= (floor_twh_r[None, :] - RATCHET_TOL_TWH), axis=1)
+        # Clean_firm TOTAL-share floor: mix's year-y absolute CF TWh must be
+        # ≥ the running-max CF commitment. Prevents retiring existing nuclear
+        # below its locked baseline and prevents later years from shrinking
+        # below whatever CF was committed earlier. The tranche decomposer
+        # handles the merit-order breakdown within clean_firm separately.
+        target_twh_cf_n = cf_share * float(demand_vec[yi])             # (N,)
+        ratchet_cf     = target_twh_cf_n >= (floor_twh_cf - RATCHET_TOL_TWH)
         ratchet_uprate = uprate_twh_yn[yi]   >= (floor_uprate   - RATCHET_TOL_TWH)
         ratchet_geo    = geo_twh_yn[yi]      >= (floor_geo      - RATCHET_TOL_TWH)
         ratchet_nuke   = nuke_new_twh_yn[yi] >= (floor_nuke_new - RATCHET_TOL_TWH)
         ratchet_ccs    = ccs_twh_yn[yi]      >= (floor_ccs      - RATCHET_TOL_TWH)
-        ratchet_mask_y = (ratchet_nonCF & ratchet_uprate & ratchet_geo
-                          & ratchet_nuke & ratchet_ccs)
+        ratchet_mask_y = (ratchet_nonCF & ratchet_cf & ratchet_uprate
+                          & ratchet_geo & ratchet_nuke & ratchet_ccs)
 
         # Sunk-cost scorer: only the NEW TWh above each floor prices at year-y LCOE.
         incr_nonCF    = np.maximum(0.0, target_twh_nr - floor_twh_r[None, :])  # (N, R)
@@ -1153,6 +1163,7 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
 
         # Update floors from the winning mix (monotone non-decreasing).
         floor_twh_r    = np.maximum(floor_twh_r, target_twh_nr[w])
+        floor_twh_cf   = max(floor_twh_cf,   float(target_twh_cf_n[w]))
         floor_uprate   = max(floor_uprate,   float(uprate_twh_yn[yi, w]))
         floor_geo      = max(floor_geo,      float(geo_twh_yn[yi, w]))
         floor_nuke_new = max(floor_nuke_new, float(nuke_new_twh_yn[yi, w]))
