@@ -28,7 +28,7 @@ var FleetDispatchEngine = (function () {
         gas_oil_ct: 0.06351
     };
 
-    // Default CO2 rates (t CO2/MWh) from eGRID 2023 CEG fleet averages.
+    // Default CO2 rates (t CO2/MWh) from eGRID 2023 fleet averages.
     // Used as fallback when plant has no co2_rate_t_mwh in fleet config.
     var DEFAULT_CO2_RATES = {
         gas_ccgt: 0.382,   // eGRID avg: 843 lb/MWh
@@ -179,9 +179,9 @@ var FleetDispatchEngine = (function () {
     };
 
     // Static fallback CFs for fossil plants when sweep data is missing (e.g. 2023 baseline).
-    // Derived from eGRID 2023: actual generation / (capacity × 8760) for CEG fleet.
+    // Derived from eGRID 2023: actual generation / (capacity × 8760).
     var FOSSIL_STATIC_CF = {
-        gas_ccgt: 0.57,    // eGRID 2023 CEG avg (higher than generic 0.44 due to fleet mix)
+        gas_ccgt: 0.57,    // eGRID 2023 avg (higher than generic 0.44 due to fleet mix)
         gas_ct: 0.08,
         oil_ct: 0.01,
         gas_oil_ct: 0.03,
