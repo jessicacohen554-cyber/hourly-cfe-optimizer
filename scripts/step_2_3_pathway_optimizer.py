@@ -959,6 +959,135 @@ _CLEAN_FIRM_TRANCHE_TX = {
 }  # geo/nuke_new/ccs — TX is already baked into their eff_lcoe vectors
 
 
+# ─── P3 foresight preview (read-only diagnostic, memo §§4-5, §7 Phase B) ────
+#
+# Three pure helpers for the endpoint-aware solver mode. Phase B calls them
+# from solve_pathway as a side computation that does NOT influence myopic
+# winner selection. Phase C will reuse them verbatim from the new
+# solve_pathway_with_foresight entry point.
+#
+# 15-dim share vector basis: 11 _RESOURCE_COLS + 4 non-existing CF tranches
+# (uprate/geo/nuke_new/ccs). The "existing" CF tranche is omitted — it is
+# always the GRID_MIX_SHARES baseline and offers no steering handle.
+
+_FORESIGHT_SHARE_KEYS = _RESOURCE_COLS + (
+    'cf_uprate', 'cf_geo', 'cf_nuke_new', 'cf_ccs',
+)
+_FORESIGHT_LAMBDAS = (0.05, 0.15, 0.5)
+_FORESIGHT_ENDPOINT_PCTS = frozenset({90.0, 95.0, 99.0, 99.9})
+
+
+def _foresight_endpoint_year(endpoint_pct: float) -> int:
+    """Memo §6.5: endpoint_year is per-endpoint — 2040/2045/2050."""
+    if endpoint_pct <= 90.0:
+        return 2040
+    if endpoint_pct <= 95.0:
+        return 2045
+    return 2050
+
+
+def _project_shares_to_endpoint(
+    shares_nr: np.ndarray,      # (N, R) non-CF resource shares, fraction
+    cf_share: np.ndarray,       # (N,)   clean_firm share, fraction
+    tg: dict,                   # decompose_clean_firm_tranches output
+    demand_vec: np.ndarray,     # (Y,)   TWh per year
+    yi: int,                    # current year index
+    endpoint_yi: int,           # endpoint year index
+) -> np.ndarray:                # (N, 15) frozen-projection share vector per mix
+    """Linear-freeze projection of candidate mixes at year yi to endpoint_yi
+    (memo §5.6). If mix m is committed at year yi and no further commits are
+    made, what resource-share vector do we land at, at endpoint_yi's demand?
+
+    Fully vectorized — no Python loops over candidate mixes.
+    """
+    ratio = float(demand_vec[yi]) / float(demand_vec[endpoint_yi])
+    resource_shares = shares_nr * ratio                           # (N, R=11)
+    # clean_firm column — rebuild from cf_share to stay consistent with the
+    # tranche totals below (shares_nr's clean_firm column already matches,
+    # but this makes the invariant explicit).
+    cf_col = _RESOURCE_COLS.index('clean_firm')
+    resource_shares = resource_shares.copy()
+    resource_shares[:, cf_col] = cf_share * ratio
+
+    denom = float(demand_vec[endpoint_yi])
+    uprate_shr   = tg['uprate_twh'][yi]   / denom                 # (N,)
+    geo_shr      = tg['geo_twh'][yi]      / denom
+    nuke_new_shr = tg['nuke_new_twh'][yi] / denom
+    ccs_shr      = tg['ccs_twh'][yi]      / denom
+
+    return np.concatenate(
+        [resource_shares,
+         uprate_shr[:, None], geo_shr[:, None],
+         nuke_new_shr[:, None], ccs_shr[:, None]],
+        axis=1,
+    )
+
+
+def _score_year_with_endpoint(
+    row_score: np.ndarray,           # (N,)   myopic year-yi scores
+    shares_to_endpoint: np.ndarray,  # (N, 15) projected shares
+    target_shares: np.ndarray,       # (15,)   endpoint target
+    lam: float,                      # λ
+    weight: float,                   # w(y, endpoint_year)
+) -> np.ndarray:
+    """myopic + λ · w · ‖shares − target‖²  (memo §5.2).
+
+    Vectorized: one broadcast subtraction, square, and sum.
+    """
+    diff = shares_to_endpoint - target_shares[None, :]            # (N, 15)
+    penalty = lam * weight * np.sum(diff * diff, axis=1)          # (N,)
+    return row_score + penalty
+
+
+def _placeholder_endpoint_target_shares(
+    shares_nr: np.ndarray,        # (N, R)
+    cf_share: np.ndarray,         # (N,)
+    tg: dict,
+    demand_vec: np.ndarray,       # (Y,)
+    delivered_yr: np.ndarray,     # (Y, R)
+    storage_cost_yn: np.ndarray,  # (Y, N)
+    gas_fixed_y: np.ndarray,      # (Y, N)
+    cf_feasible_yn: np.ndarray,   # (Y, N) bool
+    pmask: np.ndarray,            # (Y, N) bool
+    cfe_mask: np.ndarray,         # (Y, N) bool
+    endpoint_yi: int,
+) -> np.ndarray:                  # (15,)
+    """Placeholder target_shares via replacement-cost argmin at endpoint_yi.
+
+    Phase C replaces this with _compute_endpoint_target_shares (cheapest-
+    cumulative-path argmin per memo §5.6 + Q3). For Phase B we use the
+    cheaper fallback: evaluate the endpoint-year scorer with zero floors
+    (all TWh priced at endpoint LCOE, no sunk-cost discount), subject to
+    endpoint-year feasibility. Argmin → that mix's 15-dim share vector.
+    """
+    target_twh_nr = shares_nr * float(demand_vec[endpoint_yi])    # (N, R)
+    score_nonCF = (target_twh_nr * delivered_yr[endpoint_yi][None, :]
+                   ).sum(axis=1) * 1.0e6
+    score_cf = (
+          tg['uprate_twh'][endpoint_yi]   * tg['uprate_eff_lcoe'][endpoint_yi]
+        + tg['geo_twh'][endpoint_yi]      * tg['geo_eff_lcoe'][endpoint_yi]
+        + tg['nuke_new_twh'][endpoint_yi] * tg['nuke_new_eff_lcoe'][endpoint_yi]
+        + tg['ccs_twh'][endpoint_yi]      * tg['ccs_eff_lcoe'][endpoint_yi]
+    ) * 1.0e6
+    row_score = (score_nonCF + score_cf
+                 + storage_cost_yn[endpoint_yi]
+                 + gas_fixed_y[endpoint_yi])
+
+    valid = (cf_feasible_yn[endpoint_yi] & pmask[endpoint_yi]
+             & cfe_mask[endpoint_yi])
+    if not valid.any():
+        valid = np.ones_like(row_score, dtype=bool)
+    masked = np.where(valid, row_score, np.inf)
+    w = int(np.argmin(masked))
+
+    # Identity projection (endpoint → endpoint, ratio = 1).
+    proj = _project_shares_to_endpoint(
+        shares_nr, cf_share, tg, demand_vec,
+        yi=endpoint_yi, endpoint_yi=endpoint_yi,
+    )
+    return proj[w]
+
+
 # ─── Phase A: per-year argmin solver ─────────────────────────────────────────
 
 @dataclass
