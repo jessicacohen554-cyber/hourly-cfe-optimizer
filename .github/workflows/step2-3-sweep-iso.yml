@@ -90,6 +90,9 @@ jobs:
       - name: Run sweep (all 50 combos, one Python process)
         env:
           ISO: ${{ inputs.iso }}
+          # Restrict module-scope loads (dispatch cache, gen profiles, hybrid
+          # profiles) to this one ISO — full 7-ISO load OOMs ubuntu-latest's 7GB.
+          ISO_FILTER: ${{ inputs.iso }}
         run: |
           python - <<'PY'
           import os, sys, time

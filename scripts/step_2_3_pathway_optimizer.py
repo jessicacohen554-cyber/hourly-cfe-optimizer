@@ -29,6 +29,17 @@ sys.path.insert(0, str(_HERE))
 import pipeline_config as pc
 
 ISOS = list(pc.ISOS)
+
+# Memory-constrained runner escape hatch: if ISO_FILTER is set, restrict the
+# module-scope loaders (dispatch cache, gen profiles, hybrid profiles, fossil
+# mix) to that single ISO. Unset locally → full 7-ISO load as before.
+_ISO_FILTER = os.environ.get('ISO_FILTER', '').strip().upper()
+if _ISO_FILTER:
+    if _ISO_FILTER not in ISOS:
+        raise SystemExit(
+            f"ISO_FILTER={_ISO_FILTER!r} not in known ISOs {ISOS}"
+        )
+    ISOS = [_ISO_FILTER]
 PATHWAYS = ('1', '1a', '2a', '2b', '3')
 BASE_YEAR = 2025
 END_YEAR = 2050
