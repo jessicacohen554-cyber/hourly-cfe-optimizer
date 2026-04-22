@@ -647,6 +647,26 @@ _EF_BAND_THRESHOLDS = (
 # (21M) pools. Myopic-P3 full-pool wall-clock scales linearly in this.
 _POOL_CHUNK_SIZE = 500_000
 
+# ── RATCHET UNITS — READ BEFORE EDITING floor_* OR ratchet_* CODE ──────────
+# Every `floor_*` variable in solve_pathway and solve_pathway_with_foresight
+# is in ABSOLUTE TWh (or absolute MW for `running_max_gas_n`). NOT shares.
+# NOT percentages of demand. NOT fractions.
+#
+# Physical reason: once a vintage is committed, it delivers a fixed absolute
+# TWh per year. You cannot un-build a plant. Demand growth relaxes the
+# floor's share-equivalent (50 TWh is 12.5% of 400 but only 10% of 500) but
+# does NOT relax the floor itself.
+#
+# Feasibility check at year y: translate the candidate's share vector into
+# absolute TWh at year-y demand (`target_twh_nr = shares × demand_y`) and
+# compare that against the TWh floor. A share-based ratchet would be
+# strictly tighter in a growing-demand regime and is physically wrong.
+#
+# If you catch yourself writing `floor_share` or comparing `ef.clean_firm`
+# directly to a floor without multiplying by `demand_y`, stop — you've
+# slipped back into the wrong model.
+# ───────────────────────────────────────────────────────────────────────────
+
 
 def _iter_ef_band_paths(iso: str):
     """Yield (threshold, [paths]) for every on-disk band for this ISO.
@@ -1253,17 +1273,17 @@ def _compute_endpoint_target_shares(
 
 
 def _score_year_sunk_cost(
-    target_twh_nr: np.ndarray,        # (N, R) shares_nr × demand_vec[yi]
-    floor_twh_r: np.ndarray,          # (R,)   running-max non-CF floors
+    target_twh_nr: np.ndarray,        # (N, R) shares_nr × demand_vec[yi] — TWh
+    floor_twh_r: np.ndarray,          # (R,)   running-max non-CF floors, ABSOLUTE TWh
     delivered_yr_yi: np.ndarray,      # (R,)   delivered_yr[yi]
-    uprate_twh_n: np.ndarray,         # (N,)   uprate_twh_yn[yi]
-    geo_twh_n: np.ndarray,            # (N,)
-    nuke_new_twh_n: np.ndarray,       # (N,)
-    ccs_twh_n: np.ndarray,            # (N,)
-    floor_uprate: float,
-    floor_geo: float,
-    floor_nuke_new: float,
-    floor_ccs: float,
+    uprate_twh_n: np.ndarray,         # (N,)   uprate_twh_yn[yi] — TWh
+    geo_twh_n: np.ndarray,            # (N,)   TWh
+    nuke_new_twh_n: np.ndarray,       # (N,)   TWh
+    ccs_twh_n: np.ndarray,            # (N,)   TWh
+    floor_uprate: float,              # ABSOLUTE TWh (never a share)
+    floor_geo: float,                 # ABSOLUTE TWh
+    floor_nuke_new: float,            # ABSOLUTE TWh
+    floor_ccs: float,                 # ABSOLUTE TWh
     uprate_eff_yi: float,             # uprate_eff[yi]
     geo_eff_yi: float,
     nuke_new_eff_yi: float,
@@ -1554,9 +1574,12 @@ def solve_pathway(cfg: 'RunConfig', *, ef_override: Optional[dict] = None) -> Pa
     pathway_floor = _pathway_firm_floor_pct(cfg.iso) + 0.01
     uprate_cap_pct_y = uprate_cap / np.maximum(demand_vec, 1e-6) * 100.0  # (Y,)
 
-    # Absolute-TWh floors (scalar + (R,)). Non-CF initial floor = baseline
-    # grid-share TWh at base-year demand; CF-total floor = clean_firm
-    # baseline TWh; CF-tranche floors start at 0.
+    # Absolute-TWh floors — see "RATCHET UNITS" header comment near
+    # _POOL_CHUNK_SIZE. Non-CF initial floor = baseline grid-share TWh at
+    # base-year demand; CF-total floor = clean_firm baseline TWh; CF-tranche
+    # floors start at 0. `share × base_demand / 100` is the one-time
+    # conversion from the GRID_MIX_SHARES % representation to TWh; after
+    # this point no floor is ever touched as a share.
     grid = pc.GRID_MIX_SHARES[cfg.iso]
     base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
     floor_twh_r    = np.array(
@@ -1968,6 +1991,10 @@ def solve_pathway_with_foresight(cfg: 'RunConfig', *, ef_override: Optional[dict
 
     gas_fixed_y = new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom
 
+    # Absolute-TWh floors — see "RATCHET UNITS" header comment near
+    # _POOL_CHUNK_SIZE. Same convention as the myopic solver: floors are
+    # TWh, feasibility checks multiply candidate shares by year-y demand
+    # before comparing against the floor.
     grid = pc.GRID_MIX_SHARES[cfg.iso]
     base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
     floor_twh_r    = np.array(
