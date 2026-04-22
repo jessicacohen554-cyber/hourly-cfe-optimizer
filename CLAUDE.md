@@ -42,7 +42,7 @@ When the task involves writing or editing code, identify the category and read t
 
 | Working on... | Read first |
 |---|---|
-| Reliability-tax chart payload generators | `reliability_tax/charts/data_loader.py`, `reliability_tax/charts/gen_section3_reliability_tax.py` (cleanest gen_* example), `reliability_tax/methodogy.md`, `reliability_tax/INHERITANCE_PLAN.md` |
+| Reliability-tax chart payload generators | Generator layer cleared Apr 22, 2026 — pending rewrite in a dedicated presentation session. Read `reliability_tax/charts/data_loader.py` (shared loader, kept), `reliability_tax/methodogy.md`, `reliability_tax/PATHWAY_OUTPUT_SCHEMA.md`, and the raw solver outputs under `analysis/reliability-tax/data/<ISO>/` before drafting new generators. |
 | Reliability-tax pipeline / data ingestion | `reliability_tax/charts/data_loader.py`, `analysis/reliability-tax/README.md`, `analysis/reliability-tax/data/` (sample run output) |
 | Optimizer pipeline (Steps 0–7, 7-ISO sweeps) | `PIPELINE.md`, `market-simulator/scripts/pipeline_config.py`, `market-simulator/scripts/sweep_params_io.py`, `market-simulator/scripts/run_sweep_1215.py`, `data/step1-pfs/` … `data/step7*` for cached outputs |
 | Fleet dispatch / 1,215-scenario sweep | `market-simulator/scripts/fleet_dispatch.py` (canonical vectorized exemplar), `market-simulator/scripts/build_fleet_scenario_data.py`, `market-simulator/scripts/fleet_model.py`, `market-simulator/scripts/scenario_common.py` |
