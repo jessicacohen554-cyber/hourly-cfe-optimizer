@@ -1211,6 +1211,26 @@ _FORESIGHT_SHARE_KEYS = _RESOURCE_COLS + (
 _FORESIGHT_LAMBDAS = (0.05, 0.15, 0.5)
 _FORESIGHT_ENDPOINT_PCTS = frozenset({90.0, 95.0, 99.0, 99.9})
 
+# Phase 1a Commit E — share-distance cache for λ sweeps.
+# The ‖shares_to_end − target‖² vector is identical across the 5 λ values
+# Phase D sweeps (λ only scales the penalty; shares/target are fixed by the
+# cfg tuple below). Caching the per-year (N,) dist_sq vector avoids 4× the
+# per-chunk projection work on reruns — memo §7 Phase D amortization note.
+# Outer key: cfg tuple that fully determines target_shares + tranche
+# allocations + demand_vec. Inner key: yi. Value: (N,) float64 dist_sq.
+# Bypassed entirely when ef_override is supplied (Phase C regression feeds
+# the endpoint-filtered pool, which has a different N than the full pool).
+_FORESIGHT_DIST_SQ_CACHE: dict[tuple, dict[int, np.ndarray]] = {}
+
+
+def _foresight_dist_sq_cache_key(cfg: 'RunConfig') -> tuple:
+    return (
+        cfg.iso, int(cfg.endpoint_year), cfg.pathway,
+        cfg.demand_growth_level, cfg.geo_cost_level or 'X',
+        cfg.firm_cost_level, cfg.ccs_cost_level,
+        cfg.tx_level, float(cfg.endpoint_pct),
+    )
+
 
 def _foresight_endpoint_year(endpoint_pct: float) -> int:
     """Map an endpoint CFE threshold to its SBTi-ladder target year (shared
@@ -1381,6 +1401,48 @@ def _project_shares_to_endpoint(
     geo_shr      = tg['geo_twh'][yi]      / denom
     nuke_new_shr = tg['nuke_new_twh'][yi] / denom
     ccs_shr      = tg['ccs_twh'][yi]      / denom
+
+    return np.concatenate(
+        [resource_shares,
+         uprate_shr[:, None], geo_shr[:, None],
+         nuke_new_shr[:, None], ccs_shr[:, None]],
+        axis=1,
+    )
+
+
+def _project_shares_to_endpoint_chunk(
+    shares_nr_chunk: np.ndarray,      # (k, R) non-CF shares, fraction
+    non_cf_keys: tuple,               # column order of shares_nr_chunk
+    cf_share_chunk: np.ndarray,       # (k,)   clean_firm share, fraction
+    uprate_twh_chunk: np.ndarray,     # (k,)   per-chunk uprate tranche TWh
+    geo_twh_chunk: np.ndarray,        # (k,)
+    nuke_new_twh_chunk: np.ndarray,   # (k,)
+    ccs_twh_chunk: np.ndarray,        # (k,)
+    demand_y: float,                  # demand_vec[yi] in TWh
+    demand_end: float,                # demand_vec[endpoint_yi] in TWh
+) -> np.ndarray:                      # (k, 15) projected shares per mix
+    """Streaming-chunk counterpart to `_project_shares_to_endpoint`.
+
+    Same projection math (memo §5.6) but takes per-chunk tranche scalars
+    directly instead of indexing a dense (Y, N) `tg` dict — that path is
+    infeasible on the 8–21M-row full pool. Column order matches
+    `_FORESIGHT_SHARE_KEYS` exactly so callers can diff against
+    `cfg.endpoint_target_shares` without reordering.
+    """
+    ratio = demand_y / demand_end
+    k = shares_nr_chunk.shape[0]
+    resource_shares = np.empty((k, len(_RESOURCE_COLS)), dtype=np.float64)
+    non_cf_idx = {r: i for i, r in enumerate(non_cf_keys)}
+    for j, r in enumerate(_RESOURCE_COLS):
+        if r == 'clean_firm':
+            resource_shares[:, j] = cf_share_chunk * ratio
+        else:
+            resource_shares[:, j] = shares_nr_chunk[:, non_cf_idx[r]] * ratio
+
+    uprate_shr   = uprate_twh_chunk   / demand_end
+    geo_shr      = geo_twh_chunk      / demand_end
+    nuke_new_shr = nuke_new_twh_chunk / demand_end
+    ccs_shr      = ccs_twh_chunk      / demand_end
 
     return np.concatenate(
         [resource_shares,
