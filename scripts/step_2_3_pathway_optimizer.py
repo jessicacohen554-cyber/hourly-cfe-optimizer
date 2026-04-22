@@ -1211,6 +1211,26 @@ _FORESIGHT_SHARE_KEYS = _RESOURCE_COLS + (
 _FORESIGHT_LAMBDAS = (0.05, 0.15, 0.5)
 _FORESIGHT_ENDPOINT_PCTS = frozenset({90.0, 95.0, 99.0, 99.9})
 
+# Phase 1a Commit E — share-distance cache for λ sweeps.
+# The ‖shares_to_end − target‖² vector is identical across the 5 λ values
+# Phase D sweeps (λ only scales the penalty; shares/target are fixed by the
+# cfg tuple below). Caching the per-year (N,) dist_sq vector avoids 4× the
+# per-chunk projection work on reruns — memo §7 Phase D amortization note.
+# Outer key: cfg tuple that fully determines target_shares + tranche
+# allocations + demand_vec. Inner key: yi. Value: (N,) float64 dist_sq.
+# Bypassed entirely when ef_override is supplied (Phase C regression feeds
+# the endpoint-filtered pool, which has a different N than the full pool).
+_FORESIGHT_DIST_SQ_CACHE: dict[tuple, dict[int, np.ndarray]] = {}
+
+
+def _foresight_dist_sq_cache_key(cfg: 'RunConfig') -> tuple:
+    return (
+        cfg.iso, int(cfg.endpoint_year), cfg.pathway,
+        cfg.demand_growth_level, cfg.geo_cost_level or 'X',
+        cfg.firm_cost_level, cfg.ccs_cost_level,
+        cfg.tx_level, float(cfg.endpoint_pct),
+    )
+
 
 def _foresight_endpoint_year(endpoint_pct: float) -> int:
     """Map an endpoint CFE threshold to its SBTi-ladder target year (shared
