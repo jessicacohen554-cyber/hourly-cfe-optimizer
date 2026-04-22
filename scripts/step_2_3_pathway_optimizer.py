@@ -55,8 +55,7 @@ NEW_GAS_ASSET_LIFE_YEARS = 25
 _FOSSIL_CAPACITY_FACTORS = {'coal': 0.55, 'oil': 0.20, 'gas': 0.45}
 
 ENDPOINT_TO_THRESHOLD = {
-    0.60: 60, 0.70: 70, 0.75: 75, 0.80: 80, 0.85: 85,
-    0.90: 90, 0.95: 95, 0.975: 97.5, 0.99: 99, 0.999: 99.9,
+    0.90: 90, 0.95: 95, 0.99: 99, 0.999: 99.9,
 }
 
 EF_DIR = _ROOT / 'data' / 'step2.1-ef'
@@ -354,8 +353,7 @@ class VintageLedger:
 
 
 _EP_TAG_MAP = {
-    60: 'ep60', 70: 'ep70', 75: 'ep75', 80: 'ep80', 85: 'ep85',
-    90: 'ep90', 95: 'ep95', 97.5: 'ep97p5', 99: 'ep99', 99.9: 'ep99p9',
+    90: 'ep90', 95: 'ep95', 99: 'ep99', 99.9: 'ep99p9',
 }
 
 
@@ -771,13 +769,21 @@ def _pathway_mask(ef: dict, cfg: 'RunConfig') -> np.ndarray:
 
 
 def _cfe_target_for_year(year: int, endpoint_pct: float) -> float:
-    targets = ((2025, 0.0), (2030, 50.0), (2035, 70.0), (2040, 90.0),
-               (2045, 95.0), (2050, endpoint_pct))
-    if year <= targets[0][0]:
+    # Ramp terminates at _foresight_endpoint_year(endpoint_pct) — the same
+    # SBTi-ladder target year used by the foresight path (canonical source:
+    # pipeline_config.THRESHOLD_TARGET_YEARS). Interior buildup waypoints
+    # stay in the schedule only if they fall strictly before the deadline;
+    # years after the deadline hold flat at endpoint_pct.
+    end_year = _foresight_endpoint_year(endpoint_pct)
+    waypoints = [(2025, 0.0), (2030, 50.0), (2035, 70.0),
+                 (2040, 90.0), (2045, 95.0)]
+    waypoints = [(y, t) for (y, t) in waypoints if y < end_year]
+    waypoints.append((end_year, endpoint_pct))
+    if year <= waypoints[0][0]:
         return 0.0
-    if year >= targets[-1][0]:
+    if year >= end_year:
         return endpoint_pct
-    for (y0, t0), (y1, t1) in zip(targets, targets[1:]):
+    for (y0, t0), (y1, t1) in zip(waypoints, waypoints[1:]):
         if y0 <= year <= y1:
             frac = (year - y0) / (y1 - y0)
             return min(endpoint_pct, t0 + (t1 - t0) * frac)
@@ -1352,6 +1358,15 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     winner_feasible   = np.ones(N_YEARS, dtype=bool)
     ratchet_violated  = np.zeros(N_YEARS, dtype=bool)
 
+    # Endpoint-year schedule (canonical map in pipeline_config.THRESHOLD_TARGET_YEARS,
+    # surfaced here via _foresight_endpoint_year). The myopic solve loop runs
+    # 2025 → endpoint_year; years past the endpoint are frozen to the endpoint
+    # winner (mirrors solve_pathway_with_foresight's post-endpoint freeze at
+    # memo §6.5) so _finalize_run / _build_ledger / serializer receive full
+    # N_YEARS arrays unchanged. Phase E display-truncation runs later.
+    _myopic_endpoint_year = _foresight_endpoint_year(float(cfg.endpoint_pct))
+    _myopic_endpoint_yi = YEARS.index(_myopic_endpoint_year)
+
     # ── Phase B foresight preview setup (memo §5.2, §7 Phase B) ──────────
     # Read-only diagnostic: for P3 runs at the 4 canonical endpoints, collect
     # what algorithm (b) would pick each year under λ ∈ {0.05, 0.15, 0.5}.
@@ -1379,7 +1394,7 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         )
 
     RATCHET_TOL_TWH = 1.0e-6
-    for yi in range(N_YEARS):
+    for yi in range(_myopic_endpoint_yi + 1):
         # Target TWh per (mix, non-CF resource) at year-y grown demand.
         target_twh_nr = shares_nr * float(demand_vec[yi])             # (N, R)
         # Ratchet masks: a mix is admissible only if every already-committed
@@ -1497,6 +1512,17 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         floor_geo      = max(floor_geo,      float(geo_twh_yn[yi, w]))
         floor_nuke_new = max(floor_nuke_new, float(nuke_new_twh_yn[yi, w]))
         floor_ccs      = max(floor_ccs,      float(ccs_twh_yn[yi, w]))
+
+    # Post-endpoint freeze (mirrors solve_pathway_with_foresight memo §6.5):
+    # hold the endpoint winner forward through 2050 so _finalize_run and
+    # downstream helpers receive full N_YEARS arrays. The solver does not
+    # simulate post-endpoint argmins — per-endpoint trajectories stop at
+    # _myopic_endpoint_year (2040/2045/2049/2050 for 90/95/99/99.9%).
+    _endpoint_w = int(winners[_myopic_endpoint_yi])
+    for yi in range(_myopic_endpoint_yi + 1, N_YEARS):
+        winners[yi] = _endpoint_w
+        winner_feasible[yi] = winner_feasible[_myopic_endpoint_yi]
+        ratchet_violated[yi] = False
 
     # Phase B: realized clean_pct from winners → re-run existing_gas_vec, apply ratchet
     achieved_cfe = score_vec[winners]
@@ -2084,6 +2110,7 @@ def _finalize_run(cfg: 'RunConfig', ef: dict, winners: np.ndarray,
         'undiscounted_cost_usd': round(undisc, 2),
         **npvs,
         'endpoint_threshold': cfg.endpoint_pct,
+        'endpoint_year': int(_foresight_endpoint_year(cfg.endpoint_pct)),
         'pivot': {'pivoted': False, 'pivot_year': None, 'pivot_reason': None},
     }
 
@@ -2336,7 +2363,7 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument('--iso', choices=ISOS)
     ap.add_argument('--pathway', choices=PATHWAYS)
     ap.add_argument('--endpoint', type=float, choices=list(ENDPOINT_TO_THRESHOLD.keys()))
-    ap.add_argument('--all', action='store_true', help='Run full 7×5×10 sweep')
+    ap.add_argument('--all', action='store_true', help='Run full 7×5×4 sweep')
     return ap
 
 

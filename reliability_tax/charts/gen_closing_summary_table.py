@@ -35,8 +35,10 @@ from data_loader import (  # noqa: E402
 OUT_PATH = Path(__file__).parent / "closing_summary_table.json"
 DASH_OUT = REPO_ROOT / "dashboard" / "js" / "reliability-tax" / "closing_summary_table.json"
 
-# Headline 5 endpoints for the closing table (out of 10 in the full sweep)
-CLOSING_ENDPOINTS = [0.75, 0.85, 0.90, 0.95, 0.99]
+# Four scheduled endpoints — each solved on its own SBTi-ladder horizon
+# (90→2040, 95→2045, 99→2049, 99.9→2050). Must match ENDPOINT_TO_THRESHOLD
+# in step_2_3_pathway_optimizer.py.
+CLOSING_ENDPOINTS = [0.90, 0.95, 0.99, 0.999]
 
 EXISTING_GAS_GW = {
     "CAISO": 37.0, "ERCOT": 55.0, "PJM": 75.0,
@@ -334,7 +336,8 @@ def main() -> None:
                 "Pathways: 1 (VRE + storage + offshore headline), 1a (strict onshore "
                 "Card R baseline), 2a (behavioral pivot), 2b (economic pivot), "
                 "3 (proactive clean firm per §24.8 NOAK-2035). "
-                "Endpoints are the 5 headline thresholds out of the full 10-endpoint sweep."
+                "Endpoints are the 4 scheduled thresholds (90/95/99/99.9), "
+                "each solved on its own SBTi-ladder horizon (2040/2045/2049/2050)."
             ),
             "reliability_tax_formula": (
                 "SPEC §24.4 locked 5-component formula: "

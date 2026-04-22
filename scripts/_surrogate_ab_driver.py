@@ -46,10 +46,12 @@ FINAL_SURR_DIR = TRUTH_ROOT / 'ERCOT'
 
 REUSE_TRUTH_IF_COMPLETE = True
 
-# Four A/B combos (pathway, endpoint).
+# Four A/B combos (pathway, endpoint). Low-endpoint 0.80 is no longer a
+# valid solver endpoint under the SBTi-ladder schedule — swapped for 0.90
+# on both pathways so the driver still exercises two endpoints per pathway.
 COMBOS = (
-    ('3', 0.80),
-    ('1', 0.80),
+    ('3', 0.90),
+    ('1', 0.90),
     ('3', 0.95),
     ('1', 0.95),
 )

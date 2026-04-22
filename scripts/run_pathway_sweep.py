@@ -73,9 +73,10 @@ from typing import NamedTuple
 
 ALL_ISOS = ('CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP')
 ALL_PATHWAYS = ('1', '1a', '1b', '2a', '2b', '3')
-# Card S — 10 endpoints: 60/70/75/80/85 added alongside the original 5 so the
-# gas-peaker hump at medium thresholds is visible in the reliability tax.
-ALL_ENDPOINTS = (0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.975, 0.99, 0.999)
+# Four scheduled endpoints — each solved on its own SBTi-ladder horizon
+# (90→2040, 95→2045, 99→2049, 99.9→2050). Must match ENDPOINT_TO_THRESHOLD
+# in step_2_3_pathway_optimizer.py.
+ALL_ENDPOINTS = (0.90, 0.95, 0.99, 0.999)
 DEMAND_GROWTH_LEVELS = ('Low', 'Medium', 'High')
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -332,7 +333,7 @@ def build_argparser() -> argparse.ArgumentParser:
         default=','.join(str(e) for e in ALL_ENDPOINTS),
         help=(
             'Comma-separated CFE endpoints to run. '
-            'Default: all five (0.90,0.95,0.975,0.99,0.999).'
+            'Default: all four (0.90,0.95,0.99,0.999).'
         ),
     )
     ap.add_argument(
