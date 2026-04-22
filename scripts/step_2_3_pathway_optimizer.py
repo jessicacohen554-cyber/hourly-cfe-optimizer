@@ -1815,8 +1815,14 @@ def solve_pathway_with_foresight(cfg: 'RunConfig') -> PathwayRunResult:
     if cfg.endpoint_target_shares is None:
         raise ValueError("solve_pathway_with_foresight: cfg.endpoint_target_shares is required")
 
-    threshold = ENDPOINT_TO_THRESHOLD[round(cfg.endpoint, 4)]
-    ef = load_ef_mixes(cfg.iso, threshold)
+    # Pool loader: concatenated across all step 2.1 threshold bands, then
+    # filtered by max-share-per-resource caps taken across the 4 canonical
+    # endpoints' step-2.2A targets (+ slack). Non-overlapping band layout
+    # means per-band load_ef_mixes under-samples the qualifying pool — that
+    # was the Phase D pool-pathology root cause (LESSONS.md #22). Foresight
+    # keeps the dense (Y, N) path because the filtered pool stays in the
+    # ~40k–370k range across ISOs, tractable for dense tensor math.
+    ef = load_ef_pool(cfg.iso, filter_to_endpoints=True, cfg_for_filter=cfg)
     n_mixes = len(ef['hourly_match_score'])
 
     peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
