@@ -1410,6 +1410,48 @@ def _project_shares_to_endpoint(
     )
 
 
+def _project_shares_to_endpoint_chunk(
+    shares_nr_chunk: np.ndarray,      # (k, R) non-CF shares, fraction
+    non_cf_keys: tuple,               # column order of shares_nr_chunk
+    cf_share_chunk: np.ndarray,       # (k,)   clean_firm share, fraction
+    uprate_twh_chunk: np.ndarray,     # (k,)   per-chunk uprate tranche TWh
+    geo_twh_chunk: np.ndarray,        # (k,)
+    nuke_new_twh_chunk: np.ndarray,   # (k,)
+    ccs_twh_chunk: np.ndarray,        # (k,)
+    demand_y: float,                  # demand_vec[yi] in TWh
+    demand_end: float,                # demand_vec[endpoint_yi] in TWh
+) -> np.ndarray:                      # (k, 15) projected shares per mix
+    """Streaming-chunk counterpart to `_project_shares_to_endpoint`.
+
+    Same projection math (memo §5.6) but takes per-chunk tranche scalars
+    directly instead of indexing a dense (Y, N) `tg` dict — that path is
+    infeasible on the 8–21M-row full pool. Column order matches
+    `_FORESIGHT_SHARE_KEYS` exactly so callers can diff against
+    `cfg.endpoint_target_shares` without reordering.
+    """
+    ratio = demand_y / demand_end
+    k = shares_nr_chunk.shape[0]
+    resource_shares = np.empty((k, len(_RESOURCE_COLS)), dtype=np.float64)
+    non_cf_idx = {r: i for i, r in enumerate(non_cf_keys)}
+    for j, r in enumerate(_RESOURCE_COLS):
+        if r == 'clean_firm':
+            resource_shares[:, j] = cf_share_chunk * ratio
+        else:
+            resource_shares[:, j] = shares_nr_chunk[:, non_cf_idx[r]] * ratio
+
+    uprate_shr   = uprate_twh_chunk   / demand_end
+    geo_shr      = geo_twh_chunk      / demand_end
+    nuke_new_shr = nuke_new_twh_chunk / demand_end
+    ccs_shr      = ccs_twh_chunk      / demand_end
+
+    return np.concatenate(
+        [resource_shares,
+         uprate_shr[:, None], geo_shr[:, None],
+         nuke_new_shr[:, None], ccs_shr[:, None]],
+        axis=1,
+    )
+
+
 def _score_year_with_endpoint(
     row_score: np.ndarray,           # (N,)   myopic year-yi scores
     shares_to_endpoint: np.ndarray,  # (N, 15) projected shares
