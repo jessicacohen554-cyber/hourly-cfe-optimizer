@@ -374,6 +374,20 @@ class RunConfig:
     ccs_cost_level: str = 'M'
     tx_level: str = 'Medium'
     geo_cost_level: Optional[str] = None
+    # --- Phase C foresight-solver fields (memo §3, §5.2, §6.4) ---
+    # solver_mode='myopic' (default) preserves every existing call site
+    # bit-identically. solver_mode='foresight' dispatches _run_one to
+    # solve_pathway_with_foresight and emits schema-v3 payloads.
+    solver_mode: str = 'myopic'
+    # foresight_lambda: None ≡ 0.0 (degenerate-to-myopic on truncated prefix).
+    foresight_lambda: Optional[float] = None
+    # endpoint_year: SBTi-ladder target year. None → resolved via
+    # _foresight_endpoint_year(endpoint_pct) at dispatch time.
+    endpoint_year: Optional[int] = None
+    # endpoint_target_shares: tuple of 15 floats in _FORESIGHT_SHARE_KEYS
+    # order. frozen dataclass → tuple, not np.ndarray. None → looked up
+    # from step 2.2A cache by solve_pathway_with_foresight.
+    endpoint_target_shares: Optional[tuple] = None
 
     @property
     def output_path(self) -> Path:
@@ -2249,6 +2263,16 @@ def serialize_run_result(r: PathwayRunResult) -> dict:
     }
 
 
+def serialize_run_result_v3(r: PathwayRunResult) -> dict:
+    """Schema v3 emitter — foresight runs only. Task 4 stub; Task 5 expands
+    to the full memo §6.4 shape (headline pairwise metrics, diagnostics
+    sidecar). For now this just bumps schema_version so dispatch compiles.
+    """
+    base = serialize_run_result(r)
+    base['schema_version'] = '3.0.0'
+    return base
+
+
 # ─── CLI ─────────────────────────────────────────────────────────────────────
 
 def build_argparser() -> argparse.ArgumentParser:
@@ -2260,11 +2284,50 @@ def build_argparser() -> argparse.ArgumentParser:
     return ap
 
 
-def _run_one(iso: str, pathway: str, endpoint: float) -> Path:
+def _run_one(
+    iso: str,
+    pathway: str,
+    endpoint: float,
+    solver_mode: str = 'myopic',
+    foresight_lambda: Optional[float] = None,
+    endpoint_year: Optional[int] = None,
+    endpoint_target_shares: Optional[tuple] = None,
+) -> Path:
     ep_pct = endpoint * 100
-    cfg = RunConfig(iso=iso, pathway=pathway, endpoint=endpoint, endpoint_pct=ep_pct)
-    result = solve_pathway(cfg)
-    payload = serialize_run_result(result)
+    # Resolve foresight prerequisites lazily: if caller selected foresight
+    # but didn't pre-compute endpoint_year / endpoint_target_shares, pull
+    # them from pipeline_config + step 2.2A cache. Keeps myopic callers
+    # unchanged and lets a dumb sweep driver drop into foresight mode with
+    # just `solver_mode='foresight', foresight_lambda=λ`.
+    if solver_mode == 'foresight':
+        if endpoint_year is None:
+            endpoint_year = _foresight_endpoint_year(ep_pct)
+        if endpoint_target_shares is None:
+            cfg_tmp_geo = None  # match trajectory-solver default (CAISO-only handles geo internally)
+            target_arr = _compute_endpoint_target_shares(
+                iso=iso, endpoint_pct=ep_pct,
+                demand_growth_level='Medium',
+                geo_cost_level=cfg_tmp_geo,
+                firm_cost_level='M', ccs_cost_level='M',
+                tx_level='Medium',
+            )
+            endpoint_target_shares = tuple(float(x) for x in target_arr)
+    cfg = RunConfig(
+        iso=iso, pathway=pathway, endpoint=endpoint, endpoint_pct=ep_pct,
+        solver_mode=solver_mode,
+        foresight_lambda=foresight_lambda,
+        endpoint_year=endpoint_year,
+        endpoint_target_shares=endpoint_target_shares,
+    )
+    if cfg.solver_mode == 'foresight':
+        result = solve_pathway_with_foresight(cfg)
+        payload = serialize_run_result_v3(result)
+    elif cfg.solver_mode == 'myopic':
+        result = solve_pathway(cfg)
+        payload = serialize_run_result(result)
+    else:
+        raise ValueError(f"Unknown solver_mode={cfg.solver_mode!r}; "
+                         "expected 'myopic' or 'foresight'")
     out = cfg.output_path
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix('.json.tmp')
