@@ -59,24 +59,20 @@ DEMAND_H_DATA_DIR = REPO_ROOT / "analysis" / "reliability-tax" / "data-demand-H"
 DEMAND_L_DATA_DIR = REPO_ROOT / "analysis" / "reliability-tax" / "data-demand-L"
 
 # Endpoint label map — used to build file names.
-# Card S (v2 methodology) adds 60/70/75/80/85 alongside 90/95/97.5/99/99.9.
+# Each endpoint runs on its own SBTi-ladder horizon (canonical map in
+# pipeline_config.THRESHOLD_TARGET_YEARS): 90→2040, 95→2045, 99→2049,
+# 99.9→2050. The solver freezes the endpoint winner forward through 2050
+# so cached JSONs are still N_YEARS=26 rows but years past endpoint_year
+# repeat the endpoint mix; Phase E post-processor trims display.
 _EP_LABEL: dict[float, str] = {
-    0.60:  "ep60",
-    0.70:  "ep70",
-    0.75:  "ep75",
-    0.80:  "ep80",
-    0.85:  "ep85",
     0.90:  "ep90",
     0.95:  "ep95",
-    0.975: "ep97p5",
     0.99:  "ep99",
     0.999: "ep99p9",
 }
 
 # Canonical ordering used for iteration
-ENDPOINTS: list[float] = [
-    0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.975, 0.99, 0.999,
-]
+ENDPOINTS: list[float] = [0.90, 0.95, 0.99, 0.999]
 # SPEC §24.1 locks the pathway set at {1, 1a, 2a, 2b, 3} — "1" is the VRE +
 # batteries + offshore-wind headline; "1a" is the strict onshore-only VRE
 # baseline (Card R). Pathway "1b" was retired before the v2 sweep.

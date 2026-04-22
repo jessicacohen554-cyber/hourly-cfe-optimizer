@@ -3,7 +3,33 @@
 > Historical decisions and landed workstreams live in `SPEC_LOG.md`.
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-04-21 (late — vintage-scaling fix).
+> Last updated: 2026-04-22 (late — endpoint-year schedule applied to myopic solver).
+
+## Current Status (Apr 22, 2026 — late)
+
+### Step 2.3 — Endpoint-year schedule applied to myopic solver — LANDED on `claude/debug-step-2-3-script-SBNaV`
+
+**What shipped.** Rebased onto `origin/master` (post-Phase-C-tasks-1–8, top commit `b3d7229`) and applied the SBTi-ladder schedule (`90→2040, 95→2045, 99→2049, 99.9→2050` from `pipeline_config.THRESHOLD_TARGET_YEARS`) to the myopic solver using the same freeze-forward convention that `solve_pathway_with_foresight` already uses.
+
+**Design choice: freeze-forward vs. truncate.** An earlier draft on this branch truncated the myopic solver's per-year arrays to `[:n_years_run]` and renamed the `_2050` stranding fields. That turned out to be incompatible with Phase C's convention, which keeps full N_YEARS arrays, freezes the endpoint winner forward from `endpoint_yi` to 2050, and defers display truncation to a future Phase E post-processor (memo §6.5). Adopting Phase C's convention for the myopic path gives: (a) schema parity between myopic and foresight payloads (both 26-row); (b) no renames (2050 = endpoint state under freeze); (c) the Phase C `phase_c_regression_lambda_zero.py` regression passes bit-identity between myopic and foresight on the truncated prefix at all 4 ERCOT P3 endpoints without modification. Phase C's `test_foresight_scorer.py` (5 tests) also still passes.
+
+**Code changes (12 lines of solver + 4 lines of config/headline).** `scripts/step_2_3_pathway_optimizer.py`:
+1. `ENDPOINT_TO_THRESHOLD` shrunk from 10 entries to 4 (`{0.90, 0.95, 0.99, 0.999}`). Full-sweep combo count drops `7×5×10=350 → 7×5×4=140`.
+2. `_EP_TAG_MAP` shrunk to the same 4 tags.
+3. `_cfe_target_for_year` ramp now terminates at `_foresight_endpoint_year(endpoint_pct)` (reads from `pipeline_config.THRESHOLD_TARGET_YEARS`); interior buildup waypoints (2030/50, 2035/70, 2040/90, 2045/95) stay only when strictly before the deadline; post-endpoint years hold flat at `endpoint_pct`.
+4. `solve_pathway` (myopic) computes `_myopic_endpoint_yi` once, bounds the main loop to `range(_myopic_endpoint_yi + 1)`, and after the loop freezes `winners[endpoint_yi+1:N_YEARS] = endpoint_w` plus propagates `winner_feasible` / resets `ratchet_violated`. Mirrors the `solve_pathway_with_foresight` block at lines 1792–1800 exactly.
+5. `headline.endpoint_year: int` added to `_finalize_run`. Emits in both v2 (myopic) and v3 (foresight) payloads.
+6. Argparse help string updated (`7×5×10 → 7×5×4`).
+
+**Downstream updates (4-endpoint set):** `reliability_tax/charts/data_loader.py` (ENDPOINTS + _EP_LABEL), `reliability_tax/charts/gen_closing_summary_table.py` (CLOSING_ENDPOINTS + narrative), `scripts/run_pathway_sweep.py` (ALL_ENDPOINTS + help text), `scripts/_surrogate_ab_driver.py` (0.80 combos swapped for 0.90 — only canonical endpoints remain valid), `.github/workflows/step2-3-sweep-iso.yml` (input description). No field renames, no fallback `.get()` chains needed since the `_2050` field names still accurately describe the 2050 state under freeze-forward.
+
+**Not updated:** `scripts/rebuild_reliability_tax_manifest.py` narrative string, `gen_section2_gas_hump.py` doc-comment — cosmetic only.
+
+**Verification.** NEISO P3 × {ep90, ep95, ep99, ep99p9} all run end-to-end with `schema_version: 2`, `headline.endpoint_year` set to the expected SBTi year, full 26-row output with years past `endpoint_year` frozen at the endpoint CFE (ep90: years 2041–2050 all read CFE 90.80, matching year 2040). NEISO P3 ep95 in foresight mode also works end-to-end, emits `schema_version: "3.0.0"` + `solver_mode: foresight`. Phase C unit tests (5 in `test_foresight_scorer.py`) pass; `phase_c_regression_lambda_zero.py` confirms λ=0 foresight bit-identity to myopic on all 4 ERCOT P3 endpoints.
+
+**Phase 5 still pending.** Full 140-combo sweep (7 ISOs × 5 pathways × 4 endpoints) + chart-payload regeneration for all 12 generators + `/fix-prose` across regenerated dashboards has NOT run this session. Stale cached payloads under `analysis/reliability-tax/data/*/pathway*_ep{60,70,75,80,85,97p5}*.json` and corresponding `step_2_1_EF_*_{60,70,75,80,85}_peakclean.parquet` sidecars are now orphans — the solver no longer accepts those endpoints. User decision deferred on whether to delete them before Phase 5 regen or let them sit.
+
+**Resume prompt for next session.** *"Endpoint schedule + freeze-forward landed on `claude/debug-step-2-3-script-SBNaV`, rebased onto current master (post-Phase-C). Solver loop runs 2025→`_foresight_endpoint_year(endpoint_pct)` then freezes winner forward through 2050; schema v2 (myopic) and v3 (foresight) both emit 26-row payloads with `headline.endpoint_year`. Next steps: (a) user decide on deletion of orphaned `ep{60,70,75,80,85,97p5}` cached payloads + `_peakclean` sidecars; (b) run the 140-combo Phase 5 sweep via `scripts/step_2_3_pathway_optimizer.py --all`; (c) regenerate all 12 chart payloads; (d) run `/fix-prose` across any regenerated dashboard HTML. Deferred: Phase E display-truncation post-processor (memo §6.5) that would trim 2041–2050 rows from ep90 chart output — only a display fix; solver semantics are correct under freeze-forward."*
 
 ## Current Status (Apr 21, 2026 — late)
 
@@ -69,11 +95,7 @@ The two extreme pre-fix outliers ($3.3T P2a@ep99, $3.9T P3@ep99) collapse to $1.
 
 **Resume prompt.** *"Resume Step 2.3 v3 — Clean-firm disaggregation escalation on branch `claude/phase-3-cost-matrix-fix-E12dS`. WIP commit contains `scripts/step_2_3_pathway_optimizer.py` rewritten so `decompose_clean_firm_tranches` returns per-tranche (Y, n) TWh + per-year eff LCOE (no blend), `operating_cost_matrix` sums tranche × LCOE directly and returns `(op_cost, feasible_yn)`, `solve_pathway` ∞-masks infeasible cells, `_build_ledger` + `serialize_run_result` emit `clean_firm_existing/_uprate/_geo/_nuke_new/_ccs` per-tranche vintages, `feasibility.physical` reflects winner feasibility. ERCOT 6-combo gate tripped on P2a/P3 ep99 (fleet −33%, cost +104/+144% vs. Phase 3; reliability tax −48/−62%) because the argmin broke out of cf=0 collapse into cf=79 and now prices the 529 TWh/yr new-clean_firm build at merit-order rates. 6 ERCOT JSONs in `analysis/reliability-tax/data/ERCOT/` reflect the new behavior. User has three options in the transcript (1) commit, (2) by-year cost breakdown then commit, (3) revert. Also flagged: pre-existing over-scale in `_finalize_run` line 1339 (`gross_op *= demand_vec[yi]/demand_vec[0]`) inflates new-vintage costs ~20% in late years — not this session's scope but worth a later phase. Do NOT proceed past ERCOT 6-combo until the user picks an option. Phase 5 (50-combo ERCOT smoke + regenerated cached outputs) remains pending behind the decision."*
 
-## Current Status (Apr 20, 2026)
-
-- **AUDIT (2026-04-20):** Verdict B — INCLUDE_GAS_COST_IN_ARGMIN fix partially worked (PJM/CAISO/NEISO now show P3 < P1 gas) but ERCOT remains P3 ≡ P1 at 9/10 endpoints and MISO ep80 shows P3 NPV 78% higher than P1; argmin objective mismatch (minimizes EF-cost + undiscounted-gas-proxy, not NPV) is the root cause. See `reliability_tax/AUDIT_2026-04-20_step2_3_pathway_optimizer.md`.
-
-> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG; Apr 20 rotation moved the Apr 18 Coding-Session sub-agent block to SPEC_LOG). See that file for the historical decision log.
+> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG; Apr 20 rotation moved the Apr 18 Coding-Session sub-agent block to SPEC_LOG; Apr 22 late rotation moved the Apr 20 audit block to SPEC_LOG). See that file for the historical decision log.
 ---
 
 ## 1. Model Framework

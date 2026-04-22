@@ -7,6 +7,12 @@
 
 ---
 
+## Current Status (Apr 20, 2026) — rotated from SPEC.md on Apr 22, 2026 (late)
+
+- **AUDIT (2026-04-20):** Verdict B — INCLUDE_GAS_COST_IN_ARGMIN fix partially worked (PJM/CAISO/NEISO now show P3 < P1 gas) but ERCOT remains P3 ≡ P1 at 9/10 endpoints and MISO ep80 shows P3 NPV 78% higher than P1; argmin objective mismatch (minimizes EF-cost + undiscounted-gas-proxy, not NPV) is the root cause. See `reliability_tax/AUDIT_2026-04-20_step2_3_pathway_optimizer.md`.
+
+---
+
 ### Current Status (Apr 19, 2026) — §24.9 gas-cost endogenization + parquet-rewrite regression
 
 #### Endogenize new-gas-build cost in argmin — ROOT-CAUSE IDENTIFIED / fix PENDING (Apr 19, 2026)

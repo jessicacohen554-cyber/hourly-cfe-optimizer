@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to sweep (50 combos = 5 pathways × 10 endpoints)'
+        description: 'ISO to sweep (20 combos = 5 pathways × 4 endpoints)'
         required: true
         type: choice
         options:
