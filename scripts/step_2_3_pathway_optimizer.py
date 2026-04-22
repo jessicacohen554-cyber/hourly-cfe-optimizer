@@ -959,44 +959,37 @@ _CLEAN_FIRM_TRANCHE_TX = {
 }  # geo/nuke_new/ccs — TX is already baked into their eff_lcoe vectors
 
 
-# ─── P3 foresight preview (read-only diagnostic, memo §§4-5, §7 Phase B) ────
+# ─── P3 foresight primitives (memo §§4-5) ────────────────────────────────────
 #
-# Three pure helpers for the endpoint-aware solver mode. Phase B calls them
-# from solve_pathway as a side computation that does NOT influence myopic
-# winner selection. Phase C will reuse them verbatim from the new
-# solve_pathway_with_foresight entry point.
+# Three pure helpers for the endpoint-aware solver mode. solve_pathway (myopic)
+# consumes them for the Phase B read-only preview. solve_pathway_with_foresight
+# consumes them for real winner selection.
 #
 # 15-dim share vector basis: 11 _RESOURCE_COLS + 4 non-existing CF tranches
 # (uprate/geo/nuke_new/ccs). The "existing" CF tranche is omitted — it is
 # always the GRID_MIX_SHARES baseline and offers no steering handle.
 #
 # ───────────────────────────────────────────────────────────────────────────
-# PHASE B EXIT-GATE RESULT — READ BEFORE WRITING PHASE C
+# DIMENSIONAL CONVENTION — Phase C decision 2026-04-21
 # ───────────────────────────────────────────────────────────────────────────
-# The 28-cell diagnostic sweep (7 ISOs × 4 canonical endpoints, P3, all in
-# analysis/reliability-tax/data/<ISO>/pathway3_ep*_foresight_preview.json)
-# produced ZERO interior-year divergence between myopic and foresight
-# winners at every λ ∈ {0.05, 0.15, 0.5}. Every cell. Every endpoint.
-# Mean share_distance-to-target ranged 0.23–1.05, so target_shares are
-# meaningfully different from the myopic mixes — the penalty just cannot
-# move the argmin.
+# Phase B's 28-cell preview produced ZERO interior-year divergence at any
+# λ ∈ {0.05, 0.15, 0.5} on any ISO. Root cause: row_score is in USD (O(1e10))
+# while ‖shares − target‖² is O(1), so the literal-λ penalty is ~10 orders
+# of magnitude too small to move the argmin.
 #
-# Root cause is dimensional. Memo §5.2 specifies
-#     score_y[m] = myopic_score_y[m] + λ · w(y) · ‖shares[m] − target‖²
-# with λ as a bare scalar. But row_score in solve_pathway is in USD
-# (order 1e10), while ‖shares − target‖² is in fraction² (order 1). For
-# literal λ ∈ {0.05, 0.15, 0.5} the penalty is at most ~0.5 USD against
-# cross-candidate row_score variation of ~1e8 USD — ten orders of
-# magnitude too small to steer.
-#
-# PHASE C MUST DECIDE BEFORE WRITING solve_pathway_with_foresight:
-#   Option 1 — scale λ to USD units (λ ~ 1e6..1e9), sweep per-ISO.
-#   Option 2 — normalize row_score by (endpoint_demand_TWh × reference_LCOE
-#              × 1e6) to a dimensionless magnitude, keep λ in memo's
-#              {0.05, 0.15, 0.5} band.
-# Option 2 is cleaner (memo stays literal; λ stays intuitive); option 1 is
-# faster (no row_score refactor). Ask the user before coding.
+# Fix (Phase C): the foresight scorer adds a USD-scale constant C to the
+# penalty so the sum sits in the same units as row_score, i.e.
+#     score_y[m] = row_score[m] + λ · w(y) · ‖shares[m] − target‖² · C
+# with C = endpoint_year_demand_MWh × FORESIGHT_REF_LCOE_USD_PER_MWH. That
+# keeps λ in the memo's {0, 0.05, 0.15, 0.5, 1.5} band and keeps row_score
+# untouched everywhere else. Per-ISO λ calibration (memo Q2) absorbs the
+# cross-ISO share_distance variance (ERCOT ~1.0 vs SPP ~0.22 ≈ 20×).
 # ───────────────────────────────────────────────────────────────────────────
+
+# Reference LCOE for the foresight-scorer USD normalizer. Fixed cross-ISO so
+# λ values are comparable in Phase D's calibration table; per-ISO variance
+# lives in λ itself.
+FORESIGHT_REF_LCOE_USD_PER_MWH = 100.0
 
 _FORESIGHT_SHARE_KEYS = _RESOURCE_COLS + (
     'cf_uprate', 'cf_geo', 'cf_nuke_new', 'cf_ccs',
@@ -1006,12 +999,137 @@ _FORESIGHT_ENDPOINT_PCTS = frozenset({90.0, 95.0, 99.0, 99.9})
 
 
 def _foresight_endpoint_year(endpoint_pct: float) -> int:
-    """Memo §6.5: endpoint_year is per-endpoint — 2040/2045/2050."""
-    if endpoint_pct <= 90.0:
-        return 2040
-    if endpoint_pct <= 95.0:
-        return 2045
-    return 2050
+    """Map an endpoint CFE threshold to its SBTi-ladder target year (shared
+    canon with step 2.2A via pipeline_config.THRESHOLD_TARGET_YEARS). This
+    is both the foresight trajectory's stopping year and the year at which
+    step 2.2A's cost-optimal target mix is referenced.
+    """
+    return int(pc.THRESHOLD_TARGET_YEARS[endpoint_pct])
+
+
+_STEP_2_2A_DIR = _ROOT / 'data' / 'step2.2-cost'
+_STEP_2_2A_TARGET_SHARES_CACHE: dict = {}
+
+
+def _threshold_tag(endpoint_pct: float) -> str:
+    return (str(int(endpoint_pct))
+            if float(endpoint_pct).is_integer() else str(endpoint_pct))
+
+
+def _compute_endpoint_target_shares(
+    iso: str,
+    endpoint_pct: float,
+    demand_growth_level: str = 'Medium',
+    geo_cost_level: Optional[str] = None,
+    firm_cost_level: str = 'M',
+    ccs_cost_level: str = 'M',
+    tx_level: str = 'Medium',
+) -> np.ndarray:                       # (15,) in _FORESIGHT_SHARE_KEYS order
+    """Endpoint target-mix lookup from the step 2.2A cost-optimizer cache.
+
+    `reliability_tax/README.md:44` declares
+    `data/step2.2-cost/step_2_2a_DG_{ISO}_{THRESHOLD}.parquet` as the
+    per-year cost-optimal reference for this sub-project: step 2.2A solves
+    a static (demand-growth-adjusted) single-year cost optimization across
+    5,832 sensitivity scenarios and caches the winning mix per (iso,
+    threshold, scenario, growth_level, year). The foresight penalty in
+    `solve_pathway_with_foresight` steers candidates toward this mix, so
+    we simply look up the row matching the trajectory-solver's
+    sensitivity defaults and convert it into the 15-dim share vector the
+    scorer compares against.
+
+    Scenario-key encoding (step 2.2A ``make_scenario_key``) is 9-dim:
+    `{Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}`. The
+    trajectory solver exposes firm/ccs/tx as per-RunConfig fields; the
+    other toggles (renewables cost, batt/LDES cost, fuel, 45Q) default to
+    'M' / '1' for the base case. geo_cost_level is 'X' for non-CAISO ISOs.
+
+    Cached per (iso, endpoint_pct, demand_growth_level, scenario) because
+    the parquet load dominates (<1s warm, ~10s cold for a 17k-row DG
+    file) and multiple foresight runs share the same (iso, endpoint).
+    """
+    cache_key = (iso, round(endpoint_pct, 4), demand_growth_level,
+                 firm_cost_level, ccs_cost_level, tx_level,
+                 geo_cost_level or 'X')
+    if cache_key in _STEP_2_2A_TARGET_SHARES_CACHE:
+        return _STEP_2_2A_TARGET_SHARES_CACHE[cache_key]
+
+    # Geo toggle: step 2.2A uses 'X' for ISOs without a geothermal resource
+    # (non-CAISO) and an actual cost-level char ('M' default) for CAISO.
+    geo_code = (geo_cost_level or 'M') if iso == 'CAISO' else 'X'
+    tx_code  = tx_level[0].upper()  # 'Medium' → 'M', 'Low' → 'L', etc.
+    firm_code = firm_cost_level.upper()[0]
+    ccs_code  = ccs_cost_level.upper()[0]
+    # Non-tunable defaults for axes the trajectory solver doesn't expose:
+    # renewables/batt/LDES cost, fuel price, 45Q.
+    scen_key = (f'{firm_code}M{firm_code}{firm_code}_M_{tx_code}_'
+                f'{ccs_code}1_{geo_code}')
+
+    dg_path = (_STEP_2_2A_DIR
+               / f'step_2_2a_DG_{iso}_{_threshold_tag(endpoint_pct)}.parquet')
+    tbl = pq.read_table(dg_path)
+    mask = pacompute.and_(
+        pacompute.equal(tbl.column('scenario'), scen_key),
+        pacompute.equal(tbl.column('growth_level'), demand_growth_level),
+    )
+    sub = tbl.filter(mask)
+    if sub.num_rows != 1:
+        raise RuntimeError(
+            f"_compute_endpoint_target_shares: expected 1 row for "
+            f"{iso}/{scen_key}/{demand_growth_level}/ep{endpoint_pct}, "
+            f"got {sub.num_rows} in {dg_path.name}"
+        )
+    row = sub.slice(0, 1).to_pylist()[0]
+    annual_demand_twh = float(row['annual_demand_mwh']) / 1.0e6
+
+    target = np.zeros(len(_FORESIGHT_SHARE_KEYS), dtype=np.float64)
+    # Dims 0-10: resource shares (mix_* columns are % of endpoint-year demand).
+    for i, r in enumerate(_RESOURCE_COLS):
+        target[i] = float(row.get(f'mix_{r}', 0.0) or 0.0) / 100.0
+    # Dims 11-14: new-build clean-firm tranche shares (TWh / endpoint TWh).
+    target[11] = float(row.get('tranche_uprate_twh', 0.0) or 0.0) / annual_demand_twh
+    target[12] = float(row.get('tranche_geo_twh', 0.0) or 0.0) / annual_demand_twh
+    target[13] = float(row.get('tranche_nuclear_newbuild_twh', 0.0) or 0.0) / annual_demand_twh
+    target[14] = float(row.get('tranche_ccs_tranche_twh', 0.0) or 0.0) / annual_demand_twh
+
+    _STEP_2_2A_TARGET_SHARES_CACHE[cache_key] = target
+    return target
+
+
+def _score_year_sunk_cost(
+    target_twh_nr: np.ndarray,        # (N, R) shares_nr × demand_vec[yi]
+    floor_twh_r: np.ndarray,          # (R,)   running-max non-CF floors
+    delivered_yr_yi: np.ndarray,      # (R,)   delivered_yr[yi]
+    uprate_twh_n: np.ndarray,         # (N,)   uprate_twh_yn[yi]
+    geo_twh_n: np.ndarray,            # (N,)
+    nuke_new_twh_n: np.ndarray,       # (N,)
+    ccs_twh_n: np.ndarray,            # (N,)
+    floor_uprate: float,
+    floor_geo: float,
+    floor_nuke_new: float,
+    floor_ccs: float,
+    uprate_eff_yi: float,             # uprate_eff[yi]
+    geo_eff_yi: float,
+    nuke_new_eff_yi: float,
+    ccs_eff_yi: float,
+    storage_cost_n: np.ndarray,       # (N,)   storage_cost_yn[yi]
+    gas_fixed_n: np.ndarray,          # (N,)   gas_fixed_y[yi]
+) -> np.ndarray:                      # (N,)   row_score in USD
+    """Sunk-cost-B scorer (memo §5.2). Only the INCREMENTAL TWh above each
+    running-max floor prices at year-y LCOE; prior-built capacity is sunk
+    and enters at $0. Returns the year-y row_score vector in USD, for all
+    N candidate mixes. Fully vectorized — no Python loops over candidates.
+    Shared by solve_pathway (myopic) and solve_pathway_with_foresight.
+    """
+    incr_nonCF  = np.maximum(0.0, target_twh_nr - floor_twh_r[None, :])   # (N, R)
+    score_nonCF = (incr_nonCF * delivered_yr_yi[None, :]).sum(axis=1) * 1.0e6
+    score_cf    = (
+          np.maximum(0.0, uprate_twh_n   - floor_uprate)   * uprate_eff_yi
+        + np.maximum(0.0, geo_twh_n      - floor_geo)      * geo_eff_yi
+        + np.maximum(0.0, nuke_new_twh_n - floor_nuke_new) * nuke_new_eff_yi
+        + np.maximum(0.0, ccs_twh_n      - floor_ccs)      * ccs_eff_yi
+    ) * 1.0e6
+    return score_nonCF + score_cf + storage_cost_n + gas_fixed_n
 
 
 def _project_shares_to_endpoint(
@@ -1072,56 +1190,6 @@ def _score_year_with_endpoint(
     diff = shares_to_endpoint - target_shares[None, :]            # (N, 15)
     penalty = lam * weight * np.sum(diff * diff, axis=1)          # (N,)
     return row_score + penalty
-
-
-def _placeholder_endpoint_target_shares(
-    shares_non_cf: np.ndarray,    # (N, 10) non-CF shares
-    non_cf_keys: tuple,           # column order of shares_non_cf
-    cf_share: np.ndarray,         # (N,)
-    tg: dict,
-    demand_vec: np.ndarray,       # (Y,)
-    delivered_yr: np.ndarray,     # (Y, 10) delivered LCOE (matches non_cf_keys)
-    storage_cost_yn: np.ndarray,  # (Y, N)
-    gas_fixed_y: np.ndarray,      # (Y, N)
-    cf_feasible_yn: np.ndarray,   # (Y, N) bool
-    pmask: np.ndarray,            # (Y, N) bool
-    cfe_mask: np.ndarray,         # (Y, N) bool
-    endpoint_yi: int,
-) -> np.ndarray:                  # (15,)
-    """Placeholder target_shares via replacement-cost argmin at endpoint_yi.
-
-    Phase C replaces this with _compute_endpoint_target_shares (cheapest-
-    cumulative-path argmin per memo §5.6 + Q3). For Phase B we use the
-    cheaper fallback: evaluate the endpoint-year scorer with zero floors
-    (all TWh priced at endpoint LCOE, no sunk-cost discount), subject to
-    endpoint-year feasibility. Argmin → that mix's 15-dim share vector.
-    """
-    target_twh_nr = shares_non_cf * float(demand_vec[endpoint_yi])  # (N, 10)
-    score_nonCF = (target_twh_nr * delivered_yr[endpoint_yi][None, :]
-                   ).sum(axis=1) * 1.0e6
-    score_cf = (
-          tg['uprate_twh'][endpoint_yi]   * tg['uprate_eff_lcoe'][endpoint_yi]
-        + tg['geo_twh'][endpoint_yi]      * tg['geo_eff_lcoe'][endpoint_yi]
-        + tg['nuke_new_twh'][endpoint_yi] * tg['nuke_new_eff_lcoe'][endpoint_yi]
-        + tg['ccs_twh'][endpoint_yi]      * tg['ccs_eff_lcoe'][endpoint_yi]
-    ) * 1.0e6
-    row_score = (score_nonCF + score_cf
-                 + storage_cost_yn[endpoint_yi]
-                 + gas_fixed_y[endpoint_yi])
-
-    valid = (cf_feasible_yn[endpoint_yi] & pmask[endpoint_yi]
-             & cfe_mask[endpoint_yi])
-    if not valid.any():
-        valid = np.ones_like(row_score, dtype=bool)
-    masked = np.where(valid, row_score, np.inf)
-    w = int(np.argmin(masked))
-
-    # Identity projection (endpoint → endpoint, ratio = 1).
-    proj = _project_shares_to_endpoint(
-        shares_non_cf, non_cf_keys, cf_share, tg, demand_vec,
-        yi=endpoint_yi, endpoint_yi=endpoint_yi,
-    )
-    return proj[w]
 
 
 # ─── Phase A: per-year argmin solver ─────────────────────────────────────────
@@ -1282,13 +1350,14 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         _foresight_endpoint_year_val = _foresight_endpoint_year(
             float(cfg.endpoint_pct))
         _foresight_endpoint_yi = YEARS.index(_foresight_endpoint_year_val)
-        _foresight_target_shares = _placeholder_endpoint_target_shares(
-            shares_non_cf=shares_nr, non_cf_keys=non_cf,
-            cf_share=cf_share, tg=tg,
-            demand_vec=demand_vec, delivered_yr=delivered_yr,
-            storage_cost_yn=storage_cost_yn, gas_fixed_y=gas_fixed_y,
-            cf_feasible_yn=cf_feasible_yn, pmask=pmask, cfe_mask=cfe_mask,
-            endpoint_yi=_foresight_endpoint_yi,
+        _foresight_target_shares = _compute_endpoint_target_shares(
+            iso=cfg.iso,
+            endpoint_pct=float(cfg.endpoint_pct),
+            demand_growth_level=cfg.demand_growth_level,
+            geo_cost_level=cfg.geo_cost_level,
+            firm_cost_level=cfg.firm_cost_level,
+            ccs_cost_level=cfg.ccs_cost_level,
+            tx_level=cfg.tx_level,
         )
 
     RATCHET_TOL_TWH = 1.0e-6
@@ -1313,16 +1382,22 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         ratchet_mask_y = (ratchet_nonCF & ratchet_cf & ratchet_uprate
                           & ratchet_geo & ratchet_nuke & ratchet_ccs)
 
-        # Sunk-cost scorer: only the NEW TWh above each floor prices at year-y LCOE.
-        incr_nonCF    = np.maximum(0.0, target_twh_nr - floor_twh_r[None, :])  # (N, R)
-        score_nonCF   = (incr_nonCF * delivered_yr[yi][None, :]).sum(axis=1) * 1.0e6  # (N,)
-        score_cf      = (
-              np.maximum(0.0, uprate_twh_yn[yi]   - floor_uprate)   * uprate_eff[yi]
-            + np.maximum(0.0, geo_twh_yn[yi]      - floor_geo)      * geo_eff[yi]
-            + np.maximum(0.0, nuke_new_twh_yn[yi] - floor_nuke_new) * nuke_new_eff[yi]
-            + np.maximum(0.0, ccs_twh_yn[yi]      - floor_ccs)      * ccs_eff[yi]
-        ) * 1.0e6
-        row_score = score_nonCF + score_cf + storage_cost_yn[yi] + gas_fixed_y[yi]
+        # Sunk-cost scorer (memo §5.2 — shared with solve_pathway_with_foresight).
+        row_score = _score_year_sunk_cost(
+            target_twh_nr=target_twh_nr,
+            floor_twh_r=floor_twh_r,
+            delivered_yr_yi=delivered_yr[yi],
+            uprate_twh_n=uprate_twh_yn[yi],
+            geo_twh_n=geo_twh_yn[yi],
+            nuke_new_twh_n=nuke_new_twh_yn[yi],
+            ccs_twh_n=ccs_twh_yn[yi],
+            floor_uprate=floor_uprate, floor_geo=floor_geo,
+            floor_nuke_new=floor_nuke_new, floor_ccs=floor_ccs,
+            uprate_eff_yi=uprate_eff[yi], geo_eff_yi=geo_eff[yi],
+            nuke_new_eff_yi=nuke_new_eff[yi], ccs_eff_yi=ccs_eff[yi],
+            storage_cost_n=storage_cost_yn[yi],
+            gas_fixed_n=gas_fixed_y[yi],
+        )
 
         # Fallback cascade. Ratchet is non-negotiable except under the Tier-4
         # emergency case (all-infeasible even without cfe and cf_feasible).
@@ -1439,10 +1514,11 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
             "endpoint_pct": float(cfg.endpoint_pct),
             "endpoint_year": int(_foresight_endpoint_year_val),
             "schema_note": ("Phase B diagnostic sidecar. Not a pipeline "
-                            "artifact. Placeholder target_shares — see "
-                            "target_shares_method."),
+                            "artifact. target_shares sourced from step 2.2A "
+                            "cost-optimizer cache per reliability_tax/"
+                            "README.md:44 — see target_shares_method."),
             "target_shares_method":
-                "placeholder_replacement_cost_argmin_endpoint_year",
+                "step_2_2a_cost_optimal_at_threshold_year",
             "target_shares": {
                 k: round(float(v), 6)
                 for k, v in zip(
