@@ -231,14 +231,12 @@
         {
             label: 'Economic Analysis',
             children: [
-                { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
-                { label: 'Reliability Tax', href: 'reliability-tax.html' },
+                { label: 'CO₂ Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
                 { label: 'Wholesale Market Dynamics', href: 'lmp_trends.html' },
                 { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' },
                 { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' },
-                { label: 'Solar/Wind Hybrids', href: 'hybrid_analysis.html' },
-                { label: 'VRE-Only CFE Ceiling', href: 'vre_ceiling_dashboard.html' }
+                { label: 'Solar/Wind Hybrids', href: 'hybrid_analysis.html' }
             ]
         },
         {
