@@ -1,0 +1,93 @@
+{
+  "iso": "NEISO",
+  "pathway": "3",
+  "endpoint_pct": 99.0,
+  "endpoint_year": 2049,
+  "endpoint_yi": 24,
+  "lambdas_swept": [
+    0.0,
+    0.05,
+    0.15,
+    0.5,
+    1.5
+  ],
+  "myopic_baseline": {
+    "cum_undisc_cost_usd": 563183110079.47,
+    "cascade_activations": 0,
+    "time_to_90pct": 2025,
+    "wall_seconds": 0.82
+  },
+  "target_shares": {
+    "clean_firm": 0.4,
+    "solar": 0.2,
+    "wind": 0.2,
+    "hydro": 0.04,
+    "offshore_wind": 0.32,
+    "geothermal": 0.0,
+    "ccs_ccgt": 0.0,
+    "solar_batt4": 0.1,
+    "solar_batt8": 0.0,
+    "wind_batt4": 0.0,
+    "wind_batt8": 0.0,
+    "cf_uprate": 0.012476348899560036,
+    "cf_geo": 0.0,
+    "cf_nuke_new": 0.2324172024169852,
+    "cf_ccs": 0.0
+  },
+  "target_shares_method": "cheapest_cumulative_path_step_2_2a",
+  "per_lambda": [
+    {
+      "chosen_lambda": 0.0,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 563183110079.47,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.45
+    },
+    {
+      "chosen_lambda": 0.05,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 563183110079.47,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.44
+    },
+    {
+      "chosen_lambda": 0.15,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 563183110079.47,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.46
+    },
+    {
+      "chosen_lambda": 0.5,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 563183110079.47,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.44
+    },
+    {
+      "chosen_lambda": 1.5,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 563183110079.47,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.44
+    }
+  ],
+  "chosen_lambda": 0.0,
+  "chosen_flags": [
+    "needs_replacement_cost_fallback",
+    "no_positive_penalty",
+    "band_edge_low"
+  ],
+  "cascade_gate_limit": 1,
+  "total_wall_seconds": 3.04
+}
