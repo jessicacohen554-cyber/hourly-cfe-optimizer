@@ -78,7 +78,6 @@ from pipeline_config import (  # noqa: E402
 )
 from dispatch_utils import get_supply_profiles  # noqa: E402
 from eia_data_io import load_demand_profiles, load_generation_profiles  # noqa: E402
-from step1_pfs_generator import batch_hourly_scores  # noqa: E402
 
 # -------------------------------------------------------------------------
 # Configuration
@@ -165,6 +164,50 @@ def build_demand_arr(iso, demand_data):
     return arr
 
 
+_SOLAR_IDX = RESOURCES.index('solar')
+_WIND_IDX = RESOURCES.index('wind')
+_OFFSHORE_IDX = RESOURCES.index('offshore_wind')
+
+
+def _fold_baseline_hourly(baseline, supply_matrix):
+    """Collapse the frozen-resource contribution into a single (8760,) vector.
+
+    Because all 5 resource pcts multiply their 8760 shape and get summed, the
+    frozen part (clean_firm, hydro, and the baseline slices of solar / wind /
+    offshore) is constant across every grid point in the scenario. Folding it
+    once lets the per-phase kernel run on the 2 (or 3) swept axes only.
+    """
+    pcts = np.array([baseline[r] for r in RESOURCES], dtype=np.float64)
+    return (pcts / 100.0) @ supply_matrix   # (8760,)
+
+
+def _scores_folded(demand_arr, baseline_hourly, swept_rows, added_mix,
+                   chunk_size=10000):
+    """Vectorized score = sum_h min(demand, baseline_hourly + added_supply).
+
+    swept_rows: (K, 8760) — supply shapes for the K swept resources.
+    added_mix:  (N, K)    — added pct per swept resource per grid point.
+    Returns:    (N,) fraction of demand matched (multiply by 100 for pct).
+
+    Chunked to cap memory at ~700 MiB (chunk_size × 8760 × 8 bytes).
+    """
+    N = added_mix.shape[0]
+    if N <= chunk_size:
+        supply = (added_mix / 100.0) @ swept_rows   # (N, 8760)
+        supply += baseline_hourly                    # broadcast add, in-place
+        np.minimum(demand_arr, supply, out=supply)
+        return supply.sum(axis=1)
+
+    out = np.empty(N, dtype=np.float64)
+    for start in range(0, N, chunk_size):
+        end = min(start + chunk_size, N)
+        supply = (added_mix[start:end] / 100.0) @ swept_rows
+        supply += baseline_hourly
+        np.minimum(demand_arr, supply, out=supply)
+        out[start:end] = supply.sum(axis=1)
+    return out
+
+
 def _score_grid(
     iso,
     view,
@@ -178,11 +221,11 @@ def _score_grid(
     wind_axis,
     solar_axis,
     offshore_axis,        # None → onshore-only view, 2-D grid
-    phase_tag,            # 'coarse' | 'fine'
+    phase_tag,            # 'coarse' | 'fine' | 'axis_*'
+    baseline_hourly=None, # (8760,) — precomputed fold; built lazily if None
 ):
-    """Core vectorized scorer. Builds mix_batch via broadcasting, one
-    batch_hourly_scores call, then assembles DataFrame. No Python loops
-    over grid points."""
+    """Vectorized scorer. Folds the frozen baseline into a precomputed hourly
+    vector so the per-phase matmul runs only on the 2-3 swept axes."""
     is_offshore_view = offshore_axis is not None
 
     if is_offshore_view:
@@ -198,14 +241,18 @@ def _score_grid(
 
     N = added_wind.size
 
-    mix_batch = np.empty((N, len(RESOURCES)), dtype=np.float64)
-    mix_batch[:, 0] = baseline['clean_firm']
-    mix_batch[:, 1] = baseline['solar'] + added_solar
-    mix_batch[:, 2] = baseline['wind'] + added_wind
-    mix_batch[:, 3] = baseline['hydro']
-    mix_batch[:, 4] = baseline['offshore_wind'] + added_offshore
+    if baseline_hourly is None:
+        baseline_hourly = _fold_baseline_hourly(baseline, supply_matrix)
 
-    scores_pct = batch_hourly_scores(demand_arr, supply_matrix, mix_batch) * 100.0
+    # Build swept matrix: only the resources that actually vary across the grid.
+    if is_offshore_view:
+        swept_rows = supply_matrix[[_SOLAR_IDX, _WIND_IDX, _OFFSHORE_IDX], :]
+        added_mix = np.stack([added_solar, added_wind, added_offshore], axis=1)
+    else:
+        swept_rows = supply_matrix[[_SOLAR_IDX, _WIND_IDX], :]
+        added_mix = np.stack([added_solar, added_wind], axis=1)
+
+    scores_pct = _scores_folded(demand_arr, baseline_hourly, swept_rows, added_mix) * 100.0
 
     wind_gw = pct_to_gw(added_wind, iso, 'wind', demand_twh)
     solar_gw = pct_to_gw(added_solar, iso, 'solar', demand_twh)
@@ -279,6 +326,9 @@ def sweep_scenario(
 
     is_offshore_view = (view == 'onshore_plus_offshore') and (iso in OFFSHORE_ISOS)
 
+    # Precompute folded baseline (once per scenario — reused by all 5 grid calls).
+    baseline_hourly = _fold_baseline_hourly(baseline, supply_matrix)
+
     # ── Phase 1: coarse sweep ────────────────────────────────────────────
     wind_c = np.arange(0, WIND_CAP_PCT + 1, COARSE_WIND_STEP, dtype=np.float64)
     solar_c = np.arange(0, SOLAR_CAP_PCT + 1, COARSE_SOLAR_STEP, dtype=np.float64)
@@ -287,7 +337,8 @@ def sweep_scenario(
         if is_offshore_view else None
     )
     coarse = _score_grid(iso, view, year, level, baseline, demand_twh, gf,
-                         demand_arr, supply_matrix, wind_c, solar_c, offshore_c, 'coarse')
+                         demand_arr, supply_matrix, wind_c, solar_c, offshore_c, 'coarse',
+                         baseline_hourly=baseline_hourly)
 
     imax = coarse['score_pct'].idxmax()
     w_star = float(coarse.loc[imax, 'added_wind_pct'])
@@ -307,7 +358,8 @@ def sweep_scenario(
         if is_offshore_view else None
     )
     fine = _score_grid(iso, view, year, level, baseline, demand_twh, gf,
-                       demand_arr, supply_matrix, wind_f, solar_f, offshore_f, 'fine')
+                       demand_arr, supply_matrix, wind_f, solar_f, offshore_f, 'fine',
+                       baseline_hourly=baseline_hourly)
 
     # Single-axis fine stripes at 1 pp — for precise wind-only / solar-only elbows.
     wind_stripe = _score_grid(
@@ -316,14 +368,16 @@ def sweep_scenario(
         np.arange(0, WIND_CAP_PCT + 1, 1, dtype=np.float64),
         np.array([0.0]),
         np.array([0.0]) if is_offshore_view else None,
-        'axis_wind')
+        'axis_wind',
+        baseline_hourly=baseline_hourly)
     solar_stripe = _score_grid(
         iso, view, year, level, baseline, demand_twh, gf,
         demand_arr, supply_matrix,
         np.array([0.0]),
         np.arange(0, SOLAR_CAP_PCT + 1, 1, dtype=np.float64),
         np.array([0.0]) if is_offshore_view else None,
-        'axis_solar')
+        'axis_solar',
+        baseline_hourly=baseline_hourly)
     stripes = [wind_stripe, solar_stripe]
     if is_offshore_view:
         offshore_stripe = _score_grid(
@@ -331,7 +385,8 @@ def sweep_scenario(
             demand_arr, supply_matrix,
             np.array([0.0]), np.array([0.0]),
             np.arange(0, OFFSHORE_CAP_PCT + 1, 1, dtype=np.float64),
-            'axis_offshore')
+            'axis_offshore',
+            baseline_hourly=baseline_hourly)
         stripes.append(offshore_stripe)
 
     return pd.concat([coarse, fine] + stripes, ignore_index=True)
