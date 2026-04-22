@@ -2031,15 +2031,17 @@ def solve_pathway_with_foresight(cfg: 'RunConfig', *, ef_override: Optional[dict
     if cfg.endpoint_target_shares is None:
         raise ValueError("solve_pathway_with_foresight: cfg.endpoint_target_shares is required")
 
-    # Pool loader: concatenated across all step 2.1 threshold bands, then
-    # filtered by max-share-per-resource caps taken across the 4 canonical
-    # endpoints' step-2.2A targets (+ slack). Non-overlapping band layout
-    # means per-band load_ef_mixes under-samples the qualifying pool — that
-    # was the Phase D pool-pathology root cause (LESSONS.md #22). Foresight
-    # keeps the dense (Y, N) path because the filtered pool stays in the
-    # ~40k–370k range across ISOs, tractable for dense tensor math.
+    # Phase 1a Commit E — pool filter dropped. Foresight now consumes the
+    # same full unfiltered pool as myopic (ERCOT ~8.7M, CAISO ~21M rows).
+    # The endpoint-filter was starving foresight of the mixes it needed to
+    # satisfy early-year CFE-ramp targets, forcing cascade activations on
+    # MISO (11 activations vs myopic's 0 at Commit D validation). Post-E
+    # the dense (Y, N) path is unreachable at this scale — the chunked
+    # streaming year loop below mirrors solve_pathway's Commit B rewrite.
+    # ef_override preserves the Phase C regression (shared-pool λ=0 bit-
+    # identity check).
     ef = ef_override if ef_override is not None else load_ef_pool(
-        cfg.iso, filter_to_endpoints=True, cfg_for_filter=cfg
+        cfg.iso, filter_to_endpoints=False
     )
     n_mixes = len(ef['hourly_match_score'])
 
