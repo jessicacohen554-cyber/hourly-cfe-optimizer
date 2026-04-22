@@ -629,29 +629,16 @@ def load_ef_mixes(iso: str, threshold) -> dict[str, np.ndarray]:
 # under-samples the pool for any yearly CFE target below the endpoint. The
 # pool loader fixes that for the pathway optimizer (both myopic + foresight).
 #
-# Two downstream modes:
-#   - solve_pathway (myopic P1/P1a/P2a/P2b/myopic-P3): full pool, no filter.
-#     The SBTi ladder (`_cfe_target_for_year`) + `cfe_mask` do the narrowing
-#     year-by-year.
-#   - solve_pathway_with_foresight (foresight-P3): max-share-per-resource
-#     cap across 4 canonical endpoints' step-2.2A targets + slack. Stays
-#     semantically consistent with foresight's endpoint-awareness and keeps
-#     the filtered pool small enough for dense (Y, N) tensor math.
+# Post-Phase-1a Commit E, both solve_pathway (myopic P1/P1a/P2a/P2b/myopic-P3)
+# and solve_pathway_with_foresight (foresight-P3) consume the full unfiltered
+# pool. The SBTi ladder (`_cfe_target_for_year`) + `cfe_mask` do the narrowing
+# year-by-year; no candidate prefiltering happens inside the loader.
 
 # Union of all band thresholds across ISOs (ordered low → high).
 _EF_BAND_THRESHOLDS = (
     10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0,
     80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9,
 )
-
-# Slack added to the per-resource cap. Resources whose max across the 4
-# canonical endpoints' targets is ≤ _FILTER_ZERO_MAX_THRESHOLD get the
-# larger "zero-target slack"; positive-target resources get the tighter
-# slack. Kept as module-level constants for easy retuning when post-filter
-# pool counts land below ~500 mixes (see SPEC filter table).
-_FILTER_ZERO_MAX_THRESHOLD = 0.01   # ≤1pp → "zero-target"
-_FILTER_ZERO_SLACK = 0.05           # 5pp slack on zero-target resources
-_FILTER_POS_SLACK = 0.005           # 0.5pp slack on positive-target resources
 
 # Streaming chunk size for candidate-dimension argmin in solve_pathway. Sized
 # so per-chunk transient allocations (shares_nr[:k], row_score[:k], ratchet
@@ -723,50 +710,13 @@ def _load_or_build_peakclean_pool(iso: str) -> pa.Table:
     return pa.concat_tables(tables, promote_options='default')
 
 
-def _compute_pool_endpoint_caps(cfg: 'RunConfig') -> np.ndarray:
-    """Per-resource filter caps from max across 4 canonical endpoints' targets.
-
-    Returns a (len(_RESOURCE_COLS),) vector of upper bounds on each resource's
-    share (fraction). A mix passes the filter iff every resource's share ≤
-    the cap. Cap = per-resource max target across endpoints {90, 95, 99, 99.9}
-    plus slack — _FILTER_ZERO_SLACK if that max is ≤ _FILTER_ZERO_MAX_THRESHOLD
-    (the resource is effectively off-target at every endpoint), else
-    _FILTER_POS_SLACK.
-    """
-    n_res = len(_RESOURCE_COLS)
-    max_targets = np.zeros(n_res, dtype=np.float64)
-    for ep_pct in (90.0, 95.0, 99.0, 99.9):
-        targets = _compute_endpoint_target_shares(
-            iso=cfg.iso,
-            endpoint_pct=ep_pct,
-            demand_growth_level=cfg.demand_growth_level,
-            geo_cost_level=cfg.geo_cost_level,
-            firm_cost_level=cfg.firm_cost_level,
-            ccs_cost_level=cfg.ccs_cost_level,
-            tx_level=cfg.tx_level,
-        )
-        # First n_res dims of _FORESIGHT_SHARE_KEYS are _RESOURCE_COLS.
-        max_targets = np.maximum(max_targets, targets[:n_res])
-    slack = np.where(max_targets <= _FILTER_ZERO_MAX_THRESHOLD,
-                     _FILTER_ZERO_SLACK, _FILTER_POS_SLACK)
-    return max_targets + slack
-
-
-def load_ef_pool(
-    iso: str,
-    *,
-    filter_to_endpoints: bool = False,
-    cfg_for_filter: Optional['RunConfig'] = None,
-) -> dict[str, np.ndarray]:
+def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
     """Full-pool EF loader.
 
     Returns the same dict shape as `load_ef_mixes` (same keys: all
     _RESOURCE_COLS, all _STORAGE_COLS, 'hourly_match_score',
     'clean_peak_hour_mw', 'resid_norm_p9997') — concatenated across every
     on-disk threshold band for `iso`.
-
-    When `filter_to_endpoints=True`, rejects any mix whose per-resource
-    share exceeds the cap computed by `_compute_pool_endpoint_caps(cfg)`.
     """
     ef = _read_ef_pool_table(iso)
     pc_tbl = _load_or_build_peakclean_pool(iso)
@@ -786,33 +736,7 @@ def load_ef_pool(
         if 'resid_norm_p9997' in pc_tbl.column_names
         else np.zeros(n, dtype=np.float32)
     )
-    # Drop the source tables so their arrow buffers can be reclaimed before
-    # the filter pass allocates an (N, 11) share matrix (~700 MB on ERCOT).
-    del ef, pc_tbl
-
-    if not filter_to_endpoints:
-        return arrs
-
-    if cfg_for_filter is None:
-        raise ValueError(
-            "load_ef_pool(filter_to_endpoints=True) requires cfg_for_filter"
-        )
-    caps = _compute_pool_endpoint_caps(cfg_for_filter)
-    # Chunked share-cap check to avoid an (N, 11) float64 allocation on 8M+
-    # row pools. Keeps filter peak transient under ~100 MB per chunk.
-    caps_pct = (caps * 100.0).astype(np.float64)               # compare in %
-    keep = np.ones(n, dtype=bool)
-    chunk = _POOL_CHUNK_SIZE
-    for s in range(0, n, chunk):
-        e = min(s + chunk, n)
-        kc = np.ones(e - s, dtype=bool)
-        for ri, r in enumerate(_RESOURCE_COLS):
-            kc &= arrs[r][s:e].astype(np.float64) <= (caps_pct[ri] + 1.0e-9)
-        keep[s:e] = kc
-    kept_n = int(keep.sum())
-    print(f"[pool] {iso} filter_to_endpoints: {n:,} → {kept_n:,} mixes "
-          f"(caps={np.round(caps, 4).tolist()})", flush=True)
-    return {k: v[keep] for k, v in arrs.items()}
+    return arrs
 
 
 # ─── Vectorized year helpers ────────────────────────────────────────────────
@@ -1525,7 +1449,7 @@ def solve_pathway(cfg: 'RunConfig', *, ef_override: Optional[dict] = None) -> Pa
     # shares_nr) is computed inside the chunk loop from these scalars.
     # `ef_override` lets a caller (phase_c_regression_lambda_zero) feed a
     # pre-loaded pool so both solvers consume the same candidate set.
-    ef = ef_override if ef_override is not None else load_ef_pool(cfg.iso, filter_to_endpoints=False)
+    ef = ef_override if ef_override is not None else load_ef_pool(cfg.iso)
     n_mixes = len(ef['hourly_match_score'])
 
     peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
@@ -2040,9 +1964,7 @@ def solve_pathway_with_foresight(cfg: 'RunConfig', *, ef_override: Optional[dict
     # streaming year loop below mirrors solve_pathway's Commit B rewrite.
     # ef_override preserves the Phase C regression (shared-pool λ=0 bit-
     # identity check).
-    ef = ef_override if ef_override is not None else load_ef_pool(
-        cfg.iso, filter_to_endpoints=False
-    )
+    ef = ef_override if ef_override is not None else load_ef_pool(cfg.iso)
     n_mixes = len(ef['hourly_match_score'])
 
     peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
