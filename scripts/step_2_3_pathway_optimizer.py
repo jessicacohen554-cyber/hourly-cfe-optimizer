@@ -1899,54 +1899,45 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         ratchet_violated[yi] = False
         cascade_tier_y[yi] = -1  # sentinel: post-endpoint, not simulated
 
-    # Phase B: realized clean_pct from winners → re-run existing_gas_vec, apply ratchet
+    # Realized clean_pct from winners → re-run existing_gas_vec. Scalar-per-
+    # year throughout — the old code rebuilt a (Y, N) gas_required_real
+    # tensor via gas_sizing_matrix and then indexed winners out of it, which
+    # OOMs on the full unfiltered pool (17+ GB on ERCOT). Here we compute
+    # only the (Y,) vector we actually need.
     achieved_cfe = score_vec[winners]
-    existing_gas_vec_real = existing_gas_available_vec(cfg.iso, achieved_cfe, cfg.demand_growth_level)
-    gas_required_real = gas_sizing_matrix(annual_mwh_vec, existing_gas_vec_real,
-                                          resid_arr, gas_raw_2025,
-                                          existing_base, gaf)
-    cum_new_gas = gas_required_real[np.arange(N_YEARS), winners]
-    active_fleet = np.maximum.accumulate(cum_new_gas)
-    fleet_size_mw = float(active_fleet.max())
-    peak_year = int(YEARS[int(np.argmax(active_fleet))])
+    existing_gas_vec_real = existing_gas_available_vec(
+        cfg.iso, achieved_cfe, cfg.demand_growth_level)
 
-    # gas fleet CF (energy-balance)
+    resid_at_winners = resid_arr[winners]                              # (Y,)
+    gap_mwh_y        = resid_at_winners * annual_mwh_vec               # (Y,)
+    gas_raw_y        = gap_mwh_y / max(1e-9, gaf)                      # (Y,)
+    gas_needed_y_all = np.maximum(0.0, existing_base + gas_raw_y - gas_raw_2025)
+    cum_new_gas      = np.maximum(0.0, gas_needed_y_all - existing_gas_vec_real)
+    active_fleet     = np.maximum.accumulate(cum_new_gas)
+    fleet_size_mw    = float(active_fleet.max())
+    peak_year        = int(YEARS[int(np.argmax(active_fleet))])
+
+    # Gas fleet CF (energy-balance) — unchanged formula, (Y,) throughout.
     total_gas_mw = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso]) + active_fleet
-    gas_gen_mwh = np.maximum(0.0, 1.0 - achieved_cfe / 100.0) * demand_vec * 1.0e6
-    gas_cf = np.where(total_gas_mw > 1e-6,
-                      np.minimum(1.0, gas_gen_mwh / (total_gas_mw * HOURS_PER_YEAR)), 0.0)
+    gas_gen_mwh  = np.maximum(0.0, 1.0 - achieved_cfe / 100.0) * demand_vec * 1.0e6
+    gas_cf = np.where(
+        total_gas_mw > 1e-6,
+        np.minimum(1.0, gas_gen_mwh / (total_gas_mw * HOURS_PER_YEAR)),
+        0.0,
+    )
 
     # Existing gas used = min(gas_needed_at_winner, existing_gas_available).
-    gap_mwh_winner = resid_arr[winners] * annual_mwh_vec
-    gas_raw_winner = gap_mwh_winner / max(1e-9, gaf)
-    gas_needed_winner = np.maximum(0.0, existing_base + gas_raw_winner - gas_raw_2025)
-    existing_gas_used = np.minimum(existing_gas_vec_real, gas_needed_winner)
+    existing_gas_used = np.minimum(existing_gas_vec_real, gas_needed_y_all)
+
     clean_arr_diag = ef['clean_peak_hour_mw']
     result = _finalize_run(cfg, ef, winners, peak_vec, demand_vec,
                            achieved_cfe, existing_gas_vec_real, existing_gas_used,
                            cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
                            clean_arr_diag, winner_feasible, ratchet_violated)
     result.cascade_tier_y = cascade_tier_y
-    if _foresight_active:
-        result.foresight_preview = {
-            "iso": cfg.iso,
-            "pathway": cfg.pathway,
-            "endpoint_pct": float(cfg.endpoint_pct),
-            "endpoint_year": int(_foresight_endpoint_year_val),
-            "schema_note": ("Phase B diagnostic sidecar. Not a pipeline "
-                            "artifact. target_shares sourced from step 2.2A "
-                            "cost-optimizer cache per reliability_tax/"
-                            "README.md:44 — see target_shares_method."),
-            "target_shares_method":
-                "step_2_2a_cost_optimal_at_threshold_year",
-            "target_shares": {
-                k: round(float(v), 6)
-                for k, v in zip(
-                    _FORESIGHT_SHARE_KEYS, _foresight_target_shares)
-            },
-            "lambda_values": [float(x) for x in _FORESIGHT_LAMBDAS],
-            "per_year": _foresight_preview_rows,
-        }
+    # foresight_preview stays None on the full-pool streaming path
+    # (dataclass default). Phase C solver's foresight_metadata is the
+    # canonical diagnostic.
     return result
 
 
