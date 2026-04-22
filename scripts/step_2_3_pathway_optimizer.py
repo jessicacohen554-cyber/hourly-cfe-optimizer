@@ -1611,128 +1611,281 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     RATCHET_TOL_TWH = 1.0e-6
     _CHUNK_SIZE = _POOL_CHUNK_SIZE
     for yi in range(_myopic_endpoint_yi + 1):
-        # Target TWh per (mix, non-CF resource) at year-y grown demand.
-        target_twh_nr = shares_nr * float(demand_vec[yi])             # (N, R)
-        # Ratchet masks: a mix is admissible only if every already-committed
-        # resource's year-y TWh claim ≥ its running-max floor.
-        ratchet_nonCF = np.all(
-            target_twh_nr >= (floor_twh_r[None, :] - RATCHET_TOL_TWH), axis=1)
-        # Clean_firm TOTAL-share floor: mix's year-y absolute CF TWh must be
-        # ≥ the running-max CF commitment. Prevents retiring existing nuclear
-        # below its locked baseline and prevents later years from shrinking
-        # below whatever CF was committed earlier. The tranche decomposer
-        # handles the merit-order breakdown within clean_firm separately.
-        target_twh_cf_n = cf_share * float(demand_vec[yi])             # (N,)
-        ratchet_cf     = target_twh_cf_n >= (floor_twh_cf - RATCHET_TOL_TWH)
-        ratchet_uprate = uprate_twh_yn[yi]   >= (floor_uprate   - RATCHET_TOL_TWH)
-        ratchet_geo    = geo_twh_yn[yi]      >= (floor_geo      - RATCHET_TOL_TWH)
-        ratchet_nuke   = nuke_new_twh_yn[yi] >= (floor_nuke_new - RATCHET_TOL_TWH)
-        ratchet_ccs    = ccs_twh_yn[yi]      >= (floor_ccs      - RATCHET_TOL_TWH)
-        ratchet_mask_y = (ratchet_nonCF & ratchet_cf & ratchet_uprate
-                          & ratchet_geo & ratchet_nuke & ratchet_ccs)
+        # Per-year scalars (precomputed once, shared across every chunk).
+        demand_y           = float(demand_vec[yi])
+        annual_mwh_y       = float(annual_mwh_vec[yi])
+        annual_twh_y       = demand_y
+        cfe_strict_thresh  = float(cfe_targets[yi]) - 0.5
+        cfe_relaxed_thresh = float(cfe_targets[yi]) - 5.0
+        baseline_twh_y     = (baseline_pct / 100.0) * annual_twh_y
+        uprate_cap_pct_yi  = float(uprate_cap_pct_y[yi])
+        uprate_eff_yi      = float(uprate_eff[yi])
+        geo_eff_yi         = float(geo_eff_lcoe[yi])
+        nuke_new_eff_yi    = float(nuke_eff_lcoe[yi])
+        ccs_eff_yi         = float(ccs_eff_lcoe[yi])
+        existing_gas_yi    = float(existing_gas_vec[yi])
+        delivered_yi       = delivered_yr[yi]                         # (R,)
 
-        # Sunk-cost scorer (memo §5.2 — shared with solve_pathway_with_foresight).
-        row_score = _score_year_sunk_cost(
-            target_twh_nr=target_twh_nr,
-            floor_twh_r=floor_twh_r,
-            delivered_yr_yi=delivered_yr[yi],
-            uprate_twh_n=uprate_twh_yn[yi],
-            geo_twh_n=geo_twh_yn[yi],
-            nuke_new_twh_n=nuke_new_twh_yn[yi],
-            ccs_twh_n=ccs_twh_yn[yi],
-            floor_uprate=floor_uprate, floor_geo=floor_geo,
-            floor_nuke_new=floor_nuke_new, floor_ccs=floor_ccs,
-            uprate_eff_yi=uprate_eff[yi], geo_eff_yi=geo_eff[yi],
-            nuke_new_eff_yi=nuke_new_eff[yi], ccs_eff_yi=ccs_eff[yi],
-            storage_cost_n=storage_cost_yn[yi],
-            gas_fixed_n=gas_fixed_y[yi],
+        # Per-tier chunk-argmin trackers. Tier numbering mirrors the old
+        # cascade:
+        #   0 = ratchet ∩ pmask ∩ strict_cfe ∩ cf_feasible
+        #   1 = ratchet ∩ pmask ∩ relaxed_cfe (cfe−5) ∩ cf_feasible
+        #   2 = ratchet ∩ pmask              (drop cfe + cf_feasible)
+        #   3 = pmask only                   (drop ratchet)
+        best_score_t = [np.inf, np.inf, np.inf, np.inf]
+        best_idx_t   = [-1, -1, -1, -1]
+
+        for s in range(0, n_mixes, _CHUNK_SIZE):
+            e = min(s + _CHUNK_SIZE, n_mixes)
+            k = e - s
+
+            # ── Per-chunk (k, R) non-CF shares + absolute TWh targets ──
+            shares_nr_chunk = np.empty((k, R), dtype=np.float64)
+            for ri, r in enumerate(non_cf):
+                shares_nr_chunk[:, ri] = ef[r][s:e].astype(np.float64) / 100.0
+            target_twh_nr_chunk   = shares_nr_chunk * demand_y        # (k, R)
+            target_twh_cf_n_chunk = cf_share[s:e] * demand_y          # (k,)
+
+            # ── Inline tranche decomposer restricted to (yi, chunk). Same
+            # merit order as decompose_clean_firm_tranches: existing →
+            # uprate → (geo if CAISO) → nuke_new vs CCS at year-y LCOE. ──
+            existing_chunk  = np.minimum(target_twh_cf_n_chunk, baseline_twh_y)
+            remaining_chunk = target_twh_cf_n_chunk - existing_chunk
+            uprate_twh_chunk = np.minimum(remaining_chunk, uprate_cap)
+            remaining_chunk  = remaining_chunk - uprate_twh_chunk
+            if tranches_available:
+                feasible_chunk = np.ones(k, dtype=bool)
+                if geo_cap_twh > 0:
+                    geo_twh_chunk   = np.minimum(remaining_chunk, geo_cap_twh)
+                    remaining_chunk = remaining_chunk - geo_twh_chunk
+                else:
+                    geo_twh_chunk = np.zeros(k, dtype=np.float64)
+                if nuke_new_eff_yi <= ccs_eff_yi or ccs_cap <= 0:
+                    nuke_new_twh_chunk = remaining_chunk
+                    ccs_twh_chunk      = np.zeros(k, dtype=np.float64)
+                else:
+                    ccs_twh_chunk      = np.minimum(remaining_chunk, ccs_cap)
+                    nuke_new_twh_chunk = remaining_chunk - ccs_twh_chunk
+            else:
+                # P1 family — no new-firm tranches unlock. Over-cap CF
+                # targets are flagged infeasible (tier 0/1 will reject).
+                feasible_chunk     = remaining_chunk <= 1.0e-9
+                geo_twh_chunk      = np.zeros(k, dtype=np.float64)
+                nuke_new_twh_chunk = np.zeros(k, dtype=np.float64)
+                ccs_twh_chunk      = np.zeros(k, dtype=np.float64)
+
+            # ── Ratchet masks (per chunk) ──
+            ratchet_nonCF_chunk = np.all(
+                target_twh_nr_chunk
+                >= (floor_twh_r[None, :] - RATCHET_TOL_TWH),
+                axis=1,
+            )
+            ratchet_cf_chunk     = target_twh_cf_n_chunk >= (floor_twh_cf   - RATCHET_TOL_TWH)
+            ratchet_uprate_chunk = uprate_twh_chunk      >= (floor_uprate   - RATCHET_TOL_TWH)
+            ratchet_geo_chunk    = geo_twh_chunk         >= (floor_geo      - RATCHET_TOL_TWH)
+            ratchet_nuke_chunk   = nuke_new_twh_chunk    >= (floor_nuke_new - RATCHET_TOL_TWH)
+            ratchet_ccs_chunk    = ccs_twh_chunk         >= (floor_ccs      - RATCHET_TOL_TWH)
+            ratchet_chunk = (ratchet_nonCF_chunk & ratchet_cf_chunk
+                             & ratchet_uprate_chunk & ratchet_geo_chunk
+                             & ratchet_nuke_chunk & ratchet_ccs_chunk)
+
+            # ── Inline _pathway_mask restricted to (yi, chunk) ──
+            if is_p1_family:
+                cf_allowed = ef['clean_firm'][s:e] <= (
+                    pathway_floor + uprate_cap_pct_yi + 0.5)
+                no_ccs = ef['ccs_ccgt'][s:e] <= 0.5
+                pmask_chunk = cf_allowed & no_ccs
+            else:
+                pmask_chunk = np.ones(k, dtype=bool)
+
+            cfe_strict_chunk  = score_vec[s:e] >= cfe_strict_thresh
+            cfe_relaxed_chunk = score_vec[s:e] >= cfe_relaxed_thresh
+
+            # ── Gas sizing (per chunk, this year). Update running-max MW
+            # BEFORE pricing so this year's ratchet_fleet includes any
+            # newly-needed capacity from this chunk. np.maximum is
+            # idempotent, so the safety-net re-loop below is safe. ──
+            gap_mwh_chunk      = resid_arr[s:e] * annual_mwh_y
+            gas_raw_chunk      = gap_mwh_chunk / max(1e-9, gaf)
+            gas_needed_chunk   = np.maximum(0.0, existing_base + gas_raw_chunk - gas_raw_2025)
+            gas_required_chunk = np.maximum(0.0, gas_needed_chunk - existing_gas_yi)
+            running_max_gas_n[s:e] = np.maximum(
+                running_max_gas_n[s:e], gas_required_chunk)
+            ratchet_fleet_chunk = running_max_gas_n[s:e]
+
+            gas_capex_chunk = new_ccgt_capex_per_mw * ratchet_fleet_chunk
+            gas_fom_chunk   = new_ccgt_fom_per_mw   * ratchet_fleet_chunk
+            gas_frac_chunk  = np.maximum(0.0, 1.0 - score_vec[s:e] / 100.0)
+            gas_fuel_chunk  = demand_y * 1.0e6 * gas_frac_chunk * fuel_unit
+            gas_fixed_chunk = (gas_capex_chunk + gas_fom_chunk
+                               + gas_fuel_chunk + existing_fom)
+
+            # ── Storage (per chunk). Preserves the old storage_cost_yn
+            # ×1e6/1e6 algebra (bug-compatible with foresight solver). ──
+            storage_cost_chunk = np.zeros(k, dtype=np.float64)
+            for sc, unit in storage_pairs:
+                storage_cost_chunk += demand_y * (ef[sc][s:e] / 100.0) * unit
+
+            row_score_chunk = _score_year_sunk_cost(
+                target_twh_nr=target_twh_nr_chunk,
+                floor_twh_r=floor_twh_r,
+                delivered_yr_yi=delivered_yi,
+                uprate_twh_n=uprate_twh_chunk,
+                geo_twh_n=geo_twh_chunk,
+                nuke_new_twh_n=nuke_new_twh_chunk,
+                ccs_twh_n=ccs_twh_chunk,
+                floor_uprate=floor_uprate, floor_geo=floor_geo,
+                floor_nuke_new=floor_nuke_new, floor_ccs=floor_ccs,
+                uprate_eff_yi=uprate_eff_yi, geo_eff_yi=geo_eff_yi,
+                nuke_new_eff_yi=nuke_new_eff_yi, ccs_eff_yi=ccs_eff_yi,
+                storage_cost_n=storage_cost_chunk,
+                gas_fixed_n=gas_fixed_chunk,
+            )
+
+            tier0 = ratchet_chunk & pmask_chunk & cfe_strict_chunk  & feasible_chunk
+            tier1 = ratchet_chunk & pmask_chunk & cfe_relaxed_chunk & feasible_chunk
+            tier2 = ratchet_chunk & pmask_chunk
+            tier3 = pmask_chunk
+
+            for ti, tmask in enumerate((tier0, tier1, tier2, tier3)):
+                if not tmask.any():
+                    continue
+                masked = np.where(tmask, row_score_chunk, np.inf)
+                local_idx = int(np.argmin(masked))
+                local_score = float(masked[local_idx])
+                if local_score < best_score_t[ti]:
+                    best_score_t[ti] = local_score
+                    best_idx_t[ti]   = s + local_idx
+
+        # ── Pick the lowest tier with a finite winner ──
+        tier = -1
+        for ti in range(4):
+            if np.isfinite(best_score_t[ti]):
+                tier = ti
+                break
+
+        if tier == -1:
+            # Safety net: pmask was all False across every chunk. Re-loop
+            # chunks scoring without ANY mask and take a global argmin.
+            # np.maximum is idempotent, so re-touching running_max_gas_n
+            # here doesn't double-count. Flag tier=3 + ratchet_violated.
+            safety_best_score = np.inf
+            safety_best_idx   = 0
+            for s in range(0, n_mixes, _CHUNK_SIZE):
+                e = min(s + _CHUNK_SIZE, n_mixes)
+                k = e - s
+                shares_nr_chunk = np.empty((k, R), dtype=np.float64)
+                for ri, r in enumerate(non_cf):
+                    shares_nr_chunk[:, ri] = ef[r][s:e].astype(np.float64) / 100.0
+                target_twh_nr_chunk   = shares_nr_chunk * demand_y
+                target_twh_cf_n_chunk = cf_share[s:e] * demand_y
+                existing_chunk   = np.minimum(target_twh_cf_n_chunk, baseline_twh_y)
+                remaining_chunk  = target_twh_cf_n_chunk - existing_chunk
+                uprate_twh_chunk = np.minimum(remaining_chunk, uprate_cap)
+                remaining_chunk  = remaining_chunk - uprate_twh_chunk
+                if tranches_available:
+                    if geo_cap_twh > 0:
+                        geo_twh_chunk   = np.minimum(remaining_chunk, geo_cap_twh)
+                        remaining_chunk = remaining_chunk - geo_twh_chunk
+                    else:
+                        geo_twh_chunk = np.zeros(k, dtype=np.float64)
+                    if nuke_new_eff_yi <= ccs_eff_yi or ccs_cap <= 0:
+                        nuke_new_twh_chunk = remaining_chunk
+                        ccs_twh_chunk      = np.zeros(k, dtype=np.float64)
+                    else:
+                        ccs_twh_chunk      = np.minimum(remaining_chunk, ccs_cap)
+                        nuke_new_twh_chunk = remaining_chunk - ccs_twh_chunk
+                else:
+                    geo_twh_chunk      = np.zeros(k, dtype=np.float64)
+                    nuke_new_twh_chunk = np.zeros(k, dtype=np.float64)
+                    ccs_twh_chunk      = np.zeros(k, dtype=np.float64)
+                gap_mwh_chunk      = resid_arr[s:e] * annual_mwh_y
+                gas_raw_chunk      = gap_mwh_chunk / max(1e-9, gaf)
+                gas_needed_chunk   = np.maximum(0.0, existing_base + gas_raw_chunk - gas_raw_2025)
+                gas_required_chunk = np.maximum(0.0, gas_needed_chunk - existing_gas_yi)
+                running_max_gas_n[s:e] = np.maximum(
+                    running_max_gas_n[s:e], gas_required_chunk)
+                ratchet_fleet_chunk = running_max_gas_n[s:e]
+                gas_capex_chunk = new_ccgt_capex_per_mw * ratchet_fleet_chunk
+                gas_fom_chunk   = new_ccgt_fom_per_mw   * ratchet_fleet_chunk
+                gas_frac_chunk  = np.maximum(0.0, 1.0 - score_vec[s:e] / 100.0)
+                gas_fuel_chunk  = demand_y * 1.0e6 * gas_frac_chunk * fuel_unit
+                gas_fixed_chunk = (gas_capex_chunk + gas_fom_chunk
+                                   + gas_fuel_chunk + existing_fom)
+                storage_cost_chunk = np.zeros(k, dtype=np.float64)
+                for sc, unit in storage_pairs:
+                    storage_cost_chunk += demand_y * (ef[sc][s:e] / 100.0) * unit
+                row_score_chunk = _score_year_sunk_cost(
+                    target_twh_nr=target_twh_nr_chunk,
+                    floor_twh_r=floor_twh_r,
+                    delivered_yr_yi=delivered_yi,
+                    uprate_twh_n=uprate_twh_chunk,
+                    geo_twh_n=geo_twh_chunk,
+                    nuke_new_twh_n=nuke_new_twh_chunk,
+                    ccs_twh_n=ccs_twh_chunk,
+                    floor_uprate=floor_uprate, floor_geo=floor_geo,
+                    floor_nuke_new=floor_nuke_new, floor_ccs=floor_ccs,
+                    uprate_eff_yi=uprate_eff_yi, geo_eff_yi=geo_eff_yi,
+                    nuke_new_eff_yi=nuke_new_eff_yi, ccs_eff_yi=ccs_eff_yi,
+                    storage_cost_n=storage_cost_chunk,
+                    gas_fixed_n=gas_fixed_chunk,
+                )
+                local_idx = int(np.argmin(row_score_chunk))
+                local_score = float(row_score_chunk[local_idx])
+                if local_score < safety_best_score:
+                    safety_best_score = local_score
+                    safety_best_idx   = s + local_idx
+            w = safety_best_idx
+            tier = 3
+            ratchet_violated[yi] = True
+        else:
+            w = best_idx_t[tier]
+            if tier == 3:
+                ratchet_violated[yi] = True
+
+        winners[yi]         = w
+        cascade_tier_y[yi]  = tier
+        winner_feasible[yi] = (tier <= 1)
+
+        # ── Winner-only scalar re-derivation for floor updates. No full
+        # pool indexing — one scalar each. ──
+        w_target_twh_r = np.array(
+            [float(ef[r][w]) / 100.0 * demand_y for r in non_cf],
+            dtype=np.float64,
         )
+        w_target_twh_cf = float(cf_share[w]) * demand_y
+        w_existing = min(w_target_twh_cf, baseline_twh_y)
+        w_rem      = w_target_twh_cf - w_existing
+        w_uprate   = min(w_rem, uprate_cap)
+        w_rem      = w_rem - w_uprate
+        if tranches_available:
+            if geo_cap_twh > 0:
+                w_geo  = min(w_rem, geo_cap_twh)
+                w_rem  = w_rem - w_geo
+            else:
+                w_geo  = 0.0
+            if nuke_new_eff_yi <= ccs_eff_yi or ccs_cap <= 0:
+                w_nuke_new = w_rem
+                w_ccs      = 0.0
+            else:
+                w_ccs      = min(w_rem, ccs_cap)
+                w_nuke_new = w_rem - w_ccs
+        else:
+            w_geo      = 0.0
+            w_nuke_new = 0.0
+            w_ccs      = 0.0
 
-        # Fallback cascade. Ratchet is non-negotiable except under the Tier-4
-        # emergency case (all-infeasible even without cfe and cf_feasible).
-        valid = ratchet_mask_y & pmask[yi] & cfe_mask[yi] & cf_feasible_yn[yi]
-        tier = 0
-        if not valid.any():
-            # Tier 2: relax CFE ±5 pts (keep ratchet + pmask + cf_feasible).
-            relaxed_cfe = score_vec >= cfe_targets[yi] - 5.0
-            valid = ratchet_mask_y & pmask[yi] & relaxed_cfe & cf_feasible_yn[yi]
-            tier = 1
-            if not valid.any():
-                # Tier 3: drop cf_feasible (ratchet still respected). Year flagged
-                # as physically infeasible — mix reported cost is right, but it
-                # can't actually be built by the available clean_firm tranches.
-                valid = ratchet_mask_y & pmask[yi]
-                winner_feasible[yi] = False
-                tier = 2
-                if not valid.any():
-                    # Tier 4 emergency: drop ratchet too. Flag for review.
-                    valid = pmask[yi].copy()
-                    ratchet_violated[yi] = True
-                    tier = 3
-                    if not valid.any():
-                        valid = np.ones(n_mixes, dtype=bool)
-
-        masked_score = np.where(valid, row_score, np.inf)
-        w = int(np.argmin(masked_score))
-        winners[yi] = w
-        cascade_tier_y[yi] = tier
-        # If we landed via Tier-1/2, winner_feasible still reflects the mask's
-        # cf_feasible membership; reassert it explicitly for safety.
-        if winner_feasible[yi]:
-            winner_feasible[yi] = bool(cf_feasible_yn[yi, w])
-
-        # ── Phase B foresight-preview capture (read-only) ───────────────
-        # Runs on the same `valid` mask and `row_score` that myopic argmin
-        # used above. Floors update below is unaffected.
-        if _foresight_active and yi <= _foresight_endpoint_yi:
-            _fy = int(YEARS[yi])
-            _fw_weight = max(
-                0.0,
-                (_foresight_endpoint_year_val - _fy)
-                / (_foresight_endpoint_year_val - BASE_YEAR),
-            )
-            _proj = _project_shares_to_endpoint(
-                shares_nr, non_cf, cf_share, tg, demand_vec,
-                yi=yi, endpoint_yi=_foresight_endpoint_yi,
-            )
-            _m_diff = _proj[w] - _foresight_target_shares
-            _m_dist = float(np.sqrt(np.sum(_m_diff * _m_diff)))
-            _lambda_rows = {}
-            for _lam in _FORESIGHT_LAMBDAS:
-                _f_score = _score_year_with_endpoint(
-                    row_score, _proj, _foresight_target_shares,
-                    _lam, _fw_weight)
-                _f_masked = np.where(valid, _f_score, np.inf)
-                _f_w = int(np.argmin(_f_masked))
-                _fd = _proj[_f_w] - _foresight_target_shares
-                _fd_dist = float(np.sqrt(np.sum(_fd * _fd)))
-                _lambda_rows[f"{_lam:g}"] = {
-                    "mix_idx": _f_w,
-                    "score_usd": float(_f_score[_f_w]),
-                    "share_distance": round(_fd_dist, 6),
-                }
-            _foresight_preview_rows.append({
-                "year": _fy,
-                "feasible_candidates": int(valid.sum()),
-                "myopic_winner_idx": int(w),
-                "myopic_score_usd": float(row_score[w]),
-                "share_distance_to_target_at_myopic_winner": round(_m_dist, 6),
-                "foresight_winners_by_lambda": _lambda_rows,
-            })
-
-        # Update floors from the winning mix (monotone non-decreasing).
-        floor_twh_r    = np.maximum(floor_twh_r, target_twh_nr[w])
-        # P1: total-CF floor stays frozen at existing 2025 CF TWh (= share
-        # floor that declines as demand grows). No new-CF tranche unlocks
-        # beyond the fixed UPRATE_CAP_TWH, so ratcheting the floor would
-        # force later years to carry prior winners' peak absolute CF with no
-        # buildable tranche to cover the gap. P1a keeps the ratchet.
+        # ── Floor updates (monotone non-decreasing). P1 exception: keep
+        # total-CF floor frozen at the existing 2025 baseline (no unlockable
+        # tranche beyond uprate, so ratcheting it would strand later years
+        # with an unservable CF claim). P1a keeps the ratchet. ──
+        floor_twh_r = np.maximum(floor_twh_r, w_target_twh_r)
         if cfg.pathway != '1':
-            floor_twh_cf = max(floor_twh_cf, float(target_twh_cf_n[w]))
-        floor_uprate   = max(floor_uprate,   float(uprate_twh_yn[yi, w]))
-        floor_geo      = max(floor_geo,      float(geo_twh_yn[yi, w]))
-        floor_nuke_new = max(floor_nuke_new, float(nuke_new_twh_yn[yi, w]))
-        floor_ccs      = max(floor_ccs,      float(ccs_twh_yn[yi, w]))
+            floor_twh_cf = max(floor_twh_cf, w_target_twh_cf)
+        floor_uprate   = max(floor_uprate,   float(w_uprate))
+        floor_geo      = max(floor_geo,      float(w_geo))
+        floor_nuke_new = max(floor_nuke_new, float(w_nuke_new))
+        floor_ccs      = max(floor_ccs,      float(w_ccs))
 
     # Post-endpoint freeze (mirrors solve_pathway_with_foresight memo §6.5):
     # hold the endpoint winner forward through 2050 so _finalize_run and
