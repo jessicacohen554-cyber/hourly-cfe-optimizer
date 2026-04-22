@@ -260,6 +260,45 @@ def load_endpoint_target(iso: str, endpoint_pct: float, growth: str = 'Medium',
     return out
 
 
+@functools.lru_cache(maxsize=None)
+def load_archetype_curtailment(iso: str) -> dict:
+    """Per-archetype curtailment fraction per VRE resource.
+
+    Returns {resource: (A,) array of surplus/(matched+surplus)}. Curtailment
+    is priced at vintage LCOE in the reliability-tax cost build.
+    """
+    cache = pq.read_table(DISPATCH_DIR / f'{iso}_dispatch_cache.parquet')
+    a = cache.num_rows
+    out = {}
+    for r in ('solar', 'wind', 'offshore_wind', 'solar_batt4', 'solar_batt8',
+              'wind_batt4', 'wind_batt8'):
+        mk, sk = f'matched_{r}', f'surplus_{r}'
+        if mk not in cache.column_names or sk not in cache.column_names:
+            out[r] = np.zeros(a, dtype=np.float64); continue
+        mv = np.array([np.asarray(cache.column(mk)[i].as_py() or [0.0]).sum()
+                       for i in range(a)])
+        sv = np.array([np.asarray(cache.column(sk)[i].as_py() or [0.0]).sum()
+                       for i in range(a)])
+        with np.errstate(divide='ignore', invalid='ignore'):
+            out[r] = np.where(mv + sv > 0, sv / np.maximum(mv + sv, 1e-12), 0.0)
+    return out
+
+
+@functools.lru_cache(maxsize=None)
+def load_archetype_residual_profile(iso: str) -> np.ndarray:
+    """Per-archetype 8760-hour residual demand fraction (sums to annual
+    residual as fraction of annual MWh). Endpoint snapshot reads one row.
+    """
+    cache = pq.read_table(DISPATCH_DIR / f'{iso}_dispatch_cache.parquet')
+    a = cache.num_rows
+    out = np.zeros((a, HOURS_PER_YEAR), dtype=np.float64)
+    for i in range(a):
+        v = cache.column('residual_demand')[i].as_py()
+        if v and len(v) == HOURS_PER_YEAR:
+            out[i] = v
+    return out
+
+
 # ── Vectorized trajectories ─────────────────────────────────────────────────
 
 def demand_vec(iso: str, growth: str) -> np.ndarray:
@@ -593,6 +632,8 @@ class RunResult:
     lcoe: dict
     ef_snapshot: dict                 # end-year row snapshot for curtailment
     fossil_retirement: list           # per-year dict
+    winner_archetype: np.ndarray      # (26,) cache-row index of each winner
+    endpoint_archetype: int           # cache-row index of 2050 winner
 
 
 def solve(cfg: RunConfig) -> RunResult:
@@ -700,6 +741,9 @@ def solve(cfg: RunConfig) -> RunResult:
     ef_snap = {c: float(ef[c][end_w]) for c in RESOURCES + STORAGE}
     ef_snap['hourly_match_score'] = float(ef['hourly_match_score'][end_w])
 
+    # Per-year winner's archetype (for curtailment + endpoint hourly dispatch).
+    winner_arch = cache_idx[winners].astype(np.int64)
+
     # Fossil retirement per year (for serializer).
     fossil_ret = _fossil_retirement_series(cfg.iso, cfe, cfg.growth)
 
@@ -711,6 +755,8 @@ def solve(cfg: RunConfig) -> RunResult:
         annual_ratchet_twh=annual_ratchet, winner_nonCF_twh=winner_non,
         winner_cf_tranches_twh=winner_cf, lcoe=lcoe, ef_snapshot=ef_snap,
         fossil_retirement=fossil_ret,
+        winner_archetype=winner_arch,
+        endpoint_archetype=int(winner_arch[-1]),
     )
 
 
@@ -816,7 +862,30 @@ def to_dict(r: RunResult) -> dict:
     existing_fom = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso]) * float(pc.EXISTING_GAS_FOM_KW_YR[cfg.iso]) * 1000.0
     fuel_unit = float(pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso][cfg.growth])
     gas_fuel_y = np.maximum(0.0, 1.0 - r.achieved_cfe / 100.0) * r.demand_vec * 1e6 * fuel_unit
-    priced_curt_y = np.zeros(N_YEARS)  # simplified — matches the "priced curtailment" sum baked into ledger gross_op
+
+    # ── Priced VRE curtailment ─────────────────────────────────────────────
+    # Per active vintage y: vintage.twh × curtailment_fraction_at_year_y ×
+    # vintage.locked_lcoe. Curtailment fraction comes from the winning
+    # archetype at year y for the vintage's resource. Summed per year and
+    # added to net_annual_cost; total rolled up into reliability_tax.
+    curt_tbl = load_archetype_curtailment(cfg.iso)
+    vre_resources = ('solar', 'wind', 'offshore_wind', 'solar_batt4',
+                     'solar_batt8', 'wind_batt4', 'wind_batt8')
+    priced_curt_y = np.zeros(N_YEARS, dtype=np.float64)
+    for v in ledger:
+        if v['resource'] not in vre_resources:
+            continue
+        cod_yi = int(v['cod_year']) - BASE_YEAR
+        if cod_yi < 0: cod_yi = 0
+        twh = float(v['twh_per_year'])
+        lcoe_eff = float(v['locked_lcoe']) + float(v['tx_adder'])
+        curt_r = curt_tbl.get(v['resource'], np.zeros(1))
+        # For every year the vintage is on-system, price its curtailed share.
+        for yi in range(cod_yi, N_YEARS):
+            arch = int(r.winner_archetype[yi])
+            if arch < 0 or arch >= len(curt_r):
+                continue
+            priced_curt_y[yi] += twh * 1.0e6 * float(curt_r[arch]) * lcoe_eff
 
     # Annual cost rows.
     gas_cf_y = np.where(r.gas_fleet_mw > 0,
@@ -922,7 +991,10 @@ def to_dict(r: RunResult) -> dict:
         'tables': {
             'annual_buildout': annual_build,
             'annual_cost': annual_cost,
-            'endpoint_hourly_dispatch': [0.0] * HOURS_PER_YEAR,  # TODO: derive from dispatch cache
+            'endpoint_hourly_dispatch': [
+                round(float(x), 6) for x in
+                load_archetype_residual_profile(cfg.iso)[r.endpoint_archetype].tolist()
+            ],
             'new_gas_fleet': [{
                 'year_built': peak_year,
                 'initial_cap_mw': round(fleet_size_mw, 2),
@@ -956,9 +1028,15 @@ def to_dict(r: RunResult) -> dict:
             'reference_cf': 0.15,
         },
         'retirement_timeline': r.fossil_retirement,
-        'vre_curtailment_at_endpoint': {k: 0.0 for k in
-            ('solar', 'wind', 'offshore_wind', 'solar_batt4', 'solar_batt8',
-             'wind_batt4', 'wind_batt8')},
+        'vre_curtailment_at_endpoint': {
+            k: round(float(load_archetype_curtailment(cfg.iso).get(
+                k, np.zeros(1))[r.endpoint_archetype]
+                if 0 <= r.endpoint_archetype < len(
+                    load_archetype_curtailment(cfg.iso).get(k, np.zeros(1)))
+                else 0.0), 4)
+            for k in ('solar', 'wind', 'offshore_wind', 'solar_batt4',
+                      'solar_batt8', 'wind_batt4', 'wind_batt8')
+        },
         'endpoint_mix_pct': end_mix,
         'endpoint_storage_pct': end_storage,
         'terminal_ledger': ledger,
