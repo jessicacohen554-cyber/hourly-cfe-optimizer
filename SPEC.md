@@ -3,7 +3,74 @@
 > Historical decisions and landed workstreams live in `SPEC_LOG.md`.
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-04-22 (late — endpoint-year schedule applied to myopic solver).
+> Last updated: 2026-04-22 (Phase D session end — pool-pathology discovered, Phase 1a pipeline fix queued).
+
+## Current Status (Apr 22, 2026 — Phase D session end)
+
+### Phase D — 35-run λ sweep completed; structural pool pathology found; Phase 1a fix queued for next session
+
+**What landed on `claude/phase-d-lambda-calibration-9NiiK`:**
+1. `eb0fc0e` — `cascade_tier_y` vector attached to `PathwayRunResult` from both `solve_pathway` and `solve_pathway_with_foresight` so Phase D's cascade-activation gate (cascade ≤ myopic + 1) reads both solvers directly. Phase C `phase_c_regression_lambda_zero.py` still passes bit-identically on all 4 ERCOT P3 endpoints.
+2. `3c78a99` — `scripts/phase_d_lambda_sweep.py` (Task D1): in-process driver runs the 7-ISO × 5-λ matrix at (ep99, 2049) plus 1 myopic baseline per ISO, one Python process per ISO. Memo §7 Phase D exit-gate logic (max `foresight_penalty_vs_myopic` subject to cascade ≤ myopic + 1) encoded in `_select_lambda`.
+3. `3e92f8c` — Task D2 outputs at `data/phase_d/sweep_{ISO}.json`. 35 foresight runs + 7 myopic baselines, total wall-clock ~2 min across all 7.
+
+**Headline Phase D finding (all 7 ISOs fail the exit gate under current pipeline):**
+
+| ISO | Best `foresight_penalty_vs_myopic` at any λ>0 | Status |
+|---|---|---|
+| CAISO | −17.5% @ λ=1.5 | fallback trigger |
+| ERCOT | −10.5% @ λ=1.5 (0 at λ≤0.5) | fallback trigger |
+| MISO | −14.2% @ λ=0.5, 1.5 | fallback trigger |
+| NEISO | 0% at every λ (zero divergence) | fallback trigger |
+| NYISO | 0% at every λ (zero divergence) | fallback trigger |
+| PJM | −18.9% @ λ=1.5 | fallback trigger |
+| SPP | −4.6% @ λ=1.5 | fallback trigger |
+
+All 7 flag `needs_replacement_cost_fallback`. Values are undiscounted (memo §6.3 headline convention). Foresight never beats myopic in the memo's λ band on the current pool.
+
+**Root cause is NOT foresight miscalibration — it's a pipeline-layer pool defect.** `scripts/step_2_3_pathway_optimizer.py::_read_ef_table` (L417-422) loads ONE threshold band per `load_ef_mixes(iso, T)` call. But `step_2_1_efficient_frontier.py`'s docstring explicitly states that step 2.1 writes mixes to NON-OVERLAPPING bands — a mix with `score=85` lives in `band=80`, not `band=90` — and consumers are supposed to load ALL bands ≥ the target threshold to reconstruct the full qualifying pool. Step 2.3 doesn't do this. For an ep99 run the pool ends up as "mixes with `hourly_match_score ∈ [99.0, 99.5]`" (43,425 mixes for ERCOT); every candidate is already endpoint-compliant by construction. The SBTi CFE ladder `0%(2025) → 50%(2030) → 70%(2035) → 90%(2040) → 95%(2045) → 99%(2049)` is a no-op because every candidate in the pool exceeds every rung. Myopic picks one winner (ERCOT: mix 3373, CF=9/sol=49/wnd=29/score=99.02) for all 25 years; `achieved_cfe_pct=99.02` every year; `stranded_mw=0`; `peak_year=2050`; no overbuild hump for foresight to reduce. All 7 ISOs show `time_to_90pct=2025` in the sweep output.
+
+**User's second hypothesis also confirmed (flagged, not acted on):** `row_score` endogenizes new-gas capex (`gas_fixed_y = new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom` threaded into `_score_year_sunk_cost` at L1446, originally via PR #3233 commit `c8812f4` Apr 20). So even with a wider pool, the myopic argmin discounts candidates by the gas-firming bill they'd incur. User direction: keep as likely-good behavior; revisit only if Phase 1a pool fix doesn't produce a hump.
+
+**Plan agreed with user — phased (Phase 1a first; 1b only if 1a fails):**
+
+*Phase 1a — next session, pipeline-level pool fix:*
+1. Extend `_read_ef_table` / `_load_or_build_peakclean` to load ALL threshold bands for an ISO (glob `step_2_1_EF_{ISO}_*.parquet` excluding `*_peakclean.*`, concat with `promote_options='default'`, zero-fill missing resource columns per band — some bands don't have `ccs_ccgt`). Stitch peakclean sidecars together; build missing ones via `precompute_clean_peak_hour_mw` per band.
+2. **Split the pool by solver mode (user's architecture call):**
+   - `solve_pathway` (P1, P1a, P2a, P2b, myopic-P3): FULL pool. Ratchet + yearly CFE ladder do the filtering. Required so P1's BAU overbuild-and-strand hump can emerge.
+   - `solve_pathway_with_foresight` (foresight-P3): filtered pool via max-share-per-resource cap taken across all 4 canonical endpoints' step 2.2A target mixes + 5pp slack on zero-target resources. Filter is semantically consistent with foresight's endpoint-awareness. Post-filter endpoint-score-≥99 counts must be verified non-trivial; at 0.5pp slack CAISO/ERCOT/NYISO/PJM dropped below 75 mixes which is too narrow.
+3. Handle memory: full ERCOT pool is 8.7M mixes (CAISO 21M); the `(N_YEARS × N_mixes)` tranche tensors blow past 10GB. For the full-pool myopic solve use a candidate-dimension streaming scorer (500k-row chunks, running argmin, same total ops as full-vector path). Wall-clock estimate: ~25s/myopic-solve on ERCOT, ~4-5 min for the Phase D rerun (7 myopic + 35 foresight).
+4. Rerun `phase_d_lambda_sweep.py` end-to-end. Expected post-fix signals:
+   - Myopic `achieved_cfe_pct` ramps from ~50% in 2025 to 99% in 2049 (no longer flat 99.02%).
+   - Myopic `active_new_gas_fleet_mw` exhibits a peak somewhere in 2035-2045, then drops; `stranded_mw_at_2050 > 0`.
+   - `winners_diff_from_myopic_count > 0` at λ values other than 1.5.
+   - `foresight_penalty_vs_myopic > 0` for at least some ISOs at λ ∈ {0.05, 0.15, 0.5}.
+
+*Phase 1b — deferred, only if 1a doesn't produce a hump:*
+Add an `INCLUDE_GAS_CAPEX_IN_ARGMIN` flag to `solve_pathway`. When False, strip `new_gas_capex_y + new_gas_fom_y` from `gas_fixed_y` so the myopic argmin is purely "cheapest delivered MWh today" (gas capex still accrues in `annual_cost_rows` for the reliability-tax metric — only the argmin stops seeing it). Do NOT implement on speculation.
+
+**Per-ISO filter results for Phase D reference (max across 4 endpoints, 0.5pp slack):**
+
+| ISO | Full pool | Post-filter | n≥99 after filter | Current threshold=99 pool |
+|---|---:|---:|---:|---:|
+| CAISO | 21.2M | 287,794 | 73 | 147,410 |
+| ERCOT | 8.7M | 220,512 | 54 | 43,425 |
+| MISO | 6.2M | 7,905 | 791 | 44,340 |
+| NEISO | 5.2M | 206,125 | 294 | 36,753 |
+| NYISO | 2.1M | 1,668 | 39 | 135,461 |
+| PJM | 3.1M | 84,274 | 51 | 257,282 |
+| SPP | 1.5M | 92,464 | 98 | 311,963 |
+
+CAISO/ERCOT/NYISO/PJM n≥99 ≤ 75 is the reason to loosen slack to 5pp on zero-target resources. MISO 7,905 total + 791 at score≥99 is a warning — may need special handling.
+
+**Deferred Phase D tasks (unchanged):**
+- D3 (emit `foresight_lambda_by_iso.json` + `summary.json`): pending until Phase 1a produces positive `foresight_penalty_vs_myopic`.
+- D4 (replacement-cost-argmin fallback): probably unnecessary once Phase 1a lands; the current all-negative-penalty finding is a pool artifact, not a target-miscalibration.
+- D5 (user approval card): blocked on D3.
+
+**Branch state.** `claude/phase-d-lambda-calibration-9NiiK` HEAD `3e92f8c`. Working tree clean. All 7 `data/phase_d/sweep_*.json` committed on origin.
+
+**Resume prompt for next session.** *"Resume Phase D on `claude/phase-d-lambda-calibration-9NiiK`. First action: read this SPEC.md block + `LESSONS.md` entry 22 + a sample `data/phase_d/sweep_ERCOT.json` to see the all-negative foresight penalty finding. The task is Phase 1a per the plan above — fix `scripts/step_2_3_pathway_optimizer.py::_read_ef_table` + `_load_or_build_peakclean` (L417-L607) to load all threshold bands (`step_2_1_EF_{iso}_*.parquet` exclusive of `*_peakclean.parquet`), tolerate missing resource columns per band (some bands lack `ccs_ccgt` — fill zeros), and split pool behavior: `solve_pathway` → full pool (stream in 500k-row chunks to stay under memory), `solve_pathway_with_foresight` → max-endpoint-filtered pool with 5pp slack on zero-target resources. Then rerun `ISO_FILTER=<iso> python3 scripts/phase_d_lambda_sweep.py --iso <iso>` for all 7 ISOs. Success signals: myopic shows an interior ramp (not flat 99.02% for 25 years), `stranded_mw_at_2050 > 0` for at least some ISOs, and `foresight_penalty_vs_myopic > 0` at λ ∈ {0.05, 0.15, 0.5} for at least some ISOs. Escalate to user with numbers before starting Phase D Tasks D3-D5 or Phase 1b. Filter computation reference: load bands with `pa.concat_tables(tbls, promote_options='default')`, build resource-share matrix (pct/100), cap each resource at `max(step_2_2a_target[ep] for ep in {90,95,99,99.9})` with 5pp slack on resources where that max is ≤ 1pp; reject candidates where any resource exceeds its cap. See session transcript for the diagnostic queries that produced the n≥99 counts. Do NOT implement Phase 1b (gas-capex flag) without running 1a first and reporting."*
 
 ## Current Status (Apr 22, 2026 — late)
 
@@ -74,28 +141,7 @@ The two extreme pre-fix outliers ($3.3T P2a@ep99, $3.9T P3@ep99) collapse to $1.
 
 **Resume prompt for next session.** *"Vintage-scaling fix landed (commits `b381824` + `7f5f590`) on `claude/fix-vintage-scaling-bug-dbwdI`. All 6 ERCOT combos regenerated and feasibility.physical=True with no fallback notes. Two extreme outliers (P2a/P3 @ ep99) collapsed from $3.3T/$3.9T to $1.9T; ep90 combos moved UP by 52–73% because the B scorer now picks genuinely different winners. P1/P2a/P3 converge at each endpoint in ERCOT — audit whether this holds in PJM/NYISO/NEISO. Next steps: (a) user review the delta report; (b) if approved, regenerate the 6 non-ERCOT ISOs' 50 combos each via the same `_run_one` direct-call pattern (the `_sweep_pathways_inproc.py` driver is broken on this branch — imports a stale API from a deleted `market-simulator/`); (c) regenerate 12 chart payloads in `reliability_tax/charts/` + the two flagged dashboard captions; (d) run `/fix-prose` across the regenerated dashboards. Deferred separately: the P3 foresight-driven argmin (lookahead layer on top of the ratchet model, P3 only)."*
 
-## Current Status (Apr 21, 2026)
-
-### Step 2.3 v3 — Clean-firm disaggregation (Phase 2.5+4) — ESCALATION PENDING USER DECISION
-
-**Landed on branch `claude/phase-3-cost-matrix-fix-E12dS` (top commit `472392c` = Phase 3 cost-matrix fix; WIP ahead).**
-
-**What shipped in Phase 3 (`472392c`).** Ratcheted new-gas capex via `np.maximum.accumulate(gas_required, axis=0)`, NEW_CCGT_FOM_KW_YR wired into cost_matrix + rt_components (was hard-coded 0), tranche-blended clean_firm LCOE from `decompose_clean_firm_tranches(...)['blended_lcoe']` replacing the scalar `_resource_lcoe_year('clean_firm', ...)` path, P1/P1a pathway mask widened to admit `cf ≤ baseline + UPRATE_CAP_TWH/demand`. ERCOT 6-combo gate vs pre-Phase-3 was clear (+0–23% cost moves) — pathway differentiation restored at ep90 (P1 cf=0 vs. P2a/P3 cf=10), but ep99 still collapsed to cf=0 across all three pathways.
-
-**What's WIP and awaiting decision.** User pushed back on the blended-LCOE design: clean_firm carries a real merit-order cost stack (existing baseline $0 → uprate $25 → geo → min(new_nuke, CCS)) and blending that to a single $/MWh hides two distinct bugs — (a) the Phase-2 wrapper fed `target = cf_pct × demand` including the existing-nuclear baseline, charging it at uprate-LCOE when the ledger correctly has existing at $0; (b) the blend collapses the tranche signal the argmin needs. Full disaggregation implemented across `decompose_clean_firm_tranches` (returns per-tranche (Y, n) TWh + per-year effective $/MWh; no blend), `operating_cost_matrix` (sums `Σ tranche_twh × tranche_eff_lcoe × 1e6` directly; returns `(op_cost, feasible_yn)` tuple), `solve_pathway` (∞-masks infeasible cells, propagates `winner_feasible` to `_finalize_run`), `_build_ledger` + `serialize_run_result` (emit `clean_firm_existing/_uprate/_geo/_nuke_new/_ccs` vintages with tranche-specific locked_lcoe), and `feasibility.physical` in the output JSON.
-
-**Gate outcome (ERCOT 6 combos, disaggregated vs Phase 3).** P1/ep90 and P1/ep99 unchanged (locked pathway; baseline already free, no new tranches available). P2a/P3 at ep90 shifted cf=10→20 with fleet −7.3%, cost −3.5/−4.6%, tax −3% — clean under 50% threshold. **P2a/P3 at ep99 broke from cf=0 to cf=79**: fleet −33%, reliability tax −48/−62%, **but total cost +104/+144%** because the argmin now builds 529 TWh/yr of new clean_firm priced at the merit-order bill ($55–70/MWh) instead of avoiding it. >50% triggers the plan's escalation gate. Diagnosis in session transcript: direction looks correct (this is the pathway collapse the Phase-1 probe flagged), magnitude is plausible given the build size, and reliability-tax drop makes physical sense (79% clean-firm grid needs much less gas backup). Pre-existing `_finalize_run` over-scale (`gross_op *= demand_vec[yi]/demand_vec[0]` double-scales new vintages that were already sized at cod-year demand) inflates absolute costs by ~20% in late years but affects both Phase 3 and disaggregated runs equally — not fixed this session, flagged for a later phase.
-
-**Sample terminal_ledger for ERCOT P3/ep99 (disaggregated).** `clean_firm_existing 2025 42.0 TWh $0` → `clean_firm_uprate 2030 1.7 TWh $25` (cap hit exactly) → `clean_firm_ccs 2030–2035 cumulative 200 TWh $55.5–112` (cap hit in 2035, FOAK→NOAK year-adjusted) → `clean_firm_nuke_new 2035+ 283 TWh/yr growing to 310 TWh/yr by 2050 @ $70`. Merit order works — CCS is cheaper year-adjusted in ERCOT so fills to cap first; nuke picks up the leftover.
-
-**Three options surfaced to user, awaiting decision.**
-1. Commit the WIP as-is — gate threshold was a check against mechanical bugs, not methodology corrections; the ep99 move is exactly the pathway collapse fix the audit demanded.
-2. Dive into a by-year cost breakdown on P3/ep99 first to confirm no second bug is inflating the $3.9T figure, then commit.
-3. Revert and rethink — only if the magnitude reads as implausible.
-
-**Resume prompt.** *"Resume Step 2.3 v3 — Clean-firm disaggregation escalation on branch `claude/phase-3-cost-matrix-fix-E12dS`. WIP commit contains `scripts/step_2_3_pathway_optimizer.py` rewritten so `decompose_clean_firm_tranches` returns per-tranche (Y, n) TWh + per-year eff LCOE (no blend), `operating_cost_matrix` sums tranche × LCOE directly and returns `(op_cost, feasible_yn)`, `solve_pathway` ∞-masks infeasible cells, `_build_ledger` + `serialize_run_result` emit `clean_firm_existing/_uprate/_geo/_nuke_new/_ccs` per-tranche vintages, `feasibility.physical` reflects winner feasibility. ERCOT 6-combo gate tripped on P2a/P3 ep99 (fleet −33%, cost +104/+144% vs. Phase 3; reliability tax −48/−62%) because the argmin broke out of cf=0 collapse into cf=79 and now prices the 529 TWh/yr new-clean_firm build at merit-order rates. 6 ERCOT JSONs in `analysis/reliability-tax/data/ERCOT/` reflect the new behavior. User has three options in the transcript (1) commit, (2) by-year cost breakdown then commit, (3) revert. Also flagged: pre-existing over-scale in `_finalize_run` line 1339 (`gross_op *= demand_vec[yi]/demand_vec[0]`) inflates new-vintage costs ~20% in late years — not this session's scope but worth a later phase. Do NOT proceed past ERCOT 6-combo until the user picks an option. Phase 5 (50-combo ERCOT smoke + regenerated cached outputs) remains pending behind the decision."*
-
-> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG; Apr 20 rotation moved the Apr 18 Coding-Session sub-agent block to SPEC_LOG; Apr 22 late rotation moved the Apr 20 audit block to SPEC_LOG). See that file for the historical decision log.
+> Older status blocks moved to `SPEC_LOG.md` (Apr 18, 2026 archive cut; Apr 19 rotations moved the oldest reliability-tax redesign block + the Apr 18 project-infra block to SPEC_LOG; Apr 20 rotation moved the Apr 18 Coding-Session sub-agent block to SPEC_LOG; Apr 22 late rotation moved the Apr 20 audit block to SPEC_LOG; Apr 22 Phase-D rotation moved the Apr 21 clean-firm disaggregation block to SPEC_LOG). See that file for the historical decision log.
 ---
 
 ## 1. Model Framework
