@@ -1223,6 +1223,10 @@ class PathwayRunResult:
     # 4 canonical endpoints ({90, 95, 99, 99.9}); None otherwise. Does not
     # affect winner selection, ledger, or any existing cached field.
     foresight_preview: Optional[dict] = None
+    # Phase C foresight-solver metadata — populated only by
+    # solve_pathway_with_foresight. Drives schema-v3 emission in
+    # serialize_run_result_v3. None for myopic runs.
+    foresight_metadata: Optional[dict] = None
 
 
 def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
@@ -1527,6 +1531,291 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
             "lambda_values": [float(x) for x in _FORESIGHT_LAMBDAS],
             "per_year": _foresight_preview_rows,
         }
+    return result
+
+
+def solve_pathway_with_foresight(cfg: 'RunConfig') -> PathwayRunResult:
+    """Endpoint-aware solver (memo §3 option iv, algorithm §4(b)).
+
+    Year-by-year argmin steered by a lookahead penalty
+
+        score_y[m] = row_score[m] + λ · w(y) · ‖shares[m] − target‖² · C
+
+    where C = demand_MWh(endpoint_year) × FORESIGHT_REF_LCOE_USD_PER_MWH puts
+    the penalty on the same USD scale as row_score (DIMENSIONAL CONVENTION
+    block above), w(y) = max(0, (endpoint_year − y)/(endpoint_year − BASE_YEAR))
+    decays linearly to zero at the endpoint, and `target` is the step 2.2A
+    cost-optimal share vector cached by `_compute_endpoint_target_shares`.
+
+    Year loop runs [0, endpoint_yi] inclusive — foresight does not simulate
+    post-endpoint behavior (memo §6.5). Post-endpoint winners are frozen to
+    the endpoint-year winner so `_finalize_run` receives full-length arrays
+    unchanged; Phase E's post-processor truncates costs at `endpoint_year`.
+
+    Degenerate at λ = 0 to solve_pathway(cfg) bit-identically on the
+    [BASE_YEAR, endpoint_year] prefix — this is the Task 6 regression.
+    """
+    if cfg.endpoint_year is None:
+        raise ValueError("solve_pathway_with_foresight: cfg.endpoint_year is required")
+    if cfg.endpoint_target_shares is None:
+        raise ValueError("solve_pathway_with_foresight: cfg.endpoint_target_shares is required")
+
+    threshold = ENDPOINT_TO_THRESHOLD[round(cfg.endpoint, 4)]
+    ef = load_ef_mixes(cfg.iso, threshold)
+    n_mixes = len(ef['hourly_match_score'])
+
+    peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
+    demand_vec = demand_twh_vec(cfg.iso, cfg.demand_growth_level)
+    annual_mwh_vec = demand_vec * 1.0e6
+    score_vec = ef['hourly_match_score']
+    resid_arr = ef['resid_norm_p9997'].astype(np.float64)
+    gas_raw_2025 = _GAS_RAW_2025_BY_ISO[cfg.iso]
+    existing_base = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
+    gaf = float(pc.GAS_AVAILABILITY_FACTOR[cfg.iso])
+
+    cfe_targets = np.array([_cfe_target_for_year(y, cfg.endpoint_pct) for y in YEARS])
+    pmask = _pathway_mask(ef, cfg)
+    cfe_mask = score_vec[None, :] >= cfe_targets[:, None] - 0.5
+
+    existing_gas_vec = existing_gas_available_vec(cfg.iso, cfe_targets, cfg.demand_growth_level)
+    gas_required = gas_sizing_matrix(annual_mwh_vec, existing_gas_vec, resid_arr,
+                                     gas_raw_2025, existing_base, gaf)
+    fuel_unit = pc.WHOLESALE_PRICES[cfg.iso] + pc.FUEL_ADJUSTMENTS[cfg.iso]['Medium']
+    gas_fuel = gas_fuel_cost_matrix(ef, demand_vec, fuel_unit)
+
+    ratchet_fleet_y = np.maximum.accumulate(gas_required, axis=0)
+    new_gas_capex_y = (pc.NEW_CCGT_COST_KW_YR[cfg.iso] * 1000.0) * ratchet_fleet_y
+    new_gas_fom_y   = (pc.NEW_CCGT_FOM_KW_YR[cfg.iso]  * 1000.0) * ratchet_fleet_y
+    existing_fom = (float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
+                    * pc.EXISTING_GAS_FOM_KW_YR[cfg.iso] * 1000.0)
+
+    non_cf = tuple(r for r in _RESOURCE_COLS if r != 'clean_firm')
+    R = len(non_cf)
+    tx_r = np.array(
+        [_resource_tx(cfg.iso, r, cfg.tx_level) for r in non_cf],
+        dtype=np.float64,
+    )
+    lcoe_yr = np.empty((N_YEARS, R), dtype=np.float64)
+    for ri, r in enumerate(non_cf):
+        for yi, y in enumerate(YEARS):
+            lcoe_yr[yi, ri] = _resource_lcoe_year(cfg.iso, r, y, cfg)
+    delivered_yr = lcoe_yr + tx_r[None, :]
+    shares_nr = np.stack([ef[r] for r in non_cf], axis=1).astype(np.float64) / 100.0
+
+    tg = decompose_clean_firm_tranches(
+        ef['clean_firm'], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
+    uprate_twh_yn   = tg['uprate_twh']
+    geo_twh_yn      = tg['geo_twh']
+    nuke_new_twh_yn = tg['nuke_new_twh']
+    ccs_twh_yn      = tg['ccs_twh']
+    cf_feasible_yn  = tg['feasible']
+    uprate_eff      = tg['uprate_eff_lcoe']
+    geo_eff         = tg['geo_eff_lcoe']
+    nuke_new_eff    = tg['nuke_new_eff_lcoe']
+    ccs_eff         = tg['ccs_eff_lcoe']
+
+    storage_lcoe_keys = {
+        'battery_dispatch_pct': 'battery', 'battery8_dispatch_pct': 'battery8',
+        'ldes_dispatch_pct': 'ldes', 'h2_dispatch_pct': 'h2',
+    }
+    storage_cost_yn = np.zeros((N_YEARS, n_mixes), dtype=np.float64)
+    for sc, lk in storage_lcoe_keys.items():
+        share = ef[sc] / 100.0
+        if share.sum() == 0:
+            continue
+        unit = pc.LCOE_TABLES[lk]['Medium'][cfg.iso]
+        storage_cost_yn += demand_vec[:, None] * 1.0e6 * share[None, :] * unit / 1.0e6
+
+    gas_fixed_y = new_gas_capex_y + new_gas_fom_y + gas_fuel + existing_fom
+
+    grid = pc.GRID_MIX_SHARES[cfg.iso]
+    base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
+    floor_twh_r    = np.array(
+        [base_demand * grid.get(r, 0.0) / 100.0 for r in non_cf],
+        dtype=np.float64,
+    )
+    floor_twh_cf   = base_demand * grid.get('clean_firm', 0.0) / 100.0
+    cf_share       = ef['clean_firm'].astype(np.float64) / 100.0
+    floor_uprate   = 0.0
+    floor_geo      = 0.0
+    floor_nuke_new = 0.0
+    floor_ccs      = 0.0
+
+    winners           = np.empty(N_YEARS, dtype=np.int64)
+    winner_feasible   = np.ones(N_YEARS, dtype=bool)
+    ratchet_violated  = np.zeros(N_YEARS, dtype=bool)
+    # Cascade tier per year: 0 = Tier-1 (full feasibility set),
+    # 1 = Tier-2 (relaxed CFE ±5), 2 = Tier-3 (dropped cf_feasible),
+    # 3 = Tier-4 emergency (dropped ratchet). Used for schema-v3
+    # cascade_activations + per-year diagnostic sidecar.
+    cascade_tier_y    = np.zeros(N_YEARS, dtype=np.int32)
+
+    # Foresight inputs.
+    endpoint_year = int(cfg.endpoint_year)
+    if endpoint_year not in YEARS:
+        raise ValueError(f"endpoint_year={endpoint_year} not in YEARS range")
+    endpoint_yi = YEARS.index(endpoint_year)
+    target_shares = np.asarray(cfg.endpoint_target_shares, dtype=np.float64)
+    if target_shares.shape != (len(_FORESIGHT_SHARE_KEYS),):
+        raise ValueError(
+            f"endpoint_target_shares has shape {target_shares.shape}, "
+            f"expected ({len(_FORESIGHT_SHARE_KEYS)},)"
+        )
+    lam = float(cfg.foresight_lambda or 0.0)
+    # DIMENSIONAL CONVENTION (see block above _compute_endpoint_target_shares):
+    # C = endpoint_year_demand_MWh × FORESIGHT_REF_LCOE_USD_PER_MWH. This is
+    # the USD-scale normalizer; λ stays in the {0, 0.05, 0.15, 0.5, 1.5} band.
+    endpoint_demand_mwh = float(demand_vec[endpoint_yi]) * 1.0e6
+    foresight_C = endpoint_demand_mwh * FORESIGHT_REF_LCOE_USD_PER_MWH
+    horizon_denom = float(endpoint_year - BASE_YEAR)
+
+    # Per-year diagnostic rows (Phase E consumes; schema §6.4).
+    per_year_diag: list = []
+
+    RATCHET_TOL_TWH = 1.0e-6
+    # Year loop [0, endpoint_yi] inclusive — foresight-only truncation per §6.5.
+    for yi in range(endpoint_yi + 1):
+        target_twh_nr = shares_nr * float(demand_vec[yi])
+        ratchet_nonCF = np.all(
+            target_twh_nr >= (floor_twh_r[None, :] - RATCHET_TOL_TWH), axis=1)
+        target_twh_cf_n = cf_share * float(demand_vec[yi])
+        ratchet_cf     = target_twh_cf_n >= (floor_twh_cf - RATCHET_TOL_TWH)
+        ratchet_uprate = uprate_twh_yn[yi]   >= (floor_uprate   - RATCHET_TOL_TWH)
+        ratchet_geo    = geo_twh_yn[yi]      >= (floor_geo      - RATCHET_TOL_TWH)
+        ratchet_nuke   = nuke_new_twh_yn[yi] >= (floor_nuke_new - RATCHET_TOL_TWH)
+        ratchet_ccs    = ccs_twh_yn[yi]      >= (floor_ccs      - RATCHET_TOL_TWH)
+        ratchet_mask_y = (ratchet_nonCF & ratchet_cf & ratchet_uprate
+                          & ratchet_geo & ratchet_nuke & ratchet_ccs)
+
+        row_score = _score_year_sunk_cost(
+            target_twh_nr=target_twh_nr,
+            floor_twh_r=floor_twh_r,
+            delivered_yr_yi=delivered_yr[yi],
+            uprate_twh_n=uprate_twh_yn[yi],
+            geo_twh_n=geo_twh_yn[yi],
+            nuke_new_twh_n=nuke_new_twh_yn[yi],
+            ccs_twh_n=ccs_twh_yn[yi],
+            floor_uprate=floor_uprate, floor_geo=floor_geo,
+            floor_nuke_new=floor_nuke_new, floor_ccs=floor_ccs,
+            uprate_eff_yi=uprate_eff[yi], geo_eff_yi=geo_eff[yi],
+            nuke_new_eff_yi=nuke_new_eff[yi], ccs_eff_yi=ccs_eff[yi],
+            storage_cost_n=storage_cost_yn[yi],
+            gas_fixed_n=gas_fixed_y[yi],
+        )
+
+        # Endpoint-aware penalty (memo §5.2 with USD-scale normalizer).
+        year = YEARS[yi]
+        weight = max(0.0, (endpoint_year - year) / horizon_denom)
+        shares_to_end = _project_shares_to_endpoint(
+            shares_nr, non_cf, cf_share, tg, demand_vec,
+            yi=yi, endpoint_yi=endpoint_yi,
+        )
+        diff = shares_to_end - target_shares[None, :]
+        dist_sq = np.sum(diff * diff, axis=1)
+        penalty = (lam * weight * foresight_C) * dist_sq
+        foresight_score = row_score + penalty
+
+        valid = ratchet_mask_y & pmask[yi] & cfe_mask[yi] & cf_feasible_yn[yi]
+        tier = 0
+        if not valid.any():
+            relaxed_cfe = score_vec >= cfe_targets[yi] - 5.0
+            valid = ratchet_mask_y & pmask[yi] & relaxed_cfe & cf_feasible_yn[yi]
+            tier = 1
+            if not valid.any():
+                valid = ratchet_mask_y & pmask[yi]
+                winner_feasible[yi] = False
+                tier = 2
+                if not valid.any():
+                    valid = pmask[yi].copy()
+                    ratchet_violated[yi] = True
+                    tier = 3
+                    if not valid.any():
+                        valid = np.ones(n_mixes, dtype=bool)
+
+        masked_score = np.where(valid, foresight_score, np.inf)
+        w = int(np.argmin(masked_score))
+        winners[yi] = w
+        cascade_tier_y[yi] = tier
+        if winner_feasible[yi]:
+            winner_feasible[yi] = bool(cf_feasible_yn[yi, w])
+
+        # Per-year diagnostic: myopic winner (no penalty) for head-to-head,
+        # penalty/sunk components at chosen mix, share-distance, cascade tier.
+        myopic_masked = np.where(valid, row_score, np.inf)
+        myopic_w = int(np.argmin(myopic_masked))
+        w_diff = shares_to_end[w] - target_shares
+        per_year_diag.append({
+            'year': int(year),
+            'feasible_candidates': int(valid.sum()),
+            'cascade_tier_activated': int(tier),
+            'myopic_winner_idx': myopic_w,
+            'foresight_winner_idx': w,
+            'sunk_cost_component_usd': float(row_score[w]),
+            'penalty_component_usd': float(penalty[w]),
+            'share_distance_to_endpoint': float(np.sqrt(np.sum(w_diff * w_diff))),
+            'lookahead_weight': float(weight),
+            # Rank of foresight winner among myopic-sorted feasible candidates
+            # (Phase E diagnostic for "how far from cheapest did we move?").
+            'selected_mix_candidate_rank_among_feasible': int(
+                (row_score[valid] < row_score[w]).sum()
+            ),
+        })
+
+        floor_twh_r    = np.maximum(floor_twh_r, target_twh_nr[w])
+        if cfg.pathway != '1':
+            floor_twh_cf = max(floor_twh_cf, float(target_twh_cf_n[w]))
+        floor_uprate   = max(floor_uprate,   float(uprate_twh_yn[yi, w]))
+        floor_geo      = max(floor_geo,      float(geo_twh_yn[yi, w]))
+        floor_nuke_new = max(floor_nuke_new, float(nuke_new_twh_yn[yi, w]))
+        floor_ccs      = max(floor_ccs,      float(ccs_twh_yn[yi, w]))
+
+    # Post-endpoint freeze: hold the endpoint winner forward so _finalize_run
+    # receives full N_YEARS arrays unchanged. Phase E post-processor truncates
+    # cost accumulation at endpoint_year (memo §6.5).
+    endpoint_w = int(winners[endpoint_yi])
+    for yi in range(endpoint_yi + 1, N_YEARS):
+        winners[yi] = endpoint_w
+        winner_feasible[yi] = winner_feasible[endpoint_yi]
+        ratchet_violated[yi] = False
+        cascade_tier_y[yi] = -1  # sentinel: post-endpoint, not simulated
+
+    achieved_cfe = score_vec[winners]
+    existing_gas_vec_real = existing_gas_available_vec(cfg.iso, achieved_cfe, cfg.demand_growth_level)
+    gas_required_real = gas_sizing_matrix(annual_mwh_vec, existing_gas_vec_real,
+                                          resid_arr, gas_raw_2025,
+                                          existing_base, gaf)
+    cum_new_gas = gas_required_real[np.arange(N_YEARS), winners]
+    active_fleet = np.maximum.accumulate(cum_new_gas)
+    fleet_size_mw = float(active_fleet.max())
+    peak_year = int(YEARS[int(np.argmax(active_fleet))])
+
+    total_gas_mw = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso]) + active_fleet
+    gas_gen_mwh = np.maximum(0.0, 1.0 - achieved_cfe / 100.0) * demand_vec * 1.0e6
+    gas_cf = np.where(total_gas_mw > 1e-6,
+                      np.minimum(1.0, gas_gen_mwh / (total_gas_mw * HOURS_PER_YEAR)), 0.0)
+
+    gap_mwh_winner = resid_arr[winners] * annual_mwh_vec
+    gas_raw_winner = gap_mwh_winner / max(1e-9, gaf)
+    gas_needed_winner = np.maximum(0.0, existing_base + gas_raw_winner - gas_raw_2025)
+    existing_gas_used = np.minimum(existing_gas_vec_real, gas_needed_winner)
+    clean_arr_diag = ef['clean_peak_hour_mw']
+    result = _finalize_run(cfg, ef, winners, peak_vec, demand_vec,
+                           achieved_cfe, existing_gas_vec_real, existing_gas_used,
+                           cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
+                           clean_arr_diag, winner_feasible, ratchet_violated)
+    result.foresight_metadata = {
+        'solver_mode': 'foresight',
+        'endpoint_year': endpoint_year,
+        'endpoint_yi': int(endpoint_yi),
+        'foresight_lambda': lam,
+        'foresight_C_usd': float(foresight_C),
+        'target_shares': {
+            k: float(v) for k, v in zip(_FORESIGHT_SHARE_KEYS, target_shares)
+        },
+        'cascade_tier_y': [int(t) for t in cascade_tier_y],
+        'cascade_activations': int((cascade_tier_y[:endpoint_yi + 1] > 0).sum()),
+        'per_year': per_year_diag,
+    }
     return result
 
 
