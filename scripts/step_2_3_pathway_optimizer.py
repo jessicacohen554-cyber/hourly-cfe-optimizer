@@ -1247,6 +1247,15 @@ class PathwayRunResult:
     # solve_pathway_with_foresight. Drives schema-v3 emission in
     # serialize_run_result_v3. None for myopic runs.
     foresight_metadata: Optional[dict] = None
+    # Phase D cascade-tier vector (memo §5.4). Populated by both
+    # solve_pathway and solve_pathway_with_foresight so Phase D's
+    # calibration rule (cascade_activations ≤ myopic + 1) can read
+    # the myopic baseline directly from the run result without
+    # re-running. Values: 0 = Tier-1 full feasibility, 1 = Tier-2
+    # relaxed CFE ±5, 2 = Tier-3 cf_feasible dropped, 3 = Tier-4
+    # ratchet dropped, -1 = post-endpoint frozen (not simulated).
+    # None only for legacy callers that bypass the two solvers.
+    cascade_tier_y: Optional[np.ndarray] = None
 
 
 def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
@@ -1357,6 +1366,11 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     winners           = np.empty(N_YEARS, dtype=np.int64)
     winner_feasible   = np.ones(N_YEARS, dtype=bool)
     ratchet_violated  = np.zeros(N_YEARS, dtype=bool)
+    # Cascade tier per year: 0 = Tier-1 (full feasibility set),
+    # 1 = Tier-2 (relaxed CFE ±5), 2 = Tier-3 (dropped cf_feasible),
+    # 3 = Tier-4 emergency (dropped ratchet). Mirrors the foresight-path
+    # tracking so Phase D can read the myopic cascade baseline directly.
+    cascade_tier_y    = np.zeros(N_YEARS, dtype=np.int32)
 
     # Endpoint-year schedule (canonical map in pipeline_config.THRESHOLD_TARGET_YEARS,
     # surfaced here via _foresight_endpoint_year). The myopic solve loop runs
@@ -1435,26 +1449,31 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         # Fallback cascade. Ratchet is non-negotiable except under the Tier-4
         # emergency case (all-infeasible even without cfe and cf_feasible).
         valid = ratchet_mask_y & pmask[yi] & cfe_mask[yi] & cf_feasible_yn[yi]
+        tier = 0
         if not valid.any():
             # Tier 2: relax CFE ±5 pts (keep ratchet + pmask + cf_feasible).
             relaxed_cfe = score_vec >= cfe_targets[yi] - 5.0
             valid = ratchet_mask_y & pmask[yi] & relaxed_cfe & cf_feasible_yn[yi]
+            tier = 1
             if not valid.any():
                 # Tier 3: drop cf_feasible (ratchet still respected). Year flagged
                 # as physically infeasible — mix reported cost is right, but it
                 # can't actually be built by the available clean_firm tranches.
                 valid = ratchet_mask_y & pmask[yi]
                 winner_feasible[yi] = False
+                tier = 2
                 if not valid.any():
                     # Tier 4 emergency: drop ratchet too. Flag for review.
                     valid = pmask[yi].copy()
                     ratchet_violated[yi] = True
+                    tier = 3
                     if not valid.any():
                         valid = np.ones(n_mixes, dtype=bool)
 
         masked_score = np.where(valid, row_score, np.inf)
         w = int(np.argmin(masked_score))
         winners[yi] = w
+        cascade_tier_y[yi] = tier
         # If we landed via Tier-1/2, winner_feasible still reflects the mask's
         # cf_feasible membership; reassert it explicitly for safety.
         if winner_feasible[yi]:
@@ -1523,6 +1542,7 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         winners[yi] = _endpoint_w
         winner_feasible[yi] = winner_feasible[_myopic_endpoint_yi]
         ratchet_violated[yi] = False
+        cascade_tier_y[yi] = -1  # sentinel: post-endpoint, not simulated
 
     # Phase B: realized clean_pct from winners → re-run existing_gas_vec, apply ratchet
     achieved_cfe = score_vec[winners]
@@ -1551,6 +1571,7 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
                            achieved_cfe, existing_gas_vec_real, existing_gas_used,
                            cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
                            clean_arr_diag, winner_feasible, ratchet_violated)
+    result.cascade_tier_y = cascade_tier_y
     if _foresight_active:
         result.foresight_preview = {
             "iso": cfg.iso,
@@ -1843,6 +1864,7 @@ def solve_pathway_with_foresight(cfg: 'RunConfig') -> PathwayRunResult:
                            achieved_cfe, existing_gas_vec_real, existing_gas_used,
                            cum_new_gas, active_fleet, gas_cf, fleet_size_mw, peak_year,
                            clean_arr_diag, winner_feasible, ratchet_violated)
+    result.cascade_tier_y = cascade_tier_y
     result.foresight_metadata = {
         'solver_mode': 'foresight',
         'endpoint_year': endpoint_year,

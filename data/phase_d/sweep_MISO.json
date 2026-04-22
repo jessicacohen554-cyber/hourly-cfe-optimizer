@@ -1,0 +1,93 @@
+{
+  "iso": "MISO",
+  "pathway": "3",
+  "endpoint_pct": 99.0,
+  "endpoint_year": 2049,
+  "endpoint_yi": 24,
+  "lambdas_swept": [
+    0.0,
+    0.05,
+    0.15,
+    0.5,
+    1.5
+  ],
+  "myopic_baseline": {
+    "cum_undisc_cost_usd": 2265070485064.55,
+    "cascade_activations": 0,
+    "time_to_90pct": 2025,
+    "wall_seconds": 1.08
+  },
+  "target_shares": {
+    "clean_firm": 0.39,
+    "solar": 0.09,
+    "wind": 0.31,
+    "hydro": 0.01,
+    "offshore_wind": 0.0,
+    "geothermal": 0.0,
+    "ccs_ccgt": 0.0,
+    "solar_batt4": 0.09,
+    "solar_batt8": 0.19,
+    "wind_batt4": 0.01,
+    "wind_batt8": 0.21,
+    "cf_uprate": 0.00676392419947802,
+    "cf_geo": 0.0,
+    "cf_nuke_new": 0.12680414217642128,
+    "cf_ccs": 0.17872702337106672
+  },
+  "target_shares_method": "cheapest_cumulative_path_step_2_2a",
+  "per_lambda": [
+    {
+      "chosen_lambda": 0.0,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 2265070485064.55,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.55
+    },
+    {
+      "chosen_lambda": 0.05,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 2265070485064.55,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.53
+    },
+    {
+      "chosen_lambda": 0.15,
+      "foresight_penalty_vs_myopic": 0.0,
+      "cum_undisc_cost_usd": 2265070485064.55,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 0,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.52
+    },
+    {
+      "chosen_lambda": 0.5,
+      "foresight_penalty_vs_myopic": -0.14233994902971925,
+      "cum_undisc_cost_usd": 2640988679025.04,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 25,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.53
+    },
+    {
+      "chosen_lambda": 1.5,
+      "foresight_penalty_vs_myopic": -0.14233994902971925,
+      "cum_undisc_cost_usd": 2640988679025.04,
+      "cascade_activations": 0,
+      "winners_diff_from_myopic_count": 25,
+      "time_to_90pct": 2025,
+      "wall_seconds": 0.52
+    }
+  ],
+  "chosen_lambda": 0.0,
+  "chosen_flags": [
+    "needs_replacement_cost_fallback",
+    "no_positive_penalty",
+    "band_edge_low"
+  ],
+  "cascade_gate_limit": 1,
+  "total_wall_seconds": 3.73
+}
