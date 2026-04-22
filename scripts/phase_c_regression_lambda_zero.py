@@ -7,14 +7,11 @@ Runs ERCOT P3 at every canonical endpoint {90, 95, 99, 99.9}, compares:
   - winners[:endpoint_yi + 1]            bit-identical
   - achieved_cfe_pct[:endpoint_yi + 1]   bit-identical
 
-Post-Phase-1a the two solvers load different pools by default — myopic
-streams the full unfiltered pool (millions of rows), foresight runs on
-the endpoint-filtered pool (tens to hundreds of thousands). Different
-candidate sets ⇒ they can no longer pick the same integer winner even
-at λ=0. The real "no lookahead at λ=0" invariant is: given the same
-pool, the foresight argmin at λ=0 equals the myopic argmin. This
-regression feeds both solvers the endpoint-filtered pool via
-`ef_override=` and restores the original bit-identity check.
+Both solvers now load the same full unfiltered pool by default. The
+"no lookahead at λ=0" invariant is: given the same pool, the foresight
+argmin at λ=0 equals the myopic argmin. This regression loads the pool
+once and feeds both solvers via `ef_override=` — one load instead of
+two on the multi-million-row pool, and identical candidate sets.
 
 Post-endpoint years are not compared because foresight freezes them to
 the endpoint winner (memo §6.5) while myopic keeps solving to 2050.
@@ -69,9 +66,10 @@ def run_one(endpoint: float, endpoint_pct: float) -> bool:
         endpoint_target_shares=tuple(float(x) for x in target),
     )
 
-    # Feed both solvers the same endpoint-filtered pool so bit-identity at
-    # λ=0 is a statement about the solver, not about pool-loader divergence.
-    ef = opt.load_ef_pool(ISO, filter_to_endpoints=True, cfg_for_filter=foresight_cfg)
+    # Load the pool once and feed both solvers via ef_override= so bit-
+    # identity at λ=0 is a statement about the solver and we avoid loading
+    # the multi-million-row pool twice.
+    ef = opt.load_ef_pool(ISO)
     myopic_result    = opt.solve_pathway(myopic_cfg, ef_override=ef)
     foresight_result = opt.solve_pathway_with_foresight(foresight_cfg, ef_override=ef)
 
