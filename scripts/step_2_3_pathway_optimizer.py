@@ -1452,7 +1452,7 @@ class PathwayRunResult:
     cascade_tier_y: Optional[np.ndarray] = None
 
 
-def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
+def solve_pathway(cfg: 'RunConfig', *, ef_override: Optional[dict] = None) -> PathwayRunResult:
     # Phase 1a Commit B: streaming chunked argmin. The myopic path now
     # consumes the full unfiltered mix pool (ERCOT ~8.7M, CAISO ~21M rows)
     # — dense (Y, N) tensors are infeasible at that size, so setup here
@@ -1461,7 +1461,9 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     # Any (Y, N) quantity (gas_required, ratchet_fleet_y, gas_fuel,
     # uprate/geo/nuke_new/ccs tranche grids, storage_cost, pmask, cfe_mask,
     # shares_nr) is computed inside the chunk loop from these scalars.
-    ef = load_ef_pool(cfg.iso, filter_to_endpoints=False)
+    # `ef_override` lets a caller (phase_c_regression_lambda_zero) feed a
+    # pre-loaded pool so both solvers consume the same candidate set.
+    ef = ef_override if ef_override is not None else load_ef_pool(cfg.iso, filter_to_endpoints=False)
     n_mixes = len(ef['hourly_match_score'])
 
     peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
@@ -1941,7 +1943,7 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
     return result
 
 
-def solve_pathway_with_foresight(cfg: 'RunConfig') -> PathwayRunResult:
+def solve_pathway_with_foresight(cfg: 'RunConfig', *, ef_override: Optional[dict] = None) -> PathwayRunResult:
     """Endpoint-aware solver (memo §3 option iv, algorithm §4(b)).
 
     Year-by-year argmin steered by a lookahead penalty
@@ -1974,7 +1976,9 @@ def solve_pathway_with_foresight(cfg: 'RunConfig') -> PathwayRunResult:
     # was the Phase D pool-pathology root cause (LESSONS.md #22). Foresight
     # keeps the dense (Y, N) path because the filtered pool stays in the
     # ~40k–370k range across ISOs, tractable for dense tensor math.
-    ef = load_ef_pool(cfg.iso, filter_to_endpoints=True, cfg_for_filter=cfg)
+    ef = ef_override if ef_override is not None else load_ef_pool(
+        cfg.iso, filter_to_endpoints=True, cfg_for_filter=cfg
+    )
     n_mixes = len(ef['hourly_match_score'])
 
     peak_vec = peak_demand_vec(cfg.iso, cfg.demand_growth_level)
