@@ -959,44 +959,37 @@ _CLEAN_FIRM_TRANCHE_TX = {
 }  # geo/nuke_new/ccs — TX is already baked into their eff_lcoe vectors
 
 
-# ─── P3 foresight preview (read-only diagnostic, memo §§4-5, §7 Phase B) ────
+# ─── P3 foresight primitives (memo §§4-5) ────────────────────────────────────
 #
-# Three pure helpers for the endpoint-aware solver mode. Phase B calls them
-# from solve_pathway as a side computation that does NOT influence myopic
-# winner selection. Phase C will reuse them verbatim from the new
-# solve_pathway_with_foresight entry point.
+# Three pure helpers for the endpoint-aware solver mode. solve_pathway (myopic)
+# consumes them for the Phase B read-only preview. solve_pathway_with_foresight
+# consumes them for real winner selection.
 #
 # 15-dim share vector basis: 11 _RESOURCE_COLS + 4 non-existing CF tranches
 # (uprate/geo/nuke_new/ccs). The "existing" CF tranche is omitted — it is
 # always the GRID_MIX_SHARES baseline and offers no steering handle.
 #
 # ───────────────────────────────────────────────────────────────────────────
-# PHASE B EXIT-GATE RESULT — READ BEFORE WRITING PHASE C
+# DIMENSIONAL CONVENTION — Phase C decision 2026-04-21
 # ───────────────────────────────────────────────────────────────────────────
-# The 28-cell diagnostic sweep (7 ISOs × 4 canonical endpoints, P3, all in
-# analysis/reliability-tax/data/<ISO>/pathway3_ep*_foresight_preview.json)
-# produced ZERO interior-year divergence between myopic and foresight
-# winners at every λ ∈ {0.05, 0.15, 0.5}. Every cell. Every endpoint.
-# Mean share_distance-to-target ranged 0.23–1.05, so target_shares are
-# meaningfully different from the myopic mixes — the penalty just cannot
-# move the argmin.
+# Phase B's 28-cell preview produced ZERO interior-year divergence at any
+# λ ∈ {0.05, 0.15, 0.5} on any ISO. Root cause: row_score is in USD (O(1e10))
+# while ‖shares − target‖² is O(1), so the literal-λ penalty is ~10 orders
+# of magnitude too small to move the argmin.
 #
-# Root cause is dimensional. Memo §5.2 specifies
-#     score_y[m] = myopic_score_y[m] + λ · w(y) · ‖shares[m] − target‖²
-# with λ as a bare scalar. But row_score in solve_pathway is in USD
-# (order 1e10), while ‖shares − target‖² is in fraction² (order 1). For
-# literal λ ∈ {0.05, 0.15, 0.5} the penalty is at most ~0.5 USD against
-# cross-candidate row_score variation of ~1e8 USD — ten orders of
-# magnitude too small to steer.
-#
-# PHASE C MUST DECIDE BEFORE WRITING solve_pathway_with_foresight:
-#   Option 1 — scale λ to USD units (λ ~ 1e6..1e9), sweep per-ISO.
-#   Option 2 — normalize row_score by (endpoint_demand_TWh × reference_LCOE
-#              × 1e6) to a dimensionless magnitude, keep λ in memo's
-#              {0.05, 0.15, 0.5} band.
-# Option 2 is cleaner (memo stays literal; λ stays intuitive); option 1 is
-# faster (no row_score refactor). Ask the user before coding.
+# Fix (Phase C): the foresight scorer adds a USD-scale constant C to the
+# penalty so the sum sits in the same units as row_score, i.e.
+#     score_y[m] = row_score[m] + λ · w(y) · ‖shares[m] − target‖² · C
+# with C = endpoint_year_demand_MWh × FORESIGHT_REF_LCOE_USD_PER_MWH. That
+# keeps λ in the memo's {0, 0.05, 0.15, 0.5, 1.5} band and keeps row_score
+# untouched everywhere else. Per-ISO λ calibration (memo Q2) absorbs the
+# cross-ISO share_distance variance (ERCOT ~1.0 vs SPP ~0.22 ≈ 20×).
 # ───────────────────────────────────────────────────────────────────────────
+
+# Reference LCOE for the foresight-scorer USD normalizer. Fixed cross-ISO so
+# λ values are comparable in Phase D's calibration table; per-ISO variance
+# lives in λ itself.
+FORESIGHT_REF_LCOE_USD_PER_MWH = 100.0
 
 _FORESIGHT_SHARE_KEYS = _RESOURCE_COLS + (
     'cf_uprate', 'cf_geo', 'cf_nuke_new', 'cf_ccs',
@@ -1012,6 +1005,42 @@ def _foresight_endpoint_year(endpoint_pct: float) -> int:
     if endpoint_pct <= 95.0:
         return 2045
     return 2050
+
+
+def _score_year_sunk_cost(
+    target_twh_nr: np.ndarray,        # (N, R) shares_nr × demand_vec[yi]
+    floor_twh_r: np.ndarray,          # (R,)   running-max non-CF floors
+    delivered_yr_yi: np.ndarray,      # (R,)   delivered_yr[yi]
+    uprate_twh_n: np.ndarray,         # (N,)   uprate_twh_yn[yi]
+    geo_twh_n: np.ndarray,            # (N,)
+    nuke_new_twh_n: np.ndarray,       # (N,)
+    ccs_twh_n: np.ndarray,            # (N,)
+    floor_uprate: float,
+    floor_geo: float,
+    floor_nuke_new: float,
+    floor_ccs: float,
+    uprate_eff_yi: float,             # uprate_eff[yi]
+    geo_eff_yi: float,
+    nuke_new_eff_yi: float,
+    ccs_eff_yi: float,
+    storage_cost_n: np.ndarray,       # (N,)   storage_cost_yn[yi]
+    gas_fixed_n: np.ndarray,          # (N,)   gas_fixed_y[yi]
+) -> np.ndarray:                      # (N,)   row_score in USD
+    """Sunk-cost-B scorer (memo §5.2). Only the INCREMENTAL TWh above each
+    running-max floor prices at year-y LCOE; prior-built capacity is sunk
+    and enters at $0. Returns the year-y row_score vector in USD, for all
+    N candidate mixes. Fully vectorized — no Python loops over candidates.
+    Shared by solve_pathway (myopic) and solve_pathway_with_foresight.
+    """
+    incr_nonCF  = np.maximum(0.0, target_twh_nr - floor_twh_r[None, :])   # (N, R)
+    score_nonCF = (incr_nonCF * delivered_yr_yi[None, :]).sum(axis=1) * 1.0e6
+    score_cf    = (
+          np.maximum(0.0, uprate_twh_n   - floor_uprate)   * uprate_eff_yi
+        + np.maximum(0.0, geo_twh_n      - floor_geo)      * geo_eff_yi
+        + np.maximum(0.0, nuke_new_twh_n - floor_nuke_new) * nuke_new_eff_yi
+        + np.maximum(0.0, ccs_twh_n      - floor_ccs)      * ccs_eff_yi
+    ) * 1.0e6
+    return score_nonCF + score_cf + storage_cost_n + gas_fixed_n
 
 
 def _project_shares_to_endpoint(
@@ -1313,16 +1342,22 @@ def solve_pathway(cfg: 'RunConfig') -> PathwayRunResult:
         ratchet_mask_y = (ratchet_nonCF & ratchet_cf & ratchet_uprate
                           & ratchet_geo & ratchet_nuke & ratchet_ccs)
 
-        # Sunk-cost scorer: only the NEW TWh above each floor prices at year-y LCOE.
-        incr_nonCF    = np.maximum(0.0, target_twh_nr - floor_twh_r[None, :])  # (N, R)
-        score_nonCF   = (incr_nonCF * delivered_yr[yi][None, :]).sum(axis=1) * 1.0e6  # (N,)
-        score_cf      = (
-              np.maximum(0.0, uprate_twh_yn[yi]   - floor_uprate)   * uprate_eff[yi]
-            + np.maximum(0.0, geo_twh_yn[yi]      - floor_geo)      * geo_eff[yi]
-            + np.maximum(0.0, nuke_new_twh_yn[yi] - floor_nuke_new) * nuke_new_eff[yi]
-            + np.maximum(0.0, ccs_twh_yn[yi]      - floor_ccs)      * ccs_eff[yi]
-        ) * 1.0e6
-        row_score = score_nonCF + score_cf + storage_cost_yn[yi] + gas_fixed_y[yi]
+        # Sunk-cost scorer (memo §5.2 — shared with solve_pathway_with_foresight).
+        row_score = _score_year_sunk_cost(
+            target_twh_nr=target_twh_nr,
+            floor_twh_r=floor_twh_r,
+            delivered_yr_yi=delivered_yr[yi],
+            uprate_twh_n=uprate_twh_yn[yi],
+            geo_twh_n=geo_twh_yn[yi],
+            nuke_new_twh_n=nuke_new_twh_yn[yi],
+            ccs_twh_n=ccs_twh_yn[yi],
+            floor_uprate=floor_uprate, floor_geo=floor_geo,
+            floor_nuke_new=floor_nuke_new, floor_ccs=floor_ccs,
+            uprate_eff_yi=uprate_eff[yi], geo_eff_yi=geo_eff[yi],
+            nuke_new_eff_yi=nuke_new_eff[yi], ccs_eff_yi=ccs_eff[yi],
+            storage_cost_n=storage_cost_yn[yi],
+            gas_fixed_n=gas_fixed_y[yi],
+        )
 
         # Fallback cascade. Ratchet is non-negotiable except under the Tier-4
         # emergency case (all-infeasible even without cfe and cf_feasible).
