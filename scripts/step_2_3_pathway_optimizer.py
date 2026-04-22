@@ -621,6 +621,200 @@ def load_ef_mixes(iso: str, threshold) -> dict[str, np.ndarray]:
     return arrs
 
 
+# ─── Pool loader: concatenated mixes across ALL threshold bands ─────────────
+# Step 2.1's docstring (`scripts/step2_1_efficient_frontier.py:33-37`) commits
+# to a non-overlapping band layout: each mix lives in exactly one band (the
+# band whose threshold is the highest T with T ≤ score). Consumers that need
+# the full qualifying set must load every band — per-band `load_ef_mixes`
+# under-samples the pool for any yearly CFE target below the endpoint. The
+# pool loader fixes that for the pathway optimizer (both myopic + foresight).
+#
+# Two downstream modes:
+#   - solve_pathway (myopic P1/P1a/P2a/P2b/myopic-P3): full pool, no filter.
+#     The SBTi ladder (`_cfe_target_for_year`) + `cfe_mask` do the narrowing
+#     year-by-year.
+#   - solve_pathway_with_foresight (foresight-P3): max-share-per-resource
+#     cap across 4 canonical endpoints' step-2.2A targets + slack. Stays
+#     semantically consistent with foresight's endpoint-awareness and keeps
+#     the filtered pool small enough for dense (Y, N) tensor math.
+
+# Union of all band thresholds across ISOs (ordered low → high).
+_EF_BAND_THRESHOLDS = (
+    10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0,
+    80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9,
+)
+
+# Slack added to the per-resource cap. Resources whose max across the 4
+# canonical endpoints' targets is ≤ _FILTER_ZERO_MAX_THRESHOLD get the
+# larger "zero-target slack"; positive-target resources get the tighter
+# slack. Kept as module-level constants for easy retuning when post-filter
+# pool counts land below ~500 mixes (see SPEC filter table).
+_FILTER_ZERO_MAX_THRESHOLD = 0.01   # ≤1pp → "zero-target"
+_FILTER_ZERO_SLACK = 0.05           # 5pp slack on zero-target resources
+_FILTER_POS_SLACK = 0.005           # 0.5pp slack on positive-target resources
+
+# Streaming chunk size for candidate-dimension argmin in solve_pathway. Sized
+# so per-chunk transient allocations (shares_nr[:k], row_score[:k], ratchet
+# masks) stay in the low-hundreds of MB on the full ERCOT (8.7M) / CAISO
+# (21M) pools. Myopic-P3 full-pool wall-clock scales linearly in this.
+_POOL_CHUNK_SIZE = 500_000
+
+
+def _iter_ef_band_paths(iso: str):
+    """Yield (threshold, [paths]) for every on-disk band for this ISO.
+
+    Handles `_partN` split files (step 2.1 splits >45MB parquets for GitHub).
+    Skips `_peakclean` sidecars — those are picked up by the peakclean-pool
+    loader in parallel.
+    """
+    for t in _EF_BAND_THRESHOLDS:
+        name = str(int(t)) if float(t).is_integer() else str(t)
+        parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
+        if parts:
+            yield t, parts
+            continue
+        main = EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet'
+        if main.exists():
+            yield t, [main]
+
+
+def _read_ef_pool_table(iso: str) -> pa.Table:
+    """Concatenate every on-disk EF band for `iso` into one pa.Table.
+
+    Schema drift handled:
+      - `iso` column dtype varies (string vs large_string across 4 SPP/NYISO
+        bands) — `pa.concat_tables(..., promote_options='default')` unifies.
+      - Resource-column coverage varies by ISO (CAISO has +offshore_wind+
+        geothermal; NEISO/NYISO/PJM have +offshore_wind; the other 3 have
+        only the base set; no band has `ccs_ccgt`). Missing columns are
+        zero-filled downstream in `load_ef_pool` via the same
+        `if c in column_names else zeros(n)` idiom already used by
+        `load_ef_mixes`.
+    """
+    tables: list[pa.Table] = []
+    for _, paths in _iter_ef_band_paths(iso):
+        for p in paths:
+            tables.append(pq.read_table(p))
+    if not tables:
+        raise FileNotFoundError(
+            f"_read_ef_pool_table: no EF bands found for {iso} under {EF_DIR}"
+        )
+    return pa.concat_tables(tables, promote_options='default')
+
+
+def _load_or_build_peakclean_pool(iso: str) -> pa.Table:
+    """Stitch per-band peakclean sidecars in the same order as the EF pool.
+
+    Each band is handled by the existing `_load_or_build_peakclean` (which
+    rebuilds the sidecar on dispatch-cache/version drift). The row order of
+    the concatenated sidecar table matches `_read_ef_pool_table(iso)` 1:1
+    because we iterate the same `_iter_ef_band_paths` sequence and
+    `precompute_clean_peak_hour_mw` uses `_read_ef_table` (per-band,
+    single-threshold) internally — so the sidecar for a split band is
+    rebuilt as one table covering all `_partN` rows in file order.
+    """
+    tables: list[pa.Table] = []
+    for t, _paths in _iter_ef_band_paths(iso):
+        tables.append(_load_or_build_peakclean(iso, t))
+    if not tables:
+        raise FileNotFoundError(
+            f"_load_or_build_peakclean_pool: no bands found for {iso}"
+        )
+    return pa.concat_tables(tables, promote_options='default')
+
+
+def _compute_pool_endpoint_caps(cfg: 'RunConfig') -> np.ndarray:
+    """Per-resource filter caps from max across 4 canonical endpoints' targets.
+
+    Returns a (len(_RESOURCE_COLS),) vector of upper bounds on each resource's
+    share (fraction). A mix passes the filter iff every resource's share ≤
+    the cap. Cap = per-resource max target across endpoints {90, 95, 99, 99.9}
+    plus slack — _FILTER_ZERO_SLACK if that max is ≤ _FILTER_ZERO_MAX_THRESHOLD
+    (the resource is effectively off-target at every endpoint), else
+    _FILTER_POS_SLACK.
+    """
+    n_res = len(_RESOURCE_COLS)
+    max_targets = np.zeros(n_res, dtype=np.float64)
+    for ep_pct in (90.0, 95.0, 99.0, 99.9):
+        targets = _compute_endpoint_target_shares(
+            iso=cfg.iso,
+            endpoint_pct=ep_pct,
+            demand_growth_level=cfg.demand_growth_level,
+            geo_cost_level=cfg.geo_cost_level,
+            firm_cost_level=cfg.firm_cost_level,
+            ccs_cost_level=cfg.ccs_cost_level,
+            tx_level=cfg.tx_level,
+        )
+        # First n_res dims of _FORESIGHT_SHARE_KEYS are _RESOURCE_COLS.
+        max_targets = np.maximum(max_targets, targets[:n_res])
+    slack = np.where(max_targets <= _FILTER_ZERO_MAX_THRESHOLD,
+                     _FILTER_ZERO_SLACK, _FILTER_POS_SLACK)
+    return max_targets + slack
+
+
+def load_ef_pool(
+    iso: str,
+    *,
+    filter_to_endpoints: bool = False,
+    cfg_for_filter: Optional['RunConfig'] = None,
+) -> dict[str, np.ndarray]:
+    """Full-pool EF loader.
+
+    Returns the same dict shape as `load_ef_mixes` (same keys: all
+    _RESOURCE_COLS, all _STORAGE_COLS, 'hourly_match_score',
+    'clean_peak_hour_mw', 'resid_norm_p9997') — concatenated across every
+    on-disk threshold band for `iso`.
+
+    When `filter_to_endpoints=True`, rejects any mix whose per-resource
+    share exceeds the cap computed by `_compute_pool_endpoint_caps(cfg)`.
+    """
+    ef = _read_ef_pool_table(iso)
+    pc_tbl = _load_or_build_peakclean_pool(iso)
+    n = ef.num_rows
+    if pc_tbl.num_rows != n:
+        raise RuntimeError(
+            f"load_ef_pool: peakclean pool rows ({pc_tbl.num_rows}) != "
+            f"EF pool rows ({n}) for {iso} — band order drift"
+        )
+    arrs: dict[str, np.ndarray] = {
+        c: (ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n))
+        for c in _RESOURCE_COLS + _STORAGE_COLS + ('hourly_match_score',)
+    }
+    arrs['clean_peak_hour_mw'] = pc_tbl.column('clean_peak_hour_mw').to_numpy()
+    arrs['resid_norm_p9997'] = (
+        pc_tbl.column('resid_norm_p9997').to_numpy()
+        if 'resid_norm_p9997' in pc_tbl.column_names
+        else np.zeros(n, dtype=np.float32)
+    )
+    # Drop the source tables so their arrow buffers can be reclaimed before
+    # the filter pass allocates an (N, 11) share matrix (~700 MB on ERCOT).
+    del ef, pc_tbl
+
+    if not filter_to_endpoints:
+        return arrs
+
+    if cfg_for_filter is None:
+        raise ValueError(
+            "load_ef_pool(filter_to_endpoints=True) requires cfg_for_filter"
+        )
+    caps = _compute_pool_endpoint_caps(cfg_for_filter)
+    # Chunked share-cap check to avoid an (N, 11) float64 allocation on 8M+
+    # row pools. Keeps filter peak transient under ~100 MB per chunk.
+    caps_pct = (caps * 100.0).astype(np.float64)               # compare in %
+    keep = np.ones(n, dtype=bool)
+    chunk = _POOL_CHUNK_SIZE
+    for s in range(0, n, chunk):
+        e = min(s + chunk, n)
+        kc = np.ones(e - s, dtype=bool)
+        for ri, r in enumerate(_RESOURCE_COLS):
+            kc &= arrs[r][s:e].astype(np.float64) <= (caps_pct[ri] + 1.0e-9)
+        keep[s:e] = kc
+    kept_n = int(keep.sum())
+    print(f"[pool] {iso} filter_to_endpoints: {n:,} → {kept_n:,} mixes "
+          f"(caps={np.round(caps, 4).tolist()})", flush=True)
+    return {k: v[keep] for k, v in arrs.items()}
+
+
 # ─── Vectorized year helpers ────────────────────────────────────────────────
 
 def peak_demand_vec(iso: str, growth_level: str) -> np.ndarray:
@@ -2026,18 +2220,23 @@ def _build_ledger(ef: dict, winners: np.ndarray, cfg: 'RunConfig') -> VintageLed
                 floor_twh[r] = target_twh
 
     # ── Per-year delta vintages (clean_firm tranches) — absolute-TWh floor ──
+    # Decompose only the per-year winner's cf_pct (Y values) instead of the
+    # full (Y, N) pool grid — scales with years, not pool size. Safe on
+    # multi-million-mix full pools where the dense (Y, N) allocation would
+    # OOM on ERCOT (8.7M) / CAISO (21M).
     annual_mwh_vec = np.array(
         [base_demand * (1.0 + g) ** i * 1.0e6 for i in range(N_YEARS)],
         dtype=np.float64,
     )
+    winner_cf_pct = ef['clean_firm'][winners]                          # (Y,)
     tg = decompose_clean_firm_tranches(
-        ef['clean_firm'], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
+        winner_cf_pct, cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
     idx = np.arange(N_YEARS)
     tranche_series = (
-        ('uprate',   tg['uprate_twh'][idx, winners],   tg['uprate_eff_lcoe']),
-        ('geo',      tg['geo_twh'][idx, winners],      tg['geo_eff_lcoe']),
-        ('nuke_new', tg['nuke_new_twh'][idx, winners], tg['nuke_new_eff_lcoe']),
-        ('ccs',      tg['ccs_twh'][idx, winners],      tg['ccs_eff_lcoe']),
+        ('uprate',   tg['uprate_twh'][idx, idx],   tg['uprate_eff_lcoe']),
+        ('geo',      tg['geo_twh'][idx, idx],      tg['geo_eff_lcoe']),
+        ('nuke_new', tg['nuke_new_twh'][idx, idx], tg['nuke_new_eff_lcoe']),
+        ('ccs',      tg['ccs_twh'][idx, idx],      tg['ccs_eff_lcoe']),
     )
     for tranche_name, twh_y, eff_lcoe_y in tranche_series:
         floor = 0.0
@@ -2203,16 +2402,19 @@ def serialize_run_result(r: PathwayRunResult) -> dict:
     grid = pc.GRID_MIX_SHARES[cfg.iso]
     base_demand = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
     # Prebuild the clean_firm tranche grid once so each year's new_vintages
-    # can emit per-tranche lines (mirrors _build_ledger).
+    # can emit per-tranche lines (mirrors _build_ledger). Decompose only the
+    # winners' cf_pct (Y values) so full-pool runs don't OOM on the (Y, N)
+    # allocation.
     annual_mwh_vec = r.demand_vec * 1.0e6
+    winner_cf_pct = r.ef['clean_firm'][r.winners]                      # (Y,)
     tg_series = decompose_clean_firm_tranches(
-        r.ef['clean_firm'], cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
+        winner_cf_pct, cfg.iso, cfg.pathway, annual_mwh_vec, cfg)
     idx = np.arange(N_YEARS)
     tranche_twh_by_name = {
-        'uprate':   tg_series['uprate_twh'][idx, r.winners],
-        'geo':      tg_series['geo_twh'][idx, r.winners],
-        'nuke_new': tg_series['nuke_new_twh'][idx, r.winners],
-        'ccs':      tg_series['ccs_twh'][idx, r.winners],
+        'uprate':   tg_series['uprate_twh'][idx, idx],
+        'geo':      tg_series['geo_twh'][idx, idx],
+        'nuke_new': tg_series['nuke_new_twh'][idx, idx],
+        'ccs':      tg_series['ccs_twh'][idx, idx],
     }
     tranche_eff_by_name = {
         'uprate':   tg_series['uprate_eff_lcoe'],
