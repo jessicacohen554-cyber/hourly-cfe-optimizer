@@ -1440,7 +1440,7 @@ def main(argv=None) -> int:
     ap.add_argument('--all', action='store_true')
     args = ap.parse_args(argv)
     if args.all:
-        pairs = [(iso, t) for iso in ISOS for t in ENDPOINT_TO_THRESHOLD]
+        pairs = [(iso, t) for iso in ISOS for t in ENDPOINT_TO_THRESHOLD.values()]
         nw = min(len(pairs), os.cpu_count() or 4)
         ctx = multiprocessing.get_context('spawn')
         print(f"[prebuild] {len(pairs)} sidecars with {nw} workers", flush=True)
