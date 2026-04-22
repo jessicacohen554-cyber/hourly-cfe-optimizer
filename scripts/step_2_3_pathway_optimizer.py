@@ -2264,12 +2264,68 @@ def serialize_run_result(r: PathwayRunResult) -> dict:
 
 
 def serialize_run_result_v3(r: PathwayRunResult) -> dict:
-    """Schema v3 emitter — foresight runs only. Task 4 stub; Task 5 expands
-    to the full memo §6.4 shape (headline pairwise metrics, diagnostics
-    sidecar). For now this just bumps schema_version so dispatch compiles.
+    """Schema v3 emitter — foresight runs only (memo §6.4). Myopic runs
+    continue to emit the v2 shape via serialize_run_result. The v3 payload
+    is the v2 payload plus:
+      - top-level `schema_version: "3.0.0"` (breaking — v2 is int, v3 is str)
+      - `config.solver_mode`, `config.foresight_lambda`,
+        `config.endpoint_year`, `config.endpoint_target_shares`
+      - `headline` gains:
+        `foresight_penalty_vs_myopic`, `p1_penalty_vs_foresight`,
+        `p1_reliability_tax_premium` (all null here — require paired runs,
+        filled by Phase E post-processor), `time_to_90pct`,
+        `cascade_activations`
+      - `foresight_diagnostics` block with per-year rows and cascade tier
+        vector
     """
-    base = serialize_run_result(r)
+    base = serialize_run_result(r)  # v2 shape
+    cfg = r.config
+    meta = r.foresight_metadata or {}
+
     base['schema_version'] = '3.0.0'
+    base['config']['solver_mode'] = cfg.solver_mode
+    base['config']['foresight_lambda'] = (
+        float(cfg.foresight_lambda) if cfg.foresight_lambda is not None else None
+    )
+    base['config']['endpoint_year'] = (
+        int(cfg.endpoint_year) if cfg.endpoint_year is not None else None
+    )
+    base['config']['endpoint_target_shares'] = (
+        {k: round(float(v), 6) for k, v in meta.get('target_shares', {}).items()}
+        if meta else None
+    )
+
+    # time_to_90pct: first year where achieved_cfe crosses 90.0 within the
+    # simulated prefix [BASE_YEAR, endpoint_year]. None if never crossed.
+    endpoint_yi = meta.get('endpoint_yi')
+    time_to_90 = None
+    if endpoint_yi is not None:
+        pfx = r.achieved_cfe_pct[: endpoint_yi + 1]
+        hits = np.where(pfx >= 90.0 - 1e-9)[0]
+        if hits.size:
+            time_to_90 = int(YEARS[int(hits[0])])
+
+    cascade_activations = int(meta.get('cascade_activations', 0)) if meta else None
+
+    base['headline'] = {
+        **base['headline'],
+        # Pairwise metrics require Phase-E's external reference runs; emit null.
+        'foresight_penalty_vs_myopic': None,
+        'p1_penalty_vs_foresight': None,
+        'p1_reliability_tax_premium': None,
+        'time_to_90pct': time_to_90,
+        'cascade_activations': cascade_activations,
+    }
+
+    # Diagnostic sidecar block (memo §6.4 — "Diagnostic sidecar (new)").
+    # Inlined here rather than emitted as a separate file so dashboard
+    # consumers see one schema-checked payload per foresight run.
+    base['foresight_diagnostics'] = {
+        'endpoint_year': meta.get('endpoint_year'),
+        'foresight_C_usd': meta.get('foresight_C_usd'),
+        'cascade_tier_y': meta.get('cascade_tier_y'),
+        'per_year': meta.get('per_year', []),
+    }
     return base
 
 
