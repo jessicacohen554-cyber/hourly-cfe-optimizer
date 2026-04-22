@@ -11,14 +11,13 @@
 4. **Plan before writing** any data-touching code or any user-facing prose >100 words. Output the plan, wait for OK.
 5. **Vectorize before looping.** Never write a Python `for` loop over data arrays >1k rows. If you're about to, stop and write the vectorized kernel signature first, show it, wait for OK. Reference exemplar: `market-simulator/scripts/fleet_dispatch.py` ("Fully vectorized — no Python for-loops over the 1,215 scenarios").
 6. **Run `/fix-prose` before committing** any HTML/MD page you wrote or substantially edited. The `jargon-fixer` and `voice-fixer` agents catch self-referential jargon and AI-tell language you missed.
-7. **End every session by writing one line** to `LESSONS.md` describing the most important fix-this-next-time learning.
 
 ## Source docs — what to read when
 
 | File | Read when |
 |---|---|
 | `SPEC.md` | Session start, before picking up work — current status, locked-in spec, open questions |
-| `LESSONS.md` | Session start — accumulated learnings from prior sessions |
+| `LESSONS.md` | Session start, if non-empty — durable learnings that don't fit as CLAUDE.md rules |
 | `OPS.md` | Before running optimizer / heavy compute / data ops |
 | `DESIGN_SYSTEM.md` | Before any HTML/CSS work — color tokens, typography, chart conventions |
 | `PIPELINE.md` | Reference for the 8-step pipeline only |
@@ -60,6 +59,19 @@ When the task involves writing or editing code, identify the category and read t
 | Dashboard CSS / styling | `dashboard/styles/shared.css`, `dashboard/styles/article.css`, `dashboard/styles/scrollytell.css`, `DESIGN_SYSTEM.md` |
 | Building a new chart-payload `gen_*.py` | `reliability_tax/charts/data_loader.py` (canonical loader), the closest sibling `gen_*.py` to your new chart, the JSON schema of an existing payload, and the dashboard page that consumes it |
 | Market-simulator desktop app changes | `market-simulator/desktop_app.py`, `market-simulator/backend/main.py`, `market-simulator/backend/models.py`, `market-simulator/USER_MANUAL.md` |
+
+## Code-task rules
+
+In addition to the non-negotiables above, apply these when the task category matches.
+
+- **Grep before designing.** Before scoping N subprocess invocations, writing a new helper, or treating "build X or reuse Y?" as an open question: grep `scripts/`, `market-simulator/scripts/`, `reliability_tax/`, and subproject READMEs for existing utilities and cached pipeline outputs. If a pipeline output already answers the question, reuse it — don't surface it as a design decision.
+- **Profile one run before launching N.** A docstring is a claim, not a measurement. Any multi-run sweep gets a one-run `cProfile` gate first. If cold-start vs. hot-loop shape doesn't match the docstring's claim, fix the hot spot before scaling up.
+- **Audit `persist=True` sites for loop-containment.** Disk-write-per-iteration inside a solve loop silently wrecks wall-clock and produces no stdout (runs look hung, aren't). Thread `persist=False` through the loop; persist once at the end.
+- **Parity probes on flag-gated changes cover both branches.** Flag=OFF reproduces baseline bit-for-bit AND flag=ON completes end-to-end at ≥1 config before the commit lands. A passing OFF-only probe does not validate the ON code path.
+- **When sweep results are uniformly wrong-signed across orders of magnitude, audit what the solver consumes before tuning parameters.** Read the upstream module's header for the architectural contract (e.g. "each mix in exactly one band; consumers load bands ≥ target"). A uniformly-wrong answer is a data-flow bug, not a calibration problem.
+- **At resume-prompt start, verify named files and imports at current HEAD.** `head -50` any driver script the prompt names; confirm every import resolves before relying on its workflow. File:line anchors on the target file also get a quick verification. Branches drift between sessions.
+- **Before rebasing, read master's version of the conflict area first.** If a parallel session landed a coherent pattern with passing tests on the same axis as your change, conform to it — don't reintroduce your own convention on top of theirs. Parallel conventions on the same axis are a schema bifurcation nobody wants to untangle later.
+- **For dashboard tasks, verify the anchor page's actual DOM before building.** The brief's description of an anchor's layout pattern may not match what the file does. Read the anchor's HTML/CSS directly.
 
 ## Voice — what gets shipped to readers
 
@@ -103,7 +115,7 @@ When context climbs past ~80% or the user signals wrap-up:
 1. Stop starting new work.
 2. Commit + push WIP to the current branch.
 3. Update `## Current Status` at the top of `SPEC.md`.
-4. Write the session lesson to `LESSONS.md`.
+4. If a load-bearing lesson surfaced that doesn't fit as a CLAUDE.md rule, write it to `LESSONS.md`. Otherwise skip — no per-session summaries, no postmortems.
 5. Output a resume prompt focused on task context.
 
 The `Stop` hook in `.claude/settings.json` enforces this on exit.
