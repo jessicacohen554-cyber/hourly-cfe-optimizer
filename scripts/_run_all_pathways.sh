@@ -7,7 +7,7 @@
 # Exits 0 cleanly only when MANIFEST shows all 420 expected runs.
 set -u
 cd "$(dirname "$0")/.."
-MANIFEST=analysis/reliability-tax/data/MANIFEST.json
+MANIFEST=data/step2.3-pathway/MANIFEST.json
 TARGET=420
 while :; do
     COUNT=$(python3 -c "import json; print(len(json.load(open('$MANIFEST')).get('runs', {})))" 2>/dev/null || echo 0)
