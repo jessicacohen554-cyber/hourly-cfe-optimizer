@@ -1083,11 +1083,36 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
             if float(v[li]) < best_score:
                 best_score, best_idx = float(v[li]), s + li
 
-        # Safety net: global argmin using cached scores (no recomputation)
+        # Safety net: constrained fallback (pathway mask + CFE floor enforced).
+        # The global argmin fallback was broken — it ignored pathway constraints,
+        # injecting e.g. CF=60% into P1, which the ratchet then locked in forever.
+        # Cascade: (1) widen CFE ceiling to endpoint, (2) widen to 100%,
+        # (3) hold previous year's winner rather than violate constraints.
         if np.isinf(best_score):
-            best_idx = int(np.argmin(saved_rs))
-            best_score = float(saved_rs[best_idx])
-            print(f"[warn] year {YEARS[yi]}: safety net activated", flush=True)
+            # Build pathway mask over full pool
+            if ctx.is_p1:
+                _pm_full = ((ctx.ef['clean_firm'].astype(np.float64) <= ctx.pf + float(ctx.uc_pct_y[yi]) + 0.5)
+                            & (ctx.ef.get('ccs_ccgt', np.zeros(n)).astype(np.float64) <= 0.5))
+            else:
+                _pm_full = np.ones(n, dtype=bool)
+            _cfe_floor = ctx.score >= (cfe_tgt_yi - 0.5)
+            _fallback_mask = _pm_full & _cfe_floor
+            _fb_scores = np.where(_fallback_mask, saved_rs, np.inf)
+            if not np.all(np.isinf(_fb_scores)):
+                best_idx = int(np.argmin(_fb_scores))
+                best_score = float(_fb_scores[best_idx])
+                print(f"[warn] year {YEARS[yi]}: fallback (widened ceiling, pathway-constrained)", flush=True)
+            elif yi > 0:
+                # No candidate passes — hold previous year's winner
+                best_idx = int(winners[yi - 1])
+                best_score = float(saved_rs[best_idx]) if np.isfinite(saved_rs[best_idx]) else 0.0
+                print(f"[warn] year {YEARS[yi]}: holding previous winner (no feasible candidate)", flush=True)
+            else:
+                # Year 0 with no candidates — true infeasibility
+                best_idx = int(np.argmin(saved_rs))
+                best_score = float(saved_rs[best_idx])
+                print(f"[WARN] year {YEARS[yi]}: no P1-feasible candidate at CFE>={cfe_tgt_yi:.1f}%, "
+                      f"using global fallback", flush=True)
 
         winners[yi] = best_idx
         fr, fc, fu, fg, fn, fcc = _update_floors(
