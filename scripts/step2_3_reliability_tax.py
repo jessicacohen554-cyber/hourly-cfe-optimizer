@@ -357,7 +357,7 @@ def _read_ef_table(iso: str, threshold) -> pa.Table:
     name = _threshold_tag(threshold)
     parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
     if parts:
-        return pa.concat_tables([pq.read_table(p) for p in parts])
+        return pa.concat_tables([pq.read_table(p) for p in parts], promote_options='permissive')
     return pq.read_table(EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet')
 
 
@@ -462,8 +462,8 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
         pc_tables.append(_load_or_build_peakclean(iso, t))
     if not ef_tables:
         raise FileNotFoundError(f"No EF bands for {iso} under {EF_DIR}")
-    ef = pa.concat_tables(ef_tables, promote_options='default')
-    pctbl = pa.concat_tables(pc_tables, promote_options='default')
+    ef = pa.concat_tables(ef_tables, promote_options='permissive')
+    pctbl = pa.concat_tables(pc_tables, promote_options='permissive')
     n = ef.num_rows
     if pctbl.num_rows != n:
         raise RuntimeError(f"Peakclean rows ({pctbl.num_rows}) != EF rows ({n}) for {iso}")
