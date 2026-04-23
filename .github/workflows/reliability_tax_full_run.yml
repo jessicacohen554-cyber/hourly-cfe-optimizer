@@ -20,15 +20,15 @@ name: "Reliability Tax: Full Pathway Sweep"
 # ------------------
 # When include_demand_sensitivity=true, a second pass re-runs all requested
 # (ISO, endpoint, pathway) combos at Low and High demand growth (Medium is the
-# primary run). These write to analysis/reliability-tax/data-demand-sensitivity/
+# primary run). These write to data/step2.3-pathway-demand-sensitivity/
 # so they don't clobber the canonical MANIFEST.
 #
 # Output
 # ------
 #   Branch:    reliability-tax/run-<TIMESTAMP>
-#   Data:      analysis/reliability-tax/data/          (Medium growth)
-#              analysis/reliability-tax/data-demand-sensitivity/  (L/H growth)
-#   MANIFEST:  analysis/reliability-tax/data/MANIFEST.json
+#   Data:      data/step2.3-pathway/          (Medium growth)
+#              data/step2.3-pathway-demand-sensitivity/  (L/H growth)
+#   MANIFEST:  data/step2.3-pathway/MANIFEST.json
 #   Artifacts: 90-day retention, uploaded after each ISO regardless of failures
 #
 # Resumption
@@ -153,8 +153,8 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p analysis/reliability-tax/data/${{ matrix.iso }}
-          mkdir -p analysis/reliability-tax/data-demand-sensitivity/${{ matrix.iso }}
+          mkdir -p data/step2.3-pathway/${{ matrix.iso }}
+          mkdir -p data/step2.3-pathway-demand-sensitivity/${{ matrix.iso }}
 
       - name: Validate planned runs (dry run)
         run: |
@@ -178,13 +178,13 @@ jobs:
         if: always()
         run: |
           echo "=== Per-run JSON outputs ==="
-          ls -lh analysis/reliability-tax/data/${{ matrix.iso }}/*.json 2>/dev/null || echo "  (none)"
+          ls -lh data/step2.3-pathway/${{ matrix.iso }}/*.json 2>/dev/null || echo "  (none)"
           echo ""
           echo "=== MANIFEST state ==="
-          if [ -f analysis/reliability-tax/data/MANIFEST.json ]; then
+          if [ -f data/step2.3-pathway/MANIFEST.json ]; then
             python3 -c "
           import json
-          with open('analysis/reliability-tax/data/MANIFEST.json') as f:
+          with open('data/step2.3-pathway/MANIFEST.json') as f:
               m = json.load(f)
           runs = m.get('runs', {})
           iso_runs = {k: v for k, v in runs.items() if k.startswith('${{ matrix.iso }}__')}
@@ -202,7 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reliability-tax-medium-${{ matrix.iso }}
-          path: analysis/reliability-tax/data/
+          path: data/step2.3-pathway/
           retention-days: 90
 
   # ============================================================================
@@ -240,7 +240,7 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p analysis/reliability-tax/data-demand-sensitivity/${{ matrix.iso }}
+          mkdir -p data/step2.3-pathway-demand-sensitivity/${{ matrix.iso }}
 
       - name: Validate planned runs (dry run)
         run: |
@@ -249,7 +249,7 @@ jobs:
             --endpoints "${{ inputs.endpoints }}" \
             --pathways "${{ inputs.pathways }}" \
             --growth "${{ matrix.growth }}" \
-            --output-root analysis/reliability-tax/data-demand-sensitivity \
+            --output-root data/step2.3-pathway-demand-sensitivity \
             --dry-run
 
       - name: Run demand sensitivity — ${{ matrix.iso }} (${{ matrix.growth }})
@@ -261,7 +261,7 @@ jobs:
             --endpoints "${{ inputs.endpoints }}" \
             --pathways "${{ inputs.pathways }}" \
             --growth "${{ matrix.growth }}" \
-            --output-root analysis/reliability-tax/data-demand-sensitivity \
+            --output-root data/step2.3-pathway-demand-sensitivity \
             $FORCE_FLAG
 
       - name: Upload demand-sensitivity artifacts
@@ -269,7 +269,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reliability-tax-${{ matrix.growth }}-${{ matrix.iso }}
-          path: analysis/reliability-tax/data-demand-sensitivity/
+          path: data/step2.3-pathway-demand-sensitivity/
           retention-days: 90
 
   # ============================================================================
@@ -319,20 +319,20 @@ jobs:
 
       - name: Place artifacts into repo paths
         run: |
-          # Medium-growth outputs → analysis/reliability-tax/data/
+          # Medium-growth outputs → data/step2.3-pathway/
           for iso_dir in artifact-tmp/reliability-tax-medium-*/; do
             if [ -d "$iso_dir" ]; then
               echo "Placing medium-growth outputs from: $iso_dir"
-              cp -rf "${iso_dir}/." analysis/reliability-tax/data/ 2>/dev/null || true
+              cp -rf "${iso_dir}/." data/step2.3-pathway/ 2>/dev/null || true
             fi
           done
 
-          # Demand-sensitivity outputs → analysis/reliability-tax/data-demand-sensitivity/
+          # Demand-sensitivity outputs → data/step2.3-pathway-demand-sensitivity/
           for sensitivity_dir in artifact-tmp/reliability-tax-Low-* artifact-tmp/reliability-tax-High-*; do
             if [ -d "$sensitivity_dir" ]; then
               echo "Placing demand-sensitivity outputs from: $sensitivity_dir"
-              mkdir -p analysis/reliability-tax/data-demand-sensitivity
-              cp -rf "${sensitivity_dir}/." analysis/reliability-tax/data-demand-sensitivity/ 2>/dev/null || true
+              mkdir -p data/step2.3-pathway-demand-sensitivity
+              cp -rf "${sensitivity_dir}/." data/step2.3-pathway-demand-sensitivity/ 2>/dev/null || true
             fi
           done
 
@@ -343,8 +343,8 @@ jobs:
           import json, os, sys
           from pathlib import Path
 
-          manifest_path = Path('analysis/reliability-tax/data/MANIFEST.json')
-          sens_manifest_path = Path('analysis/reliability-tax/data-demand-sensitivity/MANIFEST.json')
+          manifest_path = Path('data/step2.3-pathway/MANIFEST.json')
+          sens_manifest_path = Path('data/step2.3-pathway-demand-sensitivity/MANIFEST.json')
 
           def summarise(manifest_path, label):
               if not manifest_path.exists():
@@ -392,8 +392,8 @@ jobs:
 
           1. Check MANIFEST for feasibility flags — any `economic-floor` entries signal the optimizer
              hit the Card J infeasibility threshold at that (iso, endpoint).
-          2. Per-run JSON is at `analysis/reliability-tax/data/<ISO>/pathway<N>_ep<ep>.json`.
-          3. Demand sensitivity outputs are at `analysis/reliability-tax/data-demand-sensitivity/`.
+          2. Per-run JSON is at `data/step2.3-pathway/<ISO>/pathway<N>_ep<ep>.json`.
+          3. Demand sensitivity outputs are at `data/step2.3-pathway-demand-sensitivity/`.
           4. Artifacts are retained for 90 days in the Actions run for this invocation.
 
           ## Merge checklist
@@ -430,7 +430,7 @@ jobs:
             done
           }
 
-          git add -f analysis/reliability-tax/ 2>/dev/null || true
+          git add -f data/step2.3-pathway/ data/step2.3-pathway-demand-sensitivity/ 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit — all runs may have been pre-existing."
@@ -439,7 +439,7 @@ jobs:
 
           MANIFEST_RUNS=$(python3 -c "
           import json; from pathlib import Path
-          p = Path('analysis/reliability-tax/data/MANIFEST.json')
+          p = Path('data/step2.3-pathway/MANIFEST.json')
           m = json.load(open(p)) if p.exists() else {}
           print(len(m.get('runs', {})))
           " 2>/dev/null || echo "?")

@@ -8,12 +8,12 @@
 #
 # Fix: one in-process driver per ISO, each writing to a per-ISO
 # output-root. After all workers finish, merge the per-ISO JSONs and
-# MANIFESTs into the canonical analysis/reliability-tax/data/.
+# MANIFESTs into the canonical data/step2.3-pathway/.
 set -u
 cd "$(dirname "$0")/.."
 
-STAGE=analysis/reliability-tax/_workers
-FINAL=analysis/reliability-tax/data
+STAGE=data/step2.3-pathway/_workers
+FINAL=data/step2.3-pathway
 mkdir -p "$STAGE"
 mkdir -p logs/rt_workers
 
@@ -37,8 +37,8 @@ echo "=== $(date -u) merging per-worker outputs into $FINAL ==="
 python3 - <<'PY'
 import json, os, shutil
 from pathlib import Path
-stage = Path('analysis/reliability-tax/_workers')
-final = Path('analysis/reliability-tax/data')
+stage = Path('data/step2.3-pathway/_workers')
+final = Path('data/step2.3-pathway')
 final.mkdir(parents=True, exist_ok=True)
 
 merged_runs = {}

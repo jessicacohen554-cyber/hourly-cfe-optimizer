@@ -1,4 +1,4 @@
-"""Rebuild analysis/reliability-tax/data/MANIFEST.json from per-run JSONs.
+"""Rebuild data/step2.3-pathway/MANIFEST.json from per-run JSONs.
 
 Walks every ``pathway*_ep*.json`` under the data tree, reconstructs the
 manifest entry schema used by ``_manifest_entry`` in
@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DATA_ROOT = REPO_ROOT / 'analysis' / 'reliability-tax' / 'data'
+DATA_ROOT = REPO_ROOT / 'data' / 'step2.3-pathway'
 
 
 def _run_key(cfg: dict) -> str:

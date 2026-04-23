@@ -41,7 +41,7 @@ Reference doc for the 8-step optimization pipeline. Extracted from CLAUDE.md (Ap
 - Includes NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh).
 - Output: `data/step2.2-cost/`. **Run when cost assumptions change. No physics re-run needed.**
 
-- **2.3** `step_2_3_pathway_optimizer.py` — Pathway optimizer: 7 ISOs × 5 pathways × 4 endpoints, 2025–2050. Two solver modes: `solve_pathway` (myopic, P1/P1a/P2a/P2b/P3) and `solve_pathway_with_foresight` (P3 foresight, λ-calibrated). Output: `analysis/reliability-tax/data/<ISO>/`. Driver: `scripts/run_pathway_sweep.py`. ← needs Steps 2.1 + 3A.
+- **2.3** `step_2_3_pathway_optimizer.py` — Pathway optimizer: 7 ISOs × 5 pathways × 4 endpoints, 2025–2050. Two solver modes: `solve_pathway` (myopic, P1/P1a/P2a/P2b/P3) and `solve_pathway_with_foresight` (P3 foresight, λ-calibrated, P2a/P2b/P3 only). Output: `data/step2.3-pathway/<ISO>/` (20 myopic + 12 foresight = 32 JSONs per ISO). Driver: `scripts/run_pathway_sweep.py`. ← needs Steps 2.1 + 3A.
 
   **Band-loading contract — read `step2_1_efficient_frontier.py` before touching `_read_ef_table` or `_load_or_build_peakclean`:** Step 2.1 writes mixes to non-overlapping bands — a mix with score=85 lives in `band=80`, NOT `band=90`. Consumers must load ALL bands ≥ the target threshold: `glob('step_2_1_EF_{iso}_*.parquet')` excluding `*_peakclean.*`, then `pa.concat_tables(tbls, promote_options='default')`, zero-fill missing resource columns per band (some bands lack `ccs_ccgt`). Loading only the target band returns an endpoint-compliant-only pool where every candidate already passes every ratchet rung — the ladder becomes a no-op (root cause of Phase D pool defect, all 7 ISOs).
 

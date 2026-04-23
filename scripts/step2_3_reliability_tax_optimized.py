@@ -55,7 +55,7 @@ _POOL_CHUNK = 2_000_000  # streaming chunk size for candidate argmin
 
 EF_DIR = _ROOT / 'data' / 'step2.1-ef'
 DISPATCH_DIR = _ROOT / 'data' / 'step3-dispatch'
-OUTPUT_BASE = _ROOT / 'analysis' / 'reliability-tax' / 'data'
+OUTPUT_BASE = _ROOT / 'data' / 'step2.3-pathway'
 _STEP22A_DIR = _ROOT / 'data' / 'step2.2-cost'
 
 _RESOURCE_COLS = (
@@ -122,19 +122,20 @@ def _load_gen_profiles():
     t = pq.read_table(_ROOT / 'data' / 'eia-930' / 'eia_generation_profiles.parquet')
     target_year = pacompute.max(t.column('year')).as_py()
     t = t.filter(pacompute.equal(t['year'], target_year))
-    iso_arr = t.column('iso').to_pandas().values
-    fuel_arr = t.column('fuel').to_pandas().values
-    hour_arr, val_arr = t.column('hour').to_numpy(), t.column('value').to_numpy()
     out: dict[str, dict[str, np.ndarray]] = {}
     for iso in ISOS:
+        t_iso = t.filter(pacompute.equal(t['iso'], iso))
         out[iso] = {}
-        im = iso_arr == iso
+        if t_iso.num_rows == 0:
+            continue
         for fuel in ('solar', 'wind', 'hydro', 'nuclear', 'offshore_wind', 'geothermal'):
-            mask = im & (fuel_arr == fuel)
-            if not mask.any():
+            t_fuel = t_iso.filter(pacompute.equal(t_iso['fuel'], fuel))
+            if t_fuel.num_rows == 0:
                 continue
+            hour_arr = t_fuel.column('hour').to_numpy().astype(np.int64)
+            val_arr = t_fuel.column('value').to_numpy()
             prof = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
-            prof[hour_arr[mask]] = val_arr[mask]
+            prof[hour_arr] = val_arr
             out[iso][fuel] = prof
     return out
 
@@ -164,18 +165,18 @@ def _load_demand_profiles():
             out[iso] = flat * float(pc.REGIONAL_DEMAND_TWH[iso]) * 1e6
         return out
     t = pq.read_table(path, columns=['iso', 'year', 'hour', 'normalized'])
-    iso_arr = t.column('iso').to_pandas().values
-    year_arr, hour_arr = t.column('year').to_numpy(), t.column('hour').to_numpy()
-    norm_arr = t.column('normalized').to_numpy()
     for iso in ISOS:
         mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1e6
-        mask = iso_arr == iso
-        if not mask.any():
+        t_iso = t.filter(pacompute.equal(t['iso'], iso))
+        if t_iso.num_rows == 0:
             out[iso] = flat * mwh
             continue
-        m2 = mask & (year_arr == int(year_arr[mask].max()))
+        max_year = pacompute.max(t_iso.column('year')).as_py()
+        t_y = t_iso.filter(pacompute.equal(t_iso['year'], max_year))
+        hour_arr = t_y.column('hour').to_numpy().astype(np.int64)
+        norm_arr = t_y.column('normalized').to_numpy()
         norm = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
-        norm[hour_arr[m2].astype(np.int64)] = norm_arr[m2]
+        norm[hour_arr] = norm_arr
         norm = norm / norm.sum() if norm.sum() > 0 else flat.copy()
         out[iso] = norm * mwh
     return out

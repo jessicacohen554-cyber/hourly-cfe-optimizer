@@ -230,7 +230,7 @@ def main() -> int:
     ap.add_argument('--iso', required=True)
     ap.add_argument(
         '--output-root',
-        default='analysis/reliability-tax/data',
+        default='data/step2.3-pathway',
         help='Root directory for per-run JSON outputs and MANIFEST.json.',
     )
     ap.add_argument(

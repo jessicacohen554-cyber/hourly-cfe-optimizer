@@ -31,7 +31,7 @@ Demand sensitivity pass:
     python scripts/run_pathway_sweep.py \\
         --iso MISO \\
         --growth Low \\
-        --output-root analysis/reliability-tax/data-demand-sensitivity
+        --output-root data/step2.3-pathway-demand-sensitivity
 
 Dry run to preview what would execute:
 
@@ -81,7 +81,7 @@ DEMAND_GROWTH_LEVELS = ('Low', 'Medium', 'High')
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _OPTIMIZER_SCRIPT = _REPO_ROOT / 'scripts' / 'step_2_3_pathway_optimizer.py'
-_DEFAULT_OUTPUT_ROOT = _REPO_ROOT / 'analysis' / 'reliability-tax' / 'data'
+_DEFAULT_OUTPUT_ROOT = _REPO_ROOT / 'data' / 'step2.3-pathway'
 _MANIFEST_FILENAME = 'MANIFEST.json'
 
 

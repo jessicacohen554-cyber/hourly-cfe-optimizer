@@ -254,4 +254,4 @@ python step_2_3_reliability_tax_optimized_py.py --all
 ISO_FILTER=CAISO python step_2_3_reliability_tax_optimized_py.py --all
 ```
 
-The `--all` mode parallelizes Stage 1 sidecar builds across ISO×threshold pairs, then parallelizes the full sweep across ISOs, using `multiprocessing.spawn` contexts. Output files land in `analysis/reliability-tax/data/{ISO}/pathway{P}_{ep_tag}.json`.
+The `--all` mode parallelizes Stage 1 sidecar builds across ISO×threshold pairs, then parallelizes the full sweep across ISOs, using `multiprocessing.spawn` contexts. Output files land in `data/step2.3-pathway/{ISO}/pathway{P}_{ep_tag}.json` (myopic) or `pathway{P}_{ep_tag}_foresight.json` (foresight, P2a/P2b/P3 only).

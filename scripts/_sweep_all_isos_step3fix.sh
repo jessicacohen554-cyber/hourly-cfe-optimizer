@@ -16,7 +16,7 @@ cd /home/user/hourly-cfe-optimizer
 ISOS=(CAISO ERCOT PJM NYISO NEISO MISO SPP)
 ENDPOINTS="0.60,0.70,0.75,0.80,0.85,0.90,0.95,0.975,0.99,0.999"
 PATHWAYS="1,1a,2a,2b,3"
-OUT=analysis/reliability-tax/data
+OUT=data/step2.3-pathway
 LOG_DIR=logs
 SUMMARY=$LOG_DIR/rt_step3fix_sweep.log
 
