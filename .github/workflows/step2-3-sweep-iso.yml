@@ -1,72 +1,76 @@
-name: "Step 2.3 v3: Sweep Single ISO"
+name: "Step 2.3: Pathway Sweep"
 
-# Runs the v3 pathway optimizer for one ISO at a time.
-# Each dispatch pushes its own auto/* branch so runs for different ISOs
-# never touch the same files in git. The branch follows the naming convention
-# consumed by .github/workflows/squash-pipeline-branches.yml — run that
-# workflow after a batch of ISO sweeps to consolidate them into master.
-#
-# Outputs per run:
-#   data/step2.3-pathway/<ISO>/pathway*_ep*.json            (20 myopic combos)
-#   data/step2.3-pathway/<ISO>/pathway*_ep*_foresight.json  (12 foresight combos)
-#   data/step2.3-pathway/MANIFEST_<ISO>.parquet             (one per ISO)
-#   data/step2.1-ef/step_2_1_EF_<ISO>_*_peakclean.parquet   (Stage-1 sidecars)
-#
-# The global MANIFEST.json is NOT touched — rebuild it locally from the
-# per-ISO shards after all 7 runs land:
-#
-#   python -c "
-#   import json, glob, pyarrow.parquet as pq
-#   rows = []
-#   for p in sorted(glob.glob('data/step2.3-pathway/MANIFEST_*.parquet')):
-#       rows.extend(pq.read_table(p).to_pylist())
-#   json.dump({'count': len(rows), 'rows': rows},
-#             open('data/step2.3-pathway/MANIFEST.json','w'), indent=2)"
+# Runs step_2_3_reliability_tax_optimized.py for each ISO.
+# Each matrix job runs 20 myopic + 12 foresight = 32 combos for one ISO,
+# commits the per-ISO JSONs + MANIFEST shard + peakclean sidecars.
+# iso=ALL fans out to 7 parallel matrix jobs, then merges into one branch.
+# Prerequisite: Step 2.1 EF parquets, Step 2.2 cost endpoints (for foresight
+# ceilings), Step 3A dispatch cache.
+# Output: data/step2.3-pathway/<ISO>/pathway*_ep*{,_foresight}.json
+#         data/step2.3-pathway/MANIFEST_<ISO>.parquet
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to sweep (32 combos: 20 myopic + 12 foresight for P2a/P2b/P3)'
+        description: 'ISO region to run (ALL = parallel across 7)'
         required: true
+        default: 'ALL'
         type: choice
         options:
-          - ERCOT
+          - ALL
           - CAISO
+          - ERCOT
           - PJM
           - NYISO
           - NEISO
           - MISO
           - SPP
-      base_branch:
-        description: 'Branch to check out (defaults to master)'
+      branch:
+        description: 'Branch to checkout'
         required: false
         default: 'master'
         type: string
 
-# One queue per ISO — prevents accidental double-dispatch of the same ISO.
-# Different ISOs run in parallel because their concurrency groups differ.
-concurrency:
-  group: step2-3-sweep-${{ inputs.iso }}
-  cancel-in-progress: false
-
 env:
+  BRANCH_PREFIX: step2-3-sweep
   PYTHONUNBUFFERED: "1"
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
   sweep:
-    name: "Sweep ${{ inputs.iso }}"
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 180
-    permissions:
-      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.base_branch }}
+          ref: ${{ inputs.branch || 'master' }}
           fetch-depth: 0
+
+      - name: Verify step 2.1 EF parquets exist
+        run: |
+          if [ ! -d data/step2.1-ef ] || ! ls data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*.parquet >/dev/null 2>&1; then
+            echo "ERROR: Step 2.1 EF parquets not found for ${{ matrix.iso }}. Run Step 2.1 first."
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -75,25 +79,17 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install \
-            numpy \
-            pyarrow \
-            scipy \
-            numba \
-            tqdm \
-            requests
+        run: pip install numpy numba pyarrow scipy
 
-      - name: Ensure output dir
-        run: mkdir -p data/step2.3-pathway/${{ inputs.iso }}
+      - name: Ensure output directory
+        run: mkdir -p data/step2.3-pathway/${{ matrix.iso }}
 
-      - name: Run sweep (32 combos: 20 myopic + 12 foresight, one Python process)
+      - name: "Run sweep (32 combos) — ${{ matrix.iso }}"
         env:
-          ISO: ${{ inputs.iso }}
+          ISO: ${{ matrix.iso }}
           # Restrict module-scope loads (dispatch cache, gen profiles, hybrid
           # profiles) to this one ISO — full 7-ISO load OOMs ubuntu-latest's 7GB.
-          ISO_FILTER: ${{ inputs.iso }}
+          ISO_FILTER: ${{ matrix.iso }}
         run: |
           python - <<'PY'
           import os, sys, time
@@ -105,9 +101,9 @@ jobs:
           print(f'[sweep] {iso} done in {time.time()-t0:.1f}s', flush=True)
           PY
 
-      - name: Verify combo count
+      - name: "Verify combo count — ${{ matrix.iso }}"
         env:
-          ISO: ${{ inputs.iso }}
+          ISO: ${{ matrix.iso }}
         run: |
           myopic=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null \
                    | grep -v '_foresight\.json$' | wc -l)
@@ -118,9 +114,9 @@ jobs:
             echo "::warning::${ISO} wrote ${myopic}/20 myopic + ${foresight}/12 foresight — investigate before merging"
           fi
 
-      - name: Build MANIFEST_<ISO>.parquet shard
+      - name: "Build MANIFEST shard — ${{ matrix.iso }}"
         env:
-          ISO: ${{ inputs.iso }}
+          ISO: ${{ matrix.iso }}
         run: |
           python - <<'PY'
           import glob, json, os
@@ -159,59 +155,83 @@ jobs:
           print(f'[manifest] wrote {out} with {len(rows)} rows', flush=True)
           PY
 
-      - name: Commit + push to per-ISO branch
-        env:
-          ISO: ${{ inputs.iso }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-3-${{ matrix.iso }}
+          path: |
+            data/step2.3-pathway/${{ matrix.iso }}/
+            data/step2.3-pathway/MANIFEST_${{ matrix.iso }}.parquet
+            data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_peakclean.parquet
+          retention-days: 30
+          if-no-files-found: warn
+
+  merge:
+    needs: [prepare, sweep]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          branch="auto/${TIMESTAMP}-step2-3-sweep-${ISO}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "${branch}"
-          git add "data/step2.3-pathway/${ISO}/" \
-                  "data/step2.3-pathway/MANIFEST_${ISO}.parquet"
-          # Sidecars may or may not exist (already committed in prior runs) — add if new
-          git add "data/step2.1-ef/" 2>/dev/null || true
-          count=$(ls "data/step2.3-pathway/${ISO}/"pathway*_ep*.json 2>/dev/null | wc -l)
-          git commit -m "step 2.3 — ${ISO} v3 sweep (${count} combos)"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: step2-3-*
+          path: ./artifact-tmp/
+          merge-multiple: true
+
+      - name: Place artifacts
+        run: |
+          mkdir -p data/step2.3-pathway
+          mkdir -p data/step2.1-ef
+          if [ -d artifact-tmp/data/step2.3-pathway ]; then
+            cp -rf artifact-tmp/data/step2.3-pathway/. data/step2.3-pathway/ 2>/dev/null || true
+          fi
+          if [ -d artifact-tmp/data/step2.1-ef ]; then
+            cp -rf artifact-tmp/data/step2.1-ef/. data/step2.1-ef/ 2>/dev/null || true
+          fi
+
+      - name: Commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step2.3-pathway/ 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_*_peakclean.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          total=$(ls data/step2.3-pathway/*/pathway*_ep*.json 2>/dev/null | wc -l)
+          git commit -m "Step 2.3 pathway sweep: ${{ inputs.iso }} (${total} JSONs) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "${branch}" 2>&1 && break
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
             if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "::error::Push failed after $MAX_RETRIES attempts"
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
               exit 1
             fi
             BACKOFF=$((2 ** i))
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
-          echo "COMBO_COUNT=${count}" >> "${GITHUB_ENV}"
-
-      - name: Summary
-        env:
-          ISO: ${{ inputs.iso }}
-        run: |
-          {
-            echo "## step 2.3 — ${ISO} v3 sweep"
-            echo ""
-            echo "- Branch: \`${BRANCH}\`"
-            echo "- Combos: ${COMBO_COUNT}/32 JSON payloads (20 myopic + 12 foresight)"
-            echo "- Manifest shard: \`data/step2.3-pathway/MANIFEST_${ISO}.parquet\`"
-            echo ""
-            echo "Run the **Squash Pipeline Branches** workflow with pattern \`auto/.*step2-3-sweep\` to consolidate all ISO runs into master."
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Upload artifact backup
-        uses: actions/upload-artifact@v4
-        with:
-          name: sweep-${{ inputs.iso }}-${{ github.run_id }}
-          path: |
-            data/step2.3-pathway/${{ inputs.iso }}/pathway*_ep*.json
-            data/step2.3-pathway/MANIFEST_${{ inputs.iso }}.parquet
-            data/step2.1-ef/step_2_1_EF_${{ inputs.iso }}_*_peakclean.parquet
-          retention-days: 30
-          if-no-files-found: warn
