@@ -81,6 +81,19 @@ _EF_BAND_THRESHOLDS = (
     80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9,
 )
 _STAGE1_VERSION = '3'
+_SORTED_BANDS = sorted(_EF_BAND_THRESHOLDS)
+
+
+def _next_band_ceiling(target_pct: float) -> float:
+    """Next EF band threshold strictly above target_pct.
+
+    Used to cap the search window so the optimizer builds incrementally
+    through each CFE band instead of jumping to the global cost optimum.
+    """
+    for b in _SORTED_BANDS:
+        if b > target_pct + 0.01:
+            return float(b)
+    return 100.0
 
 # ─── Module-scope loads (once at import) ─────────────────────────────────────
 
@@ -490,12 +503,13 @@ def existing_gas_vec(iso, clean_pct_vec, level):
 
 
 def _cfe_target(year: int, ep_pct: float,
-                waypoints: tuple = _DEFAULT_CFE_WAYPOINTS) -> float:
+                waypoints: tuple = _DEFAULT_CFE_WAYPOINTS,
+                base_pct: float = 0.0) -> float:
     ey = _endpoint_year(ep_pct)
-    pts = [(y, t) for y, t in [(2025, 0)] + list(waypoints)
+    pts = [(y, t) for y, t in [(BASE_YEAR, base_pct)] + list(waypoints)
            if y < ey] + [(ey, ep_pct)]
     if year <= pts[0][0]:
-        return 0.0
+        return base_pct
     if year >= ey:
         return ep_pct
     for (y0, t0), (y1, t1) in zip(pts, pts[1:]):
@@ -659,7 +673,7 @@ class _Ctx:
     """Precomputed scalars/vectors shared by both solver modes."""
     ef: dict; n: int; peak_vec: np.ndarray; demand_vec: np.ndarray
     amwh: np.ndarray; score: np.ndarray; resid: np.ndarray; cf_share: np.ndarray
-    cfe_tgt: np.ndarray; eg_vec: np.ndarray
+    cfe_tgt: np.ndarray; cfe_ceil: np.ndarray; eg_vec: np.ndarray
     gas_raw_2025: float; exist_base: float; gaf: float; fuel_unit: float
     capex_mw: float; fom_mw: float; exist_fom: float
     delivered: np.ndarray  # (Y, R)
@@ -679,13 +693,21 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
     pv = peak_demand_vec(iso, cfg.demand_growth_level)
     dv = demand_twh_vec(iso, cfg.demand_growth_level)
     amwh = dv * 1e6
-    cfe_tgt = np.array([_cfe_target(y, cfg.endpoint_pct, cfg.cfe_waypoints) for y in YEARS])
+    # Base-year CFE floor: sum of existing clean shares. The CFE target ramp
+    # starts here and slopes linearly to the first SBTi waypoint, preventing
+    # the optimizer from searching the entire EF with a 0% floor in year 1.
+    base_clean_pct = sum(pc.GRID_MIX_SHARES[iso].values())
+    cfe_tgt = np.array([_cfe_target(y, cfg.endpoint_pct, cfg.cfe_waypoints,
+                                     base_pct=base_clean_pct) for y in YEARS])
+    cfe_ceil = np.array([_next_band_ceiling(t) for t in cfe_tgt])
     eg = existing_gas_vec(iso, cfe_tgt, cfg.demand_growth_level)
     gl = cfg.geo_cost_level or ('M' if iso == 'CAISO' else None)
     nuke_eff, ccs_eff, geo_eff = _tranche_lcoe_vecs(iso, cfg)
     slm = {'battery_dispatch_pct': 'battery', 'battery8_dispatch_pct': 'battery8',
            'ldes_dispatch_pct': 'ldes', 'h2_dispatch_pct': 'h2'}
-    sp = [(sc, float(pc.LCOE_TABLES[lk]['Medium'][iso]))
+    _src = getattr(pc, 'STORAGE_REVENUE_CREDITS', {})
+    sp = [(sc, max(0.0, float(pc.LCOE_TABLES[lk]['Medium'][iso])
+                        - float(_src.get(lk, {}).get(iso, 0.0))))
           for sc, lk in slm.items() if float(ef[sc].sum()) > 0]
     uc = float(pc.UPRATE_CAP_TWH[iso])
     # Pre-stack non-CF resource shares into contiguous (n, R) matrix
@@ -706,7 +728,7 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
         score=ef['hourly_match_score'],
         resid=ef['resid_norm_p9997'].astype(np.float64),
         cf_share=ef['clean_firm'].astype(np.float64) / 100.0,
-        cfe_tgt=cfe_tgt, eg_vec=eg,
+        cfe_tgt=cfe_tgt, cfe_ceil=cfe_ceil, eg_vec=eg,
         gas_raw_2025=_GAS_RAW_2025[iso],
         exist_base=float(pc.EXISTING_GAS_CAPACITY_MW[iso]),
         gaf=float(pc.GAS_AVAILABILITY_FACTOR[iso]),
@@ -754,7 +776,7 @@ def _score_chunk_inner(
     # Per-year scalars
     dy, amwh_y, bl_y,
     nuke_eff_yi, ccs_eff_yi, up_eff_yi, geo_eff_yi,
-    eg_yi, cfe_tgt_yi, uc_pct_yi,
+    eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
     # Structural scalars
     uc, gc, cc_cap, gaf, exist_base, gas_raw_2025,
     capex_mw, fom_mw, fuel_unit, exist_fom,
@@ -846,8 +868,12 @@ def _score_chunk_inner(
         else:
             pm[i] = True
 
-        # ── CFE threshold ──
-        cfe_s[i] = score_chunk[i] >= cfe_tgt_yi - 0.5
+        # ── CFE threshold (band window) ──
+        # Candidates must be within [target, next_band_ceiling) so the
+        # optimizer builds incrementally through each CFE band instead of
+        # jumping to the global cost optimum at a higher CFE level.
+        cfe_s[i] = (score_chunk[i] >= cfe_tgt_yi - 0.5
+                     and score_chunk[i] < cfe_ceil_yi)
 
         # ── Gas sizing ──
         gap = resid_chunk[i] * amwh_y / gaf_safe
@@ -863,10 +889,12 @@ def _score_chunk_inner(
                + exist_fom)
 
         # Storage cost (dot product)
+        # storage_chunk is capacity fraction (0-1), storage_costs is $/MW-yr.
+        # dy is TWh; ×1e6 converts to MWh so units match other cost terms ($).
         sc = 0.0
         for j in range(S):
             sc += storage_chunk[i, j] * storage_costs[j]
-        sc *= dy
+        sc *= dy * 1e6
 
         # Sunk-cost: non-CF incremental
         s_nr = 0.0
@@ -896,6 +924,7 @@ def _score_chunk_inner(
 def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
                  dy=None, amwh_y=None, bl_y=None, nuke_eff_yi=None,
                  ccs_eff_yi=None, eg_yi=None, cfe_tgt_yi=None,
+                 cfe_ceil_yi=None,
                  uc_pct_yi=None, up_eff_yi=None, geo_eff_yi=None,
                  delivered_yi=None):
     """Score chunk [s,e) at year yi. Thin wrapper around numba kernel.
@@ -914,6 +943,8 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
         eg_yi = float(ctx.eg_vec[yi])
     if cfe_tgt_yi is None:
         cfe_tgt_yi = float(ctx.cfe_tgt[yi])
+    if cfe_ceil_yi is None:
+        cfe_ceil_yi = float(ctx.cfe_ceil[yi])
     if uc_pct_yi is None:
         uc_pct_yi = float(ctx.uc_pct_y[yi])
     if up_eff_yi is None:
@@ -934,7 +965,7 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
         ctx.ef['ccs_ccgt'][s:e].astype(np.float64),
         dy, amwh_y, bl_y,
         nuke_eff_yi, ccs_eff_yi, up_eff_yi, geo_eff_yi,
-        eg_yi, cfe_tgt_yi, uc_pct_yi,
+        eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
         ctx.uc, ctx.gc, ctx.cc, ctx.gaf, ctx.exist_base, ctx.gas_raw_2025,
         ctx.capex_mw, ctx.fom_mw, ctx.fuel_unit, ctx.exist_fom,
         ctx.pf, RATCHET_TOL,
@@ -1014,6 +1045,7 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         ccs_eff_yi = float(ctx.ccs_eff[yi])
         eg_yi = float(ctx.eg_vec[yi])
         cfe_tgt_yi = float(ctx.cfe_tgt[yi])
+        cfe_ceil_yi = float(ctx.cfe_ceil[yi])
         uc_pct_yi = float(ctx.uc_pct_y[yi])
         up_eff_yi = float(ctx.up_eff[yi])
         geo_eff_yi = float(ctx.geo_eff[yi])
@@ -1028,6 +1060,7 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                 dy=dy, amwh_y=amwh_y, bl_y=bl_y,
                 nuke_eff_yi=nuke_eff_yi, ccs_eff_yi=ccs_eff_yi,
                 eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
+                cfe_ceil_yi=cfe_ceil_yi,
                 uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
                 geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi)
             saved_rs[s:e] = rs
@@ -1035,12 +1068,14 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
             # Single feasibility mask (replaces 4-tier cascade)
             mask = ra & pm & cs & fe
 
-            # Ceiling constraint: can't exceed 2.2A endpoint shares
+            # Ceiling constraint: 2.2A endpoint shares with transition headroom
             if ceilings is not None:
+                progress = yi / max(1, eyi)
+                headroom = 1.0 - progress
                 ceil_ok = np.all(
-                    snr <= ceilings['non_cf_shares'][None, :] + RATCHET_TOL,
+                    snr <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL,
                     axis=1)
-                ceil_ok &= (ctx.cf_share[s:e] <= ceilings['cf_share'] + RATCHET_TOL)
+                ceil_ok &= (ctx.cf_share[s:e] <= ceilings['cf_share'] * (1.0 + headroom) + RATCHET_TOL)
                 mask = mask & ceil_ok
 
             v = np.where(mask, rs, np.inf)
@@ -1374,12 +1409,14 @@ def _serialize_buildout(r: PathwayRunResult):
                            'tx_adder_usd_per_mwh': 0.0})
             prev_tr[tn] = max(prev_tr[tn], cur)
         is_pk = (year == r.stranding['peak_year'])
+        growth = float(r.peak_vec[yi]) / float(pc.PEAK_DEMAND_MW[cfg.iso])
+        scaled_clean_peak = float(ef['clean_peak_hour_mw'][w]) * growth
         out.append({
             'year': year, 'new_vintages': nv,
             'gas_sizing': {
                 'peak_demand_mw': round(float(r.peak_vec[yi]), 2),
                 'ra_peak_mw': round(float(r.peak_vec[yi] * (1 + ra)), 2),
-                'total_clean_peak_mw': round(float(ef['clean_peak_hour_mw'][w]), 2),
+                'total_clean_peak_mw': round(scaled_clean_peak, 2),
                 'existing_gas_used_mw': round(float(r.eg_used[yi]), 2),
                 'new_gas_required_cumulative_mw': round(float(r.cum_gas[yi]), 2),
                 'new_gas_built_this_year_mw': round(r.stranding['fleet_size_mw'], 2) if is_pk else 0.0,
