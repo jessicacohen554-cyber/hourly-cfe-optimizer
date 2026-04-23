@@ -37,6 +37,7 @@ if _ISO_FILTER:
     ISOS = [_ISO_FILTER]
 
 PATHWAYS = ('1', '1a', '2a', '2b', '3')
+_FORESIGHT_PATHWAYS = ('2a', '2b', '3')
 BASE_YEAR, END_YEAR = 2025, 2050
 YEARS = list(range(BASE_YEAR, END_YEAR + 1))
 N_YEARS = len(YEARS)
@@ -121,8 +122,8 @@ def _load_gen_profiles():
     t = pq.read_table(_ROOT / 'data' / 'eia-930' / 'eia_generation_profiles.parquet')
     target_year = pacompute.max(t.column('year')).as_py()
     t = t.filter(pacompute.equal(t['year'], target_year))
-    iso_arr = np.array(t.column('iso').to_pylist())
-    fuel_arr = np.array(t.column('fuel').to_pylist())
+    iso_arr = t.column('iso').to_pandas().values
+    fuel_arr = t.column('fuel').to_pandas().values
     hour_arr, val_arr = t.column('hour').to_numpy(), t.column('value').to_numpy()
     out: dict[str, dict[str, np.ndarray]] = {}
     for iso in ISOS:
@@ -163,7 +164,7 @@ def _load_demand_profiles():
             out[iso] = flat * float(pc.REGIONAL_DEMAND_TWH[iso]) * 1e6
         return out
     t = pq.read_table(path, columns=['iso', 'year', 'hour', 'normalized'])
-    iso_arr = np.array(t.column('iso').to_pylist())
+    iso_arr = t.column('iso').to_pandas().values
     year_arr, hour_arr = t.column('year').to_numpy(), t.column('hour').to_numpy()
     norm_arr = t.column('normalized').to_numpy()
     for iso in ISOS:
@@ -276,9 +277,6 @@ def _endpoint_year(pct: float) -> int:
     return int(pc.THRESHOLD_TARGET_YEARS[pct])
 
 
-_DEFAULT_CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95))
-
-
 @dataclass(frozen=True)
 class RunConfig:
     iso: str; pathway: str; endpoint: float; endpoint_pct: float
@@ -292,7 +290,8 @@ class RunConfig:
 
     @property
     def output_path(self) -> Path:
-        return OUTPUT_BASE / self.iso / f'pathway{self.pathway}_{_ep_tag(self.endpoint_pct)}.json'
+        mode_tag = '_foresight' if self.solver_mode == 'foresight' else ''
+        return OUTPUT_BASE / self.iso / f'pathway{self.pathway}_{_ep_tag(self.endpoint_pct)}{mode_tag}.json'
 
 
 # ─── Numba-accelerated L1 nearest-neighbor ──────────────────────────────────
@@ -335,7 +334,7 @@ def _read_ef_table(iso: str, threshold) -> pa.Table:
     name = _threshold_tag(threshold)
     parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
     if parts:
-        return pa.concat_tables([pq.read_table(p) for p in parts], promote_options='permissive')
+        return pa.concat_tables([pq.read_table(p) for p in parts])
     return pq.read_table(EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet')
 
 
@@ -440,8 +439,8 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
         pc_tables.append(_load_or_build_peakclean(iso, t))
     if not ef_tables:
         raise FileNotFoundError(f"No EF bands for {iso} under {EF_DIR}")
-    ef = pa.concat_tables(ef_tables, promote_options='permissive')
-    pctbl = pa.concat_tables(pc_tables, promote_options='permissive')
+    ef = pa.concat_tables(ef_tables, promote_options='default')
+    pctbl = pa.concat_tables(pc_tables, promote_options='default')
     n = ef.num_rows
     if pctbl.num_rows != n:
         raise RuntimeError(f"Peakclean rows ({pctbl.num_rows}) != EF rows ({n}) for {iso}")
@@ -481,6 +480,9 @@ def existing_gas_vec(iso, clean_pct_vec, level):
         out[i] = max(0.0, base - _twh_to_gw(cum, _FOSSIL_CFS['gas']) * 1000.0
                      ) * pc.GAS_AVAILABILITY_FACTOR[iso]
     return out
+
+
+_DEFAULT_CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95))
 
 
 def _cfe_target(year: int, ep_pct: float,
@@ -1388,7 +1390,7 @@ def serialize_v2(r: PathwayRunResult) -> dict:
     cfg = r.config
     return {
         'schema_version': 2,
-        'run_key': f'{cfg.iso}__pathway{cfg.pathway}__{_ep_tag(cfg.endpoint_pct)}',
+        'run_key': f'{cfg.iso}__pathway{cfg.pathway}__{_ep_tag(cfg.endpoint_pct)}{"__foresight" if cfg.solver_mode == "foresight" else ""}',
         'config': {
             'iso': cfg.iso, 'pathway': cfg.pathway,
             'endpoint': cfg.endpoint, 'endpoint_pct': cfg.endpoint_pct,
@@ -1451,6 +1453,8 @@ def _run_iso_all(iso):
     for p in PATHWAYS:
         for ep in ENDPOINT_TO_THRESHOLD:
             _run_one(iso, p, ep)
+            if p in _FORESIGHT_PATHWAYS:
+                _run_one(iso, p, ep, solver_mode='foresight')
             _lcoe.cache_clear(); _tx.cache_clear()
             gc.collect()
 
