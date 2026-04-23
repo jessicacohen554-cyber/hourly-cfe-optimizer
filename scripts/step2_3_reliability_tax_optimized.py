@@ -443,8 +443,11 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
         pc_tables.append(_load_or_build_peakclean(iso, t))
     if not ef_tables:
         raise FileNotFoundError(f"No EF bands for {iso} under {EF_DIR}")
-    ef = pa.concat_tables(ef_tables, promote_options='default')
-    pctbl = pa.concat_tables(pc_tables, promote_options='default')
+    # 'permissive' unifies string/large_string (and widens numeric types) across
+    # bands — some EF parquets were written with string, others with large_string,
+    # so the stricter 'default' rejects the concat with an ArrowTypeError.
+    ef = pa.concat_tables(ef_tables, promote_options='permissive')
+    pctbl = pa.concat_tables(pc_tables, promote_options='permissive')
     n = ef.num_rows
     if pctbl.num_rows != n:
         raise RuntimeError(f"Peakclean rows ({pctbl.num_rows}) != EF rows ({n}) for {iso}")
