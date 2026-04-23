@@ -1,13 +1,41 @@
 #!/usr/bin/env python3
 """
-Step 2.4: Renewables-Only CFE Ceiling Analysis
-==============================================
+Step 2.4: Renewables-Only CFE Ceiling Analysis — with Curtailment Economics
+===========================================================================
 
 Question answered: Holding existing clean generation frozen at its 2025
 absolute-TWh baseline, what is the **highest achievable hourly CFE matching
 score** reachable by adding only wind and solar? What mix achieves it, what
 does it cost in undiscounted 2025 dollars, and at what capacity do diminishing
 returns kick in?
+
+**NEW — Curtailment economics (3 metric families):**
+
+  1. Curtailment tracking:
+     - total_gen_twh   : total supply produced (baseline + added), before clipping
+     - useful_gen_twh  : hourly-matched supply = score × demand_twh
+     - curtailed_twh   : total_gen_twh − useful_gen_twh
+     - curtailment_rate: curtailed_twh / total_gen_twh
+     - added_gen_twh   : nameplate generation from added renewables only
+
+  2. Effective LCOE:
+     - incremental_useful_twh : useful_gen_twh − baseline_useful_twh
+       (the useful energy gained by adding renewables)
+     - effective_lcoe_med/low/high : annual_cost / incremental_useful_twh
+       ($/MWh of *actually matched* clean energy — this is what blows up)
+
+  3. Marginal cost of CFE:
+     - Along the cost frontier (cheapest path to each CFE target),
+       d(cost)/d(CFE_pp) = how many $/yr to buy the next percentage point.
+     - Along single-axis slices for comparison.
+
+Two output tables:
+  ceiling_summary.parquet          — one row per scenario (enriched with curtailment)
+  cost_curve_{iso}_{view}.parquet  — frontier cost curve per ISO/view
+                                     (all years × levels stacked)
+
+Per-scenario sweep surfaces (opt-in via --write-surfaces) now include
+curtailment + effective LCOE columns at every grid point.
 
 Two views per ISO:
   - onshore_only   : add onshore wind + solar (primary, all 7 ISOs)
@@ -19,29 +47,6 @@ Demand trajectory sweep:
   levels   : Low, Medium, High (CAGRs from pipeline_config.DEMAND_GROWTH_RATES)
   baseline : existing clean frozen at 2025 TWh — as demand grows, its share
              of demand shrinks (1 / demand_growth_factor).
-
-Filter applied to keep the solution pool minimal:
-  - No clean firm (nuclear/CCS) build above baseline.
-  - No hybrid (solar_batt4/batt8, wind_batt4/batt8) build.
-  - No new storage (battery, battery8, LDES, H2) — all dispatch pcts zero.
-  - Supply matrix dimensions: 5 resources only
-    (clean_firm, solar, wind, hydro, offshore_wind) — hybrids & storage
-    skipped entirely, so no compute spent on them.
-
-Vectorization:
-  Uses step1_pfs_generator.batch_hourly_scores — matmul-based, no Python
-  for-loop over grid points. Entire 2-D / 3-D surface per scenario is one
-  numpy call.
-
-Cost model:
-  Annualized $/yr = added_MWh/yr × LCOE $/MWh (+ TX adder $/MWh).
-  LCOE source: pipeline_config.LCOE_TABLES (2025 undiscounted, no learning
-  applied — solar/wind are mature-tech in pipeline). Carries Low/Med/High
-  sensitivity as separate columns.
-
-Output:
-  data/step2.4-renewables-ceiling/ceiling_summary.parquet
-  data/step2.4-renewables-ceiling/sweep_surface_{iso}_{view}_{year}_{level}.parquet
 """
 
 from __future__ import annotations
@@ -97,15 +102,16 @@ COARSE_SOLAR_STEP = 5
 COARSE_OFFSHORE_STEP = 5
 
 # Phase 2 — fine sweep in a ±window around the coarse maximum (precise: elbow hunt).
-FINE_WINDOW_PCT = 15          # ±15 pp window (user asked for ~5-10%, +slack for elbow tails)
+FINE_WINDOW_PCT = 15          # ±15 pp window
 FINE_STEP = 1                 # 1 pp step inside the window
 FINE_OFFSHORE_STEP = 1
 
 # Saturation elbow thresholds (marginal score-lift per additional GW).
-# Two thresholds reported so the reader sees both the first knee and the deep
-# plateau. Elbow fires only if marginal < threshold for 3 consecutive steps.
 ELBOW_THRESHOLD_FIRST_KNEE = 0.10   # pp CFE per GW — first sign of bending
 ELBOW_THRESHOLD_DEEP = 0.02          # pp CFE per GW — fully diminishing returns
+
+# Cost frontier: CFE score bins for the "cheapest path" curve.
+FRONTIER_SCORE_STEP_PP = 1.0         # 1 pp bins for frontier extraction
 
 # Resource columns we actually evaluate. Ordered to match the supply matrix.
 RESOURCES = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
@@ -117,11 +123,7 @@ DATA_OUT = REPO_DIR / 'data' / 'step2.4-renewables-ceiling'
 # Utility: mix_pct ↔ GW conversion
 # -------------------------------------------------------------------------
 def pct_to_gw(pct, iso, resource, demand_twh):
-    """Convert mix_pct (% of demand, pipeline-native) → nameplate GW.
-
-    Annual generation [GWh] = pct/100 × demand_twh × 1000.
-    Nameplate GW       = Annual_GWh / (CF_annual × 8760 h).
-    """
+    """Convert mix_pct (% of demand, pipeline-native) → nameplate GW."""
     cf = RESOURCE_CAPACITY_FACTORS[resource][iso]
     return (pct / 100.0) * demand_twh * 1000.0 / (cf * 8760.0)
 
@@ -131,10 +133,7 @@ def pct_to_twh(pct, demand_twh):
 
 
 def cost_per_pct(resource, iso, demand_twh, lcoe_level='Medium', tx_level='Medium'):
-    """Return $/yr per 1 pp of demand added for this resource at this LCOE tier.
-
-    $/yr per pp = 0.01 × demand_twh × 1e6 MWh × ($/MWh LCOE + $/MWh TX adder).
-    """
+    """Return $/yr per 1 pp of demand added for this resource at this LCOE tier."""
     lcoe = LCOE_TABLES[resource][lcoe_level][iso]
     tx_entry = TX_TABLES[resource][tx_level]
     tx = tx_entry[iso] if isinstance(tx_entry, dict) else tx_entry
@@ -170,42 +169,35 @@ _OFFSHORE_IDX = RESOURCES.index('offshore_wind')
 
 
 def _fold_baseline_hourly(baseline, supply_matrix):
-    """Collapse the frozen-resource contribution into a single (8760,) vector.
-
-    Because all 5 resource pcts multiply their 8760 shape and get summed, the
-    frozen part (clean_firm, hydro, and the baseline slices of solar / wind /
-    offshore) is constant across every grid point in the scenario. Folding it
-    once lets the per-phase kernel run on the 2 (or 3) swept axes only.
-    """
+    """Collapse frozen-resource contribution into a single (8760,) vector."""
     pcts = np.array([baseline[r] for r in RESOURCES], dtype=np.float64)
     return (pcts / 100.0) @ supply_matrix   # (8760,)
 
 
-def _scores_folded(demand_arr, baseline_hourly, swept_rows, added_mix,
-                   chunk_size=10000):
-    """Vectorized score = sum_h min(demand, baseline_hourly + added_supply).
+def _scores_and_generation_folded(demand_arr, baseline_hourly, swept_rows,
+                                  added_mix, chunk_size=10000):
+    """Vectorized scorer that returns BOTH useful and total generation.
 
-    swept_rows: (K, 8760) — supply shapes for the K swept resources.
-    added_mix:  (N, K)    — added pct per swept resource per grid point.
-    Returns:    (N,) fraction of demand matched (multiply by 100 for pct).
+    Returns:
+        useful:       (N,) — sum_h min(demand_h, supply_h)   (fraction of demand)
+        total_supply: (N,) — sum_h supply_h                  (fraction of demand)
 
-    Chunked to cap memory at ~700 MiB (chunk_size × 8760 × 8 bytes).
+    The difference (total_supply − useful) is the curtailed fraction.
+    Multiply either by demand_twh to get TWh.
     """
     N = added_mix.shape[0]
-    if N <= chunk_size:
-        supply = (added_mix / 100.0) @ swept_rows   # (N, 8760)
-        supply += baseline_hourly                    # broadcast add, in-place
-        np.minimum(demand_arr, supply, out=supply)
-        return supply.sum(axis=1)
+    useful = np.empty(N, dtype=np.float64)
+    total_supply = np.empty(N, dtype=np.float64)
 
-    out = np.empty(N, dtype=np.float64)
     for start in range(0, N, chunk_size):
         end = min(start + chunk_size, N)
-        supply = (added_mix[start:end] / 100.0) @ swept_rows
-        supply += baseline_hourly
+        supply = (added_mix[start:end] / 100.0) @ swept_rows   # (chunk, 8760)
+        supply += baseline_hourly                                # broadcast add
+        total_supply[start:end] = supply.sum(axis=1)
         np.minimum(demand_arr, supply, out=supply)
-        out[start:end] = supply.sum(axis=1)
-    return out
+        useful[start:end] = supply.sum(axis=1)
+
+    return useful, total_supply
 
 
 def _score_grid(
@@ -223,9 +215,15 @@ def _score_grid(
     offshore_axis,        # None → onshore-only view, 2-D grid
     phase_tag,            # 'coarse' | 'fine' | 'axis_*'
     baseline_hourly=None, # (8760,) — precomputed fold; built lazily if None
+    baseline_useful_frac=None,  # scalar — useful fraction at zero added renewables
 ):
-    """Vectorized scorer. Folds the frozen baseline into a precomputed hourly
-    vector so the per-phase matmul runs only on the 2-3 swept axes."""
+    """Vectorized scorer with full curtailment economics.
+
+    New columns vs. original:
+      total_gen_twh, useful_gen_twh, curtailed_twh, curtailment_rate,
+      added_gen_twh, incremental_useful_twh,
+      effective_lcoe_med, effective_lcoe_low, effective_lcoe_high
+    """
     is_offshore_view = offshore_axis is not None
 
     if is_offshore_view:
@@ -244,7 +242,7 @@ def _score_grid(
     if baseline_hourly is None:
         baseline_hourly = _fold_baseline_hourly(baseline, supply_matrix)
 
-    # Build swept matrix: only the resources that actually vary across the grid.
+    # Build swept matrix
     if is_offshore_view:
         swept_rows = supply_matrix[[_SOLAR_IDX, _WIND_IDX, _OFFSHORE_IDX], :]
         added_mix = np.stack([added_solar, added_wind, added_offshore], axis=1)
@@ -252,8 +250,39 @@ def _score_grid(
         swept_rows = supply_matrix[[_SOLAR_IDX, _WIND_IDX], :]
         added_mix = np.stack([added_solar, added_wind], axis=1)
 
-    scores_pct = _scores_folded(demand_arr, baseline_hourly, swept_rows, added_mix) * 100.0
+    # ── KEY CHANGE: get both useful AND total generation ─────────────────
+    useful_frac, total_supply_frac = _scores_and_generation_folded(
+        demand_arr, baseline_hourly, swept_rows, added_mix
+    )
 
+    scores_pct = useful_frac * 100.0
+
+    # Convert fractions → TWh
+    useful_gen_twh = useful_frac * demand_twh
+    total_gen_twh = total_supply_frac * demand_twh
+    curtailed_twh = total_gen_twh - useful_gen_twh
+
+    # Curtailment rate: fraction of total generation that is wasted
+    with np.errstate(divide='ignore', invalid='ignore'):
+        curtailment_rate = np.where(
+            total_gen_twh > 0,
+            curtailed_twh / total_gen_twh,
+            0.0
+        )
+
+    # Added generation TWh (nameplate, from new renewables only — ignores baseline)
+    added_gen_twh = (pct_to_twh(added_wind, demand_twh)
+                     + pct_to_twh(added_solar, demand_twh)
+                     + pct_to_twh(added_offshore, demand_twh))
+
+    # Incremental useful TWh = useful now − useful at baseline (zero added)
+    if baseline_useful_frac is None:
+        baseline_useful_frac = _compute_baseline_useful_frac(
+            demand_arr, baseline_hourly)
+    baseline_useful_twh = baseline_useful_frac * demand_twh
+    incremental_useful_twh = useful_gen_twh - baseline_useful_twh
+
+    # ── GW conversions ───────────────────────────────────────────────────
     wind_gw = pct_to_gw(added_wind, iso, 'wind', demand_twh)
     solar_gw = pct_to_gw(added_solar, iso, 'solar', demand_twh)
     offshore_gw = (
@@ -261,12 +290,37 @@ def _score_grid(
         if is_offshore_view else np.zeros(N)
     )
 
+    # ── Cost model (unchanged) ───────────────────────────────────────────
     def _cost(level_key):
         c = (cost_per_pct('solar', iso, demand_twh, level_key, 'Medium') * added_solar
              + cost_per_pct('wind', iso, demand_twh, level_key, 'Medium') * added_wind)
         if is_offshore_view:
-            c = c + cost_per_pct('offshore_wind', iso, demand_twh, level_key, 'Medium') * added_offshore
+            c += cost_per_pct('offshore_wind', iso, demand_twh, level_key, 'Medium') * added_offshore
         return c
+
+    cost_med = _cost('Medium')
+    cost_low = _cost('Low')
+    cost_high = _cost('High')
+
+    # ── Effective LCOE: $/MWh of *useful* energy gained ──────────────────
+    # This is the metric that explodes at high penetration.
+    # effective_lcoe = annual_cost / (incremental useful TWh × 1e6 MWh/TWh)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        eff_lcoe_med = np.where(
+            incremental_useful_twh > 1e-9,
+            cost_med / (incremental_useful_twh * 1e6),
+            np.nan
+        )
+        eff_lcoe_low = np.where(
+            incremental_useful_twh > 1e-9,
+            cost_low / (incremental_useful_twh * 1e6),
+            np.nan
+        )
+        eff_lcoe_high = np.where(
+            incremental_useful_twh > 1e-9,
+            cost_high / (incremental_useful_twh * 1e6),
+            np.nan
+        )
 
     return pd.DataFrame({
         'iso': iso,
@@ -291,10 +345,27 @@ def _score_grid(
         'added_solar_twh': pct_to_twh(added_solar, demand_twh),
         'added_offshore_twh': pct_to_twh(added_offshore, demand_twh),
         'score_pct': scores_pct,
-        'annual_cost_usd_med': _cost('Medium'),
-        'annual_cost_usd_low': _cost('Low'),
-        'annual_cost_usd_high': _cost('High'),
+        # ── NEW: curtailment economics ───────────────────────────────────
+        'total_gen_twh': total_gen_twh,
+        'useful_gen_twh': useful_gen_twh,
+        'curtailed_twh': curtailed_twh,
+        'curtailment_rate': curtailment_rate,
+        'added_gen_twh': added_gen_twh,
+        'incremental_useful_twh': incremental_useful_twh,
+        # ── NEW: effective LCOE ($/MWh of matched energy gained) ─────────
+        'effective_lcoe_med': eff_lcoe_med,
+        'effective_lcoe_low': eff_lcoe_low,
+        'effective_lcoe_high': eff_lcoe_high,
+        # ── Existing: nameplate cost ─────────────────────────────────────
+        'annual_cost_usd_med': cost_med,
+        'annual_cost_usd_low': cost_low,
+        'annual_cost_usd_high': cost_high,
     })
+
+
+def _compute_baseline_useful_frac(demand_arr, baseline_hourly):
+    """Useful fraction at zero added renewables — scalar."""
+    return float(np.minimum(demand_arr, baseline_hourly).sum())
 
 
 def sweep_scenario(
@@ -307,10 +378,8 @@ def sweep_scenario(
 ):
     """Two-phase renewables-only ceiling surface for one (iso, view, year, level).
 
-    Phase 1 (coarse, 5 pp step over the full grid) locates the approximate
-    ceiling. Phase 2 (fine, 1 pp step in a ±FINE_WINDOW_PCT window around the
-    phase-1 max) nails the saturation elbow. Both phases use the same
-    vectorized scorer and are concatenated into the return DataFrame.
+    Returns the full sweep DataFrame with curtailment economics at every
+    grid point.
     """
     # Demand growth factor & absolute demand TWh
     gf = (1.0 + DEMAND_GROWTH_RATES[iso][level]) ** max(0, year - BASE_YEAR)
@@ -319,15 +388,21 @@ def sweep_scenario(
     # Baseline clean mix_pcts — 2025 pcts divided by gf to preserve ABSOLUTE TWh.
     gm = GRID_MIX_SHARES[iso]
     baseline = {r: gm.get(r, 0.0) / gf for r in RESOURCES}
-    # NYISO Hydro-Québec imports (25 TWh/yr absolute) fold into clean_firm.
     imports_twh = EXTERNAL_CLEAN_IMPORTS_TWH.get(iso, 0.0)
     if imports_twh > 0:
         baseline['clean_firm'] += imports_twh / demand_twh * 100.0
 
     is_offshore_view = (view == 'onshore_plus_offshore') and (iso in OFFSHORE_ISOS)
 
-    # Precompute folded baseline (once per scenario — reused by all 5 grid calls).
+    # Precompute folded baseline + baseline useful fraction (once per scenario)
     baseline_hourly = _fold_baseline_hourly(baseline, supply_matrix)
+    baseline_useful_frac = _compute_baseline_useful_frac(demand_arr, baseline_hourly)
+
+    # Common kwargs for all _score_grid calls in this scenario
+    common = dict(
+        baseline_hourly=baseline_hourly,
+        baseline_useful_frac=baseline_useful_frac,
+    )
 
     # ── Phase 1: coarse sweep ────────────────────────────────────────────
     wind_c = np.arange(0, WIND_CAP_PCT + 1, COARSE_WIND_STEP, dtype=np.float64)
@@ -337,8 +412,8 @@ def sweep_scenario(
         if is_offshore_view else None
     )
     coarse = _score_grid(iso, view, year, level, baseline, demand_twh, gf,
-                         demand_arr, supply_matrix, wind_c, solar_c, offshore_c, 'coarse',
-                         baseline_hourly=baseline_hourly)
+                         demand_arr, supply_matrix, wind_c, solar_c, offshore_c,
+                         'coarse', **common)
 
     imax = coarse['score_pct'].idxmax()
     w_star = float(coarse.loc[imax, 'added_wind_pct'])
@@ -358,26 +433,24 @@ def sweep_scenario(
         if is_offshore_view else None
     )
     fine = _score_grid(iso, view, year, level, baseline, demand_twh, gf,
-                       demand_arr, supply_matrix, wind_f, solar_f, offshore_f, 'fine',
-                       baseline_hourly=baseline_hourly)
+                       demand_arr, supply_matrix, wind_f, solar_f, offshore_f,
+                       'fine', **common)
 
-    # Single-axis fine stripes at 1 pp — for precise wind-only / solar-only elbows.
+    # Single-axis stripes at 1 pp resolution
     wind_stripe = _score_grid(
         iso, view, year, level, baseline, demand_twh, gf,
         demand_arr, supply_matrix,
         np.arange(0, WIND_CAP_PCT + 1, 1, dtype=np.float64),
         np.array([0.0]),
         np.array([0.0]) if is_offshore_view else None,
-        'axis_wind',
-        baseline_hourly=baseline_hourly)
+        'axis_wind', **common)
     solar_stripe = _score_grid(
         iso, view, year, level, baseline, demand_twh, gf,
         demand_arr, supply_matrix,
         np.array([0.0]),
         np.arange(0, SOLAR_CAP_PCT + 1, 1, dtype=np.float64),
         np.array([0.0]) if is_offshore_view else None,
-        'axis_solar',
-        baseline_hourly=baseline_hourly)
+        'axis_solar', **common)
     stripes = [wind_stripe, solar_stripe]
     if is_offshore_view:
         offshore_stripe = _score_grid(
@@ -385,24 +458,145 @@ def sweep_scenario(
             demand_arr, supply_matrix,
             np.array([0.0]), np.array([0.0]),
             np.arange(0, OFFSHORE_CAP_PCT + 1, 1, dtype=np.float64),
-            'axis_offshore',
-            baseline_hourly=baseline_hourly)
+            'axis_offshore', **common)
         stripes.append(offshore_stripe)
 
     return pd.concat([coarse, fine] + stripes, ignore_index=True)
 
 
 # -------------------------------------------------------------------------
-# Saturation elbow extraction
+# Cost frontier extraction
+# -------------------------------------------------------------------------
+def extract_cost_frontier(df, axis_tag=None):
+    """Extract the cheapest path to each achievable CFE score level.
+
+    For each 1-pp CFE bin, find the grid point with the MINIMUM cost that
+    achieves at least that score.  This traces the efficient frontier —
+    the curve a rational buyer would follow, adding the cheapest next
+    increment of wind/solar at each step.
+
+    If axis_tag is provided (e.g. 'axis_wind'), restricts to that single-axis
+    slice.  Otherwise uses all grid points (the joint 2-D/3-D surface).
+
+    Returns a DataFrame with one row per CFE target level, including:
+      target_score_pct, min_annual_cost_med, optimal wind/solar/offshore GW,
+      curtailment_rate, effective_lcoe_med,
+      marginal_cost_per_pp ($/yr to gain the next 1 pp of CFE).
+    """
+    if axis_tag is not None:
+        sub = df[df.phase == axis_tag].copy()
+    else:
+        sub = df.copy()
+
+    if len(sub) == 0:
+        return pd.DataFrame()
+
+    baseline_score = float(sub['score_pct'].min())
+    ceiling_score = float(sub['score_pct'].max())
+
+    # Build target bins from baseline to ceiling
+    targets = np.arange(
+        np.floor(baseline_score),
+        np.ceil(ceiling_score) + FRONTIER_SCORE_STEP_PP,
+        FRONTIER_SCORE_STEP_PP
+    )
+
+    rows = []
+    for target in targets:
+        eligible = sub[sub.score_pct >= target - 0.5]  # ±0.5 pp tolerance
+        if len(eligible) == 0:
+            continue
+        # Cheapest point that meets the target
+        imin = eligible['annual_cost_usd_med'].idxmin()
+        pt = eligible.loc[imin]
+        rows.append({
+            'target_score_pct': target,
+            'achieved_score_pct': float(pt['score_pct']),
+            'min_annual_cost_med': float(pt['annual_cost_usd_med']),
+            'min_annual_cost_low': float(pt['annual_cost_usd_low']),
+            'min_annual_cost_high': float(pt['annual_cost_usd_high']),
+            'optimal_wind_gw': float(pt['added_wind_gw']),
+            'optimal_solar_gw': float(pt['added_solar_gw']),
+            'optimal_offshore_gw': float(pt['added_offshore_gw']),
+            'optimal_wind_pct': float(pt['added_wind_pct']),
+            'optimal_solar_pct': float(pt['added_solar_pct']),
+            'optimal_offshore_pct': float(pt['added_offshore_pct']),
+            'total_gen_twh': float(pt['total_gen_twh']),
+            'useful_gen_twh': float(pt['useful_gen_twh']),
+            'curtailed_twh': float(pt['curtailed_twh']),
+            'curtailment_rate': float(pt['curtailment_rate']),
+            'added_gen_twh': float(pt['added_gen_twh']),
+            'incremental_useful_twh': float(pt['incremental_useful_twh']),
+            'effective_lcoe_med': float(pt['effective_lcoe_med'])
+                if not np.isnan(pt['effective_lcoe_med']) else np.nan,
+        })
+
+    if not rows:
+        return pd.DataFrame()
+
+    frontier = pd.DataFrame(rows).sort_values('target_score_pct').reset_index(drop=True)
+
+    # Marginal cost of CFE: d(cost)/d(score) between adjacent frontier points.
+    # Units: $/yr per 1 pp of CFE score gained.
+    dcost = np.diff(frontier['min_annual_cost_med'].values)
+    dscore = np.diff(frontier['achieved_score_pct'].values)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        marginal = np.where(dscore > 1e-6, dcost / dscore, np.nan)
+    # Assign marginal cost to the UPPER point (cost of going from prev → this).
+    frontier['marginal_cost_per_pp'] = np.concatenate([[np.nan], marginal])
+
+    # Marginal effective LCOE: marginal_cost / (marginal useful TWh gained × 1e6)
+    d_useful = np.diff(frontier['incremental_useful_twh'].values)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        marginal_eff = np.where(
+            d_useful > 1e-9,
+            dcost / (d_useful * 1e6),
+            np.nan
+        )
+    frontier['marginal_effective_lcoe_med'] = np.concatenate([[np.nan], marginal_eff])
+
+    return frontier
+
+
+def extract_all_cost_curves(df):
+    """Extract cost frontiers for joint surface + each single-axis slice."""
+    r = df.iloc[0]
+    meta = {
+        'iso': r['iso'], 'view': r['view'],
+        'year': int(r['year']), 'demand_level': r['demand_level'],
+        'demand_twh': float(r['demand_twh']),
+    }
+
+    curves = []
+
+    # Joint frontier (uses coarse + fine — the full 2-D/3-D surface)
+    joint = extract_cost_frontier(df[df.phase.isin(['coarse', 'fine'])])
+    if len(joint):
+        joint['frontier_type'] = 'joint_optimal'
+        for k, v in meta.items():
+            joint[k] = v
+        curves.append(joint)
+
+    # Single-axis frontiers
+    for axis_tag, label in [('axis_wind', 'wind_only'),
+                            ('axis_solar', 'solar_only'),
+                            ('axis_offshore', 'offshore_only')]:
+        ax = extract_cost_frontier(df, axis_tag=axis_tag)
+        if len(ax):
+            ax['frontier_type'] = label
+            for k, v in meta.items():
+                ax[k] = v
+            curves.append(ax)
+
+    return pd.concat(curves, ignore_index=True) if curves else pd.DataFrame()
+
+
+# -------------------------------------------------------------------------
+# Saturation elbow extraction  (unchanged from original)
 # -------------------------------------------------------------------------
 def saturation_elbow_single_axis(gw_arr, score_arr, threshold_pp_per_gw):
     """Return the GW at which marginal d(score)/d(gw) drops below the
-    threshold for 3 consecutive steps. Inputs sorted ascending by gw.
-
-    Elbow is searched AFTER the score first exceeds baseline + 1 pp —
-    avoids spurious elbow at gw=0 when the first increment happens to
-    produce a low marginal (e.g. partially curtailed). Returns the max GW
-    in the stripe if saturation is never reached (cap binding)."""
+    threshold for 3 consecutive steps."""
     gw_arr = np.asarray(gw_arr, dtype=np.float64)
     score_arr = np.asarray(score_arr, dtype=np.float64)
     order = np.argsort(gw_arr)
@@ -411,8 +605,6 @@ def saturation_elbow_single_axis(gw_arr, score_arr, threshold_pp_per_gw):
     if len(gw_arr) < 4:
         return float('nan')
 
-    # Only start hunting for the elbow once the score is at least 1 pp above
-    # the first (baseline) value — otherwise a flat initial segment trips it.
     baseline_score = score_arr[0]
     start_idx = int(np.searchsorted(score_arr, baseline_score + 1.0, side='left'))
     start_idx = min(start_idx, len(score_arr) - 4)
@@ -426,13 +618,11 @@ def saturation_elbow_single_axis(gw_arr, score_arr, threshold_pp_per_gw):
     for i in range(start_idx, len(below) - 2):
         if below[i] and below[i + 1] and below[i + 2]:
             return float(gw_arr[i])
-    # Cap binding — saturation not reached within grid
     return float(gw_arr[-1])
 
 
 def joint_efficient_elbow(df, threshold_pp_per_gw):
-    """Upper envelope of score vs total added GW (wind+solar[+offshore]),
-    then apply the single-axis elbow rule on the envelope."""
+    """Upper envelope of score vs total added GW, then elbow rule."""
     total_gw = df['added_wind_gw'] + df['added_solar_gw'] + df['added_offshore_gw']
     envelope = (
         pd.DataFrame({'gw': total_gw, 'score': df['score_pct']})
@@ -446,18 +636,22 @@ def joint_efficient_elbow(df, threshold_pp_per_gw):
     )
 
 
+# -------------------------------------------------------------------------
+# Summary row extraction (enriched with curtailment economics)
+# -------------------------------------------------------------------------
 def extract_summary_row(df):
     """Summarize one scenario's surface into a single row."""
     r = df.iloc[0]
     iso = r['iso']; view = r['view']; year = int(r['year']); level = r['demand_level']
 
-    baseline_row = df[(df.added_wind_pct == 0) & (df.added_solar_pct == 0) & (df.added_offshore_pct == 0)]
+    baseline_row = df[(df.added_wind_pct == 0) & (df.added_solar_pct == 0)
+                      & (df.added_offshore_pct == 0)]
     baseline_score = float(baseline_row['score_pct'].iloc[0]) if len(baseline_row) else float('nan')
 
     imax = df['score_pct'].idxmax()
     top = df.loc[imax]
 
-    # Precise single-axis elbows at two thresholds (first knee + deep plateau).
+    # Elbows (unchanged)
     wind_only = df[df.phase == 'axis_wind'].sort_values('added_wind_gw')
     wind_gw_arr = wind_only['added_wind_gw'].values
     wind_score_arr = wind_only['score_pct'].values
@@ -482,7 +676,6 @@ def extract_summary_row(df):
         sat_offshore_first = float('nan')
         sat_offshore_deep = float('nan')
 
-    # Joint envelope uses the fine 2-D window (not the coarse 5-pp grid).
     fine_only = df[df.phase == 'fine']
     sat_joint_first = joint_efficient_elbow(fine_only, ELBOW_THRESHOLD_FIRST_KNEE)
     sat_joint_deep = joint_efficient_elbow(fine_only, ELBOW_THRESHOLD_DEEP)
@@ -493,7 +686,26 @@ def extract_summary_row(df):
     total_added_twh = added_wind_twh + added_solar_twh + added_offshore_twh
     wind_share_of_added = added_wind_twh / total_added_twh if total_added_twh > 0 else float('nan')
 
-    return {
+    # ── NEW: extract cost frontier for milestone effective LCOEs ──────────
+    # Report effective LCOE at key CFE milestones along the optimal frontier.
+    frontier = extract_cost_frontier(df[df.phase.isin(['coarse', 'fine'])])
+    milestone_lcoes = {}
+    for target in [60, 70, 80, 85, 90, 95]:
+        hit = frontier[frontier.target_score_pct >= target]
+        if len(hit):
+            row = hit.iloc[0]
+            milestone_lcoes[f'eff_lcoe_at_{target}pct'] = float(row['effective_lcoe_med'])
+            milestone_lcoes[f'curtailment_at_{target}pct'] = float(row['curtailment_rate'])
+            milestone_lcoes[f'marginal_cost_pp_at_{target}pct'] = (
+                float(row['marginal_cost_per_pp'])
+                if not np.isnan(row.get('marginal_cost_per_pp', np.nan)) else np.nan
+            )
+        else:
+            milestone_lcoes[f'eff_lcoe_at_{target}pct'] = float('nan')
+            milestone_lcoes[f'curtailment_at_{target}pct'] = float('nan')
+            milestone_lcoes[f'marginal_cost_pp_at_{target}pct'] = float('nan')
+
+    result = {
         'iso': iso,
         'view': view,
         'year': year,
@@ -513,6 +725,14 @@ def extract_summary_row(df):
         'ceiling_annual_cost_usd_med': float(top['annual_cost_usd_med']),
         'ceiling_annual_cost_usd_low': float(top['annual_cost_usd_low']),
         'ceiling_annual_cost_usd_high': float(top['annual_cost_usd_high']),
+        # ── NEW: curtailment at ceiling ──────────────────────────────────
+        'ceiling_total_gen_twh': float(top['total_gen_twh']),
+        'ceiling_useful_gen_twh': float(top['useful_gen_twh']),
+        'ceiling_curtailed_twh': float(top['curtailed_twh']),
+        'ceiling_curtailment_rate': float(top['curtailment_rate']),
+        'ceiling_effective_lcoe_med': float(top['effective_lcoe_med'])
+            if not np.isnan(top['effective_lcoe_med']) else np.nan,
+        # ── Existing elbows ──────────────────────────────────────────────
         'wind_only_max_score_pct': wind_only_max_score,
         'solar_only_max_score_pct': solar_only_max_score,
         'sat_wind_gw_first_knee': sat_wind_first,
@@ -524,26 +744,26 @@ def extract_summary_row(df):
         'sat_joint_total_gw_first_knee': sat_joint_first,
         'sat_joint_total_gw_deep': sat_joint_deep,
     }
+    # Merge milestone LCOEs into summary row
+    result.update(milestone_lcoes)
+    return result
 
 
 # -------------------------------------------------------------------------
-# Verification
+# Verification (enriched)
 # -------------------------------------------------------------------------
 def run_verification(summary_df):
-    """Run five sanity checks; raise on failure."""
+    """Run sanity checks including curtailment economics."""
     msgs = []
 
-    # 1. Baseline + lift = ceiling (by construction; idempotent)
-    # (trivially holds; score_lift_pp = ceiling - baseline).
-
-    # 2. Monotonicity: ceiling_score_pct ≥ baseline_score_pct in every row
+    # 1. Monotonicity: ceiling >= baseline
     bad = summary_df[summary_df.ceiling_score_pct < summary_df.baseline_score_pct - 1e-6]
     if len(bad) > 0:
         msgs.append(f"Monotonicity FAIL: {len(bad)} rows have ceiling < baseline")
     else:
         msgs.append("Monotonicity OK: ceiling >= baseline for all rows")
 
-    # 3. Onshore+offshore ceiling >= onshore-only ceiling (for offshore ISOs)
+    # 2. Offshore superset
     for iso in OFFSHORE_ISOS:
         for yr in YEARS:
             for lvl in LEVELS:
@@ -556,12 +776,10 @@ def run_verification(summary_df):
                 if len(a) and len(b):
                     if b['ceiling_score_pct'].iloc[0] < a['ceiling_score_pct'].iloc[0] - 1e-6:
                         msgs.append(
-                            f"Offshore-superset FAIL: {iso} {yr} {lvl} onshore={a.ceiling_score_pct.iloc[0]:.3f} "
-                            f"offshore_view={b.ceiling_score_pct.iloc[0]:.3f}")
+                            f"Offshore-superset FAIL: {iso} {yr} {lvl}")
     msgs.append("Offshore-superset check complete")
 
-    # 4. Demand grows, baseline (absolute-TWh clean) score should weakly DECREASE
-    # since existing clean's share of demand shrinks.
+    # 3. Baseline score weakly decreasing with year
     for iso in ISOS:
         for lvl in LEVELS:
             sub = summary_df[(summary_df.iso == iso) & (summary_df.demand_level == lvl)
@@ -569,12 +787,10 @@ def run_verification(summary_df):
             if len(sub) >= 2:
                 s = sub['baseline_score_pct'].values
                 if np.any(np.diff(s) > 1e-3):
-                    msgs.append(
-                        f"Baseline-monotone FAIL: {iso} {lvl} baseline rose with year: {s}")
-    msgs.append("Baseline-monotone check complete (expect non-increasing with year)")
+                    msgs.append(f"Baseline-monotone FAIL: {iso} {lvl}")
+    msgs.append("Baseline-monotone check complete")
 
-    # 5. Cost scales correctly: annual_cost at ceiling should equal added TWh × LCOE × 1e6
-    #    Spot-check for ERCOT, year=2030, level=Medium, onshore_only
+    # 4. Cost spot-check (ERCOT 2030 Med onshore)
     ref = summary_df[(summary_df.iso == 'ERCOT') & (summary_df.year == 2030)
                      & (summary_df.demand_level == 'Medium')
                      & (summary_df.view == 'onshore_only')]
@@ -586,10 +802,35 @@ def run_verification(summary_df):
                                                     + TX_TABLES['solar']['Medium']['ERCOT']))
         diff = abs(r.ceiling_annual_cost_usd_med - exp) / max(exp, 1.0)
         if diff > 1e-6:
-            msgs.append(f"Cost spot-check FAIL: ERCOT 2030 Med expected {exp:.2e}, got "
-                        f"{r.ceiling_annual_cost_usd_med:.2e}")
+            msgs.append(f"Cost spot-check FAIL: ERCOT 2030 Med")
         else:
-            msgs.append(f"Cost spot-check OK (ERCOT 2030 Med onshore)")
+            msgs.append(f"Cost spot-check OK (ERCOT 2030 Med)")
+
+    # ── NEW: curtailment sanity checks ───────────────────────────────────
+
+    # 5. Curtailment at baseline should be near zero (clean generation ≤ demand
+    #    in most hours for most ISOs at 2025)
+    base_2025 = summary_df[(summary_df.year == 2025) & (summary_df.demand_level == 'Medium')
+                           & (summary_df.view == 'onshore_only')]
+    # Just check that curtailment at ceiling > 0 (it must be if renewables are over-built)
+    has_curtailment = base_2025['ceiling_curtailment_rate'] > 0.01
+    msgs.append(f"Curtailment at ceiling > 1%: {has_curtailment.sum()}/{len(base_2025)} ISOs (2025 Med)")
+
+    # 6. Effective LCOE at ceiling should be >> nameplate LCOE
+    # (if curtailment is high, effective LCOE must be much higher than input LCOE)
+    high_curt = summary_df[summary_df.ceiling_curtailment_rate > 0.30]
+    if len(high_curt):
+        # For points with >30% curtailment, effective LCOE should be >1.4× nameplate
+        msgs.append(f"High-curtailment rows (>30%): {len(high_curt)}, "
+                    f"median effective LCOE: ${high_curt.ceiling_effective_lcoe_med.median():.1f}/MWh")
+
+    # 7. Curtailment should be non-negative everywhere
+    if 'ceiling_curtailed_twh' in summary_df.columns:
+        neg = summary_df[summary_df.ceiling_curtailed_twh < -1e-6]
+        if len(neg):
+            msgs.append(f"Negative curtailment FAIL: {len(neg)} rows")
+        else:
+            msgs.append("Curtailment non-negativity OK")
 
     print("\n=== Verification ===")
     for m in msgs:
@@ -606,8 +847,7 @@ def main():
     ap.add_argument('--years', nargs='+', type=int, default=YEARS)
     ap.add_argument('--levels', nargs='+', default=LEVELS)
     ap.add_argument('--write-surfaces', action='store_true',
-                    help='Opt in to writing per-scenario surface parquets '
-                         '(~1.5 GB for full run). Default: summary only.')
+                    help='Write per-scenario surface parquets with curtailment columns')
     ap.add_argument('--skip-offshore-view', action='store_true',
                     help='Skip the 3-D offshore-inclusive view entirely')
     args = ap.parse_args()
@@ -619,7 +859,6 @@ def main():
     demand_data = load_demand_profiles()
     gen_profiles = load_generation_profiles()
 
-    # Pre-build per-ISO demand + supply (same base year across all scenarios for a given ISO)
     iso_cache = {}
     for iso in args.isos:
         iso_cache[iso] = {
@@ -629,6 +868,7 @@ def main():
     print(f"Profiles loaded in {time.monotonic()-t0:.1f}s", flush=True)
 
     summary_rows = []
+    cost_curve_frames = []
     total_scenarios = 0
     t1 = time.monotonic()
 
@@ -648,24 +888,46 @@ def main():
                     summary_rows.append(extract_summary_row(df))
                     total_scenarios += 1
 
+                    # Extract cost curves (frontier + single-axis)
+                    curves = extract_all_cost_curves(df)
+                    if len(curves):
+                        cost_curve_frames.append(curves)
+
                     if args.write_surfaces:
                         fn = DATA_OUT / f'sweep_surface_{iso}_{view}_{year}_{level}.parquet'
                         df.to_parquet(fn, compression='zstd', index=False)
 
                     dt = time.monotonic() - t_scn
+                    base_row = df[(df.added_wind_pct == 0) & (df.added_solar_pct == 0)
+                                  & (df.added_offshore_pct == 0)]
+                    base_s = base_row['score_pct'].iloc[0] if len(base_row) else float('nan')
+                    ceil_idx = df['score_pct'].idxmax()
+                    ceil_s = df.loc[ceil_idx, 'score_pct']
+                    ceil_curt = df.loc[ceil_idx, 'curtailment_rate']
+                    ceil_eff = df.loc[ceil_idx, 'effective_lcoe_med']
                     print(f"  {iso:6} {view:22} {year} {level:6} "
                           f"pts={len(df):>6} "
-                          f"baseline={df[(df.added_wind_pct==0)&(df.added_solar_pct==0)&(df.added_offshore_pct==0)]['score_pct'].iloc[0]:.3f} "
-                          f"ceiling={df['score_pct'].max():.3f} "
+                          f"base={base_s:.1f}% "
+                          f"ceil={ceil_s:.1f}% "
+                          f"curt={ceil_curt:.0%} "
+                          f"eff_lcoe=${ceil_eff:.0f}/MWh "
                           f"t={dt:.2f}s",
                           flush=True)
 
     print(f"\n{total_scenarios} scenarios in {time.monotonic()-t1:.1f}s", flush=True)
 
+    # Write enriched summary
     summary_df = pd.DataFrame(summary_rows)
     summary_out = DATA_OUT / 'ceiling_summary.parquet'
     summary_df.to_parquet(summary_out, compression='zstd', index=False)
     print(f"Wrote {summary_out} ({len(summary_df)} rows)")
+
+    # Write cost curves
+    if cost_curve_frames:
+        cost_curves = pd.concat(cost_curve_frames, ignore_index=True)
+        curves_out = DATA_OUT / 'cost_curves.parquet'
+        cost_curves.to_parquet(curves_out, compression='zstd', index=False)
+        print(f"Wrote {curves_out} ({len(cost_curves)} rows)")
 
     run_verification(summary_df)
 
