@@ -1,0 +1,223 @@
+name: "Step 2.4: Renewables-Only CFE Ceiling (per ISO)"
+
+# Runs the renewables-only ceiling sweep for one ISO at a time.
+# Each dispatch pushes its own auto/* branch so runs for different ISOs never
+# touch the same files in git. The branch follows the naming convention
+# consumed by .github/workflows/squash-pipeline-branches.yml — run that
+# workflow with pattern "auto/.*step2-4-renewables-ceiling" after a batch of
+# ISO sweeps to consolidate them into master.
+#
+# Per-ISO outputs (renamed from the script's shared filenames so 7 parallel
+# runs don't overwrite each other on disk or in git):
+#   data/step2.4-renewables-ceiling/ceiling_summary_<ISO>.parquet
+#   data/step2.4-renewables-ceiling/cost_curves_<ISO>.parquet
+#
+# Optional surface parquets (one per scenario, already ISO-distinct):
+#   data/step2.4-renewables-ceiling/sweep_surface_<ISO>_<view>_<year>_<level>.parquet
+#
+# After all 7 ISO runs land on master, rebuild the combined parquets locally
+# (one row per scenario across ISOs) with:
+#
+#   python -c "
+#   import glob, pandas as pd
+#   for stem in ('ceiling_summary', 'cost_curves'):
+#       parts = sorted(glob.glob(f'data/step2.4-renewables-ceiling/{stem}_*.parquet'))
+#       if parts:
+#           pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True) \
+#             .to_parquet(f'data/step2.4-renewables-ceiling/{stem}.parquet',
+#                         compression='zstd', index=False)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO to sweep (all years × all demand levels × both views)'
+        required: true
+        type: choice
+        options:
+          - ERCOT
+          - CAISO
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      write_surfaces:
+        description: 'Also write per-scenario surface parquets (large; opt-in)'
+        required: false
+        default: false
+        type: boolean
+      base_branch:
+        description: 'Branch to check out (defaults to master)'
+        required: false
+        default: 'master'
+        type: string
+
+# One queue per ISO — prevents accidental double-dispatch of the same ISO.
+# Different ISOs run in parallel because their concurrency groups differ.
+concurrency:
+  group: step2-4-renewables-ceiling-${{ inputs.iso }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  sweep:
+    name: "Ceiling sweep ${{ inputs.iso }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            numpy \
+            pandas \
+            pyarrow \
+            scipy \
+            tqdm \
+            requests
+
+      - name: Ensure output dir
+        run: mkdir -p data/step2.4-renewables-ceiling
+
+      - name: Clear any stale shared outputs from base branch
+        # ceiling_summary.parquet / cost_curves.parquet on master are global
+        # (built locally from the per-ISO shards). Remove them in this checkout
+        # so the rename step downstream can't accidentally re-commit a stale copy.
+        run: |
+          rm -f data/step2.4-renewables-ceiling/ceiling_summary.parquet
+          rm -f data/step2.4-renewables-ceiling/cost_curves.parquet
+
+      - name: Run renewables-ceiling sweep
+        env:
+          ISO: ${{ inputs.iso }}
+          WRITE_SURFACES: ${{ inputs.write_surfaces }}
+        run: |
+          set -euo pipefail
+          ARGS="--isos ${ISO}"
+          if [ "${WRITE_SURFACES}" = "true" ]; then
+            ARGS="${ARGS} --write-surfaces"
+          fi
+          echo "[run] python scripts/step2_4_renewables_ceiling.py ${ARGS}"
+          python scripts/step2_4_renewables_ceiling.py ${ARGS}
+
+      - name: Rename outputs to per-ISO filenames
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          set -euo pipefail
+          cd data/step2.4-renewables-ceiling
+          for stem in ceiling_summary cost_curves; do
+            if [ -f "${stem}.parquet" ]; then
+              mv -f "${stem}.parquet" "${stem}_${ISO}.parquet"
+              echo "[rename] ${stem}.parquet → ${stem}_${ISO}.parquet"
+            else
+              echo "::warning::${stem}.parquet not produced for ${ISO}"
+            fi
+          done
+
+      - name: Verify outputs
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for f in ceiling_summary cost_curves; do
+            path="data/step2.4-renewables-ceiling/${f}_${ISO}.parquet"
+            if [ ! -f "$path" ]; then
+              echo "::warning::missing $path"
+              missing=$((missing + 1))
+            else
+              size=$(stat -c%s "$path" 2>/dev/null || stat -f%z "$path")
+              echo "[verify] $path (${size} bytes)"
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "::error::${missing} expected output(s) missing for ${ISO}"
+            exit 1
+          fi
+
+      - name: Commit + push to per-ISO branch
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-step2-4-renewables-ceiling-${ISO}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${branch}"
+
+          git add -f \
+            "data/step2.4-renewables-ceiling/ceiling_summary_${ISO}.parquet" \
+            "data/step2.4-renewables-ceiling/cost_curves_${ISO}.parquet" 2>/dev/null || true
+          # Surfaces are opt-in and already ISO-distinct in the filename
+          git add -f data/step2.4-renewables-ceiling/sweep_surface_${ISO}_*.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "::error::No changes staged — nothing to commit for ${ISO}"
+            exit 1
+          fi
+
+          git commit -m "step 2.4 — ${ISO} renewables ceiling sweep"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "${branch}" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          {
+            echo "## step 2.4 — ${ISO} renewables-only ceiling sweep"
+            echo ""
+            echo "- Branch: \`${BRANCH}\`"
+            echo "- Outputs:"
+            echo "  - \`data/step2.4-renewables-ceiling/ceiling_summary_${ISO}.parquet\`"
+            echo "  - \`data/step2.4-renewables-ceiling/cost_curves_${ISO}.parquet\`"
+            if [ "${{ inputs.write_surfaces }}" = "true" ]; then
+              echo "  - \`data/step2.4-renewables-ceiling/sweep_surface_${ISO}_*.parquet\`"
+            fi
+            echo ""
+            echo "Run the **Squash Pipeline Branches** workflow with pattern \`auto/.*step2-4-renewables-ceiling\` to consolidate all ISO runs into master."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-4-renewables-ceiling-${{ inputs.iso }}-${{ github.run_id }}
+          path: |
+            data/step2.4-renewables-ceiling/ceiling_summary_${{ inputs.iso }}.parquet
+            data/step2.4-renewables-ceiling/cost_curves_${{ inputs.iso }}.parquet
+            data/step2.4-renewables-ceiling/sweep_surface_${{ inputs.iso }}_*.parquet
+          retention-days: 30
+          if-no-files-found: warn
