@@ -278,6 +278,9 @@ def _endpoint_year(pct: float) -> int:
     return int(pc.THRESHOLD_TARGET_YEARS[pct])
 
 
+_DEFAULT_CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95))
+
+
 @dataclass(frozen=True)
 class RunConfig:
     iso: str; pathway: str; endpoint: float; endpoint_pct: float
@@ -481,9 +484,6 @@ def existing_gas_vec(iso, clean_pct_vec, level):
         out[i] = max(0.0, base - _twh_to_gw(cum, _FOSSIL_CFS['gas']) * 1000.0
                      ) * pc.GAS_AVAILABILITY_FACTOR[iso]
     return out
-
-
-_DEFAULT_CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95))
 
 
 def _cfe_target(year: int, ep_pct: float,
