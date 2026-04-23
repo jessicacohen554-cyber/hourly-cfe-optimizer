@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The VRE-Only CFE Ceiling - The 8,760 Problem</title>
+<title>Renewables Ceiling Explorer — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,17 +18,23 @@
 <script src="js/shared-header.js"></script>
 <script src="js/scroll-observer.js"></script>
 <script src="js/shared-footer.js"></script>
-<script src="js/vre-ceiling-data.js"></script>
+<script src="js/ceiling-explorer-data.js"></script>
 <style>
-/* Page-specific layout for scene-3 side-by-side charts and scene-4 small-multiples grid */
-.chart-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
+/* Page-specific layout — extends shared.css, NEVER duplicates it */
+.controls-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: var(--space-md);
 }
-@media (max-width: 860px) {
-    .chart-row { grid-template-columns: 1fr; }
+.controls-row label {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 .small-multiples {
     display: grid;
@@ -51,7 +57,7 @@
 }
 .small-multiple .mini-chart {
     position: relative;
-    height: 180px;
+    height: 200px;
 }
 .headline-strip {
     display: grid;
@@ -75,27 +81,16 @@
 }
 .headline-card .lbl {
     font-size: 0.74rem;
-    color: var(--text-secondary);
+    color: var(--text-muted);
     margin-top: 4px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
-.demand-legend {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 12px;
-    font-size: 0.82rem;
+.offshore-stat {
+    margin-top: 10px;
+    font-size: 0.78rem;
     color: var(--text-secondary);
-}
-.demand-legend .dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
+    line-height: 1.5;
 }
 </style>
 </head>
@@ -104,213 +99,140 @@
 <nav id="topNav"></nav>
 
 <header class="header">
-    <h1>The VRE-Only CFE Ceiling</h1>
-    <p class="subtitle">How far can wind and solar alone take every US ISO?</p>
+    <h1>Renewables Ceiling Explorer</h1>
+    <p class="subtitle">Interactive cost curves, capacity needs, and offshore comparisons for every US ISO — wind &amp; solar only, no storage</p>
     <div class="header-accent"></div>
 </header>
 
-<!-- ============ HERO INTRO ============ -->
+<!-- ============ SECTION 1: HEADLINE — BASELINE vs CEILING ============ -->
 <section class="content-section section-light" style="padding-top: 40px;">
-    <div style="max-width: 860px; margin: 0 auto;">
-        <p style="font-size: 1.02rem; line-height: 1.75;">The question this page answers is narrow on purpose: holding existing clean generation frozen at its 2025 terawatt-hour (TWh) baseline and adding only onshore wind, utility-scale solar, and (for the coastal independent system operators) offshore wind, what is the highest hourly carbon-free energy (CFE) match score the grid can physically reach? No new storage, no new clean-firm nuclear or carbon-capture, no hybrid projects &mdash; just variable renewable energy (VRE) scaled against the existing fleet.</p>
-        <p style="font-size: 1.02rem; line-height: 1.75;">The ceiling is higher than the conventional wisdom suggests. Every independent system operator (ISO) in the US lands above 98.8% hourly match. Getting there costs hundreds of billions per year and requires gigawatts (GW) of capacity that dwarf every project queue in the country &mdash; but the physics works.</p>
+    <h2 class="section-title">Every ISO can reach &sim;99% hourly CFE with renewables alone</h2>
+    <p class="section-subtitle">2025 baseline vs. maximum achievable ceiling — Medium demand, onshore wind + solar, no storage or clean-firm additions.</p>
 
-        <div class="insight-callout fade-in" style="margin-top: 24px;">
-            <div class="page-insight-box">
-                <h3 style="margin-top:0;">Ground rules for every chart below</h3>
-                <ul style="margin: 8px 0 0 20px; padding: 0; font-size: 0.92rem; line-height: 1.7;">
-                    <li><strong>Existing clean frozen at 2025 TWh.</strong> Hydro, nuclear, and in-region clean imports are held at absolute 2025 terawatt-hours. As demand grows, that fixed baseline shrinks as a share of demand.</li>
-                    <li><strong>No storage, no clean-firm, no hybrids.</strong> The feasible set is strictly onshore wind plus solar, with offshore wind added for the four coastal ISOs.</li>
-                    <li><strong>Costs are undiscounted 2025 dollars.</strong> Annualized as added megawatt-hours per year times levelized cost of energy (LCOE) plus a transmission adder. No learning curves &mdash; solar and wind are mature-tech in this pipeline. Low, Medium, and High LCOE columns carry the sensitivity range.</li>
-                    <li>Source: <code>scripts/step2_4_renewables_ceiling.py</code> (commit 47d0b22) &rarr; <code>data/step2.4-renewables-ceiling/ceiling_summary.parquet</code> &rarr; <code>scripts/step2_4b_generate_vre_ceiling_js.py</code>.</li>
-                </ul>
-            </div>
+    <div class="headline-strip" id="headlineStrip"></div>
+
+    <div class="chart-panel" style="margin-top: 20px;">
+        <h3>Baseline vs Ceiling CFE Score by ISO</h3>
+        <div class="chart-subtitle">2025, Medium demand, onshore wind + solar only</div>
+        <div class="chart-container"><canvas id="headlineChart"></canvas></div>
+        <div id="headlineLegend" class="chart-legend" style="margin-top: 10px;"></div>
+    </div>
+</section>
+
+<!-- ============ SECTION 2: CAPACITY + COST ============ -->
+<section class="content-section">
+    <h2 class="section-title">The capacity bill is staggering</h2>
+    <p class="section-subtitle">Wind + solar GW needed to reach the ceiling, and what it costs per year at medium LCOE assumptions.</p>
+
+    <div class="headline-strip" id="capStrip"></div>
+
+    <div class="chart-panel" style="margin-top: 20px;">
+        <h3>Added Capacity (GW) &amp; Annual Cost ($B/yr)</h3>
+        <div class="chart-subtitle">2025, Medium demand, onshore only. Bars = GW added, line = annual cost.</div>
+        <div class="chart-container"><canvas id="capacityChart"></canvas></div>
+        <div id="capLegend" class="chart-legend" style="margin-top: 10px;"></div>
+    </div>
+</section>
+
+<!-- ============ SECTION 3: COST CURVES (INTERACTIVE) ============ -->
+<section class="content-section section-light">
+    <h2 class="section-title">The cost curve: cheap to 80%, punishing beyond 90%</h2>
+    <p class="section-subtitle">Select an ISO, year, and demand level to explore the optimal-cost frontier.</p>
+
+    <div class="controls-row">
+        <label>ISO:</label>
+        <div class="iso-selector" id="ccISOSelector"></div>
+    </div>
+    <div class="controls-row">
+        <label>Year:</label>
+        <div class="toggle-btn-group" id="ccYearToggle"></div>
+        <label style="margin-left: 16px;">Demand:</label>
+        <div class="toggle-btn-group" id="ccLevelToggle"></div>
+        <label style="margin-left: 16px;">View:</label>
+        <div class="toggle-btn-group" id="ccViewToggle"></div>
+    </div>
+
+    <div class="grid-2col" style="margin-top: 16px;">
+        <div class="chart-panel">
+            <h3>Annual Cost vs CFE Target</h3>
+            <div class="chart-subtitle">Minimum-cost wind/solar mix at each CFE score (%)</div>
+            <div class="chart-container"><canvas id="costCurveChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <h3>Effective LCOE vs CFE Target</h3>
+            <div class="chart-subtitle">$/MWh of useful (non-curtailed) generation</div>
+            <div class="chart-container"><canvas id="lcoeChart"></canvas></div>
+        </div>
+    </div>
+    <div class="grid-2col" style="margin-top: 20px;">
+        <div class="chart-panel">
+            <h3>Curtailment Rate vs CFE Target</h3>
+            <div class="chart-subtitle">Fraction of generated energy that cannot be used</div>
+            <div class="chart-container"><canvas id="curtChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <h3>Optimal Wind / Solar Mix</h3>
+            <div class="chart-subtitle">GW of each resource at the cost-optimal frontier</div>
+            <div class="chart-container"><canvas id="mixChart"></canvas></div>
         </div>
     </div>
 </section>
 
-<!-- ============ SCENE 1: THE HEADLINE ============ -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">1</div>
-    <h2>Every ISO can reach 98.9&ndash;99.9% hourly CFE on wind and solar alone</h2>
-    <p>With existing clean generation held at its 2025 baseline and only onshore wind plus solar added on top, the 2025-demand ceiling lands above 98.8% in every ISO.</p>
-</div>
-<section class="content-section section-light fade-in">
-    <div class="glass-chart-panel">
-        <div class="chart-title">Baseline vs ceiling hourly CFE match by ISO &mdash; 2025 demand, Medium level, onshore-only</div>
-        <div class="chart-container" style="min-height: 360px;">
-            <canvas id="scene1Chart"></canvas>
-        </div>
-        <div class="chart-legend">
-            <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#6366F1;"></span>2025 baseline (existing clean share)</span>
-            <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#22C55E;"></span>Wind + solar ceiling</span>
-        </div>
-    </div>
+<!-- ============ SECTION 4: BASELINE EROSION ============ -->
+<section class="content-section">
+    <h2 class="section-title">Demand growth erodes the baseline — fast</h2>
+    <p class="section-subtitle">Without new additions, rising demand steadily degrades clean energy scores across every ISO.</p>
 
-    <div class="headline-strip" id="scene1HeadlineStrip">
-        <!-- Populated by JS: lowest baseline, highest ceiling, largest lift -->
+    <div class="chart-panel">
+        <h3>Baseline CFE Score Decline (2025–2050)</h3>
+        <div class="chart-subtitle">Medium demand growth scenario, onshore only, no new additions</div>
+        <div class="chart-container"><canvas id="erosionChart"></canvas></div>
+        <div id="erosionLegend" class="chart-legend" style="margin-top: 10px;"></div>
     </div>
-
-    <p style="margin-top: 24px;">The lift is largest for the ISOs that start low. The Midcontinent ISO (MISO) and New England ISO (NEISO) both open below 32% hourly match on their 2025 fleet and gain nearly 70 percentage points. The Southwest Power Pool (SPP), with its wind-heavy resource base, reaches 99.94% &mdash; close enough that the residual gap is measurement noise. None of this requires a new technology; it requires enough nameplate capacity to cover every shape of residual load, which is a different conversation.</p>
 </section>
 
-<!-- ============ SCENE 2: CAPACITY + COST ============ -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">2</div>
-    <h2>What the ceiling costs: capacity and dollars</h2>
-    <p>The physics works. The capacity bill to make it work is on the scale of three to four times the country's installed wind and solar fleet, concentrated in a handful of ISOs.</p>
-</div>
-<section class="content-section section-light fade-in">
-    <div class="glass-chart-panel">
-        <div class="chart-title">Added onshore wind and solar capacity to reach the ceiling, with annual cost &mdash; 2025 demand, Medium LCOE</div>
-        <div class="chart-container" style="min-height: 400px;">
-            <canvas id="scene2Chart"></canvas>
-        </div>
-        <div class="chart-legend">
-            <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#22C55E;"></span>Added wind capacity (GW)</span>
-            <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#F59E0B;"></span>Added solar capacity (GW)</span>
-            <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#DC2626; border-radius: 2px; height: 3px; margin-top: 6px;"></span>Annual cost ($B/yr, Medium LCOE)</span>
-        </div>
+<!-- ============ SECTION 5: DEMAND TRAJECTORY SMALL MULTIPLES ============ -->
+<section class="content-section section-light">
+    <h2 class="section-title">Ceiling vs baseline under all demand scenarios</h2>
+    <p class="section-subtitle">Solid = ceiling (max CFE with unlimited renewables). Dashed = baseline (no additions). Low / Medium / High demand growth.</p>
+
+    <div class="small-multiples" id="trajectoryGrid"></div>
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-top: 12px; font-size: 0.82rem; color: var(--text-muted);">
+        <span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#0284C7; margin-right:6px; vertical-align:middle;"></span>Low</span>
+        <span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#D97706; margin-right:6px; vertical-align:middle;"></span>Medium</span>
+        <span><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#DC2626; margin-right:6px; vertical-align:middle;"></span>High</span>
+        <span style="margin-left:8px;">— Solid = ceiling &nbsp; - - Dashed = baseline</span>
     </div>
-
-    <div class="headline-strip" id="scene2HeadlineStrip">
-        <!-- Populated by JS: smallest ISO cost, largest ISO cost, PJM capacity stat -->
-    </div>
-
-    <p style="margin-top: 24px;">The spread is wide. NEISO's ceiling costs about $70 billion per year and needs roughly 175 GW of wind plus 263 GW of solar &mdash; smallest of the seven ISOs by a wide margin. PJM sits at the other end: 1,284 GW of wind and 1,699 GW of solar, $420 billion per year. That one ISO alone would need to build more wind than the entire US fleet three times over, plus more solar than the world had installed as of 2023. MISO is the runner-up at $269 billion per year.</p>
-
-    <p>Cost scales roughly with demand. PJM is the largest electricity market in the sample (about 950 TWh of demand in 2025), so the VRE-ceiling capacity and the annual cost both scale with that demand base. Smaller markets &mdash; NEISO at 118 TWh, NYISO at 147 TWh &mdash; post smaller totals but need the same proportional build relative to demand.</p>
 </section>
 
-<!-- ============ SCENE 3: DIMINISHING RETURNS (ERCOT) ============ -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">3</div>
-    <h2>Diminishing returns: why neither resource gets there alone</h2>
-    <p>In ERCOT &mdash; the cleanest example because the resource base is wind-rich and the existing fleet is simple &mdash; wind or solar by itself hits a ceiling well short of a CFE match. Only the joint build reaches the high-99s.</p>
-</div>
-<section class="content-section section-light fade-in">
-    <div class="chart-row">
-        <div class="glass-chart-panel">
-            <div class="chart-title">Single-axis ceiling: wind alone vs solar alone (ERCOT)</div>
-            <div class="chart-container" style="min-height: 300px;">
-                <canvas id="scene3ChartA"></canvas>
-            </div>
-            <div class="chart-legend">
-                <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#22C55E;"></span>Wind only &mdash; capped by low-wind weeks</span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#F59E0B;"></span>Solar only &mdash; capped by night hours</span>
-            </div>
-        </div>
-        <div class="glass-chart-panel">
-            <div class="chart-title">Joint wind + solar: capacity vs score (ERCOT)</div>
-            <div class="chart-container" style="min-height: 300px;">
-                <canvas id="scene3ChartB"></canvas>
-            </div>
-            <div class="chart-legend">
-                <span class="chart-legend-item"><span class="chart-legend-swatch" style="background:#0EA5E9;"></span>Joint envelope with elbow annotations</span>
-            </div>
-        </div>
-    </div>
+<!-- ============ SECTION 6: OFFSHORE COMPARISON ============ -->
+<section class="content-section">
+    <h2 class="section-title">Offshore wind unlocks major savings for coastal ISOs</h2>
+    <p class="section-subtitle">Adding offshore wind as an option reduces the cost to reach high CFE targets, especially above 90%.</p>
 
-    <div class="insight-callout fade-in" style="margin-top: 24px;">
-        <div class="page-insight-box">
-            <h3 style="margin-top:0;">Why single-axis saturates</h3>
-            <p><strong>Solar alone caps at 62% match, saturating around 109 GW of added capacity.</strong> Every night hour in ERCOT is structurally un-dispatchable from solar &mdash; you can build a terawatt of panels and still deliver zero between 10 PM and 5 AM. The existing clean baseline (42.9%) plus solar's daylight contribution adds up to roughly 62% before marginal capacity adds nothing.</p>
-            <p><strong>Wind alone caps at 99.1% match, saturating around 296 GW.</strong> ERCOT's wind resource is the best in the country, so wind alone closes most of the residual gap. What wind alone can't close is a handful of low-wind weeks each year, which is why the final percentage point requires a different resource.</p>
-            <p><strong>Joint builds bend around 150&ndash;300 GW total.</strong> The diminishing-returns elbow &mdash; marginal CFE pickup per additional GW &mdash; kicks in early. The last percentage point from 99% to 99.5% takes roughly as much capacity as the first fifty. That's the cost curve the $173 billion per year price tag is paying for.</p>
-        </div>
-    </div>
-
-    <p style="margin-top: 24px;">This is also why the task brief for this analysis excluded storage and clean-firm from the filter. A few GW of batteries or a slice of new nuclear would flatten the elbow and cut the capacity requirement by half or more &mdash; but the point of this chart is to isolate what variable renewable energy alone can do. When we add those options back in (separate pages elsewhere on this site), the same 99%+ ceiling becomes reachable with one-third the nameplate build.</p>
+    <div class="small-multiples" id="offshoreGrid"></div>
 </section>
 
-<!-- ============ SCENE 4: DEMAND STRESS ============ -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">4</div>
-    <h2>Demand stress: the ceiling barely moves; the baseline collapses</h2>
-    <p>Hold the ceiling question constant and vary demand along three compound-annual-growth-rate (CAGR) paths &mdash; Low, Medium, High &mdash; across 2025 through 2050. The surprise is which line holds and which line falls apart.</p>
-</div>
-<section class="content-section section-light fade-in">
-    <div class="insight-callout" style="margin-bottom: 20px;">
-        <div class="page-insight-box">
-            <h3 style="margin-top:0;">The punchline</h3>
-            <p>The ceiling barely moves. Across every ISO, every demand level, and every year through 2050, the VRE-only ceiling drops by less than 0.6 percentage points. What collapses is the <em>baseline</em> &mdash; existing clean generation holds constant in TWh, so as demand grows, its share of demand shrinks. ERCOT's baseline slides from 43% in 2025 to 11% in 2050 under High demand (3.8&times; the 2025 load). The ceiling still sits at 99.36%. The required build scales roughly with demand.</p>
-        </div>
-    </div>
-
-    <div class="glass-chart-panel">
-        <div class="chart-title">Baseline (dashed) and ceiling (solid) hourly CFE match through 2050, by ISO and demand level (onshore-only view)</div>
-        <div class="small-multiples" id="scene4Grid"></div>
-        <div class="demand-legend">
-            <span><span class="dot" style="background: #0284C7;"></span>Low demand</span>
-            <span><span class="dot" style="background: #D97706;"></span>Medium demand</span>
-            <span><span class="dot" style="background: #DC2626;"></span>High demand</span>
-            <span style="margin-left: 12px;"><span class="dot" style="background: transparent; border: 2px dashed #6B7280;"></span>Baseline (existing clean / demand)</span>
-            <span><span class="dot" style="background: #22C55E;"></span>Ceiling (wind + solar added)</span>
-        </div>
-    </div>
-
-    <p style="margin-top: 24px;">Read the charts this way: the three solid lines nearly overlap at the top of every panel &mdash; that's the ceiling, essentially flat through 2050. The three dashed lines fan downward &mdash; that's the existing-clean share of demand as demand grows. The gap between solid and dashed is what new wind and solar have to close, and the capacity required to close it scales roughly one-for-one with demand. The ceiling doesn't care how big the grid gets; it only cares whether you built enough capacity to match each hour.</p>
-</section>
-
-<!-- ============ SCENE 5: THE OFFSHORE KICKER ============ -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">5</div>
-    <h2>Offshore wind: closing the last percentage point &mdash; and sometimes the cost gap</h2>
-    <p>For the four coastal ISOs where offshore wind is a real build option &mdash; NEISO, NYISO, PJM, and CAISO &mdash; adding it to the mix does two things: it closes the final 0.5&ndash;1.1 percentage-point gap to near-unity CFE, and in PJM's case it cuts the annual bill by about $80 billion per year by substituting high-capacity-factor offshore for some of the solar overbuild.</p>
-</div>
-<section class="content-section section-light fade-in">
-    <div class="small-multiples" id="scene5Grid"></div>
-
-    <div class="insight-callout fade-in" style="margin-top: 24px;">
-        <div class="page-insight-box">
-            <h3 style="margin-top:0;">Why offshore changes the math</h3>
-            <p>Offshore wind's capacity factor (CF) runs in the 45&ndash;55% range versus 30&ndash;40% for onshore wind and 20&ndash;27% for solar in these regions. That higher CF means one megawatt of offshore delivers roughly 1.5&ndash;2&times; the annual terawatt-hours of one megawatt of onshore, with a production shape that covers more hours of the day &mdash; particularly evening and overnight, when solar has already rolled off.</p>
-            <p>The effect is most visible in PJM. Onshore-only costs $420 billion per year with nearly 1,700 GW of solar. Adding 201 GW of offshore cuts solar overbuild substantially, and the total annual cost drops to $342 billion per year &mdash; $80 billion per year cheaper for a higher final match score (99.31% &rarr; 99.98%). In the other coastal ISOs, offshore is slightly more expensive than the pure-onshore path, but closes the final gap to effectively 100%.</p>
-        </div>
-    </div>
-
-    <p style="margin-top: 24px;">Scene 5 is the narrow case where adding a single technology reshapes the bill. The broader point across all five scenes is that the VRE-only ceiling is not the interesting design question &mdash; it's the existence proof. Every US ISO can physically reach near-complete hourly CFE on wind and solar alone, and for most of the country the build required to do it is so large that the practical design conversation is really about how storage, clean-firm, and hybrid projects cut the capacity bill by half or more. The rest of this site picks that thread up from here.</p>
-</section>
-
-<div style="height: 80px;"></div>
-
-<!-- ============ CHART RENDERING ============ -->
 <script>
 (function() {
     'use strict';
+    var D = window.CeilingExplorerData;
+    if (!D) { console.error('CeilingExplorerData not loaded'); return; }
 
-    if (typeof window.VRECeilingData === 'undefined') {
-        console.error('VRECeilingData not loaded');
-        return;
-    }
-    var D = window.VRECeilingData;
-
-    // Safe guard: wait for Chart.js
     function ready(fn) {
-        if (typeof Chart === 'undefined') {
-            setTimeout(function() { ready(fn); }, 50);
-            return;
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', fn);
-        } else {
-            fn();
-        }
+        if (document.readyState !== 'loading') fn();
+        else document.addEventListener('DOMContentLoaded', fn);
     }
 
     var BAR_RADIUS = 6;
     var LINE_TENSION = 0.35;
 
-    // ---------- Scene 1: baseline vs ceiling bar chart ----------
-    function renderScene1() {
-        var s = D.scene1_headline;
-        var ctx = document.getElementById('scene1Chart');
+    // ===== Section 1: Headline =====
+    function renderHeadline() {
+        var s = D.headline;
+        var ctx = document.getElementById('headlineChart');
         if (!ctx) return;
+
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -335,14 +257,11 @@
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        callbacks: {
-                            label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%'; }
-                        }
+                        callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%'; } }
                     },
                     datalabels: {
                         anchor: 'end', align: 'top', offset: 2,
@@ -352,35 +271,36 @@
                     }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true, max: 100,
-                        title: { display: true, text: 'Hourly CFE match (%)' },
-                        grid: { color: 'rgba(0,0,0,0.06)' }
-                    },
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: 'Hourly CFE match (%)' }, grid: { color: 'rgba(0,0,0,0.06)' } },
                     x: { grid: { display: false } }
                 }
             },
             plugins: [ChartDataLabels]
         });
 
+        buildLegend('headlineLegend', [
+            { label: '2025 baseline', color: RESOURCE_COLORS.cleanFirm, type: 'band' },
+            { label: 'Wind + solar ceiling', color: RESOURCE_COLORS.wind, type: 'band' }
+        ]);
+
         // Headline strip
-        var strip = document.getElementById('scene1HeadlineStrip');
+        var strip = document.getElementById('headlineStrip');
         if (strip) {
             var maxLiftIdx = s.score_lift_pp.indexOf(Math.max.apply(null, s.score_lift_pp));
-            var maxCeilIdx = s.ceiling_score_pct.indexOf(Math.max.apply(null, s.ceiling_score_pct));
-            strip.innerHTML = [
-                '<div class="headline-card"><div class="val">98.9%</div><div class="lbl">Lowest ceiling (NEISO)</div></div>',
-                '<div class="headline-card"><div class="val">' + s.ceiling_score_pct[maxCeilIdx].toFixed(2) + '%</div><div class="lbl">Highest ceiling (' + s.isos[maxCeilIdx] + ')</div></div>',
-                '<div class="headline-card"><div class="val">+' + s.score_lift_pp[maxLiftIdx].toFixed(0) + ' pp</div><div class="lbl">Largest lift (' + s.isos[maxLiftIdx] + ')</div></div>',
-                '<div class="headline-card"><div class="val">7 / 7</div><div class="lbl">ISOs above 98.8%</div></div>'
-            ].join('');
+            var minCeil = Math.min.apply(null, s.ceiling_score_pct);
+            var maxCeil = Math.max.apply(null, s.ceiling_score_pct);
+            strip.innerHTML =
+                '<div class="headline-card"><div class="val">' + minCeil.toFixed(1) + '%</div><div class="lbl">Lowest ceiling (NEISO)</div></div>' +
+                '<div class="headline-card"><div class="val">' + maxCeil.toFixed(1) + '%</div><div class="lbl">Highest ceiling (SPP)</div></div>' +
+                '<div class="headline-card"><div class="val">+' + s.score_lift_pp[maxLiftIdx].toFixed(0) + ' pp</div><div class="lbl">Largest lift (' + s.isos[maxLiftIdx] + ')</div></div>' +
+                '<div class="headline-card"><div class="val">7 / 7</div><div class="lbl">ISOs above 98.8%</div></div>';
         }
     }
 
-    // ---------- Scene 2: stacked capacity + cost line ----------
-    function renderScene2() {
-        var s = D.scene2_capacity_cost;
-        var ctx = document.getElementById('scene2Chart');
+    // ===== Section 2: Capacity + Cost =====
+    function renderCapacity() {
+        var s = D.capacity;
+        var ctx = document.getElementById('capacityChart');
         if (!ctx) return;
         var costBn = s.annual_cost_usd_med.map(function(v) { return v / 1e9; });
 
@@ -389,38 +309,9 @@
             data: {
                 labels: s.isos,
                 datasets: [
-                    {
-                        label: 'Added wind (GW)',
-                        data: s.added_wind_gw,
-                        backgroundColor: withAlpha(RESOURCE_COLORS.wind, 0.75),
-                        borderColor: RESOURCE_COLORS.wind,
-                        borderWidth: 2,
-                        borderRadius: BAR_RADIUS,
-                        stack: 'cap',
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Added solar (GW)',
-                        data: s.added_solar_gw,
-                        backgroundColor: withAlpha(RESOURCE_COLORS.solar, 0.75),
-                        borderColor: RESOURCE_COLORS.solar,
-                        borderWidth: 2,
-                        borderRadius: BAR_RADIUS,
-                        stack: 'cap',
-                        yAxisID: 'y'
-                    },
-                    {
-                        type: 'line',
-                        label: 'Annual cost ($B/yr)',
-                        data: costBn,
-                        borderColor: SEMANTIC_COLORS.negative,
-                        backgroundColor: withAlpha(SEMANTIC_COLORS.negative, 0.12),
-                        borderWidth: 3,
-                        tension: LINE_TENSION,
-                        pointRadius: 5,
-                        pointBackgroundColor: SEMANTIC_COLORS.negative,
-                        yAxisID: 'y1'
-                    }
+                    { label: 'Added wind (GW)', data: s.added_wind_gw, backgroundColor: withAlpha(RESOURCE_COLORS.wind, 0.75), borderColor: RESOURCE_COLORS.wind, borderWidth: 2, borderRadius: BAR_RADIUS, stack: 'cap', yAxisID: 'y' },
+                    { label: 'Added solar (GW)', data: s.added_solar_gw, backgroundColor: withAlpha(RESOURCE_COLORS.solar, 0.75), borderColor: RESOURCE_COLORS.solar, borderWidth: 2, borderRadius: BAR_RADIUS, stack: 'cap', yAxisID: 'y' },
+                    { type: 'line', label: 'Annual cost ($B/yr)', data: costBn, borderColor: SEMANTIC_COLORS.negative, backgroundColor: withAlpha(SEMANTIC_COLORS.negative, 0.12), borderWidth: 3, tension: LINE_TENSION, pointRadius: 5, pointBackgroundColor: SEMANTIC_COLORS.negative, yAxisID: 'y1' }
                 ]
             },
             options: {
@@ -444,153 +335,282 @@
                     }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true, stacked: true,
-                        title: { display: true, text: 'Added capacity (GW)' },
-                        grid: { color: 'rgba(0,0,0,0.06)' }
-                    },
-                    y1: {
-                        beginAtZero: true, position: 'right',
-                        title: { display: true, text: 'Annual cost ($B/yr)' },
-                        grid: { display: false }
-                    },
+                    y: { beginAtZero: true, stacked: true, title: { display: true, text: 'Added capacity (GW)' }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Annual cost ($B/yr)' }, grid: { display: false } },
                     x: { stacked: true, grid: { display: false } }
                 }
             },
             plugins: [ChartDataLabels]
         });
 
-        var strip = document.getElementById('scene2HeadlineStrip');
+        buildLegend('capLegend', [
+            { label: 'Wind (GW)', color: RESOURCE_COLORS.wind, type: 'band' },
+            { label: 'Solar (GW)', color: RESOURCE_COLORS.solar, type: 'band' },
+            { label: 'Annual cost', color: SEMANTIC_COLORS.negative, type: 'line' }
+        ]);
+
+        var strip = document.getElementById('capStrip');
         if (strip) {
-            var minCostIdx = costBn.indexOf(Math.min.apply(null, costBn));
-            var maxCostIdx = costBn.indexOf(Math.max.apply(null, costBn));
-            var pjmIdx = s.isos.indexOf('PJM');
-            var totalCap = s.added_wind_gw[pjmIdx] + s.added_solar_gw[pjmIdx];
-            strip.innerHTML = [
-                '<div class="headline-card"><div class="val">$' + Math.round(costBn[minCostIdx]) + 'B/yr</div><div class="lbl">Smallest ISO bill (' + s.isos[minCostIdx] + ')</div></div>',
-                '<div class="headline-card"><div class="val">$' + Math.round(costBn[maxCostIdx]) + 'B/yr</div><div class="lbl">Largest ISO bill (' + s.isos[maxCostIdx] + ')</div></div>',
-                '<div class="headline-card"><div class="val">' + Math.round(totalCap).toLocaleString() + ' GW</div><div class="lbl">PJM total added capacity</div></div>',
-                '<div class="headline-card"><div class="val">' + Math.round(s.added_wind_gw[pjmIdx]).toLocaleString() + ' / ' + Math.round(s.added_solar_gw[pjmIdx]).toLocaleString() + '</div><div class="lbl">PJM wind GW / solar GW</div></div>'
-            ].join('');
+            var totalWind = s.added_wind_gw.reduce(function(a, b) { return a + b; }, 0);
+            var totalSolar = s.added_solar_gw.reduce(function(a, b) { return a + b; }, 0);
+            var totalCost = costBn.reduce(function(a, b) { return a + b; }, 0);
+            strip.innerHTML =
+                '<div class="headline-card"><div class="val">' + Math.round(totalWind / 1000).toLocaleString() + '+ TW</div><div class="lbl">Total wind needed</div></div>' +
+                '<div class="headline-card"><div class="val">' + Math.round(totalSolar / 1000).toLocaleString() + '+ TW</div><div class="lbl">Total solar needed</div></div>' +
+                '<div class="headline-card"><div class="val">$' + Math.round(totalCost).toLocaleString() + 'B/yr</div><div class="lbl">Combined annual cost</div></div>' +
+                '<div class="headline-card"><div class="val">' + Math.round((totalWind + totalSolar) / 1000).toLocaleString() + '+ TW</div><div class="lbl">Total capacity</div></div>';
         }
     }
 
-    // ---------- Scene 3: ERCOT elbows ----------
-    function renderScene3() {
-        var s = D.scene3_ercot_elbows;
+    // ===== Section 3: Interactive Cost Curves =====
+    var ccState = { iso: 'ERCOT', year: 2025, level: 'Medium', view: 'onshore_only' };
+    var ccCharts = {};
 
-        // 3A — single-axis max %
-        var ctxA = document.getElementById('scene3ChartA');
-        if (ctxA) {
-            new Chart(ctxA, {
-                type: 'bar',
-                data: {
-                    labels: ['Wind only', 'Solar only', 'Wind + solar (joint)'],
-                    datasets: [{
-                        label: 'Max achievable hourly CFE (%)',
-                        data: [s.wind_only_max_pct, s.solar_only_max_pct, s.ceiling_score_pct],
-                        backgroundColor: [
-                            withAlpha(RESOURCE_COLORS.wind, 0.75),
-                            withAlpha(RESOURCE_COLORS.solar, 0.75),
-                            withAlpha(ISO_COLORS.PJM, 0.75)
-                        ],
-                        borderColor: [RESOURCE_COLORS.wind, RESOURCE_COLORS.solar, ISO_COLORS.PJM],
-                        borderWidth: 2,
-                        borderRadius: BAR_RADIUS
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        datalabels: {
-                            anchor: 'end', align: 'end', offset: 6,
-                            font: { size: 11, weight: '700' },
-                            color: '#1F2937',
-                            formatter: function(v, ctx) {
-                                var gw = [s.sat_wind_deep_gw, s.sat_solar_deep_gw, s.ceiling_joint_total_gw][ctx.dataIndex];
-                                return v.toFixed(1) + '% @ ~' + Math.round(gw) + ' GW';
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true, max: 105,
-                            title: { display: true, text: 'Hourly CFE match (%)' },
-                            grid: { color: 'rgba(0,0,0,0.06)' }
-                        },
-                        y: { grid: { display: false } }
-                    }
-                },
-                plugins: [ChartDataLabels]
+    function buildControls() {
+        // ISO selector
+        var isoSel = document.getElementById('ccISOSelector');
+        if (isoSel) {
+            D.meta.isos.forEach(function(iso) {
+                var btn = document.createElement('button');
+                btn.className = 'iso-btn' + (iso === ccState.iso ? ' active' : '');
+                btn.textContent = iso;
+                btn.onclick = function() {
+                    ccState.iso = iso;
+                    isoSel.querySelectorAll('.iso-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    updateCostCurves();
+                };
+                isoSel.appendChild(btn);
             });
         }
 
-        // 3B — joint ceiling bar with elbow markers
-        var ctxB = document.getElementById('scene3ChartB');
-        if (ctxB) {
-            new Chart(ctxB, {
-                type: 'bar',
-                data: {
-                    labels: ['First knee', 'Deep plateau', 'Ceiling build'],
-                    datasets: [{
-                        label: 'Joint wind + solar capacity (GW)',
-                        data: [s.sat_joint_first_knee_gw, s.sat_joint_deep_gw, s.ceiling_joint_total_gw],
-                        backgroundColor: [
-                            withAlpha(ISO_COLORS.PJM, 0.4),
-                            withAlpha(ISO_COLORS.PJM, 0.6),
-                            withAlpha(ISO_COLORS.PJM, 0.85)
-                        ],
-                        borderColor: ISO_COLORS.PJM,
-                        borderWidth: 2,
-                        borderRadius: BAR_RADIUS
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) { return Math.round(ctx.parsed.y).toLocaleString() + ' GW total (wind + solar)'; }
-                            }
-                        },
-                        datalabels: {
-                            anchor: 'end', align: 'top', offset: 4,
-                            font: { size: 11, weight: '700' },
-                            color: '#0369A1',
-                            formatter: function(v) { return Math.round(v).toLocaleString() + ' GW'; }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Total added wind + solar (GW)' },
-                            grid: { color: 'rgba(0,0,0,0.06)' }
-                        },
-                        x: { grid: { display: false } }
-                    }
-                },
-                plugins: [ChartDataLabels]
+        // Year toggle
+        var yearEl = document.getElementById('ccYearToggle');
+        if (yearEl) {
+            D.meta.years.forEach(function(y) {
+                var btn = document.createElement('button');
+                btn.textContent = y;
+                btn.className = y === ccState.year ? 'active' : '';
+                btn.onclick = function() {
+                    ccState.year = y;
+                    yearEl.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    updateCostCurves();
+                };
+                yearEl.appendChild(btn);
+            });
+        }
+
+        // Level toggle
+        var lvlEl = document.getElementById('ccLevelToggle');
+        if (lvlEl) {
+            D.meta.levels.forEach(function(l) {
+                var btn = document.createElement('button');
+                btn.textContent = l;
+                btn.className = l === ccState.level ? 'active' : '';
+                btn.onclick = function() {
+                    ccState.level = l;
+                    lvlEl.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    updateCostCurves();
+                };
+                lvlEl.appendChild(btn);
+            });
+        }
+
+        // View toggle
+        var viewEl = document.getElementById('ccViewToggle');
+        if (viewEl) {
+            [['Onshore only', 'onshore_only'], ['+ Offshore', 'onshore_plus_offshore']].forEach(function(pair) {
+                var btn = document.createElement('button');
+                btn.textContent = pair[0];
+                btn.className = pair[1] === ccState.view ? 'active' : '';
+                btn.onclick = function() {
+                    ccState.view = pair[1];
+                    viewEl.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    updateCostCurves();
+                };
+                viewEl.appendChild(btn);
             });
         }
     }
 
-    // ---------- Scene 4: 7 small multiples (baseline + ceiling × Low/Med/High) ----------
-    function renderScene4() {
-        var s = D.scene4_demand_trajectory;
-        var grid = document.getElementById('scene4Grid');
+    function getCurveData() {
+        var key = ccState.view + '_' + ccState.year + '_' + ccState.level;
+        var iso_curves = D.cost_curves[ccState.iso];
+        if (!iso_curves) return [];
+        return iso_curves[key] || [];
+    }
+
+    function updateCostCurves() {
+        var pts = getCurveData();
+        if (pts.length === 0) {
+            // No data for this combo (e.g. offshore view for inland ISO)
+            Object.keys(ccCharts).forEach(function(k) {
+                if (ccCharts[k]) { ccCharts[k].destroy(); ccCharts[k] = null; }
+            });
+            return;
+        }
+        var scores = pts.map(function(p) { return p.score; });
+        var isoColor = ISO_COLORS[ccState.iso] || '#0EA5E9';
+
+        // Cost curve
+        renderLineChart('costCurveChart', 'ccCost', scores,
+            pts.map(function(p) { return p.cost_B; }),
+            isoColor, 'CFE Score (%)', 'Annual Cost ($B)',
+            function(v) { return '$' + v.toFixed(1) + 'B'; }
+        );
+
+        // LCOE
+        var lcoeScores = [], lcoeVals = [];
+        pts.forEach(function(p) { if (p.lcoe !== null) { lcoeScores.push(p.score); lcoeVals.push(p.lcoe); } });
+        renderLineChart('lcoeChart', 'ccLcoe', lcoeScores, lcoeVals,
+            SEMANTIC_COLORS.warning, 'CFE Score (%)', 'Eff. LCOE ($/MWh)',
+            function(v) { return '$' + v.toFixed(0) + '/MWh'; }
+        );
+
+        // Curtailment
+        renderLineChart('curtChart', 'ccCurt', scores,
+            pts.map(function(p) { return p.curt_pct; }),
+            SEMANTIC_COLORS.negative, 'CFE Score (%)', 'Curtailment (%)',
+            function(v) { return v.toFixed(1) + '%'; }
+        );
+
+        // Mix — stacked area
+        renderMixChart(pts, isoColor);
+    }
+
+    function renderLineChart(canvasId, chartKey, labels, data, color, xLabel, yLabel, tooltipFmt) {
+        if (ccCharts[chartKey]) ccCharts[chartKey].destroy();
+        var ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        ccCharts[chartKey] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: withAlpha(color, 0.12),
+                    borderWidth: 2.5,
+                    tension: LINE_TENSION,
+                    pointRadius: 1.5,
+                    pointHoverRadius: 5,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) { return 'CFE: ' + items[0].label + '%'; },
+                            label: function(ctx) { return tooltipFmt(ctx.parsed.y); }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: yLabel }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { title: { display: true, text: xLabel }, grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+                }
+            }
+        });
+    }
+
+    function renderMixChart(pts, isoColor) {
+        if (ccCharts.ccMix) ccCharts.ccMix.destroy();
+        var ctx = document.getElementById('mixChart');
+        if (!ctx) return;
+        var labels = pts.map(function(p) { return p.score; });
+        var datasets = [
+            { label: 'Wind (GW)', data: pts.map(function(p) { return p.wind_gw; }), backgroundColor: withAlpha(RESOURCE_COLORS.wind, 0.75), borderColor: RESOURCE_COLORS.wind, borderWidth: 1.5, fill: true, stack: 'mix' },
+            { label: 'Solar (GW)', data: pts.map(function(p) { return p.solar_gw; }), backgroundColor: withAlpha(RESOURCE_COLORS.solar, 0.75), borderColor: RESOURCE_COLORS.solar, borderWidth: 1.5, fill: true, stack: 'mix' }
+        ];
+        var hasOffshore = pts.some(function(p) { return p.offshore_gw > 0; });
+        if (hasOffshore) {
+            datasets.push({ label: 'Offshore (GW)', data: pts.map(function(p) { return p.offshore_gw; }), backgroundColor: withAlpha(RESOURCE_COLORS.offshoreWind, 0.75), borderColor: RESOURCE_COLORS.offshoreWind, borderWidth: 1.5, fill: true, stack: 'mix' });
+        }
+        ccCharts.ccMix = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { font: { size: 11 } } },
+                    datalabels: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) { return 'CFE: ' + items[0].label + '%'; },
+                            label: function(ctx) { return ctx.dataset.label + ': ' + Math.round(ctx.parsed.y).toLocaleString() + ' GW'; }
+                        }
+                    }
+                },
+                scales: {
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Capacity (GW)' }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { title: { display: true, text: 'CFE Score (%)' }, grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+                }
+            }
+        });
+    }
+
+    // ===== Section 4: Baseline Erosion =====
+    function renderErosion() {
+        var ctx = document.getElementById('erosionChart');
+        if (!ctx) return;
+
+        var datasets = D.meta.isos.map(function(iso, i) {
+            var e = D.erosion[iso];
+            return {
+                label: iso,
+                data: e.baseline_pct,
+                borderColor: ISO_COLORS[iso],
+                backgroundColor: withAlpha(ISO_COLORS[iso], 0.08),
+                borderWidth: 2.5,
+                tension: LINE_TENSION,
+                pointRadius: 4,
+                pointBackgroundColor: ISO_COLORS[iso],
+                fill: false
+            };
+        });
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: D.meta.years, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                        callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'; } }
+                    }
+                },
+                scales: {
+                    y: { min: 10, max: 60, title: { display: true, text: 'Baseline CFE Score (%)' }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        buildLegend('erosionLegend', D.meta.isos.map(function(iso) {
+            return { label: iso, color: ISO_COLORS[iso], type: 'line' };
+        }));
+    }
+
+    // ===== Section 5: Demand Trajectory Small Multiples =====
+    function renderTrajectory() {
+        var s = D.trajectory;
+        var grid = document.getElementById('trajectoryGrid');
         if (!grid) return;
 
         var LEVEL_COLORS = { Low: '#0284C7', Medium: '#D97706', High: '#DC2626' };
 
-        s.byISO && Object.keys(s.byISO).forEach(function(iso) { /* ensure ordering via meta */ });
-        var isoOrder = D.meta.isos;
-
-        isoOrder.forEach(function(iso) {
-            var iso_data = s.byISO[iso];
-            if (!iso_data) return;
+        D.meta.isos.forEach(function(iso) {
+            var isoData = s.byISO[iso];
+            if (!isoData) return;
 
             var wrap = document.createElement('div');
             wrap.className = 'small-multiple';
@@ -600,26 +620,16 @@
             var canvas = wrap.querySelector('canvas');
             var datasets = [];
             ['Low', 'Medium', 'High'].forEach(function(lvl) {
-                var lvlData = iso_data[lvl];
+                var lvlData = isoData[lvl];
                 datasets.push({
-                    label: lvl + ' ceiling',
-                    data: lvlData.ceiling_pct,
-                    borderColor: LEVEL_COLORS[lvl],
-                    backgroundColor: withAlpha(LEVEL_COLORS[lvl], 0.08),
-                    borderWidth: 2,
-                    tension: LINE_TENSION,
-                    pointRadius: 2,
-                    fill: false
+                    label: lvl + ' ceiling', data: lvlData.ceiling_pct,
+                    borderColor: LEVEL_COLORS[lvl], backgroundColor: withAlpha(LEVEL_COLORS[lvl], 0.08),
+                    borderWidth: 2, tension: LINE_TENSION, pointRadius: 2, fill: false
                 });
                 datasets.push({
-                    label: lvl + ' baseline',
-                    data: lvlData.baseline_pct,
-                    borderColor: LEVEL_COLORS[lvl],
-                    borderWidth: 1.5,
-                    borderDash: [4, 4],
-                    tension: LINE_TENSION,
-                    pointRadius: 2,
-                    fill: false
+                    label: lvl + ' baseline', data: lvlData.baseline_pct,
+                    borderColor: LEVEL_COLORS[lvl], borderWidth: 1.5, borderDash: [4, 4],
+                    tension: LINE_TENSION, pointRadius: 2, fill: false
                 });
             });
 
@@ -631,19 +641,10 @@
                     plugins: {
                         legend: { display: false },
                         datalabels: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'; }
-                            }
-                        }
+                        tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'; } } }
                     },
                     scales: {
-                        y: {
-                            beginAtZero: false,
-                            min: 0, max: 100,
-                            ticks: { font: { size: 9 }, stepSize: 20 },
-                            grid: { color: 'rgba(0,0,0,0.05)' }
-                        },
+                        y: { min: 0, max: 100, ticks: { font: { size: 9 }, stepSize: 20 }, grid: { color: 'rgba(0,0,0,0.05)' } },
                         x: { ticks: { font: { size: 9 } }, grid: { display: false } }
                     }
                 }
@@ -651,92 +652,84 @@
         });
     }
 
-    // ---------- Scene 5: offshore kicker ----------
-    function renderScene5() {
-        var s = D.scene5_offshore_kicker;
-        var grid = document.getElementById('scene5Grid');
+    // ===== Section 6: Offshore Comparison Small Multiples =====
+    function renderOffshore() {
+        var off = D.offshore;
+        var grid = document.getElementById('offshoreGrid');
         if (!grid) return;
 
-        s.isos.forEach(function(iso) {
-            var d = s[iso];
+        D.meta.offshore_isos.forEach(function(iso) {
+            var d = off[iso];
+            if (!d || !d.onshore_only || !d.onshore_plus_offshore) return;
+
+            var onPts = d.onshore_only;
+            var offPts = d.onshore_plus_offshore;
+
+            // Compute savings at highest common score
+            var maxOn = onPts[onPts.length - 1];
+            var maxOff = offPts[offPts.length - 1];
+            var savingsPct = maxOn[1] > 0 ? ((maxOn[1] - maxOff[1]) / maxOn[1] * 100) : 0;
+            var savingsLabel = savingsPct > 0
+                ? '<span style="color: #166534; font-weight: 600;">&minus;' + savingsPct.toFixed(0) + '% cost</span> at ' + maxOn[0].toFixed(0) + '% CFE'
+                : 'Minimal savings';
+
             var wrap = document.createElement('div');
             wrap.className = 'small-multiple';
-
-            var scoreDelta = d.score_lift_pp.toFixed(2);
-            var costDelta = (d.cost_delta_usd / 1e9);
-            var costDeltaStr = (costDelta >= 0 ? '+$' : '&minus;$') + Math.abs(costDelta).toFixed(0) + 'B/yr';
-            var costClass = costDelta >= 0 ? 'stat-amber' : 'stat-green';
-
-            wrap.innerHTML =
-                '<div class="mini-title">' + iso + '</div>' +
-                '<div class="mini-chart"><canvas></canvas></div>' +
-                '<div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">' +
-                    '<strong>+' + scoreDelta + ' pp</strong> to ' + d.onshore_plus_offshore.ceiling_score_pct.toFixed(2) + '% &middot; ' +
-                    '<span style="color:' + (costDelta >= 0 ? '#B45309' : '#166534') + '; font-weight: 600;">' + costDeltaStr + '</span>' +
-                '</div>';
+            wrap.innerHTML = '<div class="mini-title">' + iso + '</div><div class="mini-chart"><canvas></canvas></div>' +
+                '<div class="offshore-stat">' + savingsLabel + ' &middot; $' + maxOn[1].toFixed(0) + 'B &rarr; $' + maxOff[1].toFixed(0) + 'B</div>';
             grid.appendChild(wrap);
 
             var canvas = wrap.querySelector('canvas');
             new Chart(canvas, {
-                type: 'bar',
+                type: 'line',
                 data: {
-                    labels: ['Onshore only', 'Onshore + offshore'],
                     datasets: [
                         {
-                            label: 'Wind (GW)',
-                            data: [d.onshore_only.added_wind_gw, d.onshore_plus_offshore.added_wind_gw],
-                            backgroundColor: withAlpha(RESOURCE_COLORS.wind, 0.75),
-                            borderColor: RESOURCE_COLORS.wind,
-                            borderWidth: 1.5,
-                            borderRadius: 4,
-                            stack: 'cap'
+                            label: 'Onshore only',
+                            data: onPts.map(function(p) { return { x: p[0], y: p[1] }; }),
+                            borderColor: SEMANTIC_COLORS.warning,
+                            backgroundColor: withAlpha(SEMANTIC_COLORS.warning, 0.08),
+                            borderWidth: 2.5, tension: LINE_TENSION, pointRadius: 1, fill: true
                         },
                         {
-                            label: 'Solar (GW)',
-                            data: [d.onshore_only.added_solar_gw, d.onshore_plus_offshore.added_solar_gw],
-                            backgroundColor: withAlpha(RESOURCE_COLORS.solar, 0.75),
-                            borderColor: RESOURCE_COLORS.solar,
-                            borderWidth: 1.5,
-                            borderRadius: 4,
-                            stack: 'cap'
-                        },
-                        {
-                            label: 'Offshore (GW)',
-                            data: [0, d.onshore_plus_offshore.added_offshore_gw],
-                            backgroundColor: withAlpha(RESOURCE_COLORS.offshoreWind, 0.75),
+                            label: '+ Offshore wind',
+                            data: offPts.map(function(p) { return { x: p[0], y: p[1] }; }),
                             borderColor: RESOURCE_COLORS.offshoreWind,
-                            borderWidth: 1.5,
-                            borderRadius: 4,
-                            stack: 'cap'
+                            backgroundColor: withAlpha(RESOURCE_COLORS.offshoreWind, 0.12),
+                            borderWidth: 2.5, borderDash: [6, 3], tension: LINE_TENSION, pointRadius: 1, fill: true
                         }
                     ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false },
+                        legend: { display: true, position: 'bottom', labels: { font: { size: 10 } } },
                         datalabels: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(ctx) { return ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' GW'; }
+                                title: function(items) { return 'CFE: ' + items[0].parsed.x.toFixed(1) + '%'; },
+                                label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + 'B'; }
                             }
                         }
                     },
                     scales: {
-                        y: { stacked: true, beginAtZero: true, ticks: { font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' }, title: { display: true, text: 'GW added', font: { size: 10 } } },
-                        x: { stacked: true, ticks: { font: { size: 10 } }, grid: { display: false } }
+                        x: { type: 'linear', title: { display: true, text: 'CFE Score (%)', font: { size: 10 } }, ticks: { font: { size: 9 } }, grid: { display: false } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Cost ($B)', font: { size: 10 } }, ticks: { font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
                     }
                 }
             });
         });
     }
 
+    // ===== Init =====
     ready(function() {
-        renderScene1();
-        renderScene2();
-        renderScene3();
-        renderScene4();
-        renderScene5();
+        renderHeadline();
+        renderCapacity();
+        buildControls();
+        updateCostCurves();
+        renderErosion();
+        renderTrajectory();
+        renderOffshore();
     });
 })();
 </script>
