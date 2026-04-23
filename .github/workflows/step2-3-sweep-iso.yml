@@ -1,14 +1,15 @@
 name: "Step 2.3 v3: Sweep Single ISO"
 
-# Runs the v2 pathway optimizer for one ISO at a time.
+# Runs the v3 pathway optimizer for one ISO at a time.
 # Each dispatch pushes its own auto/* branch so runs for different ISOs
 # never touch the same files in git. The branch follows the naming convention
 # consumed by .github/workflows/squash-pipeline-branches.yml — run that
 # workflow after a batch of ISO sweeps to consolidate them into master.
 #
 # Outputs per run:
-#   analysis/reliability-tax/data/<ISO>/pathway*_ep*.json   (20 combos)
-#   analysis/reliability-tax/data/MANIFEST_<ISO>.parquet    (one per ISO)
+#   data/step2.3-pathway/<ISO>/pathway*_ep*.json            (20 myopic combos)
+#   data/step2.3-pathway/<ISO>/pathway*_ep*_foresight.json  (12 foresight combos)
+#   data/step2.3-pathway/MANIFEST_<ISO>.parquet             (one per ISO)
 #   data/step2.1-ef/step_2_1_EF_<ISO>_*_peakclean.parquet   (Stage-1 sidecars)
 #
 # The global MANIFEST.json is NOT touched — rebuild it locally from the
@@ -17,16 +18,16 @@ name: "Step 2.3 v3: Sweep Single ISO"
 #   python -c "
 #   import json, glob, pyarrow.parquet as pq
 #   rows = []
-#   for p in sorted(glob.glob('analysis/reliability-tax/data/MANIFEST_*.parquet')):
+#   for p in sorted(glob.glob('data/step2.3-pathway/MANIFEST_*.parquet')):
 #       rows.extend(pq.read_table(p).to_pylist())
 #   json.dump({'count': len(rows), 'rows': rows},
-#             open('analysis/reliability-tax/data/MANIFEST.json','w'), indent=2)"
+#             open('data/step2.3-pathway/MANIFEST.json','w'), indent=2)"
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO to sweep (20 combos: 5 pathways × 4 endpoints)'
+        description: 'ISO to sweep (32 combos: 20 myopic + 12 foresight for P2a/P2b/P3)'
         required: true
         type: choice
         options:
@@ -85,9 +86,9 @@ jobs:
             requests
 
       - name: Ensure output dir
-        run: mkdir -p analysis/reliability-tax/data/${{ inputs.iso }}
+        run: mkdir -p data/step2.3-pathway/${{ inputs.iso }}
 
-      - name: Run sweep (all 20 combos, one Python process)
+      - name: Run sweep (32 combos: 20 myopic + 12 foresight, one Python process)
         env:
           ISO: ${{ inputs.iso }}
           # Restrict module-scope loads (dispatch cache, gen profiles, hybrid
@@ -108,10 +109,13 @@ jobs:
         env:
           ISO: ${{ inputs.iso }}
         run: |
-          count=$(ls analysis/reliability-tax/data/${ISO}/pathway*_ep*.json 2>/dev/null | wc -l)
-          echo "[verify] ${ISO}: ${count}/20 JSONs"
-          if [ "${count}" -lt 20 ]; then
-            echo "::warning::${ISO} wrote ${count}/20 combos — investigate before merging"
+          myopic=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null \
+                   | grep -v '_foresight\.json$' | wc -l)
+          foresight=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*_foresight.json 2>/dev/null | wc -l)
+          total=$((myopic + foresight))
+          echo "[verify] ${ISO}: ${myopic}/20 myopic + ${foresight}/12 foresight = ${total}/32 JSONs"
+          if [ "${myopic}" -lt 20 ] || [ "${foresight}" -lt 12 ]; then
+            echo "::warning::${ISO} wrote ${myopic}/20 myopic + ${foresight}/12 foresight — investigate before merging"
           fi
 
       - name: Build MANIFEST_<ISO>.parquet shard
@@ -125,7 +129,7 @@ jobs:
 
           iso = os.environ['ISO']
           rows = []
-          for p in sorted(glob.glob(f'analysis/reliability-tax/data/{iso}/pathway*_ep*.json')):
+          for p in sorted(glob.glob(f'data/step2.3-pathway/{iso}/pathway*_ep*.json')):
               with open(p) as f:
                   d = json.load(f)
               cfg = d['config']
@@ -134,6 +138,7 @@ jobs:
                   'pathway':                    cfg['pathway'],
                   'endpoint':                   float(cfg['endpoint']),
                   'endpoint_pct':               float(cfg['endpoint_pct']),
+                  'solver_mode':                str(cfg.get('solver_mode', 'myopic')),
                   'schema_version':             int(d['schema_version']),
                   'feasibility_physical':       bool(d['feasibility']['physical']),
                   'achieved_cfe_pct':           float(d['headline']['achieved_cfe_pct']),
@@ -149,7 +154,7 @@ jobs:
                   'total_stranded_capex_usd':   float(d['stranding_metadata']['total_stranded_capex_usd']),
               })
 
-          out = f'analysis/reliability-tax/data/MANIFEST_{iso}.parquet'
+          out = f'data/step2.3-pathway/MANIFEST_{iso}.parquet'
           pq.write_table(pa.Table.from_pylist(rows), out)
           print(f'[manifest] wrote {out} with {len(rows)} rows', flush=True)
           PY
@@ -163,11 +168,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "${branch}"
-          git add "analysis/reliability-tax/data/${ISO}/" \
-                  "analysis/reliability-tax/data/MANIFEST_${ISO}.parquet"
+          git add "data/step2.3-pathway/${ISO}/" \
+                  "data/step2.3-pathway/MANIFEST_${ISO}.parquet"
           # Sidecars may or may not exist (already committed in prior runs) — add if new
           git add "data/step2.1-ef/" 2>/dev/null || true
-          count=$(ls "analysis/reliability-tax/data/${ISO}/"pathway*_ep*.json 2>/dev/null | wc -l)
+          count=$(ls "data/step2.3-pathway/${ISO}/"pathway*_ep*.json 2>/dev/null | wc -l)
           git commit -m "step 2.3 — ${ISO} v3 sweep (${count} combos)"
 
           MAX_RETRIES=4
@@ -191,11 +196,11 @@ jobs:
           ISO: ${{ inputs.iso }}
         run: |
           {
-            echo "## step 2.3 — ${ISO} v2 sweep"
+            echo "## step 2.3 — ${ISO} v3 sweep"
             echo ""
             echo "- Branch: \`${BRANCH}\`"
-            echo "- Combos: ${COMBO_COUNT}/20 JSON payloads"
-            echo "- Manifest shard: \`analysis/reliability-tax/data/MANIFEST_${ISO}.parquet\`"
+            echo "- Combos: ${COMBO_COUNT}/32 JSON payloads (20 myopic + 12 foresight)"
+            echo "- Manifest shard: \`data/step2.3-pathway/MANIFEST_${ISO}.parquet\`"
             echo ""
             echo "Run the **Squash Pipeline Branches** workflow with pattern \`auto/.*step2-3-sweep\` to consolidate all ISO runs into master."
           } >> "${GITHUB_STEP_SUMMARY}"
@@ -205,8 +210,8 @@ jobs:
         with:
           name: sweep-${{ inputs.iso }}-${{ github.run_id }}
           path: |
-            analysis/reliability-tax/data/${{ inputs.iso }}/pathway*_ep*.json
-            analysis/reliability-tax/data/MANIFEST_${{ inputs.iso }}.parquet
+            data/step2.3-pathway/${{ inputs.iso }}/pathway*_ep*.json
+            data/step2.3-pathway/MANIFEST_${{ inputs.iso }}.parquet
             data/step2.1-ef/step_2_1_EF_${{ inputs.iso }}_*_peakclean.parquet
           retention-days: 30
           if-no-files-found: warn
