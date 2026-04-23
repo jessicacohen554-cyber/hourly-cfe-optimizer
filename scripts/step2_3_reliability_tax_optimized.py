@@ -999,7 +999,7 @@ def _update_floors(w, yi, ctx, fr, fc, fu, fg, fn, fcc):
 @dataclass
 class PathwayRunResult:
     config: RunConfig; ledger: VintageLedger; winners: np.ndarray
-    cum_gas: np.ndarray; active_fleet: np.ndarray; gas_cf: np.ndarray
+    gas_need: np.ndarray; active_fleet: np.ndarray; gas_cf: np.ndarray
     achieved_cfe: np.ndarray; demand_vec: np.ndarray; peak_vec: np.ndarray
     eg_used: np.ndarray; annual_rows: list; end_dispatch: np.ndarray
     feasibility: dict; stranding: dict
@@ -1359,7 +1359,7 @@ def _finalize(ctx, winners):
                                      for r in rows), 2) for k, rate in DISCOUNT_RATES.items()}
 
     return PathwayRunResult(
-        config=cfg, ledger=ledger, winners=winners, cum_gas=cng,
+        config=cfg, ledger=ledger, winners=winners, gas_need=cng,
         active_fleet=af, gas_cf=gcf, achieved_cfe=acfe,
         demand_vec=ctx.demand_vec, peak_vec=ctx.peak_vec, eg_used=egu,
         annual_rows=rows, end_dispatch=ed,
@@ -1433,9 +1433,10 @@ def _serialize_buildout(r: PathwayRunResult):
                            'locked_lcoe_usd_per_mwh': round(float(tr_eff[tn][yi]), 2),
                            'tx_adder_usd_per_mwh': 0.0})
             prev_tr[tn] = max(prev_tr[tn], cur)
-        is_pk = (year == r.stranding['peak_year'])
         growth = float(r.peak_vec[yi]) / float(pc.PEAK_DEMAND_MW[cfg.iso])
         scaled_clean_peak = float(ef['clean_peak_hour_mw'][w]) * growth
+        prev_af = float(r.active_fleet[yi - 1]) if yi > 0 else 0.0
+        delta_af = max(0.0, float(r.active_fleet[yi]) - prev_af)
         out.append({
             'year': year, 'new_vintages': nv,
             'gas_sizing': {
@@ -1443,8 +1444,8 @@ def _serialize_buildout(r: PathwayRunResult):
                 'ra_peak_mw': round(float(r.peak_vec[yi] * (1 + ra)), 2),
                 'total_clean_peak_mw': round(scaled_clean_peak, 2),
                 'existing_gas_used_mw': round(float(r.eg_used[yi]), 2),
-                'new_gas_required_cumulative_mw': round(float(r.cum_gas[yi]), 2),
-                'new_gas_built_this_year_mw': round(r.stranding['fleet_size_mw'], 2) if is_pk else 0.0,
+                'new_gas_instantaneous_need_mw': round(float(r.gas_need[yi]), 2),
+                'new_gas_built_this_year_mw': round(delta_af, 2),
                 'active_new_gas_fleet_mw': round(float(r.active_fleet[yi]), 2),
                 'gas_fleet_cf': round(float(r.gas_cf[yi]), 4),
             },
