@@ -1139,6 +1139,18 @@ class PathwayRunResult:
 def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
     """Unified solver: myopic or foresight (2.2A ceiling constraints)."""
     ef = ef_override or load_ef_pool(cfg.iso)
+
+    # ── Pre-sort pool by hourly_match_score for binary-search filtering ──
+    # Enables O(log n) window lookup per year instead of scoring all n
+    # candidates through the numba kernel.  The sort is stable so ties
+    # preserve original order.  All downstream arrays (ctx.ef, ctx.score,
+    # ctx.resid, ef_noncf_mat, storage_mat, etc.) are reordered consistently
+    # because _build_ctx reads from the same ef dict.
+    _sort_idx = np.argsort(ef['hourly_match_score'], kind='mergesort')
+    for _k in ef:
+        ef[_k] = ef[_k][_sort_idx]
+    del _sort_idx
+
     ctx = _build_ctx(cfg, ef)
     n = ctx.n
     eyi = YEARS.index(_endpoint_year(float(cfg.endpoint_pct)))
@@ -1160,6 +1172,9 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
             'cf_share': float(tgt[0]),
         }
 
+    # ── Pre-compute gas-sizing constants for vectorized rmg pre-pass ──
+    _gaf_safe = max(ctx.gaf, 1e-9)
+
     for yi in range(eyi + 1):
         best_score, best_idx = np.inf, 0
         # Pre-compute per-year scalars once (Change 8)
@@ -1176,11 +1191,41 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         up_eff_yi = float(ctx.up_eff[yi])
         geo_eff_yi = float(ctx.geo_eff[yi])
         delivered_yi = ctx.delivered[yi]
-        # Buffer for raw scores to avoid recomputation in safety net (Change 2)
+
+        # ── Vectorized rmg pre-pass (all n candidates, O(n) numpy) ──
+        # The numba kernel accumulates rmg (running-max gas need) even for
+        # candidates it won't select.  With window-restricted scoring, out-
+        # of-window candidates would miss their rmg update.  This pre-pass
+        # replicates the kernel's gas-sizing arithmetic on the full pool in
+        # one vectorized numpy call, so rmg is correct before the kernel
+        # touches the in-window slice.  The kernel's own rmg write for
+        # in-window rows is harmlessly redundant (same formula, same result).
+        _gr_all = np.maximum(0.0, np.maximum(0.0,
+            ctx.exist_base + ctx.resid * amwh_y / _gaf_safe
+            - ctx.gas_raw_2025) - eg_yi)
+        np.maximum(rmg, _gr_all, out=rmg)
+
+        # ── Binary-search for CFE band window on sorted score array ──
+        # Pool is pre-sorted by hourly_match_score, so searchsorted gives
+        # the contiguous slice [ws, we) that passes the cfe_s check.
+        _win_lo = cfe_tgt_yi - 0.5
+        _win_hi = cfe_ceil_yi
+        ws = int(np.searchsorted(ctx.score, _win_lo, side='left'))
+        we = int(np.searchsorted(ctx.score, _win_hi, side='left'))
+        _win_n = we - ws
+        if yi == 0 or yi == eyi or yi % 5 == 0:
+            print(f"[solve] year {YEARS[yi]}: window [{_win_lo:.1f}, {_win_hi:.1f}) "
+                  f"→ {_win_n:,}/{n:,} candidates ({_win_n/max(1,n)*100:.0f}%)",
+                  flush=True)
+
+        # Buffer for raw scores — only in-window slots get filled; rest
+        # stays inf so the safety net correctly ignores them unless it
+        # extends scoring above the ceiling.
         saved_rs = np.full(n, np.inf, dtype=np.float64)
 
-        for s in range(0, n, _POOL_CHUNK):
-            e = min(s + _POOL_CHUNK, n)
+        # ── Primary path: score only the window slice [ws, we) ──
+        for s in range(ws, max(ws, we), _POOL_CHUNK):
+            e = min(s + _POOL_CHUNK, we)
             rs, ra, pm, fe, cs, tnr, tcf, up, ge, nk, cc, snr = _score_chunk(
                 s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
                 dy=dy, amwh_y=amwh_y, bl_y=bl_y,
@@ -1215,6 +1260,24 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         # Tier 2: drop ceiling entirely (floor + pathway only).
         # Tier 3: hold previous year's winner.
         if np.isinf(best_score):
+            # ── Extend scoring above ceiling for Tier-2 fallback ──
+            # Tier 2 drops the ceiling, so it needs saved_rs for candidates
+            # above cfe_ceil.  Score [we, n) now — only runs on safety-net
+            # triggers, so zero cost on the happy path.
+            if we < n:
+                for s in range(we, n, _POOL_CHUNK):
+                    e = min(s + _POOL_CHUNK, n)
+                    rs_ext, _, _, _, _, _, _, _, _, _, _, _ = _score_chunk(
+                        s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
+                        dy=dy, amwh_y=amwh_y, bl_y=bl_y,
+                        nuke_eff_yi=nuke_eff_yi, ccs_eff_yi=ccs_eff_yi,
+                        eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
+                        cfe_ceil_yi=cfe_ceil_yi,
+                        uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
+                        geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi,
+                        pf_yi=pf_yi)
+                    saved_rs[s:e] = rs_ext
+
             # Shared: pathway mask over full pool
             if ctx.is_p1:
                 _pm_full = ((ctx.ef['clean_firm'].astype(np.float64) <= pf_yi + float(ctx.uc_pct_y[yi]) + 0.5)
