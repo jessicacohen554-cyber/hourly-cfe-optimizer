@@ -117,17 +117,23 @@ def _demand_twh_vec(iso: str, level: str = 'Medium') -> np.ndarray:
     return bd * (1.0 + g) ** np.arange(N_YEARS)
 
 
-def _p1_mask_params(iso: str) -> tuple[float, np.ndarray]:
-    """Return (pf, uc_pct_y) exactly as _build_ctx computes them.
+def _p1_mask_params(iso: str) -> tuple[np.ndarray, np.ndarray]:
+    """Return (pf_y, uc_pct_y) exactly as _build_ctx computes them.
 
-    pf         = GRID_MIX_SHARES[iso]['clean_firm'] + 0.01
+    pf_y[yi]   = bl_twh / demand_twh[yi] * 100 + 0.01   (declining %)
     uc_pct_y   = UPRATE_CAP_TWH[iso] / demand_twh_vec[yi] * 100
+
+    Existing nuclear is a fixed TWh output (base-year share × base-year
+    demand).  Its percentage share declines as demand grows.
     """
-    pf = float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)) + 0.01
+    bp = float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0))
+    bd = float(pc.REGIONAL_DEMAND_TWH[iso])
+    bl_twh = bp / 100.0 * bd           # fixed TWh output
     uc = float(pc.UPRATE_CAP_TWH[iso])
     dv = _demand_twh_vec(iso)
+    pf_y = bl_twh / np.maximum(dv, 1e-6) * 100.0 + 0.01
     uc_pct_y = uc / np.maximum(dv, 1e-6) * 100.0
-    return pf, uc_pct_y
+    return pf_y, uc_pct_y
 
 
 def _p1_cf_cap(pf: float, uc_pct_yi: float) -> float:
@@ -231,7 +237,7 @@ def diagnose(iso: str) -> dict:
     base_clean_pct = sum(pc.GRID_MIX_SHARES.get(iso, {}).values())
 
     # P1 mask parameters (same as optimizer's _build_ctx)
-    pf, uc_pct_y = _p1_mask_params(iso)
+    pf_y, uc_pct_y = _p1_mask_params(iso)
 
     endpoints_report = {}
     sparse_windows = []
@@ -252,8 +258,9 @@ def diagnose(iso: str) -> dict:
             candidates_total = int(np.sum(in_window))
 
             # Apply P1 mask to the in-window rows
+            pf_yi = float(pf_y[yi])
             uc_pct_yi = float(uc_pct_y[yi])
-            p1_ok = _apply_p1_mask(cf_arr, ccs_arr, pf, uc_pct_yi)
+            p1_ok = _apply_p1_mask(cf_arr, ccs_arr, pf_yi, uc_pct_yi)
             candidates_p1 = int(np.sum(in_window & p1_ok))
 
             # P1 is the binding constraint — flag on P1 count
@@ -266,7 +273,7 @@ def diagnose(iso: str) -> dict:
                 'window_hi': round(hi, 2),
                 'candidates_total': candidates_total,
                 'candidates_p1': candidates_p1,
-                'cf_cap': round(_p1_cf_cap(pf, uc_pct_yi), 2),
+                'cf_cap': round(_p1_cf_cap(pf_yi, uc_pct_yi), 2),
                 'sparse': is_sparse,
             }
             year_details.append(detail)
@@ -280,7 +287,7 @@ def diagnose(iso: str) -> dict:
                     'window_hi': round(hi, 2),
                     'candidates_total': candidates_total,
                     'candidates_p1': candidates_p1,
-                    'cf_cap': round(_p1_cf_cap(pf, uc_pct_yi), 2),
+                    'cf_cap': round(_p1_cf_cap(pf_yi, uc_pct_yi), 2),
                 })
 
         endpoints_report[str(ep_pct)] = {
@@ -677,14 +684,16 @@ def run_augment(diag_results: dict, dry_run: bool = False):
                 windows_by_iso[iso][key] = _Window(lo=sw['window_lo'],
                                                     hi=sw['window_hi'])
             w = windows_by_iso[iso][key]
-            if sw['candidates'] < MIN_CANDIDATES:
+            if sw['candidates_total'] < MIN_CANDIDATES:
                 w.needs_general = True
             if sw['candidates_p1'] < MIN_CANDIDATES:
                 w.needs_p1 = True
             # Keep the most permissive (largest) P1 cap — earliest year has
             # highest uc_pct because demand is smallest.
-            w.p1_cf_cap = max(w.p1_cf_cap, sw.get('p1_cf_cap', 999.0))
-            w.year_indices.append(sw.get('year_index', 0))
+            w.p1_cf_cap = max(w.p1_cf_cap, sw.get('cf_cap', 999.0))
+            # Track year index for selecting uc_pct_y
+            yi = YEARS.index(sw['year']) if sw['year'] in YEARS else 0
+            w.year_indices.append(yi)
 
     total_written = 0
     for iso, wdict in windows_by_iso.items():
@@ -710,7 +719,7 @@ def run_augment(diag_results: dict, dry_run: bool = False):
         pool = _load_full_pool(iso)
         print(f"{pool.num_rows:,} rows", flush=True)
 
-        pf, uc_pct_y = _p1_mask_params(iso)
+        pf_y, uc_pct_y = _p1_mask_params(iso)
 
         for w in sorted(windows, key=lambda x: x.lo):
             lower_band, upper_band = _find_neighbor_bands(w.lo, w.hi)
@@ -738,13 +747,15 @@ def run_augment(diag_results: dict, dry_run: bool = False):
 
             # P1 augmentation (if P1 pool is sparse)
             if w.needs_p1:
-                # Use the most permissive year's uc_pct (earliest year in window)
+                # Use the most permissive year's params (earliest year in
+                # window → highest pf and uc_pct because demand is smallest)
                 earliest_yi = min(w.year_indices) if w.year_indices else 0
+                pf_yi_max = float(pf_y[earliest_yi])
                 uc_pct_yi_max = float(uc_pct_y[earliest_yi])
 
                 p1_tbl = _interpolate_p1_rows(pool, w.lo, w.hi,
                                               INTERP_ROWS_PER_GAP, rng,
-                                              pf, uc_pct_yi_max)
+                                              pf_yi_max, uc_pct_yi_max)
                 if p1_tbl is not None:
                     out_name = (f'step_2_1_EF_{iso}_{band_tag}'
                                 f'_p1interp_{w.lo:.0f}_{w.hi:.0f}.parquet')
@@ -754,7 +765,7 @@ def run_augment(diag_results: dict, dry_run: bool = False):
                     total_written += p1_tbl.num_rows
                     print(f"  [{w.lo:.1f}, {w.hi:.1f}): wrote "
                           f"{p1_tbl.num_rows} P1 rows → {out_name} "
-                          f"(cf_cap={pf + uc_pct_yi_max + 0.5:.1f})",
+                          f"(cf_cap={pf_yi_max + uc_pct_yi_max + 0.5:.1f})",
                           flush=True)
 
     print(f"\n[augment] Total rows written: {total_written:,}")
