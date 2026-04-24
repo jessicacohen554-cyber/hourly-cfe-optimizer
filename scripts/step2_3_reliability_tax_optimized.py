@@ -448,13 +448,112 @@ def _iter_ef_bands(iso: str):
                 yield t, [main]
 
 
+def _build_peakclean_from_table(iso: str, ef: pa.Table,
+                                score_floor_threshold: float) -> pa.Table:
+    """Build peakclean sidecar for an arbitrary EF table (e.g. interp files).
+
+    Same logic as precompute_clean_peak_hour_mw but accepts a pre-loaded table
+    instead of reading from disk via threshold tag.  The score_floor_threshold
+    controls the SCORE_FLOOR_PCT filter (rows with score < threshold − 10 get
+    inf residual).
+    """
+    n = ef.num_rows
+    resid = np.empty(n, dtype=np.float32)
+    cache, am = _DCACHE.get(iso), _MANIFEST.get(iso)
+    miss_val = np.float32(float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR)
+
+    if cache is None or am is None:
+        resid[:] = miss_val
+    else:
+        resid_arch = _per_archetype_resid(iso, cache).astype(np.float32)
+        k2i = {k: i for i, k in enumerate(cache.column('archetype_key').to_pylist())}
+        mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
+                 'mix_ccs_ccgt', 'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8',
+                 'mix_wind_batt4', 'mix_wind_batt8']
+        mmat = np.column_stack([am.column(c).to_numpy() for c in mcols]).astype(np.int32)
+        m2c = np.array([k2i.get(k, -1) for k in am.column('archetype_key').to_pylist()],
+                       dtype=np.int64)
+        ef_cols = [c[4:] for c in mcols]
+        emat = np.column_stack([
+            ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n)
+            for c in ef_cols]).astype(np.int32)
+        if n > 0 and len(mmat) > 0:
+            cidx = m2c[_l1_nn(emat, mmat)]
+        else:
+            cidx = np.empty(n, dtype=np.int64)
+        hit = cidx >= 0
+        resid[:] = np.where(hit, resid_arch[np.where(hit, cidx, 0)], miss_val)
+
+    if 'hourly_match_score' in ef.column_names:
+        resid[ef.column('hourly_match_score').to_numpy()
+              < (score_floor_threshold - SCORE_FLOOR_PCT)] = np.float32(np.inf)
+
+    peak = float(pc.PEAK_DEMAND_MW[iso])
+    safe = np.where(np.isfinite(resid), resid, 0.0).astype(np.float64)
+    return pa.table({
+        'resid_norm_p9997': pa.array(resid),
+        'clean_peak_hour_mw': pa.array(((1.0 - safe) * peak).astype(np.float32)),
+    })
+
+
+def _load_or_build_interp_peakclean(iso: str, interp_path: Path) -> pa.Table:
+    """Load or build peakclean for a single interp parquet file.
+
+    Caches the sidecar next to the interp file with a _peakclean suffix.
+    The score-floor threshold is derived from the minimum hourly_match_score
+    in the file.
+    """
+    pc_path = interp_path.with_name(
+        interp_path.stem + '_peakclean.parquet')
+    tgt_cv = _cache_version(iso)
+    if pc_path.exists():
+        meta = pq.read_schema(pc_path).metadata or {}
+        if (meta.get(b'source_cache_version', b'').decode() == tgt_cv
+                and meta.get(b'stage1_version', b'').decode() == _STAGE1_VERSION):
+            return pq.read_table(pc_path)
+
+    print(f"[stage1] building peakclean for interp {interp_path.name}", flush=True)
+    ef = pq.read_table(interp_path)
+    # Use minimum score as the threshold for the SCORE_FLOOR_PCT filter
+    scores = ef.column('hourly_match_score').to_numpy()
+    floor_thresh = float(scores.min()) if len(scores) > 0 else 0.0
+    tbl = _build_peakclean_from_table(iso, ef, floor_thresh)
+    tbl = tbl.replace_schema_metadata({
+        'source_cache_version': tgt_cv,
+        'stage1_version': _STAGE1_VERSION,
+        'iso': iso, 'interp_source': interp_path.name,
+    })
+    tmp = pc_path.with_suffix('.parquet.tmp')
+    pq.write_table(tbl, tmp)
+    os.replace(tmp, pc_path)
+    return tbl
+
+
 def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
-    """Full-pool EF loader: concatenate all threshold bands + peakclean sidecars."""
+    """Full-pool EF loader: concatenate all threshold bands + peakclean sidecars.
+
+    Also picks up augmented interp files (step_2_1_EF_{iso}_*_interp_*.parquet)
+    produced by diagnose_and_augment_ef_pool.py, building peakclean sidecars
+    for them independently.
+    """
     ef_tables, pc_tables = [], []
+
+    # ── Pass 1: standard EF bands ──
     for t, paths in _iter_ef_bands(iso):
         for p in paths:
             ef_tables.append(pq.read_table(p))
         pc_tables.append(_load_or_build_peakclean(iso, t))
+
+    # ── Pass 2: interpolated augmentation files ──
+    interp_files = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_*_interp_*.parquet'))
+    # Exclude peakclean sidecars from the glob
+    interp_files = [p for p in interp_files if '_peakclean' not in p.name]
+    for ip in interp_files:
+        ef_tables.append(pq.read_table(ip))
+        pc_tables.append(_load_or_build_interp_peakclean(iso, ip))
+        print(f"[pool] loaded interp file {ip.name} "
+              f"({ef_tables[-1].num_rows} rows)", flush=True)
+
     if not ef_tables:
         raise FileNotFoundError(f"No EF bands for {iso} under {EF_DIR}")
     # 'permissive' unifies string/large_string (and widens numeric types) across
