@@ -1,0 +1,136 @@
+name: "Step 2.1b: Augment Thin EF Cells"
+
+# Augments thin EF threshold bands (< min_mix_threshold unique mixes)
+# with perturbation + interpolation to ensure robust cost optimization.
+#
+# Runs AFTER Step 2.1, BEFORE Step 2.2.
+# Only modifies EF parquets for bands that are below the threshold.
+#
+# Prerequisite: Step 2.1 EF parquets in data/step2.1-ef/
+# Output: Updated data/step2.1-ef/ parquets (thin bands only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      min_mix_threshold:
+        description: 'Minimum unique mixes per threshold band'
+        required: false
+        default: '2500'
+        type: string
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-1b-augment
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  augment:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ matrix.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify EF parquets exist
+        run: |
+          ISO="${{ matrix.iso }}"
+          EF_COUNT=$(ls data/step2.1-ef/step_2_1_EF_${ISO}_*.parquet 2>/dev/null | wc -l)
+          if [ "$EF_COUNT" -eq 0 ]; then
+            echo "ERROR: No EF parquets found for ${ISO}. Run Step 2.1 first."
+            exit 1
+          fi
+          echo "Found ${EF_COUNT} EF parquets for ${ISO}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: "Run Step 2.1b augmentation (${{ matrix.iso }})"
+        timeout-minutes: 20
+        run: |
+          python scripts/step2_1b_augment_thin_ef.py \
+            --iso ${{ matrix.iso }} \
+            --min-threshold ${{ inputs.min_mix_threshold || '2500' }}
+
+      - name: Commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit for ${{ matrix.iso }} (no thin cells found)"
+            exit 0
+          fi
+
+          git commit -m "Step 2.1b: augment thin EF cells for ${{ matrix.iso }} (min=${{ inputs.min_mix_threshold || '2500' }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done

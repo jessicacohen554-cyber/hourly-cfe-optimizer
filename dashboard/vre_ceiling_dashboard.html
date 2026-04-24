@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Renewables Ceiling Explorer — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/ceiling-explorer-data.js"></script>
+<style>
+/* Page-specific layout only — everything else from shared.css + article.css */
+.controls-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+.controls-row label {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.ref-line-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+    margin-top: var(--space-sm);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+.ref-line-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ref-line-legend .ref-swatch {
+    display: inline-block;
+    width: 24px;
+    height: 3px;
+    border-top: 2px dashed;
+}
+.summary-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+
+<div class="header" id="pageHeader">
+    <h1>Renewables Ceiling Explorer</h1>
+    <div class="subtitle">How far can wind &amp; solar take you before the economics break?</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ============ BEAT 1: THE CHEAP STRETCH ============ -->
+
+<section class="content-section scroll-reveal" id="beatCheap">
+
+```
+<div class="section-header">
+    <div class="section-number">1</div>
+    <h2>The cheap stretch: baseline to ~80% CFE</h2>
+    <p>Wind and solar are genuinely cheap through the first 30–40 percentage points of additional clean energy. The question is what happens after.</p>
+</div>
+
+<div class="narrative-section">
+    <p>Every U.S. grid already gets some clean energy for free — existing hydro, nuclear, and legacy renewables provide a 30–50% baseline. From that starting point, the first 30–40 percentage points of additional CFE come remarkably cheap. Wind and solar generation is complementary enough that curtailment stays below 10%, and average delivered cost sits under $90/MWh in most ISOs.</p>
+    <p>ERCOT, SPP, and MISO lead: their wind resources are so strong that average LCOE stays under $65/MWh through 80% CFE. Coastal and congested grids (NYISO, CAISO) are pricier but still manageable.</p>
+</div>
+
+<div class="grid-stats" id="cheapStats"></div>
+
+<div class="chart-panel scroll-reveal">
+    <h3>Average LCOE vs. CFE Score</h3>
+    <div class="chart-subtitle">All 7 ISOs — onshore wind + solar only, 2025, medium demand</div>
+    <div class="chart-container-lg"><canvas id="chartC1"></canvas></div>
+    <div id="legendC1" class="chart-legend"></div>
+</div>
+```
+
+</section>
+
+<!-- ============ BEAT 2: THE ELBOW ============ -->
+
+<section class="content-section section-light scroll-reveal" id="beatElbow">
+
+```
+<div class="section-header">
+    <div class="section-number">2</div>
+    <h2>The elbow: ~80–90% CFE</h2>
+    <p>Each additional percentage point costs dramatically more than the last. The marginal cost — not the average — is the metric that matters.</p>
+</div>
+
+<div class="narrative-section">
+    <p>Around 80–85% CFE, the economics shift. Wind and solar output clusters in the same hours, so pushing beyond ~80% means building capacity that generates mostly during hours the grid already has surplus clean energy. Curtailment leaps from single digits to 30–40%.</p>
+    <p>The <strong>marginal cost of CFE</strong> — what it costs to buy the <em>next</em> percentage point — explodes. The elbow is not a cliff — it is an exponential curve.</p>
+</div>
+
+<div class="insight-callout">
+    <div class="insight-box">
+        <h3>Average vs. marginal LCOE</h3>
+        <p>Average LCOE divides total cost by total clean energy delivered. Marginal LCOE measures the cost of the <em>next increment</em> of clean energy. When deciding whether to build more renewables or switch to storage, the marginal cost is the one that matters.</p>
+    </div>
+</div>
+
+<div class="controls-row">
+    <label>ISO:</label>
+    <div class="iso-selector" id="elbowISOSelector"></div>
+</div>
+
+<div class="grid-stats" id="elbowStats"></div>
+
+<div class="grid-2col">
+    <div class="chart-panel scroll-reveal">
+        <h3>Marginal Cost of Each CFE Point</h3>
+        <div class="chart-subtitle">$/MWh cost of the next percentage point</div>
+        <div class="chart-container-lg"><canvas id="chartC2"></canvas></div>
+    </div>
+    <div class="chart-panel scroll-reveal">
+        <h3>Curtailment vs. CFE Score</h3>
+        <div class="chart-subtitle">All 7 ISOs — share of generated energy wasted</div>
+        <div class="chart-container-lg"><canvas id="chartC3"></canvas></div>
+        <div id="legendC3" class="chart-legend"></div>
+    </div>
+</div>
+```
+
+</section>
+
+<!-- ============ BEAT 3: THE CROSSOVER ZONE ============ -->
+
+<section class="content-section scroll-reveal" id="beatCrossover">
+
+```
+<div class="section-header">
+    <div class="section-number">3</div>
+    <h2>The crossover zone: where alternatives become cheaper</h2>
+    <p>When the marginal cost of the next point of wind+solar CFE exceeds what batteries or clean firm could deliver, it is time to switch tools.</p>
+</div>
+
+<div class="narrative-section">
+    <p>The crossover zone is where renewables-only marginal cost exceeds the effective cost of alternative clean technologies. When the marginal cost of the next point of wind+solar CFE exceeds these benchmarks, you would be better off buying that technology instead.</p>
+    <p>This crossover happens between 80% and 85% CFE depending on the ISO. Wind-rich grids (SPP, ERCOT, MISO) push the crossover higher; constrained grids (CAISO, NYISO) hit it sooner.</p>
+</div>
+
+<div class="insight-callout">
+    <div class="insight-box insight-warn">
+        <h3>Reference costs are illustrative benchmarks</h3>
+        <p>Battery 4hr effective ~$150/MWh, LDES ~$200/MWh, clean firm (nuclear/CCS) ~$105/MWh, and fossil gas ~$65/MWh represent approximate 2025 levelized costs. Actual costs vary by region, technology vintage, and financing.</p>
+    </div>
+</div>
+
+<div class="controls-row">
+    <label>ISO:</label>
+    <div class="iso-selector" id="crossoverISOSelector"></div>
+</div>
+
+<div class="grid-stats" id="crossoverStats"></div>
+
+<div class="chart-panel scroll-reveal">
+    <h3>Where Alternatives Become Cheaper</h3>
+    <div class="chart-subtitle">Marginal LCOE with reference cost benchmarks</div>
+    <div class="chart-container-lg"><canvas id="chartC4"></canvas></div>
+    <div class="ref-line-legend" id="legendC4"></div>
+</div>
+```
+
+</section>
+
+<!-- ============ BEAT 4: THE OFFSHORE QUESTION ============ -->
+
+<section class="content-section section-light scroll-reveal" id="beatOffshore">
+
+```
+<div class="section-header">
+    <div class="section-number">4</div>
+    <h2>The offshore question</h2>
+    <p>Does offshore wind push the economic ceiling meaningfully higher for coastal ISOs?</p>
+</div>
+
+<div class="narrative-section">
+    <p>For four coastal ISOs, offshore wind offers a different capacity factor profile — it generates during hours when onshore wind and solar do not, reducing curtailment at high targets.</p>
+    <p>The answer depends on where you are. In NYISO and NEISO, adding offshore wind reduces cost at 95% CFE by ~40%. In PJM, the reduction is ~30%. In CAISO, where onshore wind is already strong, offshore adds only ~7%. Offshore wind does not eliminate the elbow — it shifts it a few percentage points to the right and lowers the slope.</p>
+</div>
+
+<div class="controls-row">
+    <label>ISO:</label>
+    <div class="iso-selector" id="offshoreISOSelector"></div>
+</div>
+
+<div class="grid-stats" id="offshoreStats"></div>
+
+<div class="chart-panel scroll-reveal">
+    <h3>The Offshore Wind Effect</h3>
+    <div class="chart-subtitle">Average LCOE: onshore-only vs. onshore + offshore</div>
+    <div class="chart-container-lg"><canvas id="chartC5"></canvas></div>
+    <div id="legendC5" class="chart-legend"></div>
+</div>
+```
+
+</section>
+
+<!-- ============ BEAT 5: THE PUNCHLINE ============ -->
+
+<section class="content-section scroll-reveal" id="beatPunchline">
+
+```
+<div class="section-header">
+    <div class="section-number">5</div>
+    <h2>The punchline</h2>
+    <p>The renewables ceiling is economic, not physical. Here is where it falls for each ISO.</p>
+</div>
+
+<div class="narrative-section">
+    <p>Every ISO can technically reach 98–99% CFE with wind and solar alone. But the cost of those last percentage points is 5–50× the cost of the first stretch, with 60–80% of generated energy curtailed.</p>
+    <p>The practical ceiling — the point where battery storage becomes cheaper on the margin — falls between ~73% and ~85% CFE depending on the grid. Getting from there to 100% requires a different toolkit: storage, clean firm, or demand flexibility.</p>
+</div>
+
+<div class="insight-callout">
+    <div class="insight-box insight-danger">
+        <h3>The curtailment problem</h3>
+        <p>At 95% CFE, over half of all generated renewable energy is curtailed in every ISO. The marginal MWh costs $200–700+/MWh — far more than any alternative. This is the economic case for portfolio diversification beyond renewables alone.</p>
+    </div>
+</div>
+
+<div class="chart-panel scroll-reveal">
+    <h3>Economic Ceiling by ISO</h3>
+    <div class="chart-subtitle">Highest CFE score where marginal LCOE ≤ battery benchmark ($150/MWh)</div>
+    <div class="chart-container"><canvas id="chartC6"></canvas></div>
+    <div id="legendC6" class="chart-legend"></div>
+</div>
+
+<div class="section-header">
+    <h2>Summary by ISO</h2>
+</div>
+<div class="summary-wrap scroll-reveal">
+    <table class="data-table" id="summaryTable">
+        <thead>
+            <tr>
+                <th>ISO</th>
+                <th>Baseline</th>
+                <th>Cheap avg</th>
+                <th>Elbow</th>
+                <th>Gas xover</th>
+                <th>Firm xover</th>
+                <th>Batt xover</th>
+                <th>Batt+Off</th>
+                <th>Sweet spot</th>
+                <th>Curt @ sweet</th>
+            </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+    </table>
+</div>
+```
+
+</section>
+
+<footer id="siteFooter" data-footer-note="Renewables Ceiling Explorer — The 8,760 Problem"></footer>
+
+<script>
+// ============================================================================
+// CEILING EXPLORER METRICS — Pure derived-metric functions
+// ============================================================================
+var CeilingMetrics = (function() {
+    'use strict';
+    var D = function() { return window.CeilingExplorerData; };
+
+    function getDemandTWh(iso) {
+        var d = D();
+        var idx = d.meta.isos.indexOf(iso);
+        return idx < 0 ? null : d.capacity.demand_twh[idx];
+    }
+
+    function getCurve(iso, curveKey) {
+        var d = D();
+        if (!d.cost_curves[iso]) return null;
+        return d.cost_curves[iso][curveKey] || null;
+    }
+
+    function withLCOE(points) {
+        return points.filter(function(p) { return p.lcoe !== null && p.lcoe !== undefined; });
+    }
+
+    function computeMarginalLCOE(points, demandTWh) {
+        if (!points || points.length < 2 || !demandTWh) return [];
+        var raws = [];
+        for (var i = 1; i < points.length; i++) {
+            var ds = points[i].score - points[i - 1].score;
+            var dc = points[i].cost_B - points[i - 1].cost_B;
+            if (ds <= 0) continue;
+            raws.push({
+                score: (points[i - 1].score + points[i].score) / 2,
+                score_end: points[i].score,
+                raw_marginal: (dc * 1e9) / ((ds / 100) * demandTWh * 1e6)
+            });
+        }
+        var result = [];
+        for (var j = 0; j < raws.length; j++) {
+            var s = Math.max(0, j - 1), e = Math.min(raws.length, j + 2), sum = 0;
+            for (var k = s; k < e; k++) sum += raws[k].raw_marginal;
+            result.push({ score: raws[j].score, score_end: raws[j].score_end, marginal_lcoe: sum / (e - s), raw_marginal: raws[j].raw_marginal });
+        }
+        return result;
+    }
+
+    function getCheapStretchAvg(iso, curveKey) {
+        curveKey = curveKey || 'onshore_only_2025_Medium';
+        var curve = getCurve(iso, curveKey);
+        if (!curve) return null;
+        var pts = withLCOE(curve).filter(function(p) { return p.score < 75; });
+        if (pts.length === 0) return null;
+        var sum = 0;
+        for (var i = 0; i < pts.length; i++) sum += pts[i].lcoe;
+        return sum / pts.length;
+    }
+
+    function findElbow(iso, curveKey) {
+        curveKey = curveKey || 'onshore_only_2025_Medium';
+        var avg = getCheapStretchAvg(iso, curveKey);
+        if (avg === null) return null;
+        var pts = withLCOE(getCurve(iso, curveKey));
+        var threshold = 2 * avg;
+        for (var i = 0; i < pts.length; i++) {
+            if (pts[i].lcoe > threshold) return { score: pts[i].score, lcoe: pts[i].lcoe, threshold: threshold };
+        }
+        return null;
+    }
+
+    function findCrossover(iso, curveKey, refCost) {
+        curveKey = curveKey || 'onshore_only_2025_Medium';
+        var curve = getCurve(iso, curveKey);
+        var demand = getDemandTWh(iso);
+        if (!curve || !demand) return null;
+        var marginals = computeMarginalLCOE(curve, demand);
+        if (marginals.length === 0) return null;
+        var lastBelow = -1;
+        for (var i = 0; i < marginals.length; i++) {
+            if (marginals[i].marginal_lcoe <= refCost) lastBelow = i;
+        }
+        if (lastBelow < 0) return { score: marginals[0].score, marginal_lcoe: marginals[0].marginal_lcoe };
+        if (lastBelow === marginals.length - 1) return null;
+        var prev = marginals[lastBelow], curr = marginals[lastBelow + 1];
+        var frac = (refCost - prev.marginal_lcoe) / (curr.marginal_lcoe - prev.marginal_lcoe);
+        return { score: prev.score + frac * (curr.score - prev.score), marginal_lcoe: refCost };
+    }
+
+    function getOffshoreReduction(iso, targetScore) {
+        targetScore = targetScore || 95;
+        var d = D();
+        if (d.meta.offshore_isos.indexOf(iso) < 0) return null;
+        var onCurve = getCurve(iso, 'onshore_only_2025_Medium');
+        var offCurve = getCurve(iso, 'onshore_plus_offshore_2025_Medium');
+        if (!onCurve || !offCurve) return null;
+        function nearest(curve, target) {
+            var best = null, bestDist = Infinity;
+            for (var i = 0; i < curve.length; i++) {
+                var dist = Math.abs(curve[i].score - target);
+                if (dist < bestDist) { bestDist = dist; best = curve[i]; }
+            }
+            return best;
+        }
+        var onPt = nearest(withLCOE(onCurve), targetScore);
+        var offPt = nearest(withLCOE(offCurve), targetScore);
+        if (!onPt || !offPt) return null;
+        return { pct_reduction: (onPt.lcoe - offPt.lcoe) / onPt.lcoe * 100, onshore_lcoe: onPt.lcoe, offshore_lcoe: offPt.lcoe };
+    }
+
+    function getSweetSpot(iso, curveKey) {
+        curveKey = curveKey || 'onshore_only_2025_Medium';
+        var curve = getCurve(iso, curveKey);
+        var demand = getDemandTWh(iso);
+        if (!curve || !demand) return null;
+        var marginals = computeMarginalLCOE(curve, demand);
+        var best = null;
+        for (var i = 0; i < marginals.length; i++) {
+            if (marginals[i].marginal_lcoe <= 150) {
+                var pt = null;
+                for (var j = 0; j < curve.length; j++) {
+                    if (curve[j].score >= marginals[i].score_end - 0.01) { pt = curve[j]; break; }
+                }
+                best = { score: marginals[i].score_end, marginal_lcoe: marginals[i].marginal_lcoe, avg_lcoe: pt ? pt.lcoe : null, curt_pct: pt ? pt.curt_pct : null };
+            }
+        }
+        return best;
+    }
+
+    function getSummaryRow(iso) {
+        var key = 'onshore_only_2025_Medium';
+        var d = D();
+        var baseIdx = d.meta.isos.indexOf(iso);
+        var xBattOff = null;
+        if (d.meta.offshore_isos.indexOf(iso) >= 0) xBattOff = findCrossover(iso, 'onshore_plus_offshore_2025_Medium', 150);
+        return {
+            iso: iso, baseline_pct: d.headline.baseline_score_pct[baseIdx],
+            cheap_avg_lcoe: getCheapStretchAvg(iso, key), elbow_score: (findElbow(iso, key) || {}).score || null,
+            crossover_gas: (findCrossover(iso, key, 65) || {}).score || null,
+            crossover_firm: (findCrossover(iso, key, 105) || {}).score || null,
+            crossover_battery: (findCrossover(iso, key, 150) || {}).score || null,
+            crossover_ldes: (findCrossover(iso, key, 200) || {}).score || null,
+            sweet_spot: getSweetSpot(iso, key),
+            crossover_battery_offshore: xBattOff ? xBattOff.score : null,
+            offshore_reduction_95: (getOffshoreReduction(iso, 95) || {}).pct_reduction || null
+        };
+    }
+
+    return {
+        computeMarginalLCOE: computeMarginalLCOE, getCheapStretchAvg: getCheapStretchAvg,
+        findElbow: findElbow, findCrossover: findCrossover, getOffshoreReduction: getOffshoreReduction,
+        getSweetSpot: getSweetSpot, getSummaryRow: getSummaryRow, getDemandTWh: getDemandTWh,
+        getCurve: getCurve, withLCOE: function(p) { return withLCOE(p); }
+    };
+})();
+
+// ============================================================================
+// MAIN PAGE LOGIC
+// ============================================================================
+(function() {
+    'use strict';
+
+    var D = window.CeilingExplorerData;
+    if (!D) { console.error('CeilingExplorerData not loaded'); return; }
+    var M = CeilingMetrics;
+
+    var BAR_RADIUS = 6;
+    var LINE_TENSION = 0.35;
+    var GRID_Y = { color: 'rgba(0,0,0,0.06)' };
+    var GRID_X_OFF = { display: false };
+
+    var REF = {
+        gas:     { cost: 65,  label: 'Fossil gas $65',  color: RESOURCE_COLORS.fossilGas },
+        firm:    { cost: 105, label: 'Clean firm $105',  color: RESOURCE_COLORS.cleanFirm },
+        battery: { cost: 150, label: 'Battery 4hr $150', color: RESOURCE_COLORS.battery },
+        ldes:    { cost: 200, label: 'LDES $200',        color: RESOURCE_COLORS.ldes }
+    };
+
+    var elbowISO = 'ERCOT';
+    var crossoverISO = 'ERCOT';
+    var offshoreISO = 'NYISO';
+    var charts = {};
+
+    function fmt$(v, dec) { return '$' + (dec !== undefined ? v.toFixed(dec) : Math.round(v)); }
+    function fmtPct(v, dec) { return (dec !== undefined ? v.toFixed(dec) : Math.round(v)) + '%'; }
+
+    function makeStatCard(val, label) {
+        return '<div class="headline-card"><div class="val">' + val + '</div><div class="lbl">' + label + '</div></div>';
+    }
+
+    function makeAnnotationLine(refKey, yVal) {
+        return {
+            type: 'line', yMin: yVal, yMax: yVal,
+            borderColor: REF[refKey].color, borderWidth: 2, borderDash: [6, 4],
+            label: {
+                display: true, content: REF[refKey].label, position: 'start',
+                backgroundColor: 'rgba(255,255,255,0.85)', color: REF[refKey].color,
+                font: { size: 11, weight: '600' }, padding: { left: 6, right: 6, top: 2, bottom: 2 }
+            }
+        };
+    }
+
+    function buildISOSelector(containerId, isos, activeISO, callback) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+        isos.forEach(function(iso) {
+            var btn = document.createElement('button');
+            btn.className = 'iso-btn' + (iso === activeISO ? ' active' : '');
+            btn.textContent = iso;
+            btn.onclick = function() {
+                el.querySelectorAll('.iso-btn').forEach(function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                callback(iso);
+            };
+            el.appendChild(btn);
+        });
+    }
+
+    // C1 — Average LCOE vs CFE Score (all ISOs)
+    function renderC1() {
+        var ctx = document.getElementById('chartC1');
+        if (!ctx) return;
+        var datasets = D.meta.isos.map(function(iso) {
+            var curve = M.withLCOE(M.getCurve(iso, 'onshore_only_2025_Medium') || []);
+            return {
+                label: iso,
+                data: curve.map(function(p) { return { x: p.score, y: p.lcoe }; }),
+                borderColor: ISO_COLORS[iso], backgroundColor: 'transparent',
+                borderWidth: 2.5, tension: LINE_TENSION, pointRadius: 0, pointHitRadius: 8
+            };
+        });
+        charts.C1 = new Chart(ctx, {
+            type: 'line', data: { datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                plugins: {
+                    legend: { display: false }, datalabels: { display: false },
+                    tooltip: { callbacks: {
+                        title: function(items) { return 'CFE ' + items[0].parsed.x.toFixed(1) + '%'; },
+                        label: function(ctx) { return ctx.dataset.label + ': ' + fmt$(ctx.parsed.y) + '/MWh'; }
+                    }},
+                    annotation: { annotations: { gasLine: makeAnnotationLine('gas', 65) } }
+                },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'CFE score (%)' }, min: 25, max: 100, grid: GRID_X_OFF },
+                    y: { beginAtZero: true, max: 500, title: { display: true, text: 'Average LCOE ($/MWh)' }, grid: GRID_Y }
+                }
+            }
+        });
+        var items = D.meta.isos.map(function(iso) { return { label: iso, color: ISO_COLORS[iso], type: 'line' }; });
+        items.push({ label: 'Gas $65/MWh', color: RESOURCE_COLORS.fossilGas, type: 'dashed' });
+        buildLegend('legendC1', items);
+    }
+
+    // C2 — Marginal LCOE (single ISO)
+    function renderC2(iso) {
+        var ctx = document.getElementById('chartC2');
+        if (!ctx) return;
+        if (charts.C2) charts.C2.destroy();
+        var curve = M.getCurve(iso, 'onshore_only_2025_Medium');
+        var demand = M.getDemandTWh(iso);
+        var marginals = M.computeMarginalLCOE(curve, demand);
+        charts.C2 = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [{
+                label: 'Marginal LCOE',
+                data: marginals.map(function(m) { return { x: m.score, y: m.marginal_lcoe }; }),
+                borderColor: ISO_COLORS[iso], backgroundColor: withAlpha(ISO_COLORS[iso], 0.1),
+                fill: true, borderWidth: 2.5, tension: LINE_TENSION, pointRadius: 0, pointHitRadius: 8
+            }]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }, datalabels: { display: false },
+                    tooltip: { callbacks: {
+                        title: function(items) { return 'CFE ' + items[0].parsed.x.toFixed(1) + '%'; },
+                        label: function(ctx) { return 'Marginal: ' + fmt$(ctx.parsed.y) + '/MWh'; }
+                    }}
+                },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'CFE score (%)' }, min: 25, max: 100, grid: GRID_X_OFF },
+                    y: { beginAtZero: true, max: 1000, title: { display: true, text: 'Marginal LCOE ($/MWh)' }, grid: GRID_Y }
+                }
+            }
+        });
+    }
+
+    // C3 — Curtailment vs CFE Score (all ISOs)
+    function renderC3() {
+        var ctx = document.getElementById('chartC3');
+        if (!ctx) return;
+        var datasets = D.meta.isos.map(function(iso) {
+            var curve = M.getCurve(iso, 'onshore_only_2025_Medium') || [];
+            return {
+                label: iso,
+                data: curve.map(function(p) { return { x: p.score, y: p.curt_pct }; }),
+                borderColor: ISO_COLORS[iso], backgroundColor: 'transparent',
+                borderWidth: 2.5, tension: LINE_TENSION, pointRadius: 0, pointHitRadius: 8
+            };
+        });
+        charts.C3 = new Chart(ctx, {
+            type: 'line', data: { datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                plugins: {
+                    legend: { display: false }, datalabels: { display: false },
+                    tooltip: { callbacks: {
+                        title: function(items) { return 'CFE ' + items[0].parsed.x.toFixed(1) + '%'; },
+                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '% curtailed'; }
+                    }}
+                },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'CFE score (%)' }, min: 25, max: 100, grid: GRID_X_OFF },
+                    y: { beginAtZero: true, max: 85, title: { display: true, text: 'Curtailment (%)' }, grid: GRID_Y }
+                }
+            }
+        });
+        buildLegend('legendC3', D.meta.isos.map(function(iso) { return { label: iso, color: ISO_COLORS[iso], type: 'line' }; }));
+    }
+
+    // C4 — Marginal LCOE with Reference Lines (single ISO)
+    function renderC4(iso) {
+        var ctx = document.getElementById('chartC4');
+        if (!ctx) return;
+        if (charts.C4) charts.C4.destroy();
+        var curve = M.getCurve(iso, 'onshore_only_2025_Medium');
+        var demand = M.getDemandTWh(iso);
+        var marginals = M.computeMarginalLCOE(curve, demand);
+        var xBatt = M.findCrossover(iso, null, 150);
+        var annotations = {
+            gasLine: makeAnnotationLine('gas', 65), firmLine: makeAnnotationLine('firm', 105),
+            battLine: makeAnnotationLine('battery', 150), ldesLine: makeAnnotationLine('ldes', 200)
+        };
+        if (xBatt) {
+            annotations.battXover = {
+                type: 'line', xMin: xBatt.score, xMax: xBatt.score,
+                borderColor: RESOURCE_COLORS.battery, borderWidth: 2, borderDash: [4, 4],
+                label: { display: true, content: fmtPct(xBatt.score, 0) + ' CFE', position: 'start',
+                    backgroundColor: 'rgba(255,255,255,0.9)', color: RESOURCE_COLORS.battery,
+                    font: { size: 11, weight: '600' }, padding: 4 }
+            };
+        }
+        charts.C4 = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [{
+                label: 'Marginal LCOE',
+                data: marginals.map(function(m) { return { x: m.score, y: Math.min(m.marginal_lcoe, 600), realY: m.marginal_lcoe }; }),
+                borderColor: ISO_COLORS[iso], backgroundColor: withAlpha(ISO_COLORS[iso], 0.08),
+                fill: true, borderWidth: 3, tension: LINE_TENSION, pointRadius: 0, pointHitRadius: 8
+            }]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }, datalabels: { display: false },
+                    tooltip: { callbacks: {
+                        title: function(items) { return 'CFE ' + items[0].parsed.x.toFixed(1) + '%'; },
+                        label: function(ctx) { var real = ctx.raw.realY || ctx.parsed.y; return 'Marginal: ' + fmt$(real) + '/MWh'; }
+                    }},
+                    annotation: { annotations: annotations }
+                },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'CFE score (%)' }, min: 25, max: 100, grid: GRID_X_OFF },
+                    y: { beginAtZero: true, max: 600, title: { display: true, text: 'Marginal LCOE ($/MWh)' }, grid: GRID_Y }
+                }
+            }
+        });
+        var el = document.getElementById('legendC4');
+        if (el) {
+            el.innerHTML = ['gas', 'firm', 'battery', 'ldes'].map(function(r) {
+                return '<span><span class="ref-swatch" style="border-color:' + REF[r].color + '"></span>' + REF[r].label + '/MWh</span>';
+            }).join('');
+        }
+    }
+
+    // C5 — Onshore vs Offshore LCOE curves (single offshore ISO)
+    function renderC5(iso) {
+        var ctx = document.getElementById('chartC5');
+        if (!ctx) return;
+        if (charts.C5) charts.C5.destroy();
+        var onCurve = M.withLCOE(M.getCurve(iso, 'onshore_only_2025_Medium') || []);
+        var offCurve = M.withLCOE(M.getCurve(iso, 'onshore_plus_offshore_2025_Medium') || []);
+        charts.C5 = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [
+                { label: 'Onshore only', data: onCurve.map(function(p) { return { x: p.score, y: p.lcoe }; }),
+                  borderColor: RESOURCE_COLORS.wind, backgroundColor: withAlpha(RESOURCE_COLORS.wind, 0.08),
+                  fill: true, borderWidth: 2.5, tension: LINE_TENSION, pointRadius: 0, pointHitRadius: 8 },
+                { label: 'Onshore + offshore', data: offCurve.map(function(p) { return { x: p.score, y: p.lcoe }; }),
+                  borderColor: RESOURCE_COLORS.offshoreWind, backgroundColor: withAlpha(RESOURCE_COLORS.offshoreWind, 0.08),
+                  fill: true, borderWidth: 2.5, tension: LINE_TENSION, pointRadius: 0, pointHitRadius: 8 }
+            ]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                plugins: {
+                    legend: { display: false }, datalabels: { display: false },
+                    tooltip: { callbacks: {
+                        title: function(items) { return 'CFE ' + items[0].parsed.x.toFixed(1) + '%'; },
+                        label: function(ctx) { return ctx.dataset.label + ': ' + fmt$(ctx.parsed.y) + '/MWh'; }
+                    }}
+                },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'CFE score (%)' }, min: 25, max: 100, grid: GRID_X_OFF },
+                    y: { beginAtZero: true, max: 500, title: { display: true, text: 'Average LCOE ($/MWh)' }, grid: GRID_Y }
+                }
+            }
+        });
+        buildLegend('legendC5', [
+            { label: 'Onshore only', color: RESOURCE_COLORS.wind, type: 'line' },
+            { label: 'Onshore + offshore', color: RESOURCE_COLORS.offshoreWind, type: 'line' }
+        ]);
+    }
+
+    // C6 — Economic Ceiling Bar Chart (all ISOs)
+    function renderC6() {
+        var ctx = document.getElementById('chartC6');
+        if (!ctx) return;
+        var rows = D.meta.isos.map(function(iso) { return M.getSummaryRow(iso); });
+        var onshoreScores = rows.map(function(r) { return r.sweet_spot ? r.sweet_spot.score : 0; });
+        var offshoreScores = rows.map(function(r) { return r.crossover_battery_offshore || 0; });
+        charts.C6 = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: D.meta.isos,
+                datasets: [
+                    { label: 'Onshore only', data: onshoreScores,
+                      backgroundColor: withAlpha(RESOURCE_COLORS.wind, 0.75), borderColor: RESOURCE_COLORS.wind,
+                      borderWidth: 2, borderRadius: BAR_RADIUS },
+                    { label: 'With offshore', data: offshoreScores,
+                      backgroundColor: withAlpha(RESOURCE_COLORS.offshoreWind, 0.75), borderColor: RESOURCE_COLORS.offshoreWind,
+                      borderWidth: 2, borderRadius: BAR_RADIUS }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end', align: 'top', offset: 2,
+                        font: { size: 11, weight: '600' },
+                        color: function(ctx) { return ctx.datasetIndex === 0 ? RESOURCE_COLORS.wind : RESOURCE_COLORS.offshoreWind; },
+                        formatter: function(v) { return v > 0 ? v.toFixed(0) + '%' : ''; }
+                    },
+                    annotation: { annotations: {
+                        ref90: { type: 'line', yMin: 90, yMax: 90,
+                            borderColor: SEMANTIC_COLORS.muted, borderWidth: 1, borderDash: [4, 4],
+                            label: { display: true, content: '90% CFE', position: 'end',
+                                backgroundColor: 'rgba(255,255,255,0.85)', color: SEMANTIC_COLORS.muted,
+                                font: { size: 10 }, padding: 3 } }
+                    }}
+                },
+                scales: {
+                    y: { min: 50, max: 100, title: { display: true, text: 'Economic ceiling (% CFE)' }, grid: GRID_Y },
+                    x: { grid: GRID_X_OFF }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        buildLegend('legendC6', [
+            { label: 'Onshore only', color: RESOURCE_COLORS.wind, type: 'band' },
+            { label: 'With offshore', color: RESOURCE_COLORS.offshoreWind, type: 'band' }
+        ]);
+    }
+
+    // Stat Cards
+    function updateCheapStats() {
+        var el = document.getElementById('cheapStats');
+        if (!el) return;
+        var bestISO = null, bestAvg = Infinity, worstISO = null, worstAvg = 0;
+        D.meta.isos.forEach(function(iso) {
+            var avg = M.getCheapStretchAvg(iso);
+            if (avg !== null && avg < bestAvg) { bestAvg = avg; bestISO = iso; }
+            if (avg !== null && avg > worstAvg) { worstAvg = avg; worstISO = iso; }
+        });
+        el.innerHTML =
+            makeStatCard(fmt$(bestAvg) + '/MWh', 'Cheapest (' + bestISO + ')') +
+            makeStatCard(fmt$(worstAvg) + '/MWh', 'Priciest (' + worstISO + ')') +
+            makeStatCard('< 10%', 'Curtailment thru 80%') +
+            makeStatCard('30\u201350%', 'Baseline CFE range');
+    }
+
+    function updateElbowStats(iso) {
+        var el = document.getElementById('elbowStats');
+        if (!el) return;
+        var elbow = M.findElbow(iso);
+        var curve = M.getCurve(iso, 'onshore_only_2025_Medium') || [];
+        var at90 = null;
+        for (var i = 0; i < curve.length; i++) {
+            if (curve[i].score >= 89.5 && curve[i].score <= 91) { at90 = curve[i]; break; }
+        }
+        var marginals = M.computeMarginalLCOE(curve, M.getDemandTWh(iso));
+        var marg90 = null;
+        for (var j = 0; j < marginals.length; j++) {
+            if (marginals[j].score >= 89.5) { marg90 = marginals[j]; break; }
+        }
+        el.innerHTML =
+            makeStatCard(elbow ? fmtPct(elbow.score, 0) : '\u2014', 'Elbow (2\u00d7 avg)') +
+            makeStatCard(at90 ? fmtPct(at90.curt_pct, 0) : '\u2014', 'Curtailment @ 90%') +
+            makeStatCard(marg90 ? fmt$(marg90.marginal_lcoe) + '/MWh' : '\u2014', 'Marginal LCOE @ 90%');
+    }
+
+    function updateCrossoverStats(iso) {
+        var el = document.getElementById('crossoverStats');
+        if (!el) return;
+        var xBatt = M.findCrossover(iso, null, 150);
+        var xFirm = M.findCrossover(iso, null, 105);
+        var sweet = M.getSweetSpot(iso);
+        el.innerHTML =
+            makeStatCard(xFirm ? fmtPct(xFirm.score, 0) : '\u2014', 'Clean firm xover') +
+            makeStatCard(xBatt ? fmtPct(xBatt.score, 0) : '\u2014', 'Battery xover') +
+            makeStatCard(sweet ? fmtPct(sweet.curt_pct, 0) : '\u2014', 'Curtailment @ sweet spot');
+    }
+
+    function updateOffshoreStats(iso) {
+        var el = document.getElementById('offshoreStats');
+        if (!el) return;
+        var red90 = M.getOffshoreReduction(iso, 90);
+        var red95 = M.getOffshoreReduction(iso, 95);
+        var xOn = M.findCrossover(iso, 'onshore_only_2025_Medium', 150);
+        var xOff = M.findCrossover(iso, 'onshore_plus_offshore_2025_Medium', 150);
+        var shift = (xOn && xOff) ? xOff.score - xOn.score : null;
+        el.innerHTML =
+            makeStatCard(red90 ? fmtPct(red90.pct_reduction, 0) : '\u2014', 'Cost reduction @ 90%') +
+            makeStatCard(red95 ? fmtPct(red95.pct_reduction, 0) : '\u2014', 'Cost reduction @ 95%') +
+            makeStatCard(shift !== null ? (shift > 0 ? '+' : '') + shift.toFixed(1) + ' pp' : '\u2014', 'Crossover shift');
+    }
+
+    // Summary Table
+    function renderSummaryTable() {
+        var tbody = document.getElementById('summaryBody');
+        if (!tbody) return;
+        var html = '';
+        D.meta.isos.forEach(function(iso) {
+            var r = M.getSummaryRow(iso);
+            html += '<tr>' +
+                '<td><strong>' + r.iso + '</strong></td>' +
+                '<td>' + (r.baseline_pct ? fmtPct(r.baseline_pct, 1) : '\u2014') + '</td>' +
+                '<td>' + (r.cheap_avg_lcoe ? fmt$(r.cheap_avg_lcoe) + '/MWh' : '\u2014') + '</td>' +
+                '<td>' + (r.elbow_score ? fmtPct(r.elbow_score, 0) : '\u2014') + '</td>' +
+                '<td>' + (r.crossover_gas ? fmtPct(r.crossover_gas, 0) : '\u2014') + '</td>' +
+                '<td>' + (r.crossover_firm ? fmtPct(r.crossover_firm, 0) : '\u2014') + '</td>' +
+                '<td>' + (r.crossover_battery ? fmtPct(r.crossover_battery, 0) : '\u2014') + '</td>' +
+                '<td>' + (r.crossover_battery_offshore ? fmtPct(r.crossover_battery_offshore, 0) : '\u2014') + '</td>' +
+                '<td>' + (r.sweet_spot ? fmtPct(r.sweet_spot.score, 0) : '\u2014') + '</td>' +
+                '<td>' + (r.sweet_spot && r.sweet_spot.curt_pct !== null ? fmtPct(r.sweet_spot.curt_pct, 0) : '\u2014') + '</td>' +
+                '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    // ISO Selector Wiring
+    function onElbowISOChange(iso) { elbowISO = iso; renderC2(iso); updateElbowStats(iso); }
+    function onCrossoverISOChange(iso) { crossoverISO = iso; renderC4(iso); updateCrossoverStats(iso); }
+    function onOffshoreISOChange(iso) { offshoreISO = iso; renderC5(iso); updateOffshoreStats(iso); }
+
+    // Init
+    function init() {
+        buildISOSelector('elbowISOSelector', D.meta.isos, elbowISO, onElbowISOChange);
+        buildISOSelector('crossoverISOSelector', D.meta.isos, crossoverISO, onCrossoverISOChange);
+        buildISOSelector('offshoreISOSelector', D.meta.offshore_isos, offshoreISO, onOffshoreISOChange);
+
+        renderC1(); renderC2(elbowISO); renderC3();
+        renderC4(crossoverISO); renderC5(offshoreISO); renderC6();
+
+        updateCheapStats(); updateElbowStats(elbowISO);
+        updateCrossoverStats(crossoverISO); updateOffshoreStats(offshoreISO);
+        renderSummaryTable();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+
+</body>
+</html>
