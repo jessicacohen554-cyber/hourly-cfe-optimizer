@@ -84,7 +84,7 @@ _EF_BAND_THRESHOLDS = (
     10, 20, 30, 40, 50, 55, 60, 65, 70, 75,
     80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9,
 )
-_STAGE1_VERSION = '3'
+_STAGE1_VERSION = '4'
 _SORTED_BANDS = sorted(_EF_BAND_THRESHOLDS)
 
 
@@ -423,10 +423,20 @@ def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
     tgt = _cache_version(iso)
     if sp.exists():
         meta = pq.read_schema(sp).metadata or {}
-        if (meta.get(b'source_cache_version', b'').decode() == tgt
-                and meta.get(b'stage1_version', b'').decode() == _STAGE1_VERSION):
+        sv = meta.get(b'stage1_version', b'').decode()
+        cv = meta.get(b'source_cache_version', b'').decode()
+        # v4 sidecars (from regenerate_peakclean) use inline dispatch and
+        # are independent of the dispatch cache — accept unconditionally.
+        # v3 sidecars depend on the dispatch cache, so also check cache_version.
+        if sv == _STAGE1_VERSION:
             return pq.read_table(sp)
-    print(f"[stage1] building peakclean for {iso} t={threshold}", flush=True)
+        if sv == '3' and cv == tgt:
+            print(f"[stage1] {iso} t={threshold}: using v3 sidecar (run "
+                  f"regenerate_peakclean for inline-dispatch accuracy)", flush=True)
+            return pq.read_table(sp)
+    print(f"[WARN] {iso} t={threshold}: no valid peakclean sidecar found — "
+          f"rebuilding with L1-NN fallback. Run step2_3a_regenerate_peakclean.py "
+          f"for accurate residuals.", flush=True)
     tbl = precompute_clean_peak_hour_mw(iso, threshold)
     tmp = sp.with_suffix('.parquet.tmp')
     pq.write_table(tbl, tmp)
@@ -508,8 +518,12 @@ def _load_or_build_interp_peakclean(iso: str, interp_path: Path) -> pa.Table:
     tgt_cv = _cache_version(iso)
     if pc_path.exists():
         meta = pq.read_schema(pc_path).metadata or {}
-        if (meta.get(b'source_cache_version', b'').decode() == tgt_cv
-                and meta.get(b'stage1_version', b'').decode() == _STAGE1_VERSION):
+        sv = meta.get(b'stage1_version', b'').decode()
+        cv = meta.get(b'source_cache_version', b'').decode()
+        # v4 sidecars: accept unconditionally (inline dispatch, cache-independent)
+        if sv == _STAGE1_VERSION:
+            return pq.read_table(pc_path)
+        if sv == '3' and cv == tgt_cv:
             return pq.read_table(pc_path)
 
     print(f"[stage1] building peakclean for interp {interp_path.name}", flush=True)
