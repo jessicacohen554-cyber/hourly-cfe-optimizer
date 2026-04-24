@@ -108,11 +108,52 @@ def _threshold_tag(pct) -> str:
     return str(int(pct)) if float(pct).is_integer() else str(pct)
 
 
+# ── P1 pathway mask (mirrors optimizer exactly) ──────────────────────────
+
+def _demand_twh_vec(iso: str, level: str = 'Medium') -> np.ndarray:
+    """Reproduce demand_twh_vec from the optimizer."""
+    bd = float(pc.REGIONAL_DEMAND_TWH[iso])
+    g = pc.DEMAND_GROWTH_RATES[iso][level]
+    return bd * (1.0 + g) ** np.arange(N_YEARS)
+
+
+def _p1_mask_params(iso: str) -> tuple[float, np.ndarray]:
+    """Return (pf, uc_pct_y) exactly as _build_ctx computes them.
+
+    pf         = GRID_MIX_SHARES[iso]['clean_firm'] + 0.01
+    uc_pct_y   = UPRATE_CAP_TWH[iso] / demand_twh_vec[yi] * 100
+    """
+    pf = float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)) + 0.01
+    uc = float(pc.UPRATE_CAP_TWH[iso])
+    dv = _demand_twh_vec(iso)
+    uc_pct_y = uc / np.maximum(dv, 1e-6) * 100.0
+    return pf, uc_pct_y
+
+
+def _p1_cf_cap(pf: float, uc_pct_yi: float) -> float:
+    """The clean_firm ceiling for a given year: pf + uc_pct_yi + 0.5."""
+    return pf + uc_pct_yi + 0.5
+
+
+def _apply_p1_mask(cf_arr: np.ndarray, ccs_arr: np.ndarray,
+                   pf: float, uc_pct_yi: float) -> np.ndarray:
+    """Boolean mask matching the optimizer's pathway mask for P1/P1a.
+
+    clean_firm <= pf + uc_pct_yi + 0.5  AND  ccs_ccgt <= 0.5
+    """
+    cap = _p1_cf_cap(pf, uc_pct_yi)
+    return (cf_arr <= cap) & (ccs_arr <= 0.5)
+
+
 # ── EF pool loader (scores only, lightweight) ──────────────────────────────
 
-def _load_scores(iso: str) -> np.ndarray:
-    """Load only hourly_match_score from all EF bands — minimal memory."""
-    arrays = []
+def _load_scores(iso: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Load hourly_match_score, clean_firm, and ccs_ccgt from all EF bands.
+
+    Returns (scores, clean_firm, ccs_ccgt) — all float64 arrays of length N.
+    """
+    s_arrays, cf_arrays, ccs_arrays = [], [], []
+    cols = ['hourly_match_score', 'clean_firm', 'ccs_ccgt']
     for t in _EF_BAND_THRESHOLDS:
         name = _threshold_tag(t)
         parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
@@ -121,11 +162,18 @@ def _load_scores(iso: str) -> np.ndarray:
             if main.exists():
                 parts = [main]
         for p in parts:
-            tbl = pq.read_table(p, columns=['hourly_match_score'])
-            arrays.append(tbl.column('hourly_match_score').to_numpy())
-    if not arrays:
-        return np.array([], dtype=np.float64)
-    return np.concatenate(arrays).astype(np.float64)
+            tbl = pq.read_table(p, columns=cols)
+            s_arrays.append(tbl.column('hourly_match_score').to_numpy())
+            cf_arrays.append(tbl.column('clean_firm').to_numpy())
+            ccs_arrays.append(tbl.column('ccs_ccgt').to_numpy()
+                              if 'ccs_ccgt' in tbl.column_names
+                              else np.zeros(tbl.num_rows))
+    if not s_arrays:
+        empty = np.array([], dtype=np.float64)
+        return empty, empty, empty
+    return (np.concatenate(s_arrays).astype(np.float64),
+            np.concatenate(cf_arrays).astype(np.float64),
+            np.concatenate(ccs_arrays).astype(np.float64))
 
 
 def _load_full_pool(iso: str) -> pa.Table:
@@ -167,8 +215,13 @@ def _band_row_counts(iso: str) -> dict[float, int]:
 # ── Diagnostic ──────────────────────────────────────────────────────────────
 
 def diagnose(iso: str) -> dict:
-    """For one ISO, scan every endpoint × year and report sparse windows."""
-    scores = _load_scores(iso)
+    """For one ISO, scan every endpoint × year and report sparse windows.
+
+    Reports both candidates_total (all rows in window) and candidates_p1
+    (rows that also pass the P1 pathway mask).  A window is flagged sparse
+    when candidates_p1 < MIN_CANDIDATES — because P1 is the binding constraint.
+    """
+    scores, cf_arr, ccs_arr = _load_scores(iso)
     if len(scores) == 0:
         return {'iso': iso, 'pool_size': 0, 'band_counts': {},
                 'endpoints': {}, 'sparse_windows': []}
@@ -176,6 +229,9 @@ def diagnose(iso: str) -> dict:
     pool_size = len(scores)
     band_counts = _band_row_counts(iso)
     base_clean_pct = sum(pc.GRID_MIX_SHARES.get(iso, {}).values())
+
+    # P1 mask parameters (same as optimizer's _build_ctx)
+    pf, uc_pct_y = _p1_mask_params(iso)
 
     endpoints_report = {}
     sparse_windows = []
@@ -192,15 +248,25 @@ def diagnose(iso: str) -> dict:
             lo = tgt - 0.5
             hi = ceil
 
-            in_window = int(np.sum((scores >= lo) & (scores < hi)))
-            is_sparse = in_window < MIN_CANDIDATES
+            in_window = (scores >= lo) & (scores < hi)
+            candidates_total = int(np.sum(in_window))
+
+            # Apply P1 mask to the in-window rows
+            uc_pct_yi = float(uc_pct_y[yi])
+            p1_ok = _apply_p1_mask(cf_arr, ccs_arr, pf, uc_pct_yi)
+            candidates_p1 = int(np.sum(in_window & p1_ok))
+
+            # P1 is the binding constraint — flag on P1 count
+            is_sparse = candidates_p1 < MIN_CANDIDATES
 
             detail = {
                 'year': year,
                 'cfe_target': round(tgt, 2),
                 'window_lo': round(lo, 2),
                 'window_hi': round(hi, 2),
-                'candidates_in_window': in_window,
+                'candidates_total': candidates_total,
+                'candidates_p1': candidates_p1,
+                'cf_cap': round(_p1_cf_cap(pf, uc_pct_yi), 2),
                 'sparse': is_sparse,
             }
             year_details.append(detail)
@@ -212,7 +278,9 @@ def diagnose(iso: str) -> dict:
                     'year': year,
                     'window_lo': round(lo, 2),
                     'window_hi': round(hi, 2),
-                    'candidates': in_window,
+                    'candidates_total': candidates_total,
+                    'candidates_p1': candidates_p1,
+                    'cf_cap': round(_p1_cf_cap(pf, uc_pct_yi), 2),
                 })
 
         endpoints_report[str(ep_pct)] = {
@@ -248,31 +316,35 @@ def run_diagnose(output_path: Path | None = None):
             years = ep_data['years']
             sp = [y for y in years if y['sparse']]
             if sp:
-                min_cand = min(y['candidates_in_window'] for y in sp)
+                min_p1 = min(y['candidates_p1'] for y in sp)
+                min_total = min(y['candidates_total'] for y in sp)
                 year_range = f"{sp[0]['year']}-{sp[-1]['year']}"
                 print(f"       ep{ep_key}: {len(sp)} sparse years "
-                      f"({year_range}), min_candidates={min_cand}", flush=True)
+                      f"({year_range}), min_p1={min_p1} "
+                      f"(total={min_total})", flush=True)
 
     # Console summary table
-    print(f"\n{'='*72}")
-    print(f"POOL GAP DIAGNOSTIC SUMMARY")
-    print(f"{'='*72}")
-    print(f"{'ISO':<8} {'Pool':>10} {'Sparse Windows':>16} "
-          f"{'Worst Gap':>12} {'Worst Band':>14}")
-    print(f"{'-'*8} {'-'*10} {'-'*16} {'-'*12} {'-'*14}")
+    print(f"\n{'='*88}")
+    print(f"POOL GAP DIAGNOSTIC SUMMARY  (sparse = P1-eligible < {MIN_CANDIDATES})")
+    print(f"{'='*88}")
+    print(f"{'ISO':<8} {'Pool':>10} {'Sparse':>8} "
+          f"{'Worst P1':>10} {'Worst Total':>13} {'Worst Band':>14}")
+    print(f"{'-'*8} {'-'*10} {'-'*8} {'-'*10} {'-'*13} {'-'*14}")
     for iso in ISOS:
         r = all_results[iso]
         sw = r['sparse_windows']
         if sw:
-            worst = min(sw, key=lambda x: x['candidates'])
-            worst_gap = worst['candidates']
+            worst = min(sw, key=lambda x: x['candidates_p1'])
+            worst_p1 = worst['candidates_p1']
+            worst_total = worst['candidates_total']
             worst_band = f"{worst['window_lo']:.1f}-{worst['window_hi']:.1f}"
         else:
-            worst_gap = '-'
+            worst_p1 = '-'
+            worst_total = '-'
             worst_band = '-'
-        print(f"{iso:<8} {r['pool_size']:>10,} {len(sw):>16} "
-              f"{worst_gap!s:>12} {worst_band:>14}")
-    print(f"{'='*72}")
+        print(f"{iso:<8} {r['pool_size']:>10,} {len(sw):>8} "
+              f"{worst_p1!s:>10} {worst_total!s:>13} {worst_band:>14}")
+    print(f"{'='*88}")
     print(f"Total sparse windows across all ISOs: {total_sparse}")
 
     # Band density table per ISO
@@ -310,9 +382,15 @@ def _find_neighbor_bands(target_lo: float, target_hi: float):
 
 
 def _interpolate_rows(pool: pa.Table, lo_score: float, hi_score: float,
-                      n_rows: int, rng: np.random.Generator) -> pa.Table:
+                      n_rows: int, rng: np.random.Generator,
+                      cf_cap_pct: float | None = None) -> pa.Table:
     """Generate n_rows interpolated EF candidates with hourly_match_score
     uniformly distributed in [lo_score, hi_score).
+
+    If cf_cap_pct is provided (P1 mode):
+      - Source rows are pre-filtered to P1-eligible (clean_firm <= cap, ccs_ccgt <= 0.5)
+      - Output rows have ccs_ccgt forced to 0
+      - Output clean_firm is clamped to cf_cap_pct
 
     Strategy: pick pairs of rows from the pool — one from just below the
     window and one from just above — and linearly interpolate their mix
@@ -321,24 +399,34 @@ def _interpolate_rows(pool: pa.Table, lo_score: float, hi_score: float,
     """
     scores = pool.column('hourly_match_score').to_numpy().astype(np.float64)
 
-    # Rows in the band just below the window (within 5 pp)
-    below_mask = (scores >= lo_score - 5.0) & (scores < lo_score)
-    # Rows in the band just above the window (within 5 pp)
-    above_mask = (scores >= hi_score) & (scores < hi_score + 5.0)
+    # ── P1 pre-filter: restrict source rows to P1-eligible ──
+    if cf_cap_pct is not None:
+        cf_raw = pool.column('clean_firm').to_numpy().astype(np.float64)
+        ccs_raw = (pool.column('ccs_ccgt').to_numpy().astype(np.float64)
+                   if 'ccs_ccgt' in pool.column_names
+                   else np.zeros(len(scores)))
+        p1_ok = (cf_raw <= cf_cap_pct) & (ccs_raw <= 0.5)
+    else:
+        p1_ok = np.ones(len(scores), dtype=bool)
+
+    # Rows in the band just below the window (within 5 pp), P1-eligible
+    below_mask = (scores >= lo_score - 5.0) & (scores < lo_score) & p1_ok
+    # Rows in the band just above the window (within 5 pp), P1-eligible
+    above_mask = (scores >= hi_score) & (scores < hi_score + 5.0) & p1_ok
 
     below_idx = np.where(below_mask)[0]
     above_idx = np.where(above_mask)[0]
 
     if len(below_idx) == 0 or len(above_idx) == 0:
-        # Fallback: widen the search to ±10 pp
-        below_mask = (scores >= lo_score - 10.0) & (scores < lo_score)
-        above_mask = (scores >= hi_score) & (scores < hi_score + 10.0)
+        # Fallback: widen the search to ±10 pp (still P1-filtered)
+        below_mask = (scores >= lo_score - 10.0) & (scores < lo_score) & p1_ok
+        above_mask = (scores >= hi_score) & (scores < hi_score + 10.0) & p1_ok
         below_idx = np.where(below_mask)[0]
         above_idx = np.where(above_mask)[0]
 
     if len(below_idx) == 0 or len(above_idx) == 0:
-        # Still nothing — can't interpolate, skip
-        print(f"  [augment] WARNING: no neighbor rows for "
+        tag = " (P1-filtered)" if cf_cap_pct is not None else ""
+        print(f"  [augment] WARNING: no neighbor rows{tag} for "
               f"[{lo_score:.1f}, {hi_score:.1f}), skipping", flush=True)
         return None
 
@@ -390,6 +478,16 @@ def _interpolate_rows(pool: pa.Table, lo_score: float, hi_score: float,
     for ci in pct_cols_idx:
         interp[:, ci] = np.round(interp[:, ci]).astype(np.float64)
 
+    # ── P1 post-enforcement: clamp clean_firm, zero ccs_ccgt ──
+    if cf_cap_pct is not None:
+        if 'ccs_ccgt' in numeric_cols:
+            ccs_ci = numeric_cols.index('ccs_ccgt')
+            interp[:, ccs_ci] = 0.0
+        if 'clean_firm' in numeric_cols:
+            cf_ci = numeric_cols.index('clean_firm')
+            interp[:, cf_ci] = np.minimum(interp[:, cf_ci],
+                                          np.floor(cf_cap_pct))
+
     # Rebuild the hourly_match_score from rounded resource shares
     # (sum of resource cols, clamped to [0, 100])
     resource_idx = [i for i, c in enumerate(numeric_cols) if c in _RESOURCE_COLS]
@@ -417,31 +515,194 @@ def _interpolate_rows(pool: pa.Table, lo_score: float, hi_score: float,
     return pa.table(out_cols)
 
 
+def _interpolate_p1_rows(pool: pa.Table, lo_score: float, hi_score: float,
+                         n_rows: int, rng: np.random.Generator,
+                         pf: float, uc_pct_yi: float) -> pa.Table | None:
+    """Generate P1-eligible interpolated rows.
+
+    Differences from _interpolate_rows:
+      1. Source rows are pre-filtered to P1-eligible only
+      2. Output ccs_ccgt is forced to 0
+      3. Output clean_firm is clamped to the P1 cap (pf + uc_pct_yi + 0.5)
+
+    The cf_cap_pct passed via uc_pct_yi should be the most permissive
+    (earliest year → highest uc_pct) for the window, so the generated
+    rows are valid for the widest range of years.
+    """
+    cf_cap = pf + uc_pct_yi + 0.5
+
+    # ── Step 1: filter pool to P1-eligible rows only ──
+    cf_arr = pool.column('clean_firm').to_numpy().astype(np.float64)
+    ccs_arr = pool.column('ccs_ccgt').to_numpy().astype(np.float64)
+    p1_ok = _apply_p1_mask(cf_arr, ccs_arr, pf, uc_pct_yi)
+    p1_idx = np.where(p1_ok)[0]
+    if len(p1_idx) == 0:
+        print(f"  [p1-augment] WARNING: zero P1-eligible rows in entire pool, "
+              f"cannot interpolate", flush=True)
+        return None
+    pool_p1 = pool.take(p1_idx)
+
+    # ── Step 2: standard interpolation on P1-filtered pool ──
+    scores = pool_p1.column('hourly_match_score').to_numpy().astype(np.float64)
+
+    below_mask = (scores >= lo_score - 5.0) & (scores < lo_score)
+    above_mask = (scores >= hi_score) & (scores < hi_score + 5.0)
+    below_idx = np.where(below_mask)[0]
+    above_idx = np.where(above_mask)[0]
+
+    if len(below_idx) == 0 or len(above_idx) == 0:
+        below_mask = (scores >= lo_score - 10.0) & (scores < lo_score)
+        above_mask = (scores >= hi_score) & (scores < hi_score + 10.0)
+        below_idx = np.where(below_mask)[0]
+        above_idx = np.where(above_mask)[0]
+
+    if len(below_idx) == 0 or len(above_idx) == 0:
+        print(f"  [p1-augment] WARNING: no P1-eligible neighbor rows for "
+              f"[{lo_score:.1f}, {hi_score:.1f}), skipping", flush=True)
+        return None
+
+    mix_cols = [c for c in pool_p1.column_names
+                if c in _ALL_MIX_COLS or c.startswith('mix_')]
+    numeric_cols = []
+    for c in mix_cols:
+        try:
+            pool_p1.column(c).to_numpy().astype(np.float64)
+            numeric_cols.append(c)
+        except (ValueError, TypeError):
+            continue
+
+    below_mat = np.column_stack(
+        [pool_p1.column(c).to_numpy().astype(np.float64)[below_idx]
+         for c in numeric_cols])
+    above_mat = np.column_stack(
+        [pool_p1.column(c).to_numpy().astype(np.float64)[above_idx]
+         for c in numeric_cols])
+
+    score_col_idx = numeric_cols.index('hourly_match_score')
+
+    bi = rng.integers(0, len(below_idx), size=n_rows)
+    ai = rng.integers(0, len(above_idx), size=n_rows)
+    target_scores = rng.uniform(lo_score, hi_score, size=n_rows)
+
+    b_rows = below_mat[bi]
+    a_rows = above_mat[ai]
+    b_scores = b_rows[:, score_col_idx]
+    a_scores = a_rows[:, score_col_idx]
+
+    denom = a_scores - b_scores
+    denom = np.where(np.abs(denom) < 1e-6, 1e-6, denom)
+    alpha = np.clip((target_scores - b_scores) / denom, 0.0, 1.0)
+
+    interp = b_rows * (1.0 - alpha[:, None]) + a_rows * alpha[:, None]
+    interp[:, score_col_idx] = target_scores
+
+    # ── Step 3: enforce P1 constraints on output ──
+    # Force ccs_ccgt = 0
+    if 'ccs_ccgt' in numeric_cols:
+        ccs_idx = numeric_cols.index('ccs_ccgt')
+        interp[:, ccs_idx] = 0.0
+
+    # Clamp clean_firm to the P1 cap
+    if 'clean_firm' in numeric_cols:
+        cf_idx = numeric_cols.index('clean_firm')
+        interp[:, cf_idx] = np.minimum(interp[:, cf_idx], cf_cap)
+
+    # Round percentage columns
+    pct_cols_idx = [i for i, c in enumerate(numeric_cols)
+                    if c in _RESOURCE_COLS or c in _STORAGE_COLS]
+    for ci in pct_cols_idx:
+        interp[:, ci] = np.round(interp[:, ci]).astype(np.float64)
+
+    # Recompute score from rounded shares
+    resource_idx = [i for i, c in enumerate(numeric_cols) if c in _RESOURCE_COLS]
+    if resource_idx:
+        recomputed_score = np.clip(interp[:, resource_idx].sum(axis=1), 0.0, 100.0)
+        in_window = (recomputed_score >= lo_score) & (recomputed_score < hi_score)
+        interp[:, score_col_idx] = np.where(in_window, recomputed_score, target_scores)
+
+    # ── Step 4: final P1 validation — drop any row that drifted past cap ──
+    if 'clean_firm' in numeric_cols and 'ccs_ccgt' in numeric_cols:
+        cf_idx = numeric_cols.index('clean_firm')
+        ccs_idx = numeric_cols.index('ccs_ccgt')
+        valid = (interp[:, cf_idx] <= cf_cap + 0.01) & (interp[:, ccs_idx] <= 0.5)
+        interp = interp[valid]
+        if len(interp) == 0:
+            print(f"  [p1-augment] WARNING: all interpolated rows failed P1 "
+                  f"validation for [{lo_score:.1f}, {hi_score:.1f})", flush=True)
+            return None
+
+    # Build arrow table
+    out_cols = {}
+    for i, c in enumerate(numeric_cols):
+        out_cols[c] = pa.array(interp[:, i].astype(np.float32))
+
+    for c in pool_p1.column_names:
+        if c not in out_cols:
+            src_val = pool_p1.column(c)[int(below_idx[0])].as_py()
+            out_cols[c] = pa.array([src_val] * len(interp))
+
+    return pa.table(out_cols)
+
+
 def run_augment(diag_results: dict, dry_run: bool = False):
-    """Generate interpolated EF rows for each sparse window."""
+    """Generate interpolated EF rows for each sparse window.
+
+    For windows that are sparse only due to the P1 mask (candidates_total
+    is fine but candidates_p1 < MIN_CANDIDATES), generates P1-eligible
+    rows using _interpolate_p1_rows which:
+      - Uses only P1-eligible source rows
+      - Forces ccs_ccgt = 0
+      - Clamps clean_firm to the P1 cap
+    """
     rng = np.random.default_rng(42)
 
-    # Deduplicate windows: group by (iso, window_lo, window_hi)
-    # since many endpoints share the same window in early years.
-    windows_by_iso: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    # Deduplicate windows: group by (iso, window_lo, window_hi).
+    # Track whether each window needs general or P1-specific augmentation.
+    from dataclasses import dataclass, field
+
+    @dataclass
+    class _Window:
+        lo: float; hi: float
+        needs_general: bool = False   # total candidates < MIN
+        needs_p1: bool = False        # P1 candidates < MIN
+        p1_cf_cap: float = 999.0      # most permissive (largest) cap across years
+        year_indices: list = field(default_factory=list)
+
+    windows_by_iso: dict[str, dict[tuple[float, float], _Window]] = defaultdict(dict)
+
     for iso, result in diag_results.items():
-        seen = set()
         for sw in result['sparse_windows']:
             key = (sw['window_lo'], sw['window_hi'])
-            if key not in seen:
-                seen.add(key)
-                windows_by_iso[iso].append(key)
+            if key not in windows_by_iso[iso]:
+                windows_by_iso[iso][key] = _Window(lo=sw['window_lo'],
+                                                    hi=sw['window_hi'])
+            w = windows_by_iso[iso][key]
+            if sw['candidates'] < MIN_CANDIDATES:
+                w.needs_general = True
+            if sw['candidates_p1'] < MIN_CANDIDATES:
+                w.needs_p1 = True
+            # Keep the most permissive (largest) P1 cap — earliest year has
+            # highest uc_pct because demand is smallest.
+            w.p1_cf_cap = max(w.p1_cf_cap, sw.get('p1_cf_cap', 999.0))
+            w.year_indices.append(sw.get('year_index', 0))
 
     total_written = 0
-    for iso, windows in windows_by_iso.items():
+    for iso, wdict in windows_by_iso.items():
+        windows = list(wdict.values())
         if not windows:
             continue
 
-        print(f"\n[augment] {iso}: {len(windows)} unique sparse windows", flush=True)
+        n_general = sum(1 for w in windows if w.needs_general)
+        n_p1 = sum(1 for w in windows if w.needs_p1 and not w.needs_general)
+        print(f"\n[augment] {iso}: {len(windows)} unique sparse windows "
+              f"({n_general} general, {n_p1} P1-only)", flush=True)
 
         if dry_run:
-            for lo, hi in sorted(windows):
-                print(f"  [dry-run] would augment [{lo:.1f}, {hi:.1f})", flush=True)
+            for w in sorted(windows, key=lambda x: x.lo):
+                kind = 'general+P1' if w.needs_general and w.needs_p1 else (
+                    'P1-only' if w.needs_p1 else 'general')
+                print(f"  [dry-run] would augment [{w.lo:.1f}, {w.hi:.1f}) "
+                      f"[{kind}]  cf_cap={w.p1_cf_cap:.1f}", flush=True)
             continue
 
         # Load full pool once per ISO
@@ -449,26 +710,52 @@ def run_augment(diag_results: dict, dry_run: bool = False):
         pool = _load_full_pool(iso)
         print(f"{pool.num_rows:,} rows", flush=True)
 
-        for lo, hi in sorted(windows):
-            lower_band, upper_band = _find_neighbor_bands(lo, hi)
+        pf, uc_pct_y = _p1_mask_params(iso)
+
+        for w in sorted(windows, key=lambda x: x.lo):
+            lower_band, upper_band = _find_neighbor_bands(w.lo, w.hi)
             if lower_band is None or upper_band is None:
-                print(f"  [{lo:.1f}, {hi:.1f}): no bracketing bands, skip", flush=True)
+                print(f"  [{w.lo:.1f}, {w.hi:.1f}): no bracketing bands, skip",
+                      flush=True)
                 continue
 
-            interp_tbl = _interpolate_rows(pool, lo, hi, INTERP_ROWS_PER_GAP, rng)
-            if interp_tbl is None:
-                continue
-
-            # Determine which band this augments (use lower threshold name)
             band_tag = _threshold_tag(lower_band)
-            out_name = f'step_2_1_EF_{iso}_{band_tag}_interp_{lo:.0f}_{hi:.0f}.parquet'
-            out_path = EF_DIR / out_name
 
-            pq.write_table(interp_tbl, out_path,
-                           compression='zstd', compression_level=3)
-            total_written += interp_tbl.num_rows
-            print(f"  [{lo:.1f}, {hi:.1f}): wrote {interp_tbl.num_rows} rows → {out_name}",
-                  flush=True)
+            # General augmentation (if total pool is sparse)
+            if w.needs_general:
+                interp_tbl = _interpolate_rows(pool, w.lo, w.hi,
+                                               INTERP_ROWS_PER_GAP, rng)
+                if interp_tbl is not None:
+                    out_name = (f'step_2_1_EF_{iso}_{band_tag}'
+                                f'_interp_{w.lo:.0f}_{w.hi:.0f}.parquet')
+                    out_path = EF_DIR / out_name
+                    pq.write_table(interp_tbl, out_path,
+                                   compression='zstd', compression_level=3)
+                    total_written += interp_tbl.num_rows
+                    print(f"  [{w.lo:.1f}, {w.hi:.1f}): wrote "
+                          f"{interp_tbl.num_rows} general rows → {out_name}",
+                          flush=True)
+
+            # P1 augmentation (if P1 pool is sparse)
+            if w.needs_p1:
+                # Use the most permissive year's uc_pct (earliest year in window)
+                earliest_yi = min(w.year_indices) if w.year_indices else 0
+                uc_pct_yi_max = float(uc_pct_y[earliest_yi])
+
+                p1_tbl = _interpolate_p1_rows(pool, w.lo, w.hi,
+                                              INTERP_ROWS_PER_GAP, rng,
+                                              pf, uc_pct_yi_max)
+                if p1_tbl is not None:
+                    out_name = (f'step_2_1_EF_{iso}_{band_tag}'
+                                f'_p1interp_{w.lo:.0f}_{w.hi:.0f}.parquet')
+                    out_path = EF_DIR / out_name
+                    pq.write_table(p1_tbl, out_path,
+                                   compression='zstd', compression_level=3)
+                    total_written += p1_tbl.num_rows
+                    print(f"  [{w.lo:.1f}, {w.hi:.1f}): wrote "
+                          f"{p1_tbl.num_rows} P1 rows → {out_name} "
+                          f"(cf_cap={pf + uc_pct_yi_max + 0.5:.1f})",
+                          flush=True)
 
     print(f"\n[augment] Total rows written: {total_written:,}")
     return total_written
