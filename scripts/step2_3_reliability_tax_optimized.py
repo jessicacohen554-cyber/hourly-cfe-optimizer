@@ -49,8 +49,12 @@ NEW_GAS_ASSET_LIFE_YEARS = 25
 _FOSSIL_CFS = {'gas': 0.45}
 ENDPOINT_TO_THRESHOLD = {0.90: 90, 0.95: 95, 0.99: 99, 0.999: 99.9}
 _EP_TAG_MAP = {90: 'ep90', 95: 'ep95', 99: 'ep99', 99.9: 'ep99p9'}
-RATCHET_TOL = 1.0e-6  # TWh tolerance for ratchet checks
-SCORE_FLOOR_PCT = 10.0  # defensive hourly_match_score filter band
+# Ratchet tolerance: 1% of current-year demand (TWh).  Allows the solver
+# to swap e.g. 2 pp of solar for wind+battery without tripping the
+# per-resource ratchet floor.  The actual enforcement is inside the numba
+# kernel (_score_chunk_inner) as  ratch_slack = RATCHET_TOL_PCT * dy.
+RATCHET_TOL_PCT = 0.01   # 1% of demand — replaces the old epsilon (1e-6)
+SCORE_FLOOR_PCT = 10.0   # defensive hourly_match_score filter band
 _POOL_CHUNK = 2_000_000  # streaming chunk size for candidate argmin
 
 EF_DIR = _ROOT / 'data' / 'step2.1-ef'
@@ -95,6 +99,7 @@ def _next_band_ceiling(target_pct: float) -> float:
             return float(b)
     return 100.0
 
+
 # ─── Module-scope loads (once at import) ─────────────────────────────────────
 
 with open(_ROOT / 'data' / 'egrid_emission_rates.json') as _f:
@@ -106,7 +111,6 @@ with open(_ROOT / 'data' / 'step5-wrights' / 'wrights_law_curves.json') as _f:
 def _load_fossil_mix():
     t = pq.read_table(_ROOT / 'data' / 'eia-930' / 'eia_fossil_mix.parquet')
     return {iso: t.filter(pacompute.equal(t['iso'], iso)) for iso in ISOS}
-
 
 _FOSSIL_MIX = _load_fossil_mix()
 
@@ -120,7 +124,6 @@ def _load_dispatch_caches():
             caches[iso] = pq.read_table(cp)
             manifests[iso] = pq.read_table(mp)
     return caches, manifests
-
 
 _DCACHE, _MANIFEST = _load_dispatch_caches()
 
@@ -152,7 +155,6 @@ def _load_gen_profiles():
             out[iso][fuel] = prof
     return out
 
-
 _GEN_PROF = _load_gen_profiles()
 
 
@@ -164,7 +166,6 @@ def _load_hybrid_profiles():
             z = np.load(p)
             out[iso] = {k: z[k].astype(np.float64) for k in z.keys()}
     return out
-
 
 _HYB_PROF = _load_hybrid_profiles()
 
@@ -193,7 +194,6 @@ def _load_demand_profiles():
         norm = norm / norm.sum() if norm.sum() > 0 else flat.copy()
         out[iso] = norm * mwh
     return out
-
 
 _DEMAND = _load_demand_profiles()
 
@@ -225,8 +225,8 @@ def _compute_gas_raw_2025():
         out[iso] = float(np.percentile(resid, 99.97)) * mwh / gaf
     return out
 
-
 _GAS_RAW_2025 = _compute_gas_raw_2025()
+
 
 # ─── Fossil retirement ──────────────────────────────────────────────────────
 
@@ -432,6 +432,7 @@ def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
     pq.write_table(tbl, tmp)
     os.replace(tmp, sp)
     return tbl
+
 
 # ─── Pool loader ─────────────────────────────────────────────────────────────
 
@@ -666,6 +667,7 @@ def decompose_clean_firm_tranches(cf_pct, iso, pathway, annual_mwh_vec, cfg):
         'feasible': feasible,
     }
 
+
 # ─── Solver context (shared setup) ───────────────────────────────────────────
 
 @dataclass
@@ -698,8 +700,15 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
     # the optimizer from searching the entire EF with a 0% floor in year 1.
     base_clean_pct = sum(pc.GRID_MIX_SHARES[iso].values())
     cfe_tgt = np.array([_cfe_target(y, cfg.endpoint_pct, cfg.cfe_waypoints,
-                                     base_pct=base_clean_pct) for y in YEARS])
-    cfe_ceil = np.array([_next_band_ceiling(t) for t in cfe_tgt])
+                                    base_pct=base_clean_pct) for y in YEARS])
+    # ── FIX 1: Constant endpoint ceiling ────────────────────────────
+    # Ceiling is the next EF band above the ENDPOINT target, constant for
+    # all years.  The old per-year ceiling (_next_band_ceiling per cfe_tgt[yi])
+    # was too narrow in early years, so the ratchet floor from a prior year
+    # would exceed the next year's ceiling → safety-net fired → ceiling dropped
+    # entirely → solver jumped to unconstrained global optimum (Bug C-residual).
+    _ep_ceil = _next_band_ceiling(cfg.endpoint_pct)
+    cfe_ceil = np.full(N_YEARS, _ep_ceil, dtype=np.float64)
     eg = existing_gas_vec(iso, cfe_tgt, cfg.demand_growth_level)
     gl = cfg.geo_cost_level or ('M' if iso == 'CAISO' else None)
     nuke_eff, ccs_eff, geo_eff = _tranche_lcoe_vecs(iso, cfg)
@@ -707,7 +716,7 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
            'ldes_dispatch_pct': 'ldes', 'h2_dispatch_pct': 'h2'}
     _src = getattr(pc, 'STORAGE_REVENUE_CREDITS', {})
     sp = [(sc, max(0.0, float(pc.LCOE_TABLES[lk]['Medium'][iso])
-                        - float(_src.get(lk, {}).get(iso, 0.0))))
+                   - float(_src.get(lk, {}).get(iso, 0.0))))
           for sc, lk in slm.items() if float(ef[sc].sum()) > 0]
     uc = float(pc.UPRATE_CAP_TWH[iso])
     # Pre-stack non-CF resource shares into contiguous (n, R) matrix
@@ -764,31 +773,31 @@ def _init_floors(ctx):
 
 @numba.njit(cache=True, parallel=True)
 def _score_chunk_inner(
-    # Chunk slices (already sliced to [s:e])
-    ef_noncf_chunk,     # (k, R) float64 — non-CF shares / 100
-    cf_share_chunk,     # (k,) float64 — clean_firm share / 100
-    score_chunk,        # (k,) float64 — hourly_match_score
-    resid_chunk,        # (k,) float64 — resid_norm_p9997
-    rmg_chunk,          # (k,) float64 — running max gas, MUTATED in-place
-    storage_chunk,      # (k, S) float64 — storage dispatch / 100
-    ef_cf_raw_chunk,    # (k,) float64 — raw clean_firm % (for pathway mask)
-    ef_ccs_raw_chunk,   # (k,) float64 — raw ccs_ccgt % (for pathway mask)
-    # Per-year scalars
-    dy, amwh_y, bl_y,
-    nuke_eff_yi, ccs_eff_yi, up_eff_yi, geo_eff_yi,
-    eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
-    # Structural scalars
-    uc, gc, cc_cap, gaf, exist_base, gas_raw_2025,
-    capex_mw, fom_mw, fuel_unit, exist_fom,
-    pf, ratchet_tol,
-    # Flags
-    ta, is_p1,
-    # Floor arrays / scalars
-    fr,             # (R,) float64 — non-CF ratchet floors
-    fc, fu, fg, fn, fcc,
-    # Cost vectors
-    delivered_yi,   # (R,) float64
-    storage_costs,  # (S,) float64
+        # Chunk slices (already sliced to [s:e])
+        ef_noncf_chunk,     # (k, R) float64 — non-CF shares / 100
+        cf_share_chunk,     # (k,) float64 — clean_firm share / 100
+        score_chunk,        # (k,) float64 — hourly_match_score
+        resid_chunk,        # (k,) float64 — resid_norm_p9997
+        rmg_chunk,          # (k,) float64 — running max gas, MUTATED in-place
+        storage_chunk,      # (k, S) float64 — storage dispatch / 100
+        ef_cf_raw_chunk,    # (k,) float64 — raw clean_firm % (for pathway mask)
+        ef_ccs_raw_chunk,   # (k,) float64 — raw ccs_ccgt % (for pathway mask)
+        # Per-year scalars
+        dy, amwh_y, bl_y,
+        nuke_eff_yi, ccs_eff_yi, up_eff_yi, geo_eff_yi,
+        eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
+        # Structural scalars
+        uc, gc, cc_cap, gaf, exist_base, gas_raw_2025,
+        capex_mw, fom_mw, fuel_unit, exist_fom,
+        pf, ratchet_tol_pct,
+        # Flags
+        ta, is_p1,
+        # Floor arrays / scalars
+        fr,             # (R,) float64 — non-CF ratchet floors
+        fc, fu, fg, fn, fcc,
+        # Cost vectors
+        delivered_yi,   # (R,) float64
+        storage_costs,  # (S,) float64
 ):
     """Numba-jit scoring kernel.  All Python dispatch eliminated."""
     k = ef_noncf_chunk.shape[0]
@@ -847,18 +856,24 @@ def _score_chunk_inner(
         nk_out[i] = nuke_new
         cc_out[i] = ccs
 
-        # ── Ratchet ──
+        # ── FIX 3: Ratchet with demand-proportional tolerance ──
+        # Allow each resource to drop by up to 1% of current-year demand
+        # (in TWh) to permit resource-substitution (e.g. swap solar for
+        # wind+battery) without tripping the ratchet.  Prevents the
+        # per-resource floors from starving the solver of viable candidates
+        # when the total CFE is actually increasing.
+        ratch_slack = ratchet_tol_pct * dy   # 1% of demand in TWh
         ratch_ok = True
         for j in range(R):
-            if tnr[i, j] < fr[j] - ratchet_tol:
+            if tnr[i, j] < fr[j] - ratch_slack:
                 ratch_ok = False
                 break
         if ratch_ok:
-            ratch_ok = (cf_val >= fc - ratchet_tol
-                        and uprate >= fu - ratchet_tol
-                        and geo >= fg - ratchet_tol
-                        and nuke_new >= fn - ratchet_tol
-                        and ccs >= fcc - ratchet_tol)
+            ratch_ok = (cf_val >= fc - ratch_slack
+                        and uprate >= fu - ratch_slack
+                        and geo >= fg - ratch_slack
+                        and nuke_new >= fn - ratch_slack
+                        and ccs >= fcc - ratch_slack)
         ratch[i] = ratch_ok
 
         # ── Pathway mask ──
@@ -968,13 +983,12 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
         eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
         ctx.uc, ctx.gc, ctx.cc, ctx.gaf, ctx.exist_base, ctx.gas_raw_2025,
         ctx.capex_mw, ctx.fom_mw, ctx.fuel_unit, ctx.exist_fom,
-        ctx.pf, RATCHET_TOL,
+        ctx.pf, RATCHET_TOL_PCT,
         ctx.ta, ctx.is_p1,
         fr, fc, fu, fg, fn, fcc,
         delivered_yi,
         ctx.storage_costs,
     )
-
 
 
 def _update_floors(w, yi, ctx, fr, fc, fu, fg, fn, fcc):
@@ -1073,9 +1087,9 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                 progress = yi / max(1, eyi)
                 headroom = 1.0 - progress
                 ceil_ok = np.all(
-                    snr <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL,
+                    snr <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL_PCT,
                     axis=1)
-                ceil_ok &= (ctx.cf_share[s:e] <= ceilings['cf_share'] * (1.0 + headroom) + RATCHET_TOL)
+                ceil_ok &= (ctx.cf_share[s:e] <= ceilings['cf_share'] * (1.0 + headroom) + RATCHET_TOL_PCT)
                 mask = mask & ceil_ok
 
             v = np.where(mask, rs, np.inf)
@@ -1083,36 +1097,50 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
             if float(v[li]) < best_score:
                 best_score, best_idx = float(v[li]), s + li
 
-        # Safety net: constrained fallback (pathway mask + CFE floor enforced).
-        # The global argmin fallback was broken — it ignored pathway constraints,
-        # injecting e.g. CF=60% into P1, which the ratchet then locked in forever.
-        # Cascade: (1) widen CFE ceiling to endpoint, (2) widen to 100%,
-        # (3) hold previous year's winner rather than violate constraints.
+        # ── FIX 2: Three-tier constrained fallback (safety net) ──
+        # Tier 1: keep endpoint ceiling, relax ratchet / foresight ceilings.
+        # Tier 2: drop ceiling entirely (floor + pathway only).
+        # Tier 3: hold previous year's winner.
         if np.isinf(best_score):
-            # Build pathway mask over full pool
+            # Shared: pathway mask over full pool
             if ctx.is_p1:
                 _pm_full = ((ctx.ef['clean_firm'].astype(np.float64) <= ctx.pf + float(ctx.uc_pct_y[yi]) + 0.5)
                             & (ctx.ef.get('ccs_ccgt', np.zeros(n)).astype(np.float64) <= 0.5))
             else:
                 _pm_full = np.ones(n, dtype=bool)
             _cfe_floor = ctx.score >= (cfe_tgt_yi - 0.5)
-            _fallback_mask = _pm_full & _cfe_floor
-            _fb_scores = np.where(_fallback_mask, saved_rs, np.inf)
-            if not np.all(np.isinf(_fb_scores)):
-                best_idx = int(np.argmin(_fb_scores))
-                best_score = float(_fb_scores[best_idx])
-                print(f"[warn] year {YEARS[yi]}: fallback (widened ceiling, pathway-constrained)", flush=True)
-            elif yi > 0:
-                # No candidate passes — hold previous year's winner
-                best_idx = int(winners[yi - 1])
-                best_score = float(saved_rs[best_idx]) if np.isfinite(saved_rs[best_idx]) else 0.0
-                print(f"[warn] year {YEARS[yi]}: holding previous winner (no feasible candidate)", flush=True)
+            _cfe_cap = ctx.score < cfe_ceil_yi  # endpoint band ceiling
+
+            # Tier 1: floor + ceiling + pathway (drop ratchet / foresight)
+            _t1_mask = _pm_full & _cfe_floor & _cfe_cap
+            _t1_scores = np.where(_t1_mask, saved_rs, np.inf)
+            if not np.all(np.isinf(_t1_scores)):
+                best_idx = int(np.argmin(_t1_scores))
+                best_score = float(_t1_scores[best_idx])
+                print(f"[warn] year {YEARS[yi]}: tier-1 fallback "
+                      f"(ceiling preserved, ratchet relaxed)", flush=True)
             else:
-                # Year 0 with no candidates — true infeasibility
-                best_idx = int(np.argmin(saved_rs))
-                best_score = float(saved_rs[best_idx])
-                print(f"[WARN] year {YEARS[yi]}: no P1-feasible candidate at CFE>={cfe_tgt_yi:.1f}%, "
-                      f"using global fallback", flush=True)
+                # Tier 2: floor + pathway only (ceiling dropped — last resort)
+                _t2_mask = _pm_full & _cfe_floor
+                _t2_scores = np.where(_t2_mask, saved_rs, np.inf)
+                if not np.all(np.isinf(_t2_scores)):
+                    best_idx = int(np.argmin(_t2_scores))
+                    best_score = float(_t2_scores[best_idx])
+                    print(f"[WARN] year {YEARS[yi]}: tier-2 fallback "
+                          f"(ceiling dropped — no mix in band)", flush=True)
+                elif yi > 0:
+                    # Tier 3: hold previous year's winner
+                    best_idx = int(winners[yi - 1])
+                    best_score = float(saved_rs[best_idx]) if np.isfinite(saved_rs[best_idx]) else 0.0
+                    print(f"[warn] year {YEARS[yi]}: holding previous winner "
+                          f"(no feasible candidate)", flush=True)
+                else:
+                    # Year 0 with no candidates — true infeasibility
+                    best_idx = int(np.argmin(saved_rs))
+                    best_score = float(saved_rs[best_idx])
+                    print(f"[WARN] year {YEARS[yi]}: no P1-feasible candidate "
+                          f"at CFE>={cfe_tgt_yi:.1f}%, using global fallback",
+                          flush=True)
 
         winners[yi] = best_idx
         fr, fc, fu, fg, fn, fcc = _update_floors(
@@ -1148,6 +1176,7 @@ def _get_target_shares(iso, ep_pct, dgl='Medium', gl=None, fl='M', cl='M', tl='M
         tgt[i] = float(row.get(f'mix_{r}', 0.0) or 0.0) / 100.0
     _TS_CACHE[ck] = tgt
     return tgt
+
 
 # ─── Output helpers ──────────────────────────────────────────────────────────
 
@@ -1195,8 +1224,6 @@ def _endpoint_dispatch(iso, mix_pct):
     if arch not in al:
         return np.zeros(HOURS_PER_YEAR)
     return np.asarray(cache.column('total_clean')[al.index(arch)].as_py(), dtype=np.float64)
-
-
 
 
 # ─── Ledger builder ──────────────────────────────────────────────────────────
@@ -1392,6 +1419,7 @@ def _finalize(ctx, winners):
         ef=ctx.ef, clean_pct=acfe,
     )
 
+
 # ─── Serialization ───────────────────────────────────────────────────────────
 
 def _serialize_buildout(r: PathwayRunResult):
@@ -1522,8 +1550,8 @@ def _run_iso_all(iso):
             _run_one(iso, p, ep)
             if p in _FORESIGHT_PATHWAYS:
                 _run_one(iso, p, ep, solver_mode='foresight')
-            _lcoe.cache_clear(); _tx.cache_clear()
-            gc.collect()
+    _lcoe.cache_clear(); _tx.cache_clear()
+    gc.collect()
 
 
 def main(argv=None) -> int:
