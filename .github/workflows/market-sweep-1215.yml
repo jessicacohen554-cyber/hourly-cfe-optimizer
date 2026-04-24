@@ -1,0 +1,479 @@
+name: "Market Simulator: 1,215-Scenario Sweep"
+
+# Runs the full 1,215-scenario parametric sweep
+# (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new-build fossil cost)
+# across all 7 ISOs, simulating annual years 2023–2060.
+#
+# Each ISO runs in a parallel matrix job.
+# Results are merged into a single branch with parquet output only (no large JSON).
+#
+# Output: market-simulator/results/sweep_1215/
+#   - sweep_1215_flat.parquet         (flat table, ~10 MB)
+#   - sweep_1215_aggregates.json      (P10/P50/P90 bands, ~1 MB)
+#
+# Total simulations: 1,215 scenarios × 7 ISOs × 38 years = 323,190 ISO-year runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = parallel matrix)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: market-sweep-1215
+
+jobs:
+  # ── Phase 1: Run sweep per-ISO in parallel ──
+  # ERCOT uses 4-zone iterative solver (~10× slower) so it's sharded into
+  # 5 parallel jobs. All other ISOs run as single jobs.
+  # Select a specific ISO via the `iso` input to run only that ISO.
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    strategy:
+      matrix:
+        include:
+          - iso: CAISO
+            shard: ""
+            shard_label: ""
+          - iso: ERCOT
+            shard: "1/5"
+            shard_label: "-shard-1of5"
+          - iso: ERCOT
+            shard: "2/5"
+            shard_label: "-shard-2of5"
+          - iso: ERCOT
+            shard: "3/5"
+            shard_label: "-shard-3of5"
+          - iso: ERCOT
+            shard: "4/5"
+            shard_label: "-shard-4of5"
+          - iso: ERCOT
+            shard: "5/5"
+            shard_label: "-shard-5of5"
+          - iso: PJM
+            shard: ""
+            shard_label: ""
+          - iso: NYISO
+            shard: ""
+            shard_label: ""
+          - iso: NEISO
+            shard: ""
+            shard_label: ""
+          - iso: MISO
+            shard: ""
+            shard_label: ""
+          - iso: SPP
+            shard: ""
+            shard_label: ""
+      fail-fast: false
+    # Only run the full matrix when ALL is selected (or default)
+    if: ${{ inputs.iso == 'ALL' || inputs.iso == '' }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_1215
+
+      - name: "Warmup Numba JIT cache"
+        working-directory: market-simulator/scripts
+        run: python3 -c "print('Compiling Numba kernels...'); import dispatch_utils, market_simulation, scenario_common; print('Numba JIT compilation complete.')"
+
+      - name: "Run 1,215-scenario sweep — ${{ matrix.iso }}${{ matrix.shard_label }}"
+        working-directory: market-simulator/scripts
+        run: |
+          SHARD_ARG=""
+          if [ -n "${{ matrix.shard }}" ]; then
+            SHARD_ARG="--shard ${{ matrix.shard }}"
+          fi
+          python run_sweep_1215.py \
+            --isos ${{ matrix.iso }} \
+            --output-dir ../results/sweep_1215/${{ matrix.iso }}${{ matrix.shard_label }} \
+            $SHARD_ARG
+
+      - name: Upload per-ISO parquet
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-1215-${{ matrix.iso }}${{ matrix.shard_label }}
+          path: market-simulator/results/sweep_1215/${{ matrix.iso }}${{ matrix.shard_label }}/
+          retention-days: 3
+
+  # ── Single-ISO job: runs when a specific non-ERCOT ISO is selected ──
+  sweep-single:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ inputs.iso != 'ALL' && inputs.iso != '' && inputs.iso != 'ERCOT' }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_1215
+
+      - name: "Warmup Numba JIT cache"
+        working-directory: market-simulator/scripts
+        run: python3 -c "print('Compiling Numba kernels...'); import dispatch_utils, market_simulation, scenario_common; print('Numba JIT compilation complete.')"
+
+      - name: "Run 1,215-scenario sweep — ${{ inputs.iso }}"
+        working-directory: market-simulator/scripts
+        run: |
+          python run_sweep_1215.py \
+            --isos ${{ inputs.iso }} \
+            --output-dir ../results/sweep_1215/${{ inputs.iso }}
+
+      - name: Upload per-ISO parquet
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-1215-${{ inputs.iso }}
+          path: market-simulator/results/sweep_1215/${{ inputs.iso }}/
+          retention-days: 3
+
+  # ── Single-ISO ERCOT: sharded into 5 parallel jobs ──
+  sweep-ercot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ inputs.iso == 'ERCOT' }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    strategy:
+      matrix:
+        include:
+          - shard: "1/5"
+            shard_label: "-shard-1of5"
+          - shard: "2/5"
+            shard_label: "-shard-2of5"
+          - shard: "3/5"
+            shard_label: "-shard-3of5"
+          - shard: "4/5"
+            shard_label: "-shard-4of5"
+          - shard: "5/5"
+            shard_label: "-shard-5of5"
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_1215
+
+      - name: "Warmup Numba JIT cache"
+        working-directory: market-simulator/scripts
+        run: python3 -c "print('Compiling Numba kernels...'); import dispatch_utils, market_simulation, scenario_common; print('Numba JIT compilation complete.')"
+
+      - name: "Run 1,215-scenario sweep — ERCOT${{ matrix.shard_label }}"
+        working-directory: market-simulator/scripts
+        run: |
+          python run_sweep_1215.py \
+            --isos ERCOT \
+            --output-dir ../results/sweep_1215/ERCOT${{ matrix.shard_label }} \
+            --shard ${{ matrix.shard }}
+
+      - name: Upload per-ISO parquet
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-1215-ERCOT${{ matrix.shard_label }}
+          path: market-simulator/results/sweep_1215/ERCOT${{ matrix.shard_label }}/
+          retention-days: 3
+
+  # ── Phase 2: Merge per-ISO parquets into combined output ──
+  merge:
+    needs: [sweep, sweep-single, sweep-ercot]
+    if: always()  # Run merge even if some jobs were skipped or timed out
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Download all per-ISO artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sweep-1215-*
+          path: ./artifact-tmp/
+
+      - name: Merge per-ISO parquets into combined output
+        working-directory: market-simulator/scripts
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          import pandas as pd
+
+          artifact_root = os.path.join(os.getcwd(), '..', '..', 'artifact-tmp')
+          out_dir = os.path.join(os.getcwd(), '..', 'results', 'sweep_1215')
+          os.makedirs(out_dir, exist_ok=True)
+
+          import numpy as np
+
+          # Collect per-ISO dataframes from artifacts
+          iso_dfs = {}  # iso_name -> DataFrame
+          for iso_dir in sorted(os.listdir(artifact_root)):
+              iso_path = os.path.join(artifact_root, iso_dir)
+              for root, dirs, files in os.walk(iso_path):
+                  for f in files:
+                      if f.endswith('.parquet'):
+                          df = pd.read_parquet(os.path.join(root, f))
+                          # Identify ISO from data
+                          isos_found = df['iso'].dropna().unique()
+                          for iso_name in isos_found:
+                              iso_slice = df[df['iso'] == iso_name]
+                              if iso_name in iso_dfs:
+                                  iso_dfs[iso_name] = pd.concat(
+                                      [iso_dfs[iso_name], iso_slice], ignore_index=True)
+                              else:
+                                  iso_dfs[iso_name] = iso_slice.copy()
+                          print(f"  Loaded {iso_dir}/{f}: {len(df)} rows")
+
+          if not iso_dfs:
+              print("ERROR: No parquet files found in artifacts")
+              sys.exit(1)
+
+          # Write per-ISO parquets (primary output — downstream reads these)
+          for iso_name, iso_df in sorted(iso_dfs.items()):
+              # Replace inf/-inf with NaN for pyarrow
+              numeric_cols = iso_df.select_dtypes(include=[np.number]).columns
+              iso_df[numeric_cols] = iso_df[numeric_cols].replace([np.inf, -np.inf], np.nan)
+              iso_parquet = os.path.join(out_dir, f'sweep_1215_{iso_name}.parquet')
+              iso_df.to_parquet(iso_parquet, index=False)
+              print(f"  Per-ISO parquet: {iso_parquet} ({len(iso_df)} rows)")
+
+          # Write combined parquet (backward-compat for sensitivity_analysis.py etc.)
+          combined_df = pd.concat(list(iso_dfs.values()), ignore_index=True)
+          parquet_path = os.path.join(out_dir, 'sweep_1215_flat.parquet')
+          combined_df.to_parquet(parquet_path, index=False)
+          print(f"Combined parquet: {len(combined_df)} rows x {len(combined_df.columns)} cols")
+          size_mb = os.path.getsize(parquet_path) / 1e6
+          print(f"  Size: {size_mb:.1f} MB")
+
+          # Compute aggregates from the combined parquet
+          print("Computing P10/P50/P90 aggregates from parquet...")
+          agg_cols = [
+              'avg_lmp', 'lmp_p90', 'emissions_mt', 'emission_rate_tco2_mwh',
+              'cost_per_mwh', 'revenue_per_mwh', 'clean_pct', 'demand_twh',
+              'total_new_fossil_mw', 'total_economic_retirement_mw',
+              'ordc_scarcity_hours',
+          ]
+          existing_cols = [c for c in agg_cols if c in combined_df.columns]
+
+          aggregates = {}
+          for iso in sorted(combined_df['iso'].dropna().unique()):
+              iso_df = combined_df[combined_df['iso'] == iso]
+              iso_agg = {}
+              for year in sorted(iso_df['year'].dropna().unique()):
+                  yr_df = iso_df[iso_df['year'] == year]
+                  yr_agg = {}
+                  for col in existing_cols:
+                      vals = yr_df[col].dropna()
+                      if len(vals) > 0:
+                          yr_agg[col] = {
+                              'p10': round(float(vals.quantile(0.1)), 4),
+                              'p50': round(float(vals.quantile(0.5)), 4),
+                              'p90': round(float(vals.quantile(0.9)), 4),
+                              'mean': round(float(vals.mean()), 4),
+                          }
+                  iso_agg[str(int(year))] = yr_agg
+              aggregates[iso] = iso_agg
+
+              # Write per-ISO aggregate JSON
+              iso_agg_path = os.path.join(out_dir, f'sweep_1215_aggregates_{iso}.json')
+              with open(iso_agg_path, 'w') as f:
+                  json.dump({iso: iso_agg}, f, indent=2)
+              print(f"  Per-ISO aggregates: {iso_agg_path}")
+
+          # Write combined aggregates JSON
+          agg_path = os.path.join(out_dir, 'sweep_1215_aggregates.json')
+          with open(agg_path, 'w') as f:
+              json.dump(aggregates, f, indent=2)
+          print(f"Combined aggregates: {agg_path} ({len(aggregates)} ISOs)")
+          PYEOF
+
+      - name: Run sensitivity analysis (Morris + ANOVA)
+        working-directory: market-simulator/scripts
+        run: |
+          python sensitivity_analysis.py \
+            --parquet ../results/sweep_1215/sweep_1215_flat.parquet \
+            --output-dir ../results/sensitivity
+
+      - name: Generate constellation scenarios JSON
+        working-directory: market-simulator/scripts
+        run: python generate_constellation_scenarios.py
+
+      - name: Copy constellation JSON to frontend/data for extract script
+        run: |
+          mkdir -p market-simulator/frontend/data
+          cp market-simulator/fleet_scenarios/constellation_scenarios.json \
+             market-simulator/frontend/data/constellation_scenarios.json
+
+      - name: Extract ISO sweep data for dashboard
+        working-directory: market-simulator/scripts
+        run: python extract_iso_sweep_data.py
+
+      - name: Export sweep dispatch data (per-ISO + combined JSON)
+        working-directory: market-simulator/scripts
+        run: python export_sweep_dispatch_data.py
+
+      - name: Build fleet scenario data
+        working-directory: market-simulator/scripts
+        run: python build_fleet_scenario_data.py
+
+      - name: Sync fleet data to dashboard
+        run: |
+          mkdir -p dashboard/data
+
+          # Combined fleet + sweep JSON files → dashboard/data/
+          cp -v market-simulator/frontend/data/fleet_scenario_results_sample.json \
+                dashboard/data/fleet_scenario_results_sample.json
+
+          # Per-ISO fleet result JSONs → dashboard/data/
+          for f in market-simulator/frontend/data/fleet_scenario_results_*.json; do
+            if [ -f "$f" ]; then
+              cp -v "$f" "dashboard/data/$(basename $f)"
+            fi
+          done
+
+          # Per-ISO + combined sweep dispatch JSONs → dashboard/data/
+          for f in market-simulator/frontend/data/sweep_dispatch_data*.json; do
+            if [ -f "$f" ]; then
+              cp -v "$f" "dashboard/data/$(basename $f)"
+            fi
+          done
+
+          # constellation_scenarios.json → dashboard/data/
+          cp -v market-simulator/fleet_scenarios/constellation_scenarios.json \
+                dashboard/data/constellation_scenarios.json
+
+          # fleet JS modules → dashboard/js/ (ensure parity)
+          for f in fleet-scenarios.js fleet-dispatch-engine.js fleet-sidebar.js; do
+            if [ -f "market-simulator/frontend/js/$f" ]; then
+              cp -v "market-simulator/frontend/js/$f" "dashboard/js/$f"
+            fi
+          done
+
+          echo "Fleet data synced to dashboard/"
+          ls -la dashboard/data/fleet_scenario_results_*.json
+          ls -la dashboard/data/sweep_dispatch_data*.json
+          ls -la dashboard/data/constellation_scenarios.json
+
+      - name: Create output branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          # Sweep results
+          git add -f market-simulator/results/sweep_1215/
+          git add -f market-simulator/results/sensitivity/
+
+          # Fleet scenario data — per-ISO + combined (both locations)
+          git add -f market-simulator/frontend/data/fleet_scenario_results_*.json
+          git add -f market-simulator/frontend/data/sweep_dispatch_data*.json
+          git add -f market-simulator/fleet_scenarios/constellation_scenarios.json
+          git add -f dashboard/data/fleet_scenario_results_*.json
+          git add -f dashboard/data/sweep_dispatch_data*.json
+          git add -f dashboard/data/constellation_scenarios.json
+
+          # Dashboard JS exports
+          git add -f dashboard/js/iso-sweep-data.js
+          git add -f dashboard/js/fleet-scenarios.js
+          git add -f dashboard/js/fleet-dispatch-engine.js
+          git add -f dashboard/js/fleet-sidebar.js
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Market simulator: 1,215-scenario sweep + fleet data — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          Sweep: 1,215 scenarios × 7 ISOs (unified deployment model).
+          Post-processing: sensitivity analysis (Morris + ANOVA), fleet scenario
+          trajectories (P10/P50/P90 envelopes), constellation scenarios, ISO sweep
+          data for dashboard. Fleet data synced to both market-simulator/frontend/
+          and dashboard/ for fleet_scenarios.html parity."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done

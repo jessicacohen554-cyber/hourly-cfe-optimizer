@@ -1,0 +1,1114 @@
+{
+  "_comment": "IPP fleet configuration for Step 11. Add new companies by appending to the 'companies' array. Each plant needs: name, iso, fuel, cap_mw, gen_twh, co2_mt, and optionally hr (heat rate BTU/kWh) and retire_by (year).",
+  "_fuel_types": [
+    "coal",
+    "gas_ccgt",
+    "gas_peaker",
+    "nuclear",
+    "solar",
+    "wind",
+    "battery",
+    "hydro",
+    "geothermal",
+    "oil"
+  ],
+  "_iso_options": [
+    "CAISO",
+    "ERCOT",
+    "PJM",
+    "NYISO",
+    "NEISO",
+    "MISO",
+    "SPP"
+  ],
+  "companies": [
+    {
+      "id": "vistra",
+      "name": "Vistra Energy",
+      "shortName": "Vistra",
+      "co2_2023_mt": 73,
+      "co2_2024_mt": 68,
+      "intensity_kg": 485,
+      "gen_twh": 154,
+      "cap_gw": 44,
+      "target": "Net-zero by 2050",
+      "clean_pipeline": {
+        "pipeline_twh": 4.5,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 1200, "twh": 2.6, "stage": "under_construction"},
+          {"tech": "battery", "cap_mw": 1500, "twh": 0, "stage": "under_construction"},
+          {"tech": "nuclear_uprate", "cap_mw": 230, "twh": 1.9, "stage": "approved"}
+        ],
+        "_note": "Comanche Peak uprate (NRC approved), ERCOT solar+battery portfolio. Modest clean pipeline relative to fleet size."
+      },
+      "plants": [
+        {
+          "name": "Martin Lake Coal (TX)",
+          "iso": "ERCOT",
+          "fuel": "coal",
+          "cap_mw": 2250,
+          "gen_twh": 11.0,
+          "co2_mt": 15.07,
+          "hr": 10200,
+          "retire_by": 2027
+        },
+        {
+          "name": "Coleto Creek Coal (TX)",
+          "iso": "ERCOT",
+          "fuel": "coal",
+          "cap_mw": 630,
+          "gen_twh": 3.1,
+          "co2_mt": 4.29,
+          "hr": 10400,
+          "retire_by": 2027
+        },
+        {
+          "name": "Odessa-Ector CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1054,
+          "gen_twh": 5.5,
+          "co2_mt": 2.86,
+          "hr": 6900
+        },
+        {
+          "name": "Midlothian CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1600,
+          "gen_twh": 8.4,
+          "co2_mt": 4.29,
+          "hr": 6700
+        },
+        {
+          "name": "Forney CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1800,
+          "gen_twh": 9.4,
+          "co2_mt": 4.94,
+          "hr": 6800
+        },
+        {
+          "name": "ERCOT CT/Peaker Fleet",
+          "iso": "ERCOT",
+          "fuel": "gas_peaker",
+          "cap_mw": 4600,
+          "gen_twh": 4.0,
+          "co2_mt": 3.38,
+          "hr": 9800
+        },
+        {
+          "name": "Comanche Peak Nuclear",
+          "iso": "ERCOT",
+          "fuel": "nuclear",
+          "cap_mw": 2400,
+          "gen_twh": 20.5,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "ERCOT Solar Portfolio",
+          "iso": "ERCOT",
+          "fuel": "solar",
+          "cap_mw": 358,
+          "gen_twh": 0.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "DeCordova BESS",
+          "iso": "ERCOT",
+          "fuel": "battery",
+          "cap_mw": 260,
+          "gen_twh": 0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Perry Nuclear (OH)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1268,
+          "gen_twh": 10.7,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Davis-Besse Nuclear (OH)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 908,
+          "gen_twh": 7.6,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Beaver Valley Nuclear (PA)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1872,
+          "gen_twh": 15.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Kincaid Coal (IL)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 1319,
+          "gen_twh": 4.0,
+          "co2_mt": 5.2,
+          "hr": 10800,
+          "retire_by": 2027
+        },
+        {
+          "name": "Baldwin Coal (IL)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 1185,
+          "gen_twh": 3.6,
+          "co2_mt": 4.68,
+          "hr": 10600,
+          "retire_by": 2027
+        },
+        {
+          "name": "Newton Coal (IL)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 615,
+          "gen_twh": 1.9,
+          "co2_mt": 2.47,
+          "hr": 10700,
+          "retire_by": 2027
+        },
+        {
+          "name": "PJM Gas CCGT Fleet",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 5200,
+          "gen_twh": 27.3,
+          "co2_mt": 14.16,
+          "hr": 7100
+        },
+        {
+          "name": "PJM CT/Peaker Fleet",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 5000,
+          "gen_twh": 4.4,
+          "co2_mt": 3.64,
+          "hr": 9600
+        },
+        {
+          "name": "Moss Landing CCGT (CA)",
+          "iso": "CAISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1200,
+          "gen_twh": 6.3,
+          "co2_mt": 3.25,
+          "hr": 6900
+        },
+        {
+          "name": "Newington CCGT (NH)",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 624,
+          "gen_twh": 3.3,
+          "co2_mt": 1.69,
+          "hr": 7000
+        },
+        {
+          "name": "Bridgeport CCGT (CT)",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 558,
+          "gen_twh": 2.9,
+          "co2_mt": 1.56,
+          "hr": 7100
+        },
+        {
+          "name": "Tiverton/Rumford CCGT",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 568,
+          "gen_twh": 3.0,
+          "co2_mt": 1.56,
+          "hr": 7000
+        }
+      ]
+    },
+    {
+      "id": "constellation",
+      "name": "Constellation Energy",
+      "shortName": "Constellation",
+      "co2_2023_mt": 57,
+      "co2_2024_mt": 55,
+      "intensity_kg": 131,
+      "gen_twh": 300,
+      "cap_gw": 55,
+      "target": "100% carbon-free by 2040",
+      "_note": "Post-Calpine merger (Jan 2026). ~200 TWh clean (180 nuclear, 9 geo, 5 renewable), ~100 TWh gas CCGT/peaker.",
+      "clean_pipeline": {
+        "pipeline_twh": 15.3,
+        "breakdown": [
+          {"tech": "nuclear_uprate", "cap_mw": 1000, "twh": 8.0, "stage": "approved", "_note": "NRC-approved uprates across fleet (Braidwood, Byron, LaSalle, Limerick, Peach Bottom)"},
+          {"tech": "nuclear_restart", "cap_mw": 835, "twh": 6.5, "stage": "permitted", "_note": "Crane Clean Energy Center (Three Mile Island Unit 1) restart, Microsoft PPA, target 2028"},
+          {"tech": "solar", "cap_mw": 300, "twh": 0.6, "stage": "announced"},
+          {"tech": "battery", "cap_mw": 200, "twh": 0, "stage": "announced"},
+          {"tech": "geothermal", "cap_mw": 100, "twh": 0.2, "stage": "announced", "_note": "Via Calpine geothermal expansion (The Geysers)"}
+        ],
+        "_note": "Constellation's clean pipeline is uniquely nuclear-heavy: ~8 TWh from NRC-approved uprates at existing plants, ~6.5 TWh from Crane restart. This is the largest single clean firm pipeline of any US IPP."
+      },
+      "plants": [
+        {
+          "name": "Limerick Nuclear (PA)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 2317,
+          "gen_twh": 19.5,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Peach Bottom Nuclear (PA, 50%)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1385,
+          "gen_twh": 11.7,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Calvert Cliffs Nuclear (MD)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1790,
+          "gen_twh": 15.1,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Crane Clean Energy Center (PA)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 835,
+          "gen_twh": 7.0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Salem Nuclear (NJ, 43%)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 987,
+          "gen_twh": 8.3,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Byron Nuclear (IL)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 2347,
+          "gen_twh": 18.5,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Braidwood Nuclear (IL)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 2386,
+          "gen_twh": 18.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Quad Cities Nuclear (IL)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1819,
+          "gen_twh": 14.3,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Dresden Nuclear (IL)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1845,
+          "gen_twh": 14.5,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "LaSalle Nuclear (IL)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 2320,
+          "gen_twh": 18.3,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Clinton Nuclear (IL)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1065,
+          "gen_twh": 5.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "PJM Calpine CCGT Fleet (York/Bethlehem/etc)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1950,
+          "gen_twh": 10.2,
+          "co2_mt": 5.96,
+          "hr": 7000
+        },
+        {
+          "name": "PJM Gas Peaker Fleet",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 786,
+          "gen_twh": 0.7,
+          "co2_mt": 0.58,
+          "hr": 9500
+        },
+        {
+          "name": "Conowingo Hydro (MD)",
+          "iso": "PJM",
+          "fuel": "hydro",
+          "cap_mw": 572,
+          "gen_twh": 1.9,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Nine Mile Point Nuclear (NY)",
+          "iso": "NYISO",
+          "fuel": "nuclear",
+          "cap_mw": 1907,
+          "gen_twh": 16.1,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "FitzPatrick Nuclear (NY)",
+          "iso": "NYISO",
+          "fuel": "nuclear",
+          "cap_mw": 842,
+          "gen_twh": 7.1,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Ginna Nuclear (NY)",
+          "iso": "NYISO",
+          "fuel": "nuclear",
+          "cap_mw": 576,
+          "gen_twh": 4.9,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "NYISO Calpine Gas Fleet",
+          "iso": "NYISO",
+          "fuel": "gas_peaker",
+          "cap_mw": 225,
+          "gen_twh": 0.5,
+          "co2_mt": 0.29,
+          "hr": 9200
+        },
+        {
+          "name": "Fore River CCGT (MA)",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 750,
+          "gen_twh": 3.9,
+          "co2_mt": 2.18,
+          "hr": 6800
+        },
+        {
+          "name": "Granite Ridge CCGT (NH)",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 745,
+          "gen_twh": 3.9,
+          "co2_mt": 2.18,
+          "hr": 6900
+        },
+        {
+          "name": "Westbrook CCGT (ME)",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 552,
+          "gen_twh": 2.9,
+          "co2_mt": 1.6,
+          "hr": 7000
+        },
+        {
+          "name": "South Texas Project (44%)",
+          "iso": "ERCOT",
+          "fuel": "nuclear",
+          "cap_mw": 1164,
+          "gen_twh": 9.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Deer Park Energy Center",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1204,
+          "gen_twh": 6.3,
+          "co2_mt": 3.64,
+          "hr": 6700
+        },
+        {
+          "name": "Guadalupe Energy Center",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1009,
+          "gen_twh": 5.3,
+          "co2_mt": 3.05,
+          "hr": 6800
+        },
+        {
+          "name": "Baytown/Channel/Freestone CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 2483,
+          "gen_twh": 13.0,
+          "co2_mt": 7.56,
+          "hr": 7000
+        },
+        {
+          "name": "Bosque/Magic Valley/Pasadena CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 2083,
+          "gen_twh": 10.9,
+          "co2_mt": 6.4,
+          "hr": 7100
+        },
+        {
+          "name": "Quail Run/Corpus/Lost Pines CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1570,
+          "gen_twh": 8.2,
+          "co2_mt": 4.8,
+          "hr": 7200
+        },
+        {
+          "name": "ERCOT Calpine Peaker Fleet",
+          "iso": "ERCOT",
+          "fuel": "gas_peaker",
+          "cap_mw": 1500,
+          "gen_twh": 1.3,
+          "co2_mt": 1.16,
+          "hr": 9600
+        },
+        {
+          "name": "Colorado Bend CCGT (TX)",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 550,
+          "gen_twh": 2.9,
+          "co2_mt": 1.74,
+          "hr": 7000
+        },
+        {
+          "name": "Delta/Los Medanos CCGT",
+          "iso": "CAISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1643,
+          "gen_twh": 8.6,
+          "co2_mt": 4.94,
+          "hr": 6800
+        },
+        {
+          "name": "Russell City/Gateway CCGT",
+          "iso": "CAISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1239,
+          "gen_twh": 6.5,
+          "co2_mt": 3.78,
+          "hr": 6900
+        },
+        {
+          "name": "Pastoria/Metcalf/Sutter CCGT",
+          "iso": "CAISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1754,
+          "gen_twh": 9.2,
+          "co2_mt": 5.38,
+          "hr": 7000
+        },
+        {
+          "name": "CAISO Calpine Peaker Fleet",
+          "iso": "CAISO",
+          "fuel": "gas_peaker",
+          "cap_mw": 1318,
+          "gen_twh": 1.2,
+          "co2_mt": 1.02,
+          "hr": 9800
+        },
+        {
+          "name": "The Geysers Geothermal (CA)",
+          "iso": "CAISO",
+          "fuel": "geothermal",
+          "cap_mw": 725,
+          "gen_twh": 9.0,
+          "co2_mt": 0.73
+        },
+        {
+          "name": "Nova BESS Portfolio (CA)",
+          "iso": "CAISO",
+          "fuel": "battery",
+          "cap_mw": 798,
+          "gen_twh": 0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Wind Portfolio (10 states)",
+          "iso": "PJM",
+          "fuel": "wind",
+          "cap_mw": 1400,
+          "gen_twh": 3.2,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Solar Portfolio",
+          "iso": "CAISO",
+          "fuel": "solar",
+          "cap_mw": 360,
+          "gen_twh": 0.8,
+          "co2_mt": 0.0
+        }
+      ]
+    },
+    {
+      "id": "nrg",
+      "name": "NRG Energy",
+      "shortName": "NRG",
+      "co2_2023_mt": 46,
+      "co2_2024_mt": 42,
+      "intensity_kg": 520,
+      "gen_twh": 80,
+      "cap_gw": 25,
+      "target": "Net-zero by 2050",
+      "clean_pipeline": {
+        "pipeline_twh": 1.5,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 400, "twh": 0.9, "stage": "announced"},
+          {"tech": "battery", "cap_mw": 500, "twh": 0, "stage": "announced"},
+          {"tech": "wind", "cap_mw": 200, "twh": 0.6, "stage": "announced"}
+        ],
+        "_note": "Minimal clean pipeline. NRG is primarily focused on retail electricity and thermal generation. Vivint Solar acquisition focused on rooftop, not utility-scale."
+      },
+      "plants": [
+        {
+          "name": "W.A. Parish Coal (TX)",
+          "iso": "ERCOT",
+          "fuel": "coal",
+          "cap_mw": 2697,
+          "gen_twh": 13.0,
+          "co2_mt": 12.1,
+          "hr": 10500
+        },
+        {
+          "name": "Limestone Coal (TX)",
+          "iso": "ERCOT",
+          "fuel": "coal",
+          "cap_mw": 1629,
+          "gen_twh": 7.8,
+          "co2_mt": 7.24,
+          "hr": 10400
+        },
+        {
+          "name": "W.A. Parish Gas CCGT",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1086,
+          "gen_twh": 5.7,
+          "co2_mt": 1.94,
+          "hr": 7000
+        },
+        {
+          "name": "Cedar Bayou CCGT (TX)",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1492,
+          "gen_twh": 7.8,
+          "co2_mt": 2.74,
+          "hr": 6900
+        },
+        {
+          "name": "LS Power TX Gas Plants",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 2060,
+          "gen_twh": 10.8,
+          "co2_mt": 3.8,
+          "hr": 6800
+        },
+        {
+          "name": "ERCOT CT/Peaker Fleet",
+          "iso": "ERCOT",
+          "fuel": "gas_peaker",
+          "cap_mw": 3489,
+          "gen_twh": 3.1,
+          "co2_mt": 1.77,
+          "hr": 9800
+        },
+        {
+          "name": "Doswell Energy Center (VA)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1313,
+          "gen_twh": 6.9,
+          "co2_mt": 2.47,
+          "hr": 6800
+        },
+        {
+          "name": "Hunterstown CCGT (PA)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 810,
+          "gen_twh": 4.2,
+          "co2_mt": 1.5,
+          "hr": 7000
+        },
+        {
+          "name": "Ironwood CCGT (PA)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 778,
+          "gen_twh": 4.1,
+          "co2_mt": 1.41,
+          "hr": 7100
+        },
+        {
+          "name": "Springdale/Other PJM CCGT",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 2623,
+          "gen_twh": 13.8,
+          "co2_mt": 4.86,
+          "hr": 7200
+        },
+        {
+          "name": "PJM CT/Peaker Fleet",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 2000,
+          "gen_twh": 1.8,
+          "co2_mt": 0.97,
+          "hr": 9600
+        },
+        {
+          "name": "Ravenswood Gas/Oil (NY)",
+          "iso": "NYISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1947,
+          "gen_twh": 8.5,
+          "co2_mt": 3.09,
+          "hr": 7800
+        },
+        {
+          "name": "Arthur Kill Gas (NY)",
+          "iso": "NYISO",
+          "fuel": "gas_peaker",
+          "cap_mw": 866,
+          "gen_twh": 0.8,
+          "co2_mt": 0.44,
+          "hr": 10200
+        },
+        {
+          "name": "NE Gas Plants",
+          "iso": "NEISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 940,
+          "gen_twh": 4.9,
+          "co2_mt": 1.68,
+          "hr": 7000
+        }
+      ]
+    },
+    {
+      "id": "talen",
+      "name": "Talen Energy",
+      "shortName": "Talen",
+      "co2_2023_mt": 16,
+      "co2_2024_mt": 14,
+      "intensity_kg": 340,
+      "gen_twh": 42,
+      "cap_gw": 10.7,
+      "target": "No formal net-zero target",
+      "clean_pipeline": {
+        "pipeline_twh": 1.0,
+        "breakdown": [
+          {"tech": "nuclear_uprate", "cap_mw": 120, "twh": 1.0, "stage": "approved", "_note": "Susquehanna uprate potential"}
+        ],
+        "_note": "Minimal clean pipeline. Talen's strategy is data center colocation at Susquehanna (Amazon deal), not new clean development. Post-restructuring focus on existing assets."
+      },
+      "plants": [
+        {
+          "name": "Susquehanna Nuclear (PA, 90%)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 2228,
+          "gen_twh": 18.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Lower Mt. Bethel CCGT (PA)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 610,
+          "gen_twh": 3.2,
+          "co2_mt": 1.28,
+          "hr": 6700
+        },
+        {
+          "name": "Martins Creek CT (PA)",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 1710,
+          "gen_twh": 1.5,
+          "co2_mt": 0.98,
+          "hr": 10000
+        },
+        {
+          "name": "Camden CT (NJ)",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 145,
+          "gen_twh": 0.1,
+          "co2_mt": 0.1,
+          "hr": 9800
+        },
+        {
+          "name": "Brandon Shores Coal (MD, RMR)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 1295,
+          "gen_twh": 3.9,
+          "co2_mt": 3.83,
+          "hr": 10600,
+          "retire_by": 2029
+        },
+        {
+          "name": "Brunner Island (PA)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 1419,
+          "gen_twh": 4.3,
+          "co2_mt": 4.22,
+          "hr": 10500,
+          "retire_by": 2028
+        },
+        {
+          "name": "Montour (PA, gas conversion)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1508,
+          "gen_twh": 7.9,
+          "co2_mt": 3.14,
+          "hr": 7100
+        },
+        {
+          "name": "Conemaugh (PA, 22%)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 392,
+          "gen_twh": 1.2,
+          "co2_mt": 1.18,
+          "hr": 10700
+        },
+        {
+          "name": "Keystone (PA, 12%)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 214,
+          "gen_twh": 0.6,
+          "co2_mt": 0.59,
+          "hr": 10800
+        },
+        {
+          "name": "H.A. Wagner (MD, oil/gas)",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 838,
+          "gen_twh": 1.0,
+          "co2_mt": 0.69,
+          "hr": 10200,
+          "retire_by": 2029
+        }
+      ]
+    },
+    {
+      "id": "pseg",
+      "name": "PSEG Power",
+      "shortName": "PSEG",
+      "co2_2023_mt": 1.2,
+      "co2_2024_mt": 1,
+      "intensity_kg": 22,
+      "gen_twh": 34.6,
+      "cap_gw": 3.8,
+      "target": "Net-zero operations by 2045",
+      "clean_pipeline": {
+        "pipeline_twh": 4.8,
+        "breakdown": [
+          {"tech": "nuclear_uprate", "cap_mw": 200, "twh": 1.6, "stage": "approved", "_note": "Hope Creek & Salem uprate potential"},
+          {"tech": "offshore_wind", "cap_mw": 1100, "twh": 2.2, "stage": "permitted", "_note": "Ocean Wind equity stake / NJ offshore commitments"},
+          {"tech": "solar", "cap_mw": 400, "twh": 0.9, "stage": "announced"},
+          {"tech": "battery", "cap_mw": 100, "twh": 0, "stage": "announced"}
+        ],
+        "_note": "PSEG pipeline is a mix of nuclear uprates, offshore wind equity stakes, and utility-scale solar. Relatively small fleet makes this a meaningful share."
+      },
+      "plants": [
+        {
+          "name": "Hope Creek Nuclear (NJ)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1172,
+          "gen_twh": 9.9,
+          "co2_mt": 0
+        },
+        {
+          "name": "Salem Nuclear (NJ, 57%)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1308,
+          "gen_twh": 11.0,
+          "co2_mt": 0
+        },
+        {
+          "name": "Peach Bottom Nuclear (PA, 50%)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1275,
+          "gen_twh": 10.7,
+          "co2_mt": 0
+        },
+        {
+          "name": "PSEG Fossil Fleet (NJ/CT)",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 3500,
+          "gen_twh": 3.0,
+          "co2_mt": 1.2,
+          "hr": 7200
+        }
+      ]
+    },
+    {
+      "id": "nextera",
+      "name": "NextEra Energy Resources",
+      "shortName": "NextEra",
+      "co2_2023_mt": 20,
+      "co2_2024_mt": 18,
+      "intensity_kg": 180,
+      "gen_twh": 100,
+      "cap_gw": 33,
+      "target": "Real Zero emissions by 2045",
+      "clean_pipeline": {
+        "pipeline_twh": 50.0,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 10000, "twh": 22.0, "stage": "under_construction", "_note": "Largest US solar pipeline, ~10 GW in active development"},
+          {"tech": "wind", "cap_mw": 5000, "twh": 16.0, "stage": "under_construction", "_note": "Onshore wind backlog across ERCOT, SPP, MISO"},
+          {"tech": "battery", "cap_mw": 5000, "twh": 0, "stage": "under_construction", "_note": "Co-located with solar portfolio"},
+          {"tech": "wind_offshore", "cap_mw": 1000, "twh": 4.0, "stage": "permitted"},
+          {"tech": "solar_distributed", "cap_mw": 3000, "twh": 5.0, "stage": "announced"},
+          {"tech": "nuclear_smr", "cap_mw": 400, "twh": 3.0, "stage": "announced", "_note": "Exploring SMR at Duane Arnold site"}
+        ],
+        "_note": "Largest clean energy pipeline of any US IPP by a wide margin. NextEra adds ~8-10 GW/year of renewables+storage. Backlog is 25+ GW with strong execution track record."
+      },
+      "plants": [
+        {
+          "name": "Point Beach Nuclear (WI)",
+          "iso": "PJM",
+          "fuel": "nuclear",
+          "cap_mw": 1200,
+          "gen_twh": 10.1,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "ERCOT Wind Portfolio",
+          "iso": "ERCOT",
+          "fuel": "wind",
+          "cap_mw": 8000,
+          "gen_twh": 25.0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "ERCOT Solar Portfolio",
+          "iso": "ERCOT",
+          "fuel": "solar",
+          "cap_mw": 3500,
+          "gen_twh": 7.7,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "ERCOT Battery Storage",
+          "iso": "ERCOT",
+          "fuel": "battery",
+          "cap_mw": 2000,
+          "gen_twh": 0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "ERCOT Gas CCGT Fleet",
+          "iso": "ERCOT",
+          "fuel": "gas_ccgt",
+          "cap_mw": 3200,
+          "gen_twh": 16.8,
+          "co2_mt": 14.57,
+          "hr": 7000
+        },
+        {
+          "name": "PJM Wind Portfolio",
+          "iso": "PJM",
+          "fuel": "wind",
+          "cap_mw": 2000,
+          "gen_twh": 6.3,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "PJM Solar Portfolio",
+          "iso": "PJM",
+          "fuel": "solar",
+          "cap_mw": 1500,
+          "gen_twh": 3.3,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "CAISO Solar Portfolio",
+          "iso": "CAISO",
+          "fuel": "solar",
+          "cap_mw": 2500,
+          "gen_twh": 5.5,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "CAISO Battery Storage",
+          "iso": "CAISO",
+          "fuel": "battery",
+          "cap_mw": 1500,
+          "gen_twh": 0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "CAISO Gas CCGT Fleet",
+          "iso": "CAISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1200,
+          "gen_twh": 6.3,
+          "co2_mt": 5.43,
+          "hr": 7000
+        },
+        {
+          "name": "NEISO Wind Portfolio",
+          "iso": "NEISO",
+          "fuel": "wind",
+          "cap_mw": 800,
+          "gen_twh": 2.5,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Seabrook Nuclear (NH)",
+          "iso": "NEISO",
+          "fuel": "nuclear",
+          "cap_mw": 1244,
+          "gen_twh": 10.5,
+          "co2_mt": 0.0
+        }
+      ]
+    },
+    {
+      "id": "aes",
+      "name": "AES Corporation",
+      "shortName": "AES",
+      "co2_2023_mt": 30,
+      "co2_2024_mt": 28,
+      "intensity_kg": 372,
+      "gen_twh": 75,
+      "cap_gw": 35,
+      "target": "Carbon-neutral Scope 1&2 by 2040; SBTi validated 1.5C",
+      "clean_pipeline": {
+        "pipeline_twh": 25.0,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 6000, "twh": 13.2, "stage": "under_construction", "_note": "US solar portfolio in PJM, ERCOT, CAISO"},
+          {"tech": "battery", "cap_mw": 4000, "twh": 0, "stage": "under_construction", "_note": "Largest US battery developer, Fluence partnership"},
+          {"tech": "wind", "cap_mw": 2000, "twh": 6.4, "stage": "permitted"},
+          {"tech": "wind_offshore", "cap_mw": 800, "twh": 3.2, "stage": "announced"},
+          {"tech": "green_hydrogen", "cap_mw": 500, "twh": 2.2, "stage": "announced", "_note": "Green hydrogen pilot projects"}
+        ],
+        "_note": "AES has aggressive clean pipeline driven by SBTi commitment. Second-largest US battery developer (via Fluence). Strong execution in solar+storage co-location."
+      },
+      "plants": [
+        {
+          "name": "Petersburg Coal (IN)",
+          "iso": "PJM",
+          "fuel": "coal",
+          "cap_mw": 1700,
+          "gen_twh": 5.3,
+          "co2_mt": 10.82,
+          "hr": 10700
+        },
+        {
+          "name": "PJM Gas CCGT Fleet",
+          "iso": "PJM",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1800,
+          "gen_twh": 9.4,
+          "co2_mt": 7.76,
+          "hr": 7100
+        },
+        {
+          "name": "PJM Gas Peaker Fleet",
+          "iso": "PJM",
+          "fuel": "gas_peaker",
+          "cap_mw": 1200,
+          "gen_twh": 1.1,
+          "co2_mt": 1.43,
+          "hr": 9800
+        },
+        {
+          "name": "CAISO Solar Portfolio",
+          "iso": "CAISO",
+          "fuel": "solar",
+          "cap_mw": 3000,
+          "gen_twh": 6.6,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "CAISO Battery Storage",
+          "iso": "CAISO",
+          "fuel": "battery",
+          "cap_mw": 2000,
+          "gen_twh": 0,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "AES Alamitos CCGT (CA)",
+          "iso": "CAISO",
+          "fuel": "gas_ccgt",
+          "cap_mw": 1960,
+          "gen_twh": 10.3,
+          "co2_mt": 8.37,
+          "hr": 6900
+        },
+        {
+          "name": "AES Redondo/Huntington (CA)",
+          "iso": "CAISO",
+          "fuel": "gas_peaker",
+          "cap_mw": 1500,
+          "gen_twh": 1.3,
+          "co2_mt": 1.63,
+          "hr": 9800
+        },
+        {
+          "name": "Wind Portfolio (Multi-ISO)",
+          "iso": "PJM",
+          "fuel": "wind",
+          "cap_mw": 2500,
+          "gen_twh": 7.8,
+          "co2_mt": 0.0
+        },
+        {
+          "name": "Solar Portfolio (Other)",
+          "iso": "PJM",
+          "fuel": "solar",
+          "cap_mw": 2000,
+          "gen_twh": 4.4,
+          "co2_mt": 0.0
+        }
+      ]
+    }
+  ]
+}

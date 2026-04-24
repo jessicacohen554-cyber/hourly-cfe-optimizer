@@ -1,0 +1,710 @@
+{
+  "metadata": {
+    "created": "2026-03-14",
+    "sources": {
+      "EIA_AEO_2025": {
+        "name": "EIA Annual Energy Outlook 2025",
+        "url": "https://www.eia.gov/outlooks/aeo/",
+        "scenario": "Reference Case",
+        "notes": "EMM regions mapped to ISOs. Generation in TWh, prices in $/MWh, emissions in Mt CO2."
+      },
+      "NREL_CAMBIUM_2024": {
+        "name": "NREL Cambium 2024 (Mid-Case)",
+        "url": "https://www.nrel.gov/analysis/cambium.html",
+        "scenario": "Mid-Case (includes IRA)",
+        "notes": "Balancing areas aggregated to ISO level. Marginal costs and generation mix."
+      },
+      "NREL_STD_SCENARIOS": {
+        "name": "NREL Standard Scenarios 2024",
+        "url": "https://www.nrel.gov/analysis/standard-scenarios.html",
+        "scenario": "Mid-Case / High RE Cost / Low RE Cost",
+        "notes": "National and regional capacity/generation projections."
+      },
+      "PRINCETON_REPEAT": {
+        "name": "Princeton REPEAT Project",
+        "url": "https://repeatproject.org/",
+        "scenario": "IRA as enacted",
+        "notes": "Capacity additions and emissions through 2035 under IRA."
+      },
+      "LBNL_QUEUED_UP": {
+        "name": "LBNL Queued Up 2024",
+        "url": "https://emp.lbl.gov/queues",
+        "notes": "Interconnection queue data by ISO and technology."
+      },
+      "EPA_IPM": {
+        "name": "EPA Integrated Planning Model",
+        "url": "https://www.epa.gov/power-sector-modeling",
+        "scenario": "Post-IRA baseline",
+        "notes": "Power sector emissions and generation under regulatory scenarios."
+      }
+    }
+  },
+  "EIA_AEO_2025": {
+    "description": "EIA AEO 2025 Reference Case \u2014 national and EMM regional projections",
+    "national": {
+      "generation_twh": {
+        "2023": {
+          "coal": 675,
+          "gas": 1740,
+          "nuclear": 775,
+          "solar": 238,
+          "wind": 425,
+          "hydro": 260,
+          "other_re": 80,
+          "total": 4178
+        },
+        "2030": {
+          "coal": 470,
+          "gas": 1850,
+          "nuclear": 760,
+          "solar": 530,
+          "wind": 560,
+          "hydro": 265,
+          "other_re": 95,
+          "total": 4530
+        },
+        "2035": {
+          "coal": 350,
+          "gas": 1920,
+          "nuclear": 740,
+          "solar": 780,
+          "wind": 650,
+          "hydro": 268,
+          "other_re": 110,
+          "total": 4818
+        },
+        "2040": {
+          "coal": 260,
+          "gas": 2050,
+          "nuclear": 720,
+          "solar": 1050,
+          "wind": 740,
+          "hydro": 270,
+          "other_re": 125,
+          "total": 5215
+        },
+        "2050": {
+          "coal": 150,
+          "gas": 2200,
+          "nuclear": 680,
+          "solar": 1500,
+          "wind": 900,
+          "hydro": 275,
+          "other_re": 150,
+          "total": 5855
+        }
+      },
+      "clean_pct": {
+        "2023": 42.5,
+        "2030": 48.8,
+        "2035": 52.8,
+        "2040": 55.7,
+        "2050": 59.9
+      },
+      "emissions_mt": {
+        "2023": 1550,
+        "2030": 1320,
+        "2035": 1200,
+        "2040": 1130,
+        "2050": 1050
+      },
+      "wholesale_price": {
+        "2023": 35.0,
+        "2030": 37.0,
+        "2035": 38.5,
+        "2040": 40.0,
+        "2050": 42.0
+      },
+      "capacity_additions_gw": {
+        "2030": {
+          "solar": 150,
+          "wind": 55,
+          "battery": 60,
+          "gas": 35,
+          "nuclear": 0
+        },
+        "2035": {
+          "solar": 280,
+          "wind": 90,
+          "battery": 110,
+          "gas": 55,
+          "nuclear": 2
+        },
+        "2040": {
+          "solar": 430,
+          "wind": 130,
+          "battery": 170,
+          "gas": 80,
+          "nuclear": 5
+        },
+        "2050": {
+          "solar": 700,
+          "wind": 200,
+          "battery": 280,
+          "gas": 120,
+          "nuclear": 10
+        }
+      },
+      "demand_twh": {
+        "2023": 4178,
+        "2025": 4419,
+        "2030": 4800,
+        "2035": 5300,
+        "2040": 5700,
+        "2050": 6646
+      },
+      "demand_growth_pct_yr": 1.6,
+      "notes": "AEO 2025 projects +50% generation growth to 2050, driven by data centers (+440 TWh by 2050) and electrification. Sales growth +15.9% by 2035 (3x AEO 2023)."
+    },
+    "regional": {
+      "PJM": {
+        "clean_pct": {
+          "2023": 37,
+          "2030": 42,
+          "2035": 47,
+          "2040": 52,
+          "2050": 58
+        },
+        "emissions_mt": {
+          "2023": 270,
+          "2030": 230,
+          "2035": 200,
+          "2040": 175,
+          "2050": 140
+        },
+        "avg_lmp": {
+          "2023": 34.7,
+          "2030": 36,
+          "2035": 38,
+          "2040": 40,
+          "2050": 43
+        },
+        "demand_twh": {
+          "2023": 843,
+          "2030": 900,
+          "2035": 955,
+          "2040": 1020,
+          "2050": 1140
+        }
+      },
+      "ERCOT": {
+        "clean_pct": {
+          "2023": 34,
+          "2030": 45,
+          "2035": 52,
+          "2040": 58,
+          "2050": 65
+        },
+        "emissions_mt": {
+          "2023": 160,
+          "2030": 130,
+          "2035": 110,
+          "2040": 95,
+          "2050": 70
+        },
+        "avg_lmp": {
+          "2023": 26,
+          "2030": 28,
+          "2035": 30,
+          "2040": 32,
+          "2050": 35
+        },
+        "demand_twh": {
+          "2023": 450,
+          "2030": 520,
+          "2035": 580,
+          "2040": 650,
+          "2050": 800
+        }
+      },
+      "CAISO": {
+        "clean_pct": {
+          "2023": 56,
+          "2030": 68,
+          "2035": 75,
+          "2040": 80,
+          "2050": 88
+        },
+        "emissions_mt": {
+          "2023": 42,
+          "2030": 30,
+          "2035": 22,
+          "2040": 16,
+          "2050": 8
+        },
+        "avg_lmp": {
+          "2023": 38,
+          "2030": 35,
+          "2035": 33,
+          "2040": 32,
+          "2050": 30
+        },
+        "demand_twh": {
+          "2023": 280,
+          "2030": 310,
+          "2035": 340,
+          "2040": 375,
+          "2050": 430
+        }
+      },
+      "NYISO": {
+        "clean_pct": {
+          "2023": 48,
+          "2030": 58,
+          "2035": 65,
+          "2040": 70,
+          "2050": 78
+        },
+        "emissions_mt": {
+          "2023": 28,
+          "2030": 20,
+          "2035": 16,
+          "2040": 13,
+          "2050": 8
+        },
+        "avg_lmp": {
+          "2023": 42,
+          "2030": 44,
+          "2035": 46,
+          "2040": 48,
+          "2050": 50
+        },
+        "demand_twh": {
+          "2023": 160,
+          "2030": 172,
+          "2035": 185,
+          "2040": 200,
+          "2050": 225
+        }
+      },
+      "NEISO": {
+        "clean_pct": {
+          "2023": 45,
+          "2030": 55,
+          "2035": 62,
+          "2040": 68,
+          "2050": 76
+        },
+        "emissions_mt": {
+          "2023": 22,
+          "2030": 16,
+          "2035": 12,
+          "2040": 9,
+          "2050": 5
+        },
+        "avg_lmp": {
+          "2023": 39.5,
+          "2030": 41,
+          "2035": 43,
+          "2040": 45,
+          "2050": 48
+        },
+        "demand_twh": {
+          "2023": 130,
+          "2030": 140,
+          "2035": 150,
+          "2040": 162,
+          "2050": 180
+        }
+      },
+      "MISO": {
+        "clean_pct": {
+          "2023": 28,
+          "2030": 38,
+          "2035": 45,
+          "2040": 52,
+          "2050": 60
+        },
+        "emissions_mt": {
+          "2023": 320,
+          "2030": 260,
+          "2035": 220,
+          "2040": 185,
+          "2050": 140
+        },
+        "avg_lmp": {
+          "2023": 31,
+          "2030": 33,
+          "2035": 35,
+          "2040": 37,
+          "2050": 40
+        },
+        "demand_twh": {
+          "2023": 680,
+          "2030": 730,
+          "2035": 780,
+          "2040": 840,
+          "2050": 950
+        }
+      },
+      "SPP": {
+        "clean_pct": {
+          "2023": 42,
+          "2030": 52,
+          "2035": 58,
+          "2040": 64,
+          "2050": 72
+        },
+        "emissions_mt": {
+          "2023": 85,
+          "2030": 65,
+          "2035": 52,
+          "2040": 42,
+          "2050": 28
+        },
+        "avg_lmp": {
+          "2023": 26,
+          "2030": 25,
+          "2035": 24,
+          "2040": 24,
+          "2050": 25
+        },
+        "demand_twh": {
+          "2023": 280,
+          "2030": 305,
+          "2035": 330,
+          "2040": 360,
+          "2050": 410
+        }
+      }
+    }
+  },
+  "NREL_CAMBIUM_2024": {
+    "description": "NREL Cambium 2024 Mid-Case \u2014 includes IRA, faster RE deployment than AEO",
+    "national": {
+      "clean_pct": {
+        "2023": 42.5,
+        "2030": 55,
+        "2035": 62,
+        "2040": 68,
+        "2050": 80
+      },
+      "emissions_mt": {
+        "2023": 1550,
+        "2030": 1050,
+        "2035": 850,
+        "2040": 680,
+        "2050": 400
+      },
+      "marginal_cost": {
+        "2023": 35,
+        "2030": 30,
+        "2035": 26,
+        "2040": 22,
+        "2050": 18
+      },
+      "capacity_additions_gw": {
+        "2030": {
+          "solar": 200,
+          "wind": 75,
+          "battery": 90,
+          "gas": 20,
+          "nuclear": 0
+        },
+        "2035": {
+          "solar": 380,
+          "wind": 130,
+          "battery": 170,
+          "gas": 30,
+          "nuclear": 3
+        },
+        "2040": {
+          "solar": 580,
+          "wind": 190,
+          "battery": 260,
+          "gas": 40,
+          "nuclear": 8
+        },
+        "2050": {
+          "solar": 950,
+          "wind": 300,
+          "battery": 450,
+          "gas": 50,
+          "nuclear": 15
+        }
+      }
+    },
+    "regional": {
+      "PJM": {
+        "clean_pct": {
+          "2023": 37,
+          "2030": 48,
+          "2035": 56,
+          "2040": 63,
+          "2050": 75
+        },
+        "marginal_cost": {
+          "2023": 35,
+          "2030": 32,
+          "2035": 28,
+          "2040": 25,
+          "2050": 20
+        },
+        "emissions_mt": {
+          "2023": 270,
+          "2030": 195,
+          "2035": 155,
+          "2040": 120,
+          "2050": 70
+        }
+      },
+      "ERCOT": {
+        "clean_pct": {
+          "2023": 34,
+          "2030": 52,
+          "2035": 62,
+          "2040": 70,
+          "2050": 82
+        },
+        "marginal_cost": {
+          "2023": 26,
+          "2030": 22,
+          "2035": 18,
+          "2040": 15,
+          "2050": 10
+        },
+        "emissions_mt": {
+          "2023": 160,
+          "2030": 105,
+          "2035": 78,
+          "2040": 55,
+          "2050": 25
+        }
+      },
+      "CAISO": {
+        "clean_pct": {
+          "2023": 56,
+          "2030": 75,
+          "2035": 83,
+          "2040": 88,
+          "2050": 95
+        },
+        "marginal_cost": {
+          "2023": 38,
+          "2030": 28,
+          "2035": 22,
+          "2040": 18,
+          "2050": 12
+        },
+        "emissions_mt": {
+          "2023": 42,
+          "2030": 22,
+          "2035": 13,
+          "2040": 8,
+          "2050": 3
+        }
+      },
+      "NYISO": {
+        "clean_pct": {
+          "2023": 48,
+          "2030": 62,
+          "2035": 72,
+          "2040": 78,
+          "2050": 88
+        },
+        "marginal_cost": {
+          "2023": 42,
+          "2030": 38,
+          "2035": 34,
+          "2040": 30,
+          "2050": 24
+        },
+        "emissions_mt": {
+          "2023": 28,
+          "2030": 16,
+          "2035": 10,
+          "2040": 7,
+          "2050": 3
+        }
+      },
+      "NEISO": {
+        "clean_pct": {
+          "2023": 45,
+          "2030": 60,
+          "2035": 70,
+          "2040": 76,
+          "2050": 85
+        },
+        "marginal_cost": {
+          "2023": 39.5,
+          "2030": 35,
+          "2035": 30,
+          "2040": 26,
+          "2050": 20
+        },
+        "emissions_mt": {
+          "2023": 22,
+          "2030": 12,
+          "2035": 8,
+          "2040": 5,
+          "2050": 2
+        }
+      },
+      "MISO": {
+        "clean_pct": {
+          "2023": 28,
+          "2030": 44,
+          "2035": 54,
+          "2040": 62,
+          "2050": 76
+        },
+        "marginal_cost": {
+          "2023": 31,
+          "2030": 27,
+          "2035": 24,
+          "2040": 20,
+          "2050": 15
+        },
+        "emissions_mt": {
+          "2023": 320,
+          "2030": 215,
+          "2035": 165,
+          "2040": 120,
+          "2050": 60
+        }
+      },
+      "SPP": {
+        "clean_pct": {
+          "2023": 42,
+          "2030": 58,
+          "2035": 68,
+          "2040": 75,
+          "2050": 85
+        },
+        "marginal_cost": {
+          "2023": 26,
+          "2030": 20,
+          "2035": 16,
+          "2040": 13,
+          "2050": 8
+        },
+        "emissions_mt": {
+          "2023": 85,
+          "2030": 52,
+          "2035": 35,
+          "2040": 24,
+          "2050": 10
+        }
+      }
+    }
+  },
+  "PRINCETON_REPEAT": {
+    "description": "Princeton REPEAT 2024 Annual Update \u2014 IRA as-enacted impact analysis through 2035",
+    "national": {
+      "clean_pct": {
+        "2023": 42.5,
+        "2030": 75,
+        "2035": 90
+      },
+      "clean_pct_transmission_constrained": {
+        "2030": 61,
+        "2035": 71
+      },
+      "emissions_reduction_vs_2005": {
+        "2030": "37-41%",
+        "2035": "66-87%"
+      },
+      "capacity_additions_gw_per_yr": {
+        "2023_2030": {
+          "solar": 48,
+          "wind": 41
+        },
+        "2031_2035": {
+          "solar": 145,
+          "wind": 34
+        }
+      },
+      "ira_total_clean_additions_gw_yr": "70-126"
+    },
+    "notes": "REPEAT projects 75% clean by 2030, 90% by 2035 with IRA. But if transmission growth stays at 1%/yr (vs required 2.3%/yr), clean% drops to 61%/71%. Our reference sweep (market-only) should be compared to the transmission-constrained case since we don't model transmission expansion. IRA repeal would cost $500B in clean investment and -820 TWh by 2035."
+  },
+  "LBNL_QUEUED_UP": {
+    "description": "LBNL Queued Up 2025 Edition \u2014 active proposals by ISO and technology (end-2024 data)",
+    "national_summary": {
+      "total_projects": 10300,
+      "total_generation_gw": 1400,
+      "total_storage_gw": 890,
+      "total_queue_gw": 2300,
+      "yoy_change_pct": -12
+    },
+    "active_queue_gw": {
+      "CAISO": {
+        "total": 523
+      },
+      "MISO": {
+        "total": 312
+      },
+      "PJM": {
+        "total": 287
+      },
+      "ERCOT": {
+        "total": 269
+      },
+      "SPP": {
+        "total": 145
+      },
+      "NYISO": {
+        "total": 132
+      },
+      "NEISO": {
+        "total": 51
+      }
+    },
+    "national_by_technology_gw": {
+      "solar": 956,
+      "storage": 890,
+      "wind": 271,
+      "gas": 136
+    },
+    "completion_rates": {
+      "overall": 0.13,
+      "gas": 0.31,
+      "wind": 0.2,
+      "solar": 0.13,
+      "battery": 0.11,
+      "withdrawal_rate": 0.77
+    },
+    "median_development_time_years": {
+      "2000_2007_cohort": 2.0,
+      "2018_2024_cohort": 4.0
+    },
+    "ia_suspension_rates": {
+      "high_group": {
+        "isos": [
+          "NYISO",
+          "SPP",
+          "PJM",
+          "NEISO"
+        ],
+        "rate_pct": "46-79%"
+      },
+      "low_group": {
+        "isos": [
+          "ERCOT",
+          "CAISO",
+          "MISO"
+        ],
+        "rate_pct": "~20%"
+      }
+    },
+    "notes": "Queue completion rates 13% overall (2000-2019 cohort). 77% withdraw. Our model's queue caps (3-8 GW/yr) validated: LBNL effective throughput \u2248 queue \u00d7 13% completion \u00f7 ~5yr dev time. E.g., PJM 287 GW \u00d7 0.13 / 5 \u2248 7.5 GW/yr, consistent with our 7 GW/yr Facilitating cap."
+  },
+  "EPA_IPM": {
+    "description": "EPA Integrated Planning Model \u2014 post-IRA regulatory baseline",
+    "national": {
+      "emissions_mt": {
+        "2023": 1550,
+        "2030": 1200,
+        "2035": 950,
+        "2040": 750
+      },
+      "coal_generation_twh": {
+        "2023": 675,
+        "2030": 380,
+        "2035": 220,
+        "2040": 120
+      }
+    },
+    "notes": "EPA IPM projects aggressive coal retirement under GHG regulations. Faster coal decline than EIA AEO."
+  }
+}

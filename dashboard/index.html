@@ -1,0 +1,4487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hourly Clean Energy Cost Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* === Act 1: Heatstrip-specific styles === */
+html, body { overflow-x: hidden; max-width: 100vw; }
+
+.act1-intro,
+.act1-postscript {
+    max-width: 780px;
+}
+.act1-intro p,
+.act1-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act1-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act1-postscript {
+    margin-top: var(--space-xl);
+}
+.act1-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act1-explore-link:hover { gap: 10px; }
+
+/* --- Heatstrip visual container --- */
+.heatstrip-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+.heatstrip-row {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s cubic-bezier(0.23,1,0.32,1),
+                transform 0.6s cubic-bezier(0.23,1,0.32,1);
+}
+.heatstrip-row.strip-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.heatstrip-label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.heatstrip-label .iso-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.heatstrip-grid {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+    align-items: end;
+    min-height: 48px;
+}
+.heatstrip-cell {
+    min-height: 36px;
+    height: 36px;
+    border-radius: 3px;
+    position: relative;
+    transition: background-color 1.5s cubic-bezier(0.4,0,0.2,1),
+                border-color 1.5s cubic-bezier(0.4,0,0.2,1),
+                height 1.2s cubic-bezier(0.4,0,0.2,1);
+    cursor: default;
+}
+/* Tooltip on hover */
+.heatstrip-cell::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--navy, #1A2744);
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 10;
+}
+.heatstrip-cell:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+/* Hour axis labels */
+.heatstrip-hours {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    margin-top: 2px;
+}
+.heatstrip-hours span {
+    font-family: var(--font-data);
+    font-size: 0.6rem;
+    color: var(--text-muted, #94A3B8);
+    text-align: center;
+}
+
+/* --- Illusion / Reality toggle --- */
+.mode-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+.mode-toggle-label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+    transition: color 0.3s, text-shadow 0.3s;
+}
+.mode-toggle-label.active-label {
+    color: var(--text-primary, #1A2744);
+}
+.mode-toggle-label.active-label[data-mode="illusion"] {
+    text-shadow: 0 0 8px rgba(245,158,11,0.3);
+}
+.mode-toggle-label.active-label[data-mode="reality"] {
+    text-shadow: 0 0 8px rgba(14,165,233,0.3);
+}
+.mode-toggle-track {
+    position: relative;
+    width: 56px;
+    height: 30px;
+    background: rgba(26,39,68,0.15);
+    border-radius: var(--radius-pill, 9999px);
+    cursor: pointer;
+    transition: background 0.3s, box-shadow 0.3s;
+    flex-shrink: 0;
+    animation: toggle-pulse 2s ease-in-out infinite;
+}
+.mode-toggle-track.reality {
+    background: var(--hydro, #0EA5E9);
+    animation: none;
+    box-shadow: 0 0 12px rgba(14,165,233,0.3);
+}
+@keyframes toggle-pulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(26,39,68,0.1); }
+    50% { box-shadow: 0 0 12px rgba(245,158,11,0.25); }
+}
+.mode-toggle-thumb {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 22px;
+    height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+    transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.mode-toggle-track.reality .mode-toggle-thumb {
+    left: 30px;
+}
+.mode-toggle-hint {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+    margin-left: var(--space-sm);
+    opacity: 1;
+    transition: opacity 1s ease-out;
+}
+.mode-toggle-hint.hidden { opacity: 0; pointer-events: none; }
+
+/* --- Scanline sweep animation --- */
+@keyframes scanline-sweep {
+    0%   { clip-path: inset(0 100% 0 0); }
+    100% { clip-path: inset(0 0 0 0); }
+}
+.heatstrip-grid.sweeping .heatstrip-cell {
+    animation: none; /* cells transition via inline style changes */
+}
+/* Sweep overlay for visual effect */
+.heatstrip-grid.sweep-active {
+    position: relative;
+}
+.heatstrip-grid.sweep-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 0 12px 4px rgba(14,165,233,0.4);
+    z-index: 5;
+    animation: scan-move 1.2s cubic-bezier(0.4,0,0.2,1) forwards;
+    border-radius: 2px;
+}
+@keyframes scan-move {
+    0%   { left: 0; opacity: 1; }
+    90%  { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+}
+
+/* --- Legend --- */
+.heatstrip-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 8px);
+    margin-top: var(--space-md);
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.heatstrip-legend-bar {
+    width: 120px;
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(90deg, #22C55E, #F59E0B, #EF4444);
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+    .heatstrip-cell {
+        min-height: 36px;
+    }
+    .heatstrip-grid {
+        min-height: 44px;
+    }
+}
+@media (max-width: 480px) {
+    .heatstrip-cell {
+        min-height: 28px;
+    }
+    .heatstrip-hours span {
+        font-size: 0.5rem;
+    }
+}
+
+/* === Act 0: The Grid is Not a Bank — Vault vs Live Wire === */
+.act0-intro,
+.act0-postscript {
+    max-width: 780px;
+}
+.act0-intro p,
+.act0-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act0-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act0-panel {
+    position: relative;
+    margin-top: var(--space-lg);
+}
+.act0-visual {
+    position: relative;
+    min-height: 320px;
+}
+.act0-view {
+    transition: opacity 0.8s ease, transform 0.6s ease;
+}
+.act0-view.hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    transform: translateY(12px);
+}
+/* Canvas containers */
+#act0IllusionCanvas,
+#act0RealityCanvas {
+    width: 100%;
+    height: 380px;
+    border-radius: var(--radius-md, 8px);
+    display: block;
+}
+.act0-canvas-caption {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--text-muted, #94A3B8);
+    text-align: center;
+    margin-top: var(--space-sm);
+    font-style: italic;
+}
+.act0-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-md);
+    padding: 0 4px;
+}
+.act0-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act0-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.act0-insight {
+    margin-top: var(--space-lg);
+    padding: 16px 20px;
+    border-left: 4px solid var(--hydro, #0EA5E9);
+    background: rgba(14,165,233,0.06);
+    border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s, transform 0.5s;
+}
+.act0-insight.insight-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act0-insight strong {
+    color: var(--text-primary, #1A2744);
+}
+@media (max-width: 768px) {
+    #act0IllusionCanvas,
+    #act0RealityCanvas {
+        height: 300px;
+    }
+}
+@media (max-width: 480px) {
+    #act0IllusionCanvas,
+    #act0RealityCanvas {
+        height: 260px;
+    }
+}
+
+/* === Act 2: The 100% Clean Illusion === */
+.act2-intro,
+.act2-postscript {
+    max-width: 780px;
+}
+.act2-intro p,
+.act2-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act2-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act2-postscript {
+    margin-top: var(--space-xl);
+}
+.act2-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act2-explore-link:hover { gap: 10px; }
+
+/* Chart panel */
+.act2-chart-wrap {
+    position: relative;
+}
+.act2-chart-container {
+    position: relative;
+    min-height: 340px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px 12px;
+}
+
+/* Stats overlay */
+.act2-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+}
+.act2-stat {
+    flex: 1;
+    min-width: 140px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.act2-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+}
+.act2-stat-value {
+    font-family: var(--font-data);
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.act2-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+}
+
+/* Badge overlay that cracks */
+.act2-badge-overlay {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 8;
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: var(--radius-pill, 9999px);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: rgba(34, 197, 94, 0.12);
+    color: #166534;
+    border: 2px solid rgba(34, 197, 94, 0.4);
+    transition: opacity 0.6s, transform 0.6s, filter 0.6s, background 0.4s, border-color 0.4s, color 0.4s;
+}
+.act2-badge-overlay.cracked {
+    opacity: 0;
+    transform: scale(1.1) rotate(2deg);
+    filter: blur(3px);
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #DC2626;
+}
+.act2-hms-badge {
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(239, 68, 68, 0.12);
+    color: #DC2626;
+    border: 2px solid rgba(239, 68, 68, 0.4);
+    transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+    transform: scale(0.95);
+}
+.act2-hms-badge.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+}
+
+/* Legend strip under chart */
+.act2-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm, 8px);
+    padding: 0 4px;
+}
+.act2-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act2-legend-dot {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+    .act2-chart-container {
+        min-height: 280px;
+    }
+}
+
+/* === Act 3: The VRE-Gas Trap === */
+.act3-intro,
+.act3-postscript {
+    max-width: 780px;
+}
+.act3-intro p,
+.act3-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act3-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act3-postscript {
+    margin-top: var(--space-xl);
+}
+.act3-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act3-explore-link:hover { gap: 10px; }
+
+.act3-bold-statement {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1A2744);
+    margin: var(--space-lg) 0 var(--space-md);
+    max-width: 780px;
+}
+
+.act3-chart-wrap {
+    position: relative;
+}
+.act3-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-top: var(--space-md);
+}
+.act3-panel-title {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-sm, 8px);
+    letter-spacing: 0.3px;
+}
+.act3-chart-container {
+    position: relative;
+    min-height: 340px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px 12px;
+}
+.act3-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm, 8px);
+    padding: 0 4px;
+}
+.act3-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act3-legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.act3-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.act3-stats.stats-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act3-stat {
+    flex: 1;
+    min-width: 160px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.act3-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+}
+.act3-stat-value {
+    font-family: var(--font-data);
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.act3-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+}
+
+/* Insight box (inline, appears on reality) */
+.act3-insight {
+    margin-top: var(--space-lg);
+    padding: 16px 20px;
+    border-left: 4px solid var(--fossil-gas, #6B7280);
+    background: rgba(107,114,128,0.06);
+    border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s, transform 0.5s;
+}
+.act3-insight.insight-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act3-insight strong {
+    color: var(--text-primary, #1A2744);
+}
+
+@media (max-width: 900px) {
+    .act3-charts-grid {
+        grid-template-columns: 1fr;
+    }
+    .act3-chart-container {
+        min-height: 280px;
+    }
+}
+
+/* === Act 4: The Stranded Asset Cliff — Pathway Timeline === */
+.act4-intro,
+.act4-postscript {
+    max-width: 780px;
+}
+.act4-intro p,
+.act4-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act4-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act4-postscript {
+    margin-top: var(--space-xl);
+}
+.act4-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act4-explore-link:hover { gap: 10px; }
+
+/* Timeline layout */
+.act4-timeline {
+    margin-top: var(--space-lg, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+}
+.act4-milestone-group {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 16px 16px 12px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.act4-milestone-group.group-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act4-milestone-group-header {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary, #1A2744);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.act4-group-year {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary, #1A2744);
+}
+.act4-group-target {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted, #94A3B8);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.act4-strat-label {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 800;
+    width: 28px;
+    flex-shrink: 0;
+    text-align: center;
+    line-height: 28px;
+}
+.act4-subtitle {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--iso-pjm, #0EA5E9);
+    margin-top: -4px;
+    margin-bottom: var(--space-md);
+}
+.act4-sequencing {
+    max-width: 780px;
+    margin-bottom: var(--space-lg);
+}
+.act4-sequencing p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+}
+
+/* Milestone rows */
+.act4-milestone-row {
+    display: grid;
+    grid-template-columns: 28px 110px 1fr;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 0;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.act4-milestone-row + .act4-milestone-row {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 4px;
+}
+.act4-milestone-row.row-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Left metrics column */
+.act4-row-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-right: 4px;
+}
+.act4-row-metric {
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    color: var(--text-muted, #94A3B8);
+    white-space: nowrap;
+}
+.act4-row-metric strong {
+    font-weight: 700;
+    color: var(--text-secondary, #475569);
+}
+.act4-row-metric.metric-warn strong {
+    color: #DC2626;
+}
+.act4-row-metric.metric-good strong {
+    color: #16A34A;
+}
+
+/* Stacked bar */
+.act4-bar-wrap {
+    display: flex;
+    height: 28px;
+    border-radius: 4px;
+    overflow: visible;
+    position: relative;
+}
+.act4-bar-seg {
+    height: 100%;
+    transition: width 0.8s ease;
+    position: relative;
+    min-width: 0;
+}
+.act4-bar-seg[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26,39,68,0.92);
+    color: #fff;
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+.act4-bar-seg-hatch {
+    border-radius: 0 4px 4px 0;
+}
+.act4-bar-100-mark {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--text-primary, #1A2744);
+    opacity: 0.4;
+    z-index: 5;
+    pointer-events: none;
+}
+.act4-bar-100-label {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-data);
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: var(--text-muted, #94A3B8);
+    white-space: nowrap;
+}
+
+/* Cumulative summary stats */
+.act4-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg, 24px);
+    margin-top: var(--space-xl, 32px);
+}
+.act4-summary-card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.6s, transform 0.6s;
+}
+.act4-summary-card.card-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act4-summary-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 12px;
+}
+.act4-summary-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.act4-summary-stat {
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--bg-page, #F8FAFC);
+    border-radius: var(--radius-md, 8px);
+}
+.act4-summary-stat-value {
+    font-family: var(--font-data);
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.act4-summary-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+    margin-top: 2px;
+}
+
+
+/* Legend */
+.act4-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-md, 16px);
+    padding: 0 4px;
+    justify-content: center;
+}
+.act4-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act4-legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+/* Insight box */
+.act4-insight {
+    margin-top: var(--space-lg);
+    padding: 16px 20px;
+    border-left: 4px solid var(--storage, #EF4444);
+    background: rgba(239,68,68,0.06);
+    border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    max-width: 780px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.6s, transform 0.6s;
+}
+.act4-insight.insight-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act4-insight strong {
+    color: var(--text-primary, #1A2744);
+}
+
+@media (max-width: 900px) {
+    .act4-summary-grid {
+        grid-template-columns: 1fr;
+    }
+    .act4-milestone-row {
+        grid-template-columns: 24px 90px 1fr;
+    }
+    .act4-bar-wrap {
+        height: 24px;
+    }
+}
+@media (max-width: 480px) {
+    .act4-milestone-row {
+        grid-template-columns: 22px 72px 1fr;
+    }
+    .act4-row-metric {
+        font-size: 0.62rem;
+    }
+    .act4-strat-label {
+        font-size: 0.62rem;
+        width: 22px;
+    }
+}
+
+/* === Act 5: The True Endpoint === */
+.act5-intro,
+.act5-postscript {
+    max-width: 780px;
+}
+.act5-intro p,
+.act5-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act5-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act5-postscript {
+    margin-top: var(--space-xl);
+}
+.act5-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act5-explore-link:hover { gap: 10px; }
+
+.act5-chart-wrap {
+    position: relative;
+    cursor: pointer;
+}
+.act5-chart-container {
+    position: relative;
+    min-height: 380px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px 12px;
+}
+
+/* Match counter overlay */
+.act5-match-counter {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 8;
+    text-align: right;
+}
+.act5-match-pct {
+    font-family: var(--font-data);
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-muted, #94A3B8);
+    transition: color 0.6s;
+}
+.act5-match-pct.matched-high {
+    color: #16A34A;
+}
+.act5-match-sublabel {
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+    margin-top: 2px;
+}
+
+/* Step indicator pills */
+.act5-step-indicator {
+    display: flex;
+    gap: 6px;
+    margin-top: var(--space-md);
+    justify-content: center;
+}
+.act5-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(26,39,68,0.12);
+    transition: background 0.4s, transform 0.4s;
+    cursor: pointer;
+}
+.act5-step-dot.step-active {
+    background: var(--clean-firm, #6366F1);
+    transform: scale(1.3);
+}
+.act5-step-dot.step-done {
+    background: #16A34A;
+}
+
+/* Legend */
+.act5-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm, 8px);
+    padding: 0 4px;
+}
+.act5-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+    opacity: 0.4;
+    transition: opacity 0.5s;
+}
+.act5-legend-item.legend-active {
+    opacity: 1;
+}
+.act5-legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+/* Stats row */
+.act5-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.act5-stats.stats-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act5-stat {
+    flex: 1;
+    min-width: 140px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.6s;
+}
+.act5-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+}
+.act5-stat.stat-success {
+    border-color: #16A34A;
+}
+.act5-stat-value {
+    font-family: var(--font-data);
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.act5-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+}
+
+/* Success badge */
+.act5-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: var(--radius-pill, 999px);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: rgba(22,163,106,0.08);
+    color: #16A34A;
+    border: 2px solid rgba(22,163,106,0.3);
+    margin-top: var(--space-lg);
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.6s, transform 0.6s cubic-bezier(0.34,1.56,0.64,1);
+}
+.act5-badge.badge-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+@keyframes act5Glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,106,0.3); }
+    50% { box-shadow: 0 0 0 8px rgba(22,163,106,0); }
+}
+.act5-badge.badge-visible {
+    animation: act5Glow 2s ease-in-out infinite;
+}
+
+/* Step narration text */
+.act5-step-narration {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+    text-align: center;
+    margin-top: var(--space-sm, 8px);
+    min-height: 1.4em;
+    transition: opacity 0.4s;
+}
+
+@media (max-width: 900px) {
+    .act5-chart-container {
+        min-height: 300px;
+    }
+    .act5-match-pct {
+        font-size: 1.6rem;
+    }
+    .act5-stat-value {
+        font-size: 1.5rem;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/lmp-data.js"></script>
+<script src="js/shared-data.js"></script>
+<script src="js/no-regrets-data.js"></script>
+<script src="js/deployment-data.js"></script>
+
+<!-- Shared chart utilities -->
+<script>
+function createHatchPattern(color, spacing) {
+    var c = document.createElement('canvas');
+    c.width = spacing || 8;
+    c.height = spacing || 8;
+    var cx = c.getContext('2d');
+    cx.strokeStyle = color;
+    cx.lineWidth = 1.5;
+    cx.beginPath();
+    cx.moveTo(0, c.height);
+    cx.lineTo(c.width, 0);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(-1, 1);
+    cx.lineTo(1, -1);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(c.width - 1, c.height + 1);
+    cx.lineTo(c.width + 1, c.height - 1);
+    cx.stroke();
+    return cx.createPattern(c, 'repeat');
+}
+var HATCH_GRAY = createHatchPattern('rgba(107,114,128,0.45)', 8);
+var GAS_RED = 'rgba(220,38,38,0.18)';
+</script>
+
+<!-- HEADER BANNER -->
+<header class="header" id="pageHeader">
+    <h1>The 8,760 Problem</h1>
+    <div class="subtitle">Why hourly matching changes everything about clean energy procurement</div>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ================================================================== -->
+<!-- ACT 0: THE THESIS                                                   -->
+<!-- ================================================================== -->
+<section class="story-section" id="act0">
+    <span class="story-badge story-badge-red">The Thesis</span>
+    <h2>The Grid is Not a Bank</h2>
+
+    <!-- Intro text above visual -->
+    <div class="act0-intro">
+        <p class="lead-text">
+            The grid is a live, interconnected machine&mdash;not a vault where
+            megawatt-hours can be deposited and withdrawn at will.
+        </p>
+        <p>
+            We can&rsquo;t store MWhs in a vault to be distributed later, so we
+            can&rsquo;t account for clean energy that way either. Incentive structures
+            and policies that don&rsquo;t consider grid physics have adverse
+            consequences&mdash;and the difference between the illusion of paper
+            accounting and grid reality is significant.
+        </p>
+        <p>
+            What you count, where you start, and where you&rsquo;re going matter
+            profoundly in a complex spatial, temporal, and physical system like the
+            grid.
+        </p>
+        <p class="toggle-cta" style="text-align:center; font-size:1.15em; font-weight:700; color:var(--accent-secondary, #E91E63); letter-spacing:0.01em; margin:var(--space-md) 0;">
+            Throughout this analysis, toggle between <span style="color:var(--text-primary, #1E293B);">Illusion</span>
+            and <span style="color:var(--text-primary, #1E293B);">Reality</span> to see why.
+        </p>
+    </div>
+
+    <!-- Vault vs Live Wire illustration -->
+    <div class="act0-panel" id="act0Panel">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act0LabelIllusion" data-mode="illusion">Illusion</span>
+            <div class="mode-toggle-track" id="act0Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="act0LabelReality" data-mode="reality">Reality</span>
+            <span class="mode-toggle-hint" id="act0Hint">&larr; toggle to see reality</span>
+        </div>
+
+        <div class="act0-visual" id="act0Visual">
+            <!-- Illusion: vault with dropping MWh coins -->
+            <div class="act0-view" id="act0IllusionView">
+                <canvas id="act0IllusionCanvas"></canvas>
+                <div class="act0-canvas-caption">Annual accounting: deposit clean MWh, withdraw whenever you need them</div>
+            </div>
+            <!-- Reality: live wire with flowing electricity -->
+            <div class="act0-view hidden" id="act0RealityView">
+                <canvas id="act0RealityCanvas"></canvas>
+                <div class="act0-canvas-caption">Grid reality: electricity must be consumed the instant it&rsquo;s generated</div>
+            </div>
+        </div>
+
+        <div class="act0-legend" id="act0Legend"></div>
+    </div>
+
+    <!-- Insight box (shown on reality) -->
+    <div class="act0-insight" id="act0Insight"></div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 1: EVERY HOUR IS DIFFERENT                                      -->
+<!-- ================================================================== -->
+<section class="story-section" id="act1">
+    <span class="story-badge story-badge-red">Act 1</span>
+    <h2>Every Hour is Different</h2>
+
+    <!-- All text above the figure -->
+    <div class="act1-intro">
+        <p class="lead-text">
+            Carbon intensity and demand both vary dramatically by the hour
+            and by region. Annual averages hide these differences completely.
+        </p>
+        <p>
+            A solar MWh generated at noon in California displaces almost no
+            fossil fuel&mdash;the grid is already clean at that hour. That same
+            MWh at 8&nbsp;PM in PJM displaces coal. Annual accounting treats
+            them as identical. Hourly data reveals the truth.
+        </p>
+        <p>
+            Each cell below represents one hour. In <strong>Illusion</strong> mode,
+            every hour looks the same&mdash;flat boxes, identical emission rates
+            across all regions. Toggle to <strong>Reality</strong> to see both
+            <em>color</em> (emission intensity, normalized within each region) and
+            <em>height</em> (demand level) change hour by hour.
+        </p>
+    </div>
+
+    <!-- Heatstrip visualization (full-width) -->
+    <div class="heatstrip-panel" id="heatstripPanel">
+        <!-- Mode toggle -->
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="labelIllusion" data-mode="illusion">Illusion</span>
+            <div class="mode-toggle-track" id="modeToggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="labelReality" data-mode="reality">Reality</span>
+        </div>
+
+        <!-- Strips rendered by JS -->
+        <div id="heatstripContainer"></div>
+
+        <!-- Legend -->
+        <div class="heatstrip-legend">
+            <span>Low carbon</span>
+            <div class="heatstrip-legend-bar"></div>
+            <span>High carbon</span>
+            <span style="margin-left:var(--space-lg); font-style:italic;">Bar height = relative demand</span>
+        </div>
+    </div>
+
+    <!-- Post-visual findings -->
+    <div class="act1-postscript">
+        <a href="lmp_trends.html" class="act1-explore-link">
+            Explore regional patterns <span aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 2: THE 100% CLEAN ILLUSION                                      -->
+<!-- ================================================================== -->
+<section class="story-section" id="act2">
+    <span class="story-badge story-badge-green">Act 2</span>
+    <h2>The 100% Clean Illusion</h2>
+
+    <!-- Intro text above visual -->
+    <div class="act2-intro">
+        <p class="lead-text">
+            Annual accounting matches abundant daytime solar with nighttime demand.
+            The math works on paper, but physically, the company relies entirely
+            on the dirty grid after dark.
+        </p>
+        <p>
+            Consider a CAISO buyer who procures enough wind and solar to cover
+            100% of annual load. Spreadsheet says: mission accomplished. But
+            look at any single hour&mdash;solar generates nothing at midnight,
+            and wind can&rsquo;t fill the gap alone.
+        </p>
+    </div>
+
+    <!-- Toggle + chart -->
+    <div class="act2-chart-wrap">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act2LabelIllusion">Illusion</span>
+            <div class="mode-toggle-track" id="act2Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="act2LabelReality">Reality</span>
+        </div>
+        <div class="act2-chart-container">
+            <span class="act2-badge-overlay" id="act2Badge">100% Annually Matched</span>
+            <span class="act2-badge-overlay act2-hms-badge" id="act2HmsBadge"></span>
+            <canvas id="act2Chart"></canvas>
+        </div>
+        <div class="act2-legend" id="act2Legend"></div>
+        <div class="act2-stats">
+            <div class="act2-stat">
+                <div class="act2-stat-value" id="act2AnnualVal" style="color:#16A34A;">—</div>
+                <div class="act2-stat-label">Annual Match</div>
+            </div>
+            <div class="act2-stat">
+                <div class="act2-stat-value" id="act2HourlyVal" style="color:#DC2626;">—</div>
+                <div class="act2-stat-label">Hours Matched with 100% Clean Energy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post-visual narrative -->
+    <div class="act2-postscript">
+        <p>
+            The annual ledger balances. The atmosphere does not.
+        </p>
+        <a href="procurement_strategies.html" class="act2-explore-link">
+            Compare procurement strategies <span aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 3: THE VRE-GAS TRAP                                             -->
+<!-- ================================================================== -->
+<section class="story-section" id="act3">
+    <span class="story-badge story-badge-red">Act 3</span>
+    <h2>The VRE-Gas Trap</h2>
+
+    <!-- Intro text -->
+    <div class="act3-intro">
+        <p class="lead-text">
+            Adding solar and wind without considering <em>when</em> and <em>where</em>
+            the grid needs power doesn&rsquo;t just leave gaps&mdash;it creates a
+            structural dependency on the very fossil plants you&rsquo;re trying to replace.
+        </p>
+        <p>
+            When you procure clean energy on an annual basis without matching hourly
+            demand, you flood the grid with power it can&rsquo;t use at midday and
+            starve it during evening peaks. Wholesale prices collapse during surplus
+            hours, but gas plants still have to run when renewables can&rsquo;t.
+            You haven&rsquo;t displaced gas&mdash;you&rsquo;ve made it unprofitable
+            <em>and</em> indispensable.
+        </p>
+    </div>
+
+    <p class="act3-bold-statement">
+        VRE deployment in a vacuum creates structural lock-in for gas.
+    </p>
+
+    <!-- Moved above figures: surplus solar paragraph -->
+    <div class="act3-postscript" style="margin-top:0; margin-bottom: var(--space-lg);">
+        <p>
+            Every hour of surplus solar that crashes prices to zero is an hour you
+            chose not to invest in firm clean resources that could have displaced gas
+            permanently. The VRE-gas trap isn&rsquo;t inevitable&mdash;it&rsquo;s
+            the cost of ignoring the grid&rsquo;s temporal and spatial requirements.
+        </p>
+    </div>
+
+    <!-- Toggle + dual charts -->
+    <div class="act3-chart-wrap">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act3LabelIllusion" data-mode="illusion">Illusion</span>
+            <div class="mode-toggle-track" id="act3Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="act3LabelReality" data-mode="reality">Reality</span>
+        </div>
+
+        <div class="act3-charts-grid">
+            <!-- LEFT: Duck Curve -->
+            <div class="act3-duck-panel">
+                <div class="act3-panel-title">ERCOT Net Peak Demand Day &mdash; 87% Clean Grid</div>
+                <div class="act3-chart-container">
+                    <canvas id="act3DuckChart"></canvas>
+                </div>
+                <div class="act3-legend" id="act3DuckLegend"></div>
+            </div>
+            <!-- RIGHT: LMP Collapse -->
+            <div class="act3-lmp-panel">
+                <div class="act3-panel-title">Wholesale Price Erosion &mdash; ERCOT (Energy-Only Market)</div>
+                <div class="act3-chart-container">
+                    <canvas id="act3LmpChart"></canvas>
+                </div>
+                <div class="act3-legend" id="act3LmpLegend"></div>
+            </div>
+        </div>
+
+        <!-- Stat cards — hidden until reality toggle -->
+        <div class="act3-stats" id="act3Stats">
+            <div class="act3-stat">
+                <div class="act3-stat-value" id="act3ZeroVal" style="color:#DC2626;">&mdash;</div>
+                <div class="act3-stat-label">Zero-Price Hours / yr at 95% Clean</div>
+            </div>
+            <div class="act3-stat">
+                <div class="act3-stat-value" id="act3RevenueVal" style="color:#DC2626;">&mdash;</div>
+                <div class="act3-stat-label">Gas Revenue Loss from Wholesale Market Price</div>
+            </div>
+        </div>
+
+        <!-- Insight box (shown on reality) -->
+        <div class="act3-insight" id="act3Insight">
+            At <strong>95% clean energy</strong>, ERCOT gas plants see
+            <strong>zero or negative wholesale prices for over 6,000 hours per year</strong>&mdash;more
+            than 70% of the time. But the grid still needs them for evening peaks
+            and calm nights. This isn&rsquo;t a market failure&mdash;it&rsquo;s the
+            predictable consequence of deploying clean energy without matching it to
+            when and where it&rsquo;s needed. The solution isn&rsquo;t to subsidize
+            stranded gas&mdash;it&rsquo;s to procure the right clean resources
+            from the start.
+        </div>
+    </div>
+
+    <!-- Post-visual link -->
+    <div class="act3-postscript">
+        <a href="lmp_trends.html" class="act3-explore-link">
+            See the full market analysis <span aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 4: The Stranded Asset Cliff                                     -->
+<!-- ================================================================== -->
+<section class="story-section" id="act4">
+    <span class="story-badge story-badge-red">Act 4</span>
+    <h2>The Stranded Asset Cliff</h2>
+    <p class="act4-subtitle">PJM&rsquo;s Journey to 95% Hourly Clean Energy</p>
+
+    <!-- Intro text -->
+    <div class="act4-intro">
+        <p class="lead-text">
+            Two strategies, same destination: PJM&rsquo;s grid from 38% clean to 95%.
+            The difference is the journey&mdash;what gets built, what gets stranded,
+            and what it costs everyone in the end.
+        </p>
+        <p>
+            Strategy 1B deploys the cheapest resources first. Solar and wind saturate the easy hours,
+            but the 99.97th-percentile worst hour still needs gas. Developers respond to that signal
+            by building CCGT to cover the residual peak. Once clean targets tighten, those vintages
+            dispatch less than 15% of the year for two consecutive years &mdash; the Card&nbsp;F&prime;
+            breakeven &mdash; and the unrecovered book value is written off as stranded capital. The
+            locked-in gas capex becomes a political anchor&mdash;an industrial complex that will fight
+            to protect its investments.
+        </p>
+        <p>
+            Strategy 2C co-optimizes hourly matching from day one. Clean firm and storage deploy early,
+            driving Wright&rsquo;s Law learning curves that make each subsequent GW cheaper. Gas retires
+            on schedule. Almost no vintages hit the Card&nbsp;F&prime; trigger. The reliability tax
+            doesn&rsquo;t disappear &mdash; every pathway to a clean grid still carries one &mdash; but
+            it collapses to what clean firm itself cannot avoid. The transition costs more upfront for
+            buyers&mdash;and less for everyone else.
+        </p>
+    </div>
+
+    <!-- Sequencing thesis (moved from postscript) -->
+    <div class="act4-sequencing">
+        <p>
+            This isn&rsquo;t about ambition&mdash;it&rsquo;s about sequencing.
+            Building VRE without firm clean for the hard hours forces gas buildout that
+            becomes unnecessary at high clean targets. The capital is spent. The lobbying
+            apparatus is built. The rates are higher. And the people who pay those rates
+            see &ldquo;more renewables&rdquo; and &ldquo;higher bills&rdquo; and draw
+            the obvious conclusion. Strategy 2C avoids the trap by investing in clean firm
+            early&mdash;when it&rsquo;s expensive but catalytic&mdash;so that by the time
+            the grid needs it most, learning curves have made it affordable.
+        </p>
+    </div>
+
+    <!-- Unified timeline: paired 1B/2C rows per milestone -->
+    <div class="act4-timeline" id="act4Timeline"></div>
+
+    <!-- Shared legend -->
+    <div class="act4-legend" id="act4Legend"></div>
+
+    <!-- Cumulative system cost summary -->
+    <div class="act4-summary-grid" id="act4SummaryGrid">
+        <div class="act4-summary-card" id="act4Summary1B">
+            <h4 style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; Annual Matching</h4>
+            <div class="act4-summary-stats" id="act4SummaryStats1B"></div>
+        </div>
+        <div class="act4-summary-card" id="act4Summary2C">
+            <h4 style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Hourly Matching</h4>
+            <div class="act4-summary-stats" id="act4SummaryStats2C"></div>
+        </div>
+    </div>
+
+    <!-- Insight box -->
+    <div class="act4-insight" id="act4Insight">
+        <strong>Cheap for the buyer ≠ cheap for the system.</strong>
+        Strategy 1B reduces corporate emissions on paper at $12&ndash;22/MWh&mdash;by externalizing the
+        reliability tax onto the rest of the ratepayer base. Developers build gas to cover the hours
+        VRE and storage can&rsquo;t. Those vintages dispatch less and less as clean targets tighten;
+        once annual CF falls below 15% for two consecutive years, the unrecovered book value is
+        written off as stranded capital. The capex has already been paid, the plants are already
+        built, and the political constituency to protect them is already organized. The result: a
+        climate transition that&rsquo;s more expensive for everyone, rate increases that erode public
+        support, and an industrial complex locked into defending fossil assets. Strategy 2C pays
+        more upfront but builds the infrastructure that actually finishes the job.
+    </div>
+
+    <!-- Post-visual link -->
+    <div class="act4-postscript">
+        <a href="abatement_dashboard.html" class="act4-explore-link">
+            Explore regional abatement curves <span aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 5: The True Endpoint                                            -->
+<!-- ================================================================== -->
+<section class="story-section" id="act5">
+    <span class="story-badge story-badge-green">Act 5</span>
+    <h2>The True Endpoint</h2>
+
+    <!-- Intro text (moved from postscript — "this isn't theoretical") -->
+    <div class="act5-intro">
+        <p class="lead-text">
+            This isn&rsquo;t a theoretical exercise&mdash;it&rsquo;s the optimizer&rsquo;s
+            actual output for ERCOT at a 99% hourly CFE target.
+        </p>
+        <p>
+            Every hour of a representative day is physically matched by four
+            complementary clean resources, each playing a specific temporal role.
+            Firm capacity provides the always-on baseload. Wind fills
+            broadly&mdash;strongest at night when solar drops off. Solar captures
+            midday abundance. And battery storage time-shifts daytime surplus into
+            the evening peak and overnight hours.
+        </p>
+    </div>
+
+    <!-- Chart -->
+    <div class="act5-chart-wrap">
+        <div class="act5-chart-container">
+            <div class="act5-match-counter">
+                <div class="act5-match-pct" id="act5MatchPct">0%</div>
+                <div class="act5-match-sublabel">Hourly Matched</div>
+            </div>
+            <canvas id="act5Chart"></canvas>
+        </div>
+
+        <!-- Step narration -->
+        <div class="act5-step-narration" id="act5StepText">Watch each resource layer build the clean grid&hellip;</div>
+
+        <!-- Step dots (clickable to replay individual steps) -->
+        <div class="act5-step-indicator" id="act5StepDots">
+            <div class="act5-step-dot" data-step="0"></div>
+            <div class="act5-step-dot" data-step="1"></div>
+            <div class="act5-step-dot" data-step="2"></div>
+            <div class="act5-step-dot" data-step="3"></div>
+            <div class="act5-step-dot" data-step="4"></div>
+            <div class="act5-step-dot" data-step="5"></div>
+        </div>
+
+        <!-- Legend -->
+        <div class="act5-legend" id="act5Legend"></div>
+    </div>
+
+    <!-- Success badge (hidden until final step) -->
+    <div style="text-align: center;">
+        <div class="act5-badge" id="act5Badge">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span id="act5BadgeText">99% Hourly Matched &mdash; System Integral Solved</span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="act5-stats" id="act5Stats">
+        <div class="act5-stat" id="act5StatMatch">
+            <div class="act5-stat-value" style="color: #16A34A;">&mdash;</div>
+            <div class="act5-stat-label">Hourly Match</div>
+        </div>
+        <div class="act5-stat" id="act5StatResources">
+            <div class="act5-stat-value" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
+            <div class="act5-stat-label">Resource Types</div>
+        </div>
+        <div class="act5-stat" id="act5StatGap">
+            <div class="act5-stat-value" style="color: var(--hydro, #0EA5E9);">&mdash;</div>
+            <div class="act5-stat-label">Peak Gap</div>
+        </div>
+    </div>
+
+    <!-- Post-visual narrative -->
+    <div class="act5-postscript">
+        <p>
+            The system integral is solved: supply meets demand, hour by hour, with
+            near-zero residual fossil generation. This is the endpoint that hourly
+            procurement frameworks are designed to reach.
+        </p>
+        <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-top: var(--space-lg);">
+            <a href="research_paper.html" class="act5-explore-link">
+                Read the full research paper <span aria-hidden="true">&rarr;</span>
+            </a>
+            <a href="dashboard.html" class="act5-explore-link">
+                Explore all 7 regions <span aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Analysis</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p style="margin-top:12px; opacity:0.6; font-size:0.8rem;">
+        7 ISOs &middot; 5,832 scenarios &middot; 8,760 hours
+    </p>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 0 SCRIPT: The Grid is Not a Bank — Vault vs Live Wire           -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    /* --- Colors & Canvas Utils --- */
+    var COL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
+    var solarHex = COL.solar || '#F59E0B';
+    var windHex  = COL.wind  || '#22C55E';
+    var gapRed   = '#EF4444';
+    var navyDark = '#1A2744';
+    var mutedGray = '#94A3B8';
+
+    function setupCanvas(canvas) {
+        var dpr = window.devicePixelRatio || 1;
+        var rect = canvas.getBoundingClientRect();
+        canvas.width  = rect.width  * dpr;
+        canvas.height = rect.height * dpr;
+        var ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        return { ctx: ctx, w: rect.width, h: rect.height };
+    }
+    /* === ILLUSION: Vault with dropping MWh coins === */
+    var vaultCanvas = document.getElementById('act0IllusionCanvas');
+    var vaultSetup = setupCanvas(vaultCanvas);
+    var vCtx = vaultSetup.ctx, vW = vaultSetup.w, vH = vaultSetup.h;
+    var vaultCoins = [];
+    var settledCoins = [];
+    var vaultBanked = 0;
+    var vaultRAF = null;
+    var lastCoinTime = 0;
+    var COIN_INTERVAL = 380;
+
+    // Vault geometry
+    var vaultW = vW * 0.38;
+    var vaultH = vH * 0.55;
+    var vaultX = (vW - vaultW) / 2;
+    var vaultY = vH * 0.30;
+    var vaultSlotW = vaultW * 0.35;
+    var vaultFloor = vaultY + vaultH;
+    var COIN_R = Math.max(10, Math.min(18, vW * 0.025));
+
+    function drawVaultBody() {
+        var r = 18;
+        vCtx.save();
+        // Vault body
+        vCtx.beginPath();
+        vCtx.moveTo(vaultX, vaultY);
+        vCtx.lineTo(vaultX + vaultW, vaultY);
+        vCtx.lineTo(vaultX + vaultW, vaultFloor - r);
+        vCtx.quadraticCurveTo(vaultX + vaultW, vaultFloor, vaultX + vaultW - r, vaultFloor);
+        vCtx.lineTo(vaultX + r, vaultFloor);
+        vCtx.quadraticCurveTo(vaultX, vaultFloor, vaultX, vaultFloor - r);
+        vCtx.lineTo(vaultX, vaultY);
+        vCtx.closePath();
+        vCtx.fillStyle = 'rgba(26,39,68,0.06)';
+        vCtx.fill();
+        vCtx.strokeStyle = 'rgba(26,39,68,0.25)';
+        vCtx.lineWidth = 2.5;
+        vCtx.stroke();
+
+        // Top plate with slot
+        var slotX1 = vW / 2 - vaultSlotW / 2;
+        var slotX2 = vW / 2 + vaultSlotW / 2;
+        vCtx.beginPath();
+        vCtx.moveTo(vaultX - 8, vaultY);
+        vCtx.lineTo(slotX1, vaultY);
+        vCtx.moveTo(slotX2, vaultY);
+        vCtx.lineTo(vaultX + vaultW + 8, vaultY);
+        vCtx.lineWidth = 4;
+        vCtx.strokeStyle = 'rgba(26,39,68,0.35)';
+        vCtx.stroke();
+
+        // Vault label
+        vCtx.font = '600 ' + Math.max(11, vW * 0.017) + 'px "Plus Jakarta Sans", sans-serif';
+        vCtx.fillStyle = mutedGray;
+        vCtx.textAlign = 'center';
+        vCtx.fillText('ANNUAL ENERGY VAULT', vW / 2, vaultFloor + 22);
+
+        // Counter
+        vCtx.font = '700 ' + Math.max(16, vW * 0.028) + 'px "Plus Jakarta Sans", sans-serif';
+        vCtx.fillStyle = navyDark;
+        vCtx.fillText(vaultBanked + ' MWh Banked', vW / 2, vaultFloor + 46);
+
+        if (vaultBanked >= 30) {
+            vCtx.font = '700 ' + Math.max(13, vW * 0.02) + 'px "Plus Jakarta Sans", sans-serif';
+            vCtx.fillStyle = '#16A34A';
+            vCtx.fillText('\u2713 Balanced!', vW / 2, vaultFloor + 66);
+        }
+        vCtx.restore();
+    }
+
+    function spawnCoin() {
+        var isSolar = Math.random() < 0.55;
+        vaultCoins.push({
+            x: vW / 2 + (Math.random() - 0.5) * vaultSlotW * 0.5,
+            y: -COIN_R * 2,
+            vy: 0,
+            vx: (Math.random() - 0.5) * 0.8,
+            r: COIN_R + (Math.random() - 0.5) * 4,
+            color: isSolar ? solarHex : windHex,
+            label: isSolar ? 'S' : 'W',
+            settled: false,
+            bounces: 0,
+            opacity: 1
+        });
+    }
+
+    function tickVault(now) {
+        vCtx.clearRect(0, 0, vW, vH);
+
+        // Spawn coins
+        if (now - lastCoinTime > COIN_INTERVAL && vaultBanked < 42) {
+            spawnCoin();
+            lastCoinTime = now;
+        }
+
+        drawVaultBody();
+
+        // Compute settle floor based on stacked coins
+        var stackH = settledCoins.length * (COIN_R * 0.6);
+        var settleY = vaultFloor - COIN_R - stackH;
+
+        // Draw settled coins
+        for (var s = 0; s < settledCoins.length; s++) {
+            var sc = settledCoins[s];
+            vCtx.globalAlpha = 0.85;
+            vCtx.beginPath();
+            vCtx.arc(sc.x, sc.y, sc.r, 0, Math.PI * 2);
+            vCtx.fillStyle = sc.color;
+            vCtx.fill();
+            vCtx.globalAlpha = 1;
+        }
+
+        // Update & draw falling coins
+        for (var i = vaultCoins.length - 1; i >= 0; i--) {
+            var c = vaultCoins[i];
+            c.vy += 0.35; // gravity
+            c.y += c.vy;
+            c.x += c.vx;
+
+            // Bounce off vault walls
+            if (c.x - c.r < vaultX) { c.x = vaultX + c.r; c.vx *= -0.5; }
+            if (c.x + c.r > vaultX + vaultW) { c.x = vaultX + vaultW - c.r; c.vx *= -0.5; }
+
+            // Settle
+            if (c.y + c.r >= settleY) {
+                c.y = settleY - c.r + c.r;
+                c.bounces++;
+                if (c.bounces >= 2) {
+                    c.y = settleY;
+                    settledCoins.push({ x: c.x, y: c.y, r: c.r, color: c.color });
+                    vaultBanked++;
+                    vaultCoins.splice(i, 1);
+                    continue;
+                }
+                c.vy *= -0.4;
+                c.vx *= 0.6;
+            }
+
+            // Draw coin
+            vCtx.save();
+            vCtx.shadowColor = c.color;
+            vCtx.shadowBlur = 6;
+            vCtx.beginPath();
+            vCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+            vCtx.fillStyle = c.color;
+            vCtx.fill();
+            vCtx.restore();
+
+            // MWh label on coin
+            vCtx.font = '700 ' + Math.max(7, c.r * 0.6) + 'px "DM Sans", sans-serif';
+            vCtx.fillStyle = '#fff';
+            vCtx.textAlign = 'center';
+            vCtx.textBaseline = 'middle';
+            vCtx.fillText('MWh', c.x, c.y);
+        }
+
+        // Reset cycle when full
+        if (vaultBanked >= 42 && vaultCoins.length === 0) {
+            setTimeout(function() {
+                settledCoins = [];
+                vaultBanked = 0;
+            }, 2000);
+        }
+
+        vaultRAF = requestAnimationFrame(tickVault);
+    }
+
+    // Start vault animation immediately
+    vaultRAF = requestAnimationFrame(tickVault);
+    /* === REALITY: Live Wire with flowing electricity === */
+    var wireCanvas = document.getElementById('act0RealityCanvas');
+    var wireSetup = setupCanvas(wireCanvas);
+    var wCtx = wireSetup.ctx, wW = wireSetup.w, wH = wireSetup.h;
+    var wireParticles = [];
+    var wireRAF = null;
+    var CYCLE_MS = 10000; // 10s = one "day"
+    var wireY = wH * 0.50;
+    var srcX = wW * 0.12;
+    var dstX = wW * 0.88;
+    var wireLen = dstX - srcX;
+    var buildingBrightness = 0;
+    var recentArrivals = [];
+
+    // Day phase: 0-0.2 dawn, 0.2-0.5 midday, 0.5-0.7 evening, 0.7-1.0 night
+    function dayPhase(t) {
+        if (t < 0.15) return { name: 'dawn',    sun: 0.3 + t / 0.15 * 0.4, wind: 0.4, spawnRate: 0.08 };
+        if (t < 0.45) return { name: 'midday',  sun: 1.0, wind: 0.3, spawnRate: 0.45 };
+        if (t < 0.65) return { name: 'evening', sun: Math.max(0, 1.0 - (t - 0.45) / 0.2), wind: 0.6, spawnRate: 0.15 };
+        return { name: 'night', sun: 0, wind: 0.2 + Math.sin(t * 20) * 0.15, spawnRate: 0.04 };
+    }
+
+    function drawSun(opacity) {
+        var sx = srcX - 10, sy = wireY - 60;
+        vCtx = wCtx; // reuse ref
+        wCtx.save();
+        wCtx.globalAlpha = Math.max(0, opacity);
+        // Sun circle
+        wCtx.beginPath();
+        wCtx.arc(sx, sy, 22, 0, Math.PI * 2);
+        wCtx.fillStyle = solarHex;
+        wCtx.shadowColor = solarHex;
+        wCtx.shadowBlur = opacity * 20;
+        wCtx.fill();
+        // Rays
+        for (var r = 0; r < 8; r++) {
+            var angle = (r / 8) * Math.PI * 2 + Date.now() * 0.001;
+            wCtx.beginPath();
+            wCtx.moveTo(sx + Math.cos(angle) * 26, sy + Math.sin(angle) * 26);
+            wCtx.lineTo(sx + Math.cos(angle) * 34, sy + Math.sin(angle) * 34);
+            wCtx.strokeStyle = solarHex;
+            wCtx.lineWidth = 2;
+            wCtx.stroke();
+        }
+        wCtx.restore();
+        // Label
+        wCtx.font = '600 ' + Math.max(9, wW * 0.013) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = mutedGray;
+        wCtx.textAlign = 'center';
+        wCtx.fillText('Solar', sx, sy + 42);
+    }
+
+    function drawTurbine(windStr) {
+        var tx = srcX + 30, ty = wireY - 65;
+        wCtx.save();
+        // Tower
+        wCtx.beginPath();
+        wCtx.moveTo(tx, ty + 10);
+        wCtx.lineTo(tx, ty + 55);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.3)';
+        wCtx.lineWidth = 3;
+        wCtx.stroke();
+        // Blades (rotating)
+        var bladeAngle = Date.now() * 0.002 * (0.3 + windStr * 2);
+        wCtx.globalAlpha = 0.6 + windStr * 0.4;
+        for (var b = 0; b < 3; b++) {
+            var a = bladeAngle + (b / 3) * Math.PI * 2;
+            wCtx.beginPath();
+            wCtx.moveTo(tx, ty + 10);
+            wCtx.lineTo(tx + Math.cos(a) * 22, ty + 10 + Math.sin(a) * 22);
+            wCtx.strokeStyle = windHex;
+            wCtx.lineWidth = 3;
+            wCtx.stroke();
+        }
+        // Hub
+        wCtx.beginPath();
+        wCtx.arc(tx, ty + 10, 4, 0, Math.PI * 2);
+        wCtx.fillStyle = windHex;
+        wCtx.fill();
+        wCtx.restore();
+        // Label
+        wCtx.font = '600 ' + Math.max(9, wW * 0.013) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = mutedGray;
+        wCtx.textAlign = 'center';
+        wCtx.fillText('Wind', tx, ty + 72);
+    }
+
+    function drawBuilding(brightness) {
+        var bx = dstX - 15, by = wireY - 50, bw = 36, bh = 50;
+        wCtx.save();
+        wCtx.fillStyle = 'rgba(26,39,68,' + (0.08 + brightness * 0.15) + ')';
+        wCtx.fillRect(bx, by, bw, bh);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.25)';
+        wCtx.lineWidth = 1.5;
+        wCtx.strokeRect(bx, by, bw, bh);
+        // Windows — glow with brightness
+        var winColor = 'rgba(245,158,11,' + (0.15 + brightness * 0.7) + ')';
+        for (var row = 0; row < 3; row++) {
+            for (var col = 0; col < 2; col++) {
+                wCtx.fillStyle = winColor;
+                wCtx.fillRect(bx + 6 + col * 16, by + 6 + row * 15, 10, 8);
+            }
+        }
+        // Gap pulse when dark
+        if (brightness < 0.3) {
+            var pulse = 0.3 + Math.sin(Date.now() * 0.012) * 0.2;
+            wCtx.shadowColor = gapRed;
+            wCtx.shadowBlur = 12 * pulse;
+            wCtx.strokeStyle = 'rgba(239,68,68,' + pulse + ')';
+            wCtx.lineWidth = 2;
+            wCtx.strokeRect(bx - 2, by - 2, bw + 4, bh + 4);
+        }
+        wCtx.restore();
+        // Label
+        wCtx.font = '600 ' + Math.max(9, wW * 0.013) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = mutedGray;
+        wCtx.textAlign = 'center';
+        wCtx.fillText('Consumer', bx + bw / 2, by + bh + 18);
+    }
+
+    function drawWire() {
+        wCtx.save();
+        // Wire glow
+        wCtx.beginPath();
+        wCtx.moveTo(srcX, wireY);
+        wCtx.lineTo(dstX, wireY);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.12)';
+        wCtx.lineWidth = 6;
+        wCtx.stroke();
+        // Wire core
+        wCtx.beginPath();
+        wCtx.moveTo(srcX, wireY);
+        wCtx.lineTo(dstX, wireY);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.3)';
+        wCtx.lineWidth = 2.5;
+        wCtx.stroke();
+        // Pylons
+        var pylonCount = 4;
+        for (var p = 0; p <= pylonCount; p++) {
+            var px = srcX + (wireLen * p / pylonCount);
+            wCtx.beginPath();
+            wCtx.moveTo(px, wireY);
+            wCtx.lineTo(px, wireY + 18);
+            wCtx.strokeStyle = 'rgba(26,39,68,0.2)';
+            wCtx.lineWidth = 2;
+            wCtx.stroke();
+            wCtx.beginPath();
+            wCtx.moveTo(px - 6, wireY + 18);
+            wCtx.lineTo(px + 6, wireY + 18);
+            wCtx.stroke();
+        }
+        wCtx.restore();
+    }
+
+    function drawTimeIndicator(t) {
+        var phases = [
+            { start: 0,    end: 0.15, label: 'dawn' },
+            { start: 0.15, end: 0.45, label: 'midday' },
+            { start: 0.45, end: 0.65, label: 'evening' },
+            { start: 0.65, end: 1.0,  label: 'night' }
+        ];
+        var barY = wireY + 40;
+        var barH = 4;
+        var colors = { dawn: '#F59E0B', midday: '#FBBF24', evening: '#6366F1', night: '#1E293B' };
+        for (var i = 0; i < phases.length; i++) {
+            var p = phases[i];
+            var x1 = srcX + p.start * wireLen;
+            var x2 = srcX + p.end * wireLen;
+            wCtx.fillStyle = colors[p.label];
+            wCtx.globalAlpha = 0.25;
+            wCtx.fillRect(x1, barY, x2 - x1, barH);
+            wCtx.globalAlpha = 1;
+            wCtx.font = '500 ' + Math.max(8, wW * 0.011) + 'px "DM Sans", sans-serif';
+            wCtx.fillStyle = mutedGray;
+            wCtx.textAlign = 'center';
+            wCtx.fillText(p.label, (x1 + x2) / 2, barY + 16);
+        }
+        // Current time marker
+        var markerX = srcX + t * wireLen;
+        wCtx.beginPath();
+        wCtx.arc(markerX, barY + barH / 2, 5, 0, Math.PI * 2);
+        wCtx.fillStyle = navyDark;
+        wCtx.fill();
+    }
+
+    function tickWire(now) {
+        wCtx.clearRect(0, 0, wW, wH);
+        var t = (now % CYCLE_MS) / CYCLE_MS;
+        var phase = dayPhase(t);
+
+        drawWire();
+        drawSun(phase.sun);
+        drawTurbine(phase.wind);
+
+        // Spawn particles
+        if (Math.random() < phase.spawnRate) {
+            var isSolar = phase.sun > 0.2 && Math.random() < 0.6;
+            wireParticles.push({
+                x: srcX,
+                speed: 1.5 + Math.random() * 2.5,
+                color: isSolar ? solarHex : windHex,
+                opacity: 0.8 + Math.random() * 0.2,
+                trail: []
+            });
+        }
+
+        // Cap particles
+        if (wireParticles.length > 60) wireParticles.splice(0, wireParticles.length - 60);
+
+        // Track arrivals for building brightness
+        var arrivedThisFrame = 0;
+
+        // Update & draw particles
+        for (var i = wireParticles.length - 1; i >= 0; i--) {
+            var p = wireParticles[i];
+            p.trail.push(p.x);
+            if (p.trail.length > 6) p.trail.shift();
+            p.x += p.speed;
+
+            if (p.x > dstX) {
+                arrivedThisFrame++;
+                wireParticles.splice(i, 1);
+                continue;
+            }
+
+            // Draw trail
+            for (var tr = 0; tr < p.trail.length; tr++) {
+                var ta = (tr / p.trail.length) * 0.3;
+                wCtx.beginPath();
+                wCtx.arc(p.trail[tr], wireY, 2.5, 0, Math.PI * 2);
+                wCtx.fillStyle = p.color;
+                wCtx.globalAlpha = ta;
+                wCtx.fill();
+            }
+
+            // Draw particle
+            wCtx.globalAlpha = p.opacity;
+            wCtx.save();
+            wCtx.shadowColor = p.color;
+            wCtx.shadowBlur = 8;
+            wCtx.beginPath();
+            wCtx.arc(p.x, wireY, 4, 0, Math.PI * 2);
+            wCtx.fillStyle = p.color;
+            wCtx.fill();
+            wCtx.restore();
+            wCtx.globalAlpha = 1;
+        }
+
+        // Building brightness from recent arrivals
+        recentArrivals.push(arrivedThisFrame);
+        if (recentArrivals.length > 30) recentArrivals.shift();
+        var totalRecent = 0;
+        for (var a = 0; a < recentArrivals.length; a++) totalRecent += recentArrivals[a];
+        buildingBrightness = Math.min(1, totalRecent / 12);
+
+        drawBuilding(buildingBrightness);
+        drawTimeIndicator(t);
+
+        // "No storage" label
+        wCtx.font = '600 ' + Math.max(10, wW * 0.015) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = 'rgba(239,68,68,0.6)';
+        wCtx.textAlign = 'center';
+        wCtx.fillText('No vault. No storage. Use it or lose it.', wW / 2, wH - 16);
+
+        wireRAF = requestAnimationFrame(tickWire);
+    }
+
+    /* === LEGEND === */
+    var legendEl = document.getElementById('act0Legend');
+    [
+        { label: 'Solar', color: solarHex },
+        { label: 'Wind', color: windHex }
+    ].forEach(function(item) {
+        var el = document.createElement('div');
+        el.className = 'act0-legend-item';
+        var dot = document.createElement('span');
+        dot.className = 'act0-legend-dot';
+        dot.style.background = item.color;
+        el.appendChild(dot);
+        el.appendChild(document.createTextNode(item.label));
+        legendEl.appendChild(el);
+    });
+
+    /* === TOGGLE LOGIC === */
+    var toggle   = document.getElementById('act0Toggle');
+    var labelIll = document.getElementById('act0LabelIllusion');
+    var labelReal= document.getElementById('act0LabelReality');
+    var illusionView = document.getElementById('act0IllusionView');
+    var realityView  = document.getElementById('act0RealityView');
+    var insightEl    = document.getElementById('act0Insight');
+    var hintEl       = document.getElementById('act0Hint');
+    var isReality    = false;
+
+    insightEl.innerHTML = 'Electricity isn\u2019t a commodity you can warehouse. ' +
+        'Every electron must be consumed <strong>the instant it\u2019s generated</strong>. ' +
+        'When the sun sets or the wind dies, that clean energy doesn\u2019t wait in a vault\u2009\u2014\u2009' +
+        'it simply doesn\u2019t exist. Annual accounting hides this fundamental physics.';
+
+    function act0SwitchToReality() {
+        if (isReality) return;
+        isReality = true;
+        toggle.classList.add('reality');
+        toggle.setAttribute('aria-checked', 'true');
+        labelIll.classList.remove('active-label');
+        labelReal.classList.add('active-label');
+
+        // Stop vault, start wire
+        if (vaultRAF) { cancelAnimationFrame(vaultRAF); vaultRAF = null; }
+        illusionView.classList.add('hidden');
+        realityView.classList.remove('hidden');
+        wireRAF = requestAnimationFrame(tickWire);
+
+        setTimeout(function() { insightEl.classList.add('insight-visible'); }, 800);
+        if (hintEl) hintEl.classList.add('hidden');
+    }
+
+    function act0SwitchToIllusion() {
+        if (!isReality) return;
+        isReality = false;
+        toggle.classList.remove('reality');
+        toggle.setAttribute('aria-checked', 'false');
+        labelIll.classList.add('active-label');
+        labelReal.classList.remove('active-label');
+
+        // Stop wire, start vault
+        if (wireRAF) { cancelAnimationFrame(wireRAF); wireRAF = null; }
+        illusionView.classList.remove('hidden');
+        realityView.classList.add('hidden');
+        vaultRAF = requestAnimationFrame(tickVault);
+
+        insightEl.classList.remove('insight-visible');
+    }
+
+    toggle.addEventListener('click', function() {
+        if (isReality) act0SwitchToIllusion();
+        else act0SwitchToReality();
+    });
+    toggle.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle.click();
+        }
+    });
+
+    // Auto-transition on scroll
+    var act0Initialized = false;
+    if (typeof IntersectionObserver !== 'undefined') {
+        var obs0 = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !act0Initialized) {
+                    act0Initialized = true;
+                    setTimeout(act0SwitchToReality, 3000);
+                    obs0.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.25 });
+        obs0.observe(document.getElementById('act0'));
+    }
+
+    // Fade out hint after 4s
+    if (hintEl) {
+        setTimeout(function() { hintEl.classList.add('hidden'); }, 4000);
+    }
+
+    // Resize handler
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            // Re-setup illusion canvas
+            var vs = setupCanvas(vaultCanvas);
+            vCtx = vs.ctx; vW = vs.w; vH = vs.h;
+            vaultW = vW * 0.38; vaultH = vH * 0.55;
+            vaultX = (vW - vaultW) / 2; vaultY = vH * 0.30;
+            vaultSlotW = vaultW * 0.35; vaultFloor = vaultY + vaultH;
+            COIN_R = Math.max(10, Math.min(18, vW * 0.025));
+            // Re-setup reality canvas
+            var ws = setupCanvas(wireCanvas);
+            wCtx = ws.ctx; wW = ws.w; wH = ws.h;
+            wireY = wH * 0.50; srcX = wW * 0.12; dstX = wW * 0.88;
+            wireLen = dstX - srcX;
+        }, 200);
+    });
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 1 SCRIPT: Carbon intensity heatstrips                           -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
+    function rotateToLocal(arr, offset) {
+        var o = offset % 24;
+        return arr.slice(o).concat(arr.slice(0, o));
+    }
+
+    // --- Config ---
+    var ISOS = ['CAISO', 'PJM', 'ERCOT'];
+    var ISO_LABELS = {
+        CAISO: 'CAISO — California',
+        PJM:   'PJM — Mid-Atlantic',
+        ERCOT: 'ERCOT — Texas'
+    };
+
+    var FOSSIL_EMISSION_RATE = {
+        CAISO: 0.39,
+        PJM:   0.52,
+        ERCOT: 0.42
+    };
+
+    // Color scale: green (0) -> amber (0.5) -> red (1)
+    function carbonColor(t01, alpha) {
+        var t = Math.max(0, Math.min(1, t01));
+        var r, g, b;
+        if (t < 0.5) {
+            var s = t / 0.5;
+            r = Math.round(34 + (245 - 34) * s);
+            g = Math.round(197 + (158 - 197) * s);
+            b = Math.round(94 + (11 - 94) * s);
+        } else {
+            var s = (t - 0.5) / 0.5;
+            r = Math.round(245 + (239 - 245) * s);
+            g = Math.round(158 + (68 - 158) * s);
+            b = Math.round(11 + (68 - 11) * s);
+        }
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+
+    // Illusion uses a single uniform color (grand average across all ISOs)
+    var ILLUSION_COLOR_BG, ILLUSION_COLOR_BORDER;
+    // Bar heights: base (illusion) and reality
+    var BASE_HEIGHT = 36; // px, flat illusion height
+    var MAX_BAR_HEIGHT = 80; // px, tallest reality bar
+
+    fetch('compressed_day_profiles.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var container = document.getElementById('heatstripContainer');
+            var profileData = {};
+            var grandTotalFossil = 0;
+            var grandCount = 0;
+
+            // Pass 1: compute fossil fractions per ISO, normalize WITHIN each ISO
+            ISOS.forEach(function(iso) {
+                var profiles = data[iso].profiles;
+                var keys = Object.keys(profiles);
+                var prof = profiles[keys[0]];
+                var offset = UTC_OFFSETS[iso];
+
+                // Rotate to local time
+                var demandLocal = rotateToLocal(prof.demand, offset);
+                var gapLocal = rotateToLocal(prof.gap || new Array(24).fill(0), offset);
+
+                var fossilFractions = [];
+                var avgFossil = 0;
+                var isoMin = Infinity, isoMax = -Infinity;
+                var demandMin = Infinity, demandMax = -Infinity;
+
+                for (var h = 0; h < 24; h++) {
+                    var d = demandLocal[h];
+                    var g = gapLocal[h];
+                    var frac = d > 0 ? g / d : 0;
+                    fossilFractions.push(frac);
+                    avgFossil += frac;
+                    if (frac < isoMin) isoMin = frac;
+                    if (frac > isoMax) isoMax = frac;
+                    if (d < demandMin) demandMin = d;
+                    if (d > demandMax) demandMax = d;
+                }
+                avgFossil /= 24;
+                grandTotalFossil += avgFossil;
+                grandCount++;
+
+                // Per-ISO normalization
+                var isoRange = isoMax - isoMin;
+                var isoPad = isoRange * 0.05;
+                var normMin = Math.max(0, isoMin - isoPad);
+                var normMax = isoMax + isoPad;
+
+                profileData[iso] = {
+                    fractions: fossilFractions,
+                    avg: avgFossil,
+                    demand: demandLocal,
+                    demandMin: demandMin,
+                    demandMax: demandMax,
+                    normMin: normMin,
+                    normMax: normMax,
+                    emissionRate: FOSSIL_EMISSION_RATE[iso]
+                };
+            });
+
+            // Illusion: uniform color = grand average mapped to 0.5 (mid-amber)
+            ILLUSION_COLOR_BG = carbonColor(0.5, 0.15);
+            ILLUSION_COLOR_BORDER = carbonColor(0.5, 0.9);
+
+            // Pass 2: build DOM
+            ISOS.forEach(function(iso) {
+                var pd = profileData[iso];
+
+                var row = document.createElement('div');
+                row.className = 'heatstrip-row';
+                row.setAttribute('data-iso', iso);
+
+                var label = document.createElement('div');
+                label.className = 'heatstrip-label';
+                var dot = document.createElement('span');
+                dot.className = 'iso-dot';
+                dot.style.background = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS[iso] : '#666';
+                label.appendChild(dot);
+                label.appendChild(document.createTextNode(ISO_LABELS[iso]));
+                row.appendChild(label);
+
+                var grid = document.createElement('div');
+                grid.className = 'heatstrip-grid';
+                grid.setAttribute('data-iso', iso);
+
+                for (var h = 0; h < 24; h++) {
+                    var cell = document.createElement('div');
+                    cell.className = 'heatstrip-cell';
+                    cell.setAttribute('data-hour', h);
+                    // Illusion: uniform color, flat height
+                    cell.style.background = ILLUSION_COLOR_BG;
+                    cell.style.border = '2px solid ' + ILLUSION_COLOR_BORDER;
+                    cell.style.height = BASE_HEIGHT + 'px';
+
+                    // Tooltip with local time label
+                    var hourLabel = (h === 0 ? '12' : h <= 12 ? '' + h : '' + (h - 12))
+                        + (h < 12 ? 'AM' : 'PM');
+                    if (h === 0) hourLabel = '12AM';
+                    if (h === 12) hourLabel = '12PM';
+                    var realIntensity = pd.fractions[h] * pd.emissionRate * 1000;
+                    cell.setAttribute('data-tooltip',
+                        hourLabel + ': ' + Math.round(realIntensity) + ' g/kWh');
+
+                    // Store reality data on element for toggle
+                    var normFrac = pd.normMax > pd.normMin
+                        ? (pd.fractions[h] - pd.normMin) / (pd.normMax - pd.normMin)
+                        : 0.5;
+                    var demandNorm = pd.demandMax > pd.demandMin
+                        ? (pd.demand[h] - pd.demandMin) / (pd.demandMax - pd.demandMin)
+                        : 0.5;
+                    var barHeight = Math.round(BASE_HEIGHT + (MAX_BAR_HEIGHT - BASE_HEIGHT) * demandNorm);
+                    cell.setAttribute('data-norm-frac', normFrac.toFixed(4));
+                    cell.setAttribute('data-bar-height', barHeight);
+
+                    grid.appendChild(cell);
+                }
+                row.appendChild(grid);
+
+                // Hour axis
+                var hours = document.createElement('div');
+                hours.className = 'heatstrip-hours';
+                for (var h = 0; h < 24; h++) {
+                    var sp = document.createElement('span');
+                    if (h === 0) sp.textContent = '12a';
+                    else if (h === 6) sp.textContent = '6a';
+                    else if (h === 12) sp.textContent = '12p';
+                    else if (h === 18) sp.textContent = '6p';
+                    else if (h === 23) sp.textContent = '11p';
+                    else sp.textContent = '';
+                    hours.appendChild(sp);
+                }
+                row.appendChild(hours);
+
+                container.appendChild(row);
+            });
+
+            // --- Staggered reveal on scroll ---
+            var rows = container.querySelectorAll('.heatstrip-row');
+            var revealed = false;
+            var transitioned = false;
+
+            function revealStrips() {
+                if (revealed) return;
+                revealed = true;
+                rows.forEach(function(row, i) {
+                    setTimeout(function() {
+                        row.classList.add('strip-visible');
+                    }, i * 200);
+                });
+                // Auto-transition to Reality after strips appear + 2s pause on illusion
+                setTimeout(function() {
+                    if (!transitioned) switchToReality();
+                }, ISOS.length * 200 + 3000);
+            }
+
+            if (typeof IntersectionObserver !== 'undefined') {
+                var obs = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            revealStrips();
+                            obs.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.2 });
+                obs.observe(document.getElementById('heatstripPanel'));
+            } else {
+                revealStrips();
+            }
+
+            // --- Illusion / Reality toggle ---
+            var toggle = document.getElementById('modeToggle');
+            var labelIll = document.getElementById('labelIllusion');
+            var labelReal = document.getElementById('labelReality');
+            var isReality = false;
+
+            function switchToReality() {
+                if (isReality) return;
+                isReality = true;
+                transitioned = true;
+                toggle.classList.add('reality');
+                toggle.setAttribute('aria-checked', 'true');
+                labelIll.classList.remove('active-label');
+                labelReal.classList.add('active-label');
+
+                // No sweep animation — just smooth CSS transitions
+                ISOS.forEach(function(iso) {
+                    var grid = container.querySelector('.heatstrip-grid[data-iso="' + iso + '"]');
+                    var cells = grid.querySelectorAll('.heatstrip-cell');
+
+                    cells.forEach(function(cell) {
+                        var nf = parseFloat(cell.getAttribute('data-norm-frac'));
+                        var bh = parseInt(cell.getAttribute('data-bar-height'));
+                        cell.style.background = carbonColor(nf, 0.15);
+                        cell.style.border = '2px solid ' + carbonColor(nf, 0.9);
+                        cell.style.height = bh + 'px';
+                    });
+                });
+            }
+
+            function switchToIllusion() {
+                if (!isReality) return;
+                isReality = false;
+                toggle.classList.remove('reality');
+                toggle.setAttribute('aria-checked', 'false');
+                labelIll.classList.add('active-label');
+                labelReal.classList.remove('active-label');
+
+                ISOS.forEach(function(iso) {
+                    var grid = container.querySelector('.heatstrip-grid[data-iso="' + iso + '"]');
+                    var cells = grid.querySelectorAll('.heatstrip-cell');
+
+                    cells.forEach(function(cell) {
+                        cell.style.background = ILLUSION_COLOR_BG;
+                        cell.style.border = '2px solid ' + ILLUSION_COLOR_BORDER;
+                        cell.style.height = BASE_HEIGHT + 'px';
+                    });
+                });
+            }
+
+            toggle.addEventListener('click', function() {
+                if (isReality) switchToIllusion();
+                else switchToReality();
+            });
+            toggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle.click();
+                }
+            });
+        })
+        .catch(function(err) {
+            console.error('Act 1: Failed to load day profiles:', err);
+            document.getElementById('heatstripContainer').innerHTML =
+                '<p style="color:var(--text-muted)">Carbon intensity data unavailable.</p>';
+        });
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 2 SCRIPT: The 100% Clean Illusion — solar + wind only           -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
+    function rotateToLocal(arr, offset) {
+        var o = offset % 24;
+        return arr.slice(o).concat(arr.slice(0, o));
+    }
+
+    var HOUR_LABELS = [];
+    for (var i = 0; i < 24; i++) {
+        if (i === 0) HOUR_LABELS.push('12AM');
+        else if (i < 12) HOUR_LABELS.push(i + 'AM');
+        else if (i === 12) HOUR_LABELS.push('12PM');
+        else HOUR_LABELS.push((i - 12) + 'PM');
+    }
+
+    fetch('compressed_day_profiles.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var prof = data.CAISO.profiles[Object.keys(data.CAISO.profiles)[0]];
+            var offset = UTC_OFFSETS.CAISO;
+
+            // Rotate all arrays to local time
+            var demand = rotateToLocal(prof.demand, offset);
+            var solarMatched = rotateToLocal(prof.matched.solar, offset);
+            var solarSurplus = rotateToLocal(prof.surplus.solar, offset);
+            var windMatched = rotateToLocal(prof.matched.wind, offset);
+            var windSurplus = rotateToLocal(prof.surplus.wind, offset);
+
+            var demandSum = demand.reduce(function(a, b) { return a + b; }, 0);
+
+            var solarRaw = [], windRaw = [];
+            for (var h = 0; h < 24; h++) {
+                solarRaw.push(solarMatched[h] + solarSurplus[h]);
+                windRaw.push(windMatched[h] + windSurplus[h]);
+            }
+            var solarSum = solarRaw.reduce(function(a, b) { return a + b; }, 0);
+            var windSum = windRaw.reduce(function(a, b) { return a + b; }, 0);
+
+            var solarShape = solarRaw.map(function(v) { return solarSum > 0 ? v / solarSum : 0; });
+            var windShape = windRaw.map(function(v) { return windSum > 0 ? v / windSum : 0; });
+            var demandShape = demand.map(function(v) { return v / demandSum; });
+
+            var S = 1000;
+            var demandDisp = demandShape.map(function(v) { return v * S; });
+            var avgDemand = S / 24;
+
+            var realWind = windShape.map(function(v) { return v * 0.5 * S; });
+            var realSolar = [];
+            for (var h = 0; h < 24; h++) {
+                realSolar.push(realWind[h] + solarShape[h] * 0.5 * S);
+            }
+
+            var flatWindTop = avgDemand * 0.5;
+            var flatSolarTop = avgDemand;
+            var illusionWind = demandDisp.map(function() { return flatWindTop; });
+            var illusionSolar = demandDisp.map(function() { return flatSolarTop; });
+            var illusionDemand = demandDisp.map(function() { return avgDemand; });
+
+            // Compute hours where clean gen >= demand
+            var cleanHours = 0;
+            for (var h = 0; h < 24; h++) {
+                var totalGen = (solarShape[h] * 0.5 + windShape[h] * 0.5);
+                if (totalGen >= demandShape[h] - 0.0001) cleanHours++;
+            }
+            var cleanHourPct = Math.round(cleanHours / 24 * 100);
+
+            // Compute actual HMS = (delivered clean MWh) / (total demand MWh)
+            // delivered = sum(min(total_clean_gen, demand)) per hour
+            var deliveredSum = 0;
+            var demandTotal = 0;
+            for (var h = 0; h < 24; h++) {
+                var cleanGen = realSolar[h]; // realSolar is stacked wind+solar
+                deliveredSum += Math.min(cleanGen, demandDisp[h]);
+                demandTotal += demandDisp[h];
+            }
+            var hmsPct = Math.round(deliveredSum / demandTotal * 100);
+
+            var COL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
+            var solarHex = COL.solar || '#F59E0B';
+            var windHex = COL.wind || '#22C55E';
+            var fontStack = "'Plus Jakarta Sans', sans-serif";
+
+            function hexAlpha(hex, a) {
+                var r = parseInt(hex.slice(1,3),16);
+                var g = parseInt(hex.slice(3,5),16);
+                var b = parseInt(hex.slice(5,7),16);
+                return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+            }
+
+            // Build legend
+            var legendEl = document.getElementById('act2Legend');
+            [
+                { label: 'Wind', color: windHex, type: 'solid' },
+                { label: 'Solar', color: solarHex, type: 'solid' },
+                { label: 'Demand', color: '#1A2744', type: 'dash' },
+                { label: 'Gas Needed', color: '#DC2626', type: 'fill' },
+                { label: 'Curtailed', color: null, type: 'hatch' }
+            ].forEach(function(item) {
+                var el = document.createElement('div');
+                el.className = 'act2-legend-item';
+                var sw = document.createElement('span');
+                sw.className = 'act2-legend-dot';
+                if (item.type === 'dash') {
+                    sw.style.background = 'transparent';
+                    sw.style.height = '0';
+                    sw.style.borderTop = '2px dashed ' + item.color;
+                } else if (item.type === 'fill') {
+                    sw.style.background = 'rgba(220,38,38,0.25)';
+                    sw.style.height = '8px';
+                    sw.style.border = '1px solid rgba(220,38,38,0.4)';
+                } else if (item.type === 'hatch') {
+                    sw.style.height = '8px';
+                    sw.style.background = 'repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(107,114,128,0.45) 2px, rgba(107,114,128,0.45) 3px)';
+                    sw.style.border = '1px solid rgba(107,114,128,0.3)';
+                } else {
+                    sw.style.background = item.color;
+                }
+                el.appendChild(sw);
+                el.appendChild(document.createTextNode(item.label));
+                legendEl.appendChild(el);
+            });
+
+            // Set HMS badge text
+            var hmsBadge = document.getElementById('act2HmsBadge');
+            hmsBadge.textContent = hmsPct + '% Hourly Matching Score';
+
+            // Chart — y-axis has extra headroom for the 100% badge
+            var yMax = avgDemand * 1.35; // extra space above flat line
+            var ctx = document.getElementById('act2Chart').getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: HOUR_LABELS,
+                    datasets: [
+                        {
+                            label: 'Wind',
+                            data: illusionWind.slice(),
+                            fill: 'origin',
+                            backgroundColor: hexAlpha(windHex, 0.12),
+                            borderColor: windHex,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.35,
+                            order: 3
+                        },
+                        {
+                            label: 'Solar',
+                            data: illusionSolar.slice(),
+                            fill: '-1',
+                            backgroundColor: hexAlpha(solarHex, 0.12),
+                            borderColor: solarHex,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.35,
+                            order: 2
+                        },
+                        {
+                            label: 'Demand',
+                            data: illusionDemand.slice(),
+                            fill: { target: 1, above: GAS_RED, below: HATCH_GRAY },
+                            borderColor: '#1A2744',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            tension: 0.35,
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 1200, easing: 'easeInOutQuart' },
+                    interaction: { mode: 'index', intersect: false },
+                    elements: { point: { radius: 0, hoverRadius: 0 } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(26,39,68,0.95)',
+                            titleFont: { family: fontStack, weight: '600' },
+                            bodyFont: { family: fontStack, size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(ctx) {
+                                    if (ctx.dataset.label === 'Demand') {
+                                        return 'Demand: ' + ctx.parsed.y.toFixed(1);
+                                    }
+                                    var raw = ctx.parsed.y;
+                                    var prev = ctx.datasetIndex > 0
+                                        ? chart.data.datasets[ctx.datasetIndex - 1].data[ctx.dataIndex]
+                                        : 0;
+                                    if (ctx.dataset.label === 'Wind') prev = 0;
+                                    var val = raw - prev;
+                                    if (val < 0.05) return null;
+                                    return ctx.dataset.label + ': ' + val.toFixed(1);
+                                }
+                            }
+                        },
+                        annotation: { annotations: {} }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { family: fontStack, size: 11 },
+                                color: '#94A3B8',
+                                maxRotation: 0,
+                                callback: function(val, idx) {
+                                    return idx % (window.innerWidth < 600 ? 6 : 3) === 0
+                                        ? HOUR_LABELS[idx] : '';
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: yMax,
+                            grid: { color: 'rgba(0,0,0,0.04)' },
+                            ticks: {
+                                font: { family: fontStack, size: 11 },
+                                color: '#94A3B8',
+                                callback: function(val) { return val.toFixed(0); }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Generation & Demand (relative units)',
+                                font: { family: fontStack, size: 11, weight: '500' },
+                                color: '#94A3B8'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // --- Toggle ---
+            var badge = document.getElementById('act2Badge');
+            var annualEl = document.getElementById('act2AnnualVal');
+            var hourlyEl = document.getElementById('act2HourlyVal');
+            var act2Toggle = document.getElementById('act2Toggle');
+            var act2LabelIll = document.getElementById('act2LabelIllusion');
+            var act2LabelReal = document.getElementById('act2LabelReality');
+            var act2IsReality = false;
+            var act2Initialized = false;
+
+            annualEl.textContent = '100%';
+            annualEl.style.color = '#16A34A';
+            hourlyEl.textContent = '100%';
+            hourlyEl.style.color = '#16A34A';
+
+            function animateCounter(el, from, to, suffix, duration, color) {
+                var start = performance.now();
+                el.style.color = color;
+                function tick(now) {
+                    var t = Math.min((now - start) / duration, 1);
+                    var ease = 1 - Math.pow(1 - t, 3);
+                    el.textContent = Math.round(from + (to - from) * ease) + suffix;
+                    if (t < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            }
+
+            function act2SwitchToReality() {
+                if (act2IsReality) return;
+                act2IsReality = true;
+                act2Toggle.classList.add('reality');
+                act2Toggle.setAttribute('aria-checked', 'true');
+                act2LabelIll.classList.remove('active-label');
+                act2LabelReal.classList.add('active-label');
+
+                chart.data.datasets[0].data = realWind;
+                chart.data.datasets[1].data = realSolar;
+                chart.data.datasets[2].data = demandDisp;
+                chart.update('active');
+
+                badge.classList.add('cracked');
+                hmsBadge.classList.add('visible');
+                setTimeout(function() {
+                    animateCounter(hourlyEl, 100, cleanHourPct, '%', 1400, '#DC2626');
+                }, 400);
+            }
+
+            function act2SwitchToIllusion() {
+                if (!act2IsReality) return;
+                act2IsReality = false;
+                act2Toggle.classList.remove('reality');
+                act2Toggle.setAttribute('aria-checked', 'false');
+                act2LabelIll.classList.add('active-label');
+                act2LabelReal.classList.remove('active-label');
+
+                chart.data.datasets[0].data = illusionWind.slice();
+                chart.data.datasets[1].data = illusionSolar.slice();
+                chart.data.datasets[2].data = illusionDemand.slice();
+                chart.update('active');
+
+                badge.classList.remove('cracked');
+                hmsBadge.classList.remove('visible');
+                annualEl.textContent = '100%';
+                annualEl.style.color = '#16A34A';
+                hourlyEl.textContent = '100%';
+                hourlyEl.style.color = '#16A34A';
+            }
+
+            act2Toggle.addEventListener('click', function() {
+                if (act2IsReality) act2SwitchToIllusion();
+                else act2SwitchToReality();
+            });
+            act2Toggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    act2Toggle.click();
+                }
+            });
+
+            if (typeof IntersectionObserver !== 'undefined') {
+                var obs2 = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting && !act2Initialized) {
+                            act2Initialized = true;
+                            setTimeout(act2SwitchToReality, 3000);
+                            obs2.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.25 });
+                obs2.observe(document.getElementById('act2'));
+            }
+        })
+        .catch(function(err) {
+            console.error('Act 2: Failed to load profiles:', err);
+        });
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 3 SCRIPT: The VRE-Gas Trap — Dual chart (Duck Curve + LMP)      -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    if (typeof LMP_ALL === 'undefined') {
+        console.error('Act 3: lmp-data.js not loaded');
+        return;
+    }
+
+    function hexToRgba(hex, a) {
+        var r = parseInt(hex.slice(1,3),16);
+        var g = parseInt(hex.slice(3,5),16);
+        var b = parseInt(hex.slice(5,7),16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+
+    // Colors
+    var solarHex = (typeof RESOURCE_COLORS !== 'undefined') ? RESOURCE_COLORS.solar : '#F59E0B';
+    var windHex  = (typeof RESOURCE_COLORS !== 'undefined') ? RESOURCE_COLORS.wind  : '#22C55E';
+    var fossilHex = '#6B7280';
+    var blueHex   = '#0EA5E9';
+    var demandColor = '#1A2744';
+
+    var fontStack = "'Plus Jakarta Sans', sans-serif";
+
+    // Use shared hatch pattern & gas red from global scope
+    var hatchGray = HATCH_GRAY;
+    var gasRed = GAS_RED;
+
+    // ==========================================
+    // DUCK CURVE — ERCOT Peak Summer Day, 87% Clean
+    // ==========================================
+    var hours = [];
+    for (var h = 0; h < 24; h++) hours.push(h);
+
+    // ERCOT summer peak demand (GW)
+    var dkDemand = [47,44,42,41,40,41,44,50,56,61,65,68,70,72,73,74,75,74,71,67,63,58,53,49];
+
+    // Solar capacity factor shape (ERCOT summer, peaks ~noon)
+    var solarCF = [0,0,0,0,0,0.02,0.12,0.32,0.55,0.75,0.89,0.96,1.0,0.97,0.89,0.75,0.55,0.30,0.08,0,0,0,0,0];
+
+    // Wind capacity factor shape (West Texas — counter-cyclical, higher at night)
+    var windCF = [0.45,0.47,0.46,0.44,0.42,0.38,0.32,0.25,0.20,0.17,0.15,0.14,0.13,0.13,0.14,0.17,0.22,0.30,0.38,0.43,0.45,0.46,0.46,0.45];
+
+    // Scale to 87% of daily demand (55% solar, 32% wind)
+    var dailyDemand = 0, solarCFSum = 0, windCFSum = 0;
+    for (var i = 0; i < 24; i++) {
+        dailyDemand += dkDemand[i];
+        solarCFSum += solarCF[i];
+        windCFSum += windCF[i];
+    }
+    var avgDemand = dailyDemand / 24;
+    var solScale = (dailyDemand * 0.55) / solarCFSum;
+    var wndScale = (dailyDemand * 0.32) / windCFSum;
+
+    // Reality: actual hourly profiles (stacked: wind bottom, solar on top)
+    var realDkWind = [], realDkSolar = [];
+    for (var i = 0; i < 24; i++) {
+        var w = Math.round(windCF[i] * wndScale * 10) / 10;
+        var s = Math.round(solarCF[i] * solScale * 10) / 10;
+        realDkWind.push(w);
+        realDkSolar.push(w + s); // stacked top
+    }
+
+    // Illusion: flat annual averages (wind + solar = 87% of avg demand)
+    var flatWind = Math.round(avgDemand * 0.32 * 10) / 10;
+    var flatSolarTop = Math.round(avgDemand * 0.87 * 10) / 10;
+    var illDkWind = hours.map(function() { return flatWind; });
+    var illDkSolar = hours.map(function() { return flatSolarTop; });
+    var illDkDemand = hours.map(function() { return flatSolarTop; }); // flat, aligned to solar top
+
+    // Hour labels for x-axis
+    var hourLabels = hours.map(function(h) {
+        if (h === 0) return '12a';
+        if (h === 6) return '6a';
+        if (h === 12) return '12p';
+        if (h === 18) return '6p';
+        return '';
+    });
+
+    // Build duck chart legend
+    var duckLegendEl = document.getElementById('act3DuckLegend');
+    [{label:'Wind', color:windHex, type:'solid'},
+     {label:'Solar', color:solarHex, type:'solid'},
+     {label:'Demand', color:demandColor, type:'dash'},
+     {label:'Gas Needed', color:'#DC2626', type:'fill'},
+     {label:'Curtailed', color:null, type:'hatch'}
+    ].forEach(function(item) {
+        var el = document.createElement('div');
+        el.className = 'act3-legend-item';
+        var sw = document.createElement('span');
+        sw.className = 'act3-legend-swatch';
+        if (item.type === 'dash') {
+            sw.style.background = 'transparent';
+            sw.style.borderTop = '2px dashed ' + item.color;
+            sw.style.height = '0';
+        } else if (item.type === 'fill') {
+            sw.style.background = 'rgba(220,38,38,0.25)';
+            sw.style.height = '8px';
+            sw.style.border = '1px solid rgba(220,38,38,0.4)';
+        } else if (item.type === 'hatch') {
+            sw.style.height = '8px';
+            sw.style.background = 'repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(107,114,128,0.45) 2px, rgba(107,114,128,0.45) 3px)';
+            sw.style.border = '1px solid rgba(107,114,128,0.3)';
+        } else {
+            sw.style.background = item.color;
+        }
+        el.appendChild(sw);
+        el.appendChild(document.createTextNode(item.label));
+        duckLegendEl.appendChild(el);
+    });
+
+    // Annotation sets for duck curve
+    // Illusion: no annotations (everything looks balanced)
+    var duckIllusionAnnotations = {};
+
+    // Reality: only "Gas needed" label on chart
+    var duckRealityAnnotations = {
+        gasLabel: {
+            type: 'label', xValue: 20,
+            yValue: (realDkSolar[20] + dkDemand[20]) / 2,
+            content: 'Gas needed',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: '#DC2626',
+            backgroundColor: 'rgba(254,226,226,0.92)',
+            padding: { top: 3, bottom: 3, left: 6, right: 6 }, borderRadius: 4
+        }
+    };
+
+    // Duck curve chart
+    var duckCtx = document.getElementById('act3DuckChart').getContext('2d');
+    var duckChart = new Chart(duckCtx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [
+                {
+                    label: 'Wind',
+                    data: illDkWind.slice(),
+                    fill: 'origin',
+                    backgroundColor: hexToRgba(windHex, 0.18),
+                    borderColor: windHex,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.35,
+                    order: 3
+                },
+                {
+                    label: 'Solar',
+                    data: illDkSolar.slice(),
+                    fill: '-1',
+                    backgroundColor: hexToRgba(solarHex, 0.18),
+                    borderColor: solarHex,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.35,
+                    order: 2
+                },
+                {
+                    label: 'Demand',
+                    data: illDkDemand.slice(),
+                    fill: { target: 1, above: gasRed, below: hatchGray },
+                    borderColor: demandColor,
+                    borderWidth: 2.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    tension: 0.35,
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeInOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            elements: { point: { radius: 0, hoverRadius: 0 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: fontStack, weight: '600' },
+                    bodyFont: { family: fontStack, size: 12 },
+                    padding: 12, cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            var h = items[0] ? items[0].dataIndex : 0;
+                            var ampm = h < 12 ? 'am' : 'pm';
+                            var hr = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+                            return hr + ampm;
+                        },
+                        label: function(item) {
+                            return item.dataset.label + ': ' + item.raw.toFixed(1) + ' GW';
+                        }
+                    }
+                },
+                annotation: { annotations: duckIllusionAnnotations }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        callback: function(val, idx) { return hourLabels[idx]; },
+                        font: { family: fontStack, size: 10 },
+                        color: '#94A3B8',
+                        maxRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 125,
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    title: {
+                        display: true, text: 'Power (GW)',
+                        font: { family: fontStack, size: 11, weight: '500' },
+                        color: '#94A3B8'
+                    },
+                    ticks: {
+                        font: { family: fontStack, size: 11 },
+                        color: '#94A3B8'
+                    }
+                }
+            }
+        }
+    });
+
+    // ==========================================
+    // LMP CHART — ERCOT wholesale price erosion
+    // ==========================================
+    var E = LMP_ALL.ERCOT;
+    var T = E.thresholds;
+    var dataLen = E.envelope.p50.length;
+    var TData = T.slice(0, dataLen);
+
+    function pts(xArr, yArr) {
+        var out = [];
+        for (var i = 0; i < xArr.length && i < yArr.length; i++) {
+            out.push({ x: xArr[i], y: yArr[i] });
+        }
+        return out;
+    }
+
+    var baselineLMP = E.envelope.p50[0];
+    var baselineZero = E.regime.zeroP50[0];
+
+    // Illusion: flat at baseline
+    var flatP50 = TData.map(function() { return baselineLMP; });
+    var flatP10 = TData.map(function() { return E.envelope.p10[0]; });
+    var flatP90 = TData.map(function() { return E.envelope.p90[0]; });
+    var flatZero = TData.map(function() { return baselineZero; });
+
+    // Reality
+    var realP50 = E.envelope.p50.slice(0, dataLen);
+    var realP10 = E.envelope.p10.slice(0, dataLen);
+    var realP90 = E.envelope.p90.slice(0, dataLen);
+    var realZero = E.regime.zeroP50.slice(0, dataLen);
+
+    // Stats at 95% (index 11) — set immediately, tiles don't toggle
+    var idx95 = 11;
+    var zeroAt95 = realZero[idx95];
+    var lmpAt95 = realP50[idx95];
+    var revenueDropPct = Math.round((1 - lmpAt95 / baselineLMP) * 100);
+
+    document.getElementById('act3ZeroVal').textContent = zeroAt95.toLocaleString();
+    document.getElementById('act3RevenueVal').textContent = '-' + revenueDropPct + '%';
+
+    // Build LMP legend
+    var lmpLegendEl = document.getElementById('act3LmpLegend');
+    [
+        { label: 'P10\u2013P90 range', color: fossilHex, type: 'band' },
+        { label: 'Median LMP', color: fossilHex, type: 'line' },
+        { label: 'Zero-price hours', color: blueHex, type: 'line' }
+    ].forEach(function(item) {
+        var el = document.createElement('div');
+        el.className = 'act3-legend-item';
+        var sw = document.createElement('span');
+        sw.className = 'act3-legend-swatch';
+        if (item.type === 'band') {
+            sw.style.height = '8px';
+            sw.style.background = hexToRgba(item.color, 0.12);
+            sw.style.border = '1px solid ' + hexToRgba(item.color, 0.3);
+        } else {
+            sw.style.background = item.color;
+        }
+        el.appendChild(sw);
+        el.appendChild(document.createTextNode(item.label));
+        lmpLegendEl.appendChild(el);
+    });
+
+    // LMP annotation labels for reality mode
+    var lmpRealityAnnotations = {
+        medianLabel: {
+            type: 'label',
+            xScaleID: 'x', yScaleID: 'y',
+            xValue: 73, yValue: realP50[4] + 3,
+            content: 'Median LMP',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: fossilHex,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        zeroLabel: {
+            type: 'label',
+            xScaleID: 'x', yScaleID: 'y1',
+            xValue: 83, yValue: realZero[6] + 350,
+            content: 'Zero-price hours',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: blueHex,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        }
+    };
+
+    // LMP Chart
+    var lmpCtx = document.getElementById('act3LmpChart').getContext('2d');
+    var lmpChart = new Chart(lmpCtx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'P90',
+                    data: pts(TData, flatP90),
+                    borderColor: 'transparent',
+                    backgroundColor: hexToRgba(fossilHex, 0.09),
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: '+2',
+                    tension: 0.35,
+                    order: 10,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Median LMP',
+                    data: pts(TData, flatP50),
+                    borderColor: fossilHex,
+                    backgroundColor: hexToRgba(fossilHex, 0.12),
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.35,
+                    order: 5,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'P10',
+                    data: pts(TData, flatP10),
+                    borderColor: hexToRgba(fossilHex, 0.25),
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderDash: [4, 3],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.35,
+                    order: 10,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Zero-price hours',
+                    data: pts(TData, flatZero),
+                    borderColor: blueHex,
+                    backgroundColor: hexToRgba(blueHex, 0.10),
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: 'origin',
+                    tension: 0.35,
+                    order: 8,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeInOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            elements: { point: { radius: 0, hoverRadius: 0 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: fontStack, weight: '600' },
+                    bodyFont: { family: fontStack, size: 12 },
+                    padding: 12, cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            return items[0] ? items[0].raw.x + '% Clean Energy' : '';
+                        },
+                        label: function(item) {
+                            if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
+                            if (item.dataset.yAxisID === 'y1') {
+                                return item.dataset.label + ': ' + Math.round(item.raw.y).toLocaleString() + ' hrs/yr';
+                            }
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                },
+                annotation: { annotations: {} }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 48, max: 97,
+                    grid: { display: false },
+                    title: {
+                        display: true, text: 'Clean Energy Share (%)',
+                        font: { family: fontStack, size: 11, weight: '500' },
+                        color: '#94A3B8'
+                    },
+                    ticks: {
+                        font: { family: fontStack, size: 11 },
+                        color: '#94A3B8',
+                        callback: function(v) { return v + '%'; }
+                    }
+                },
+                y: {
+                    position: 'left',
+                    beginAtZero: false,
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    title: {
+                        display: true, text: 'Wholesale LMP ($/MWh)',
+                        font: { family: fontStack, size: 11, weight: '500' },
+                        color: '#94A3B8'
+                    },
+                    ticks: {
+                        font: { family: fontStack, size: 11 },
+                        color: '#94A3B8',
+                        callback: function(v) { return '$' + v; }
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    title: {
+                        display: true, text: 'Zero-Price Hours / yr',
+                        font: { family: fontStack, size: 11, weight: '500' },
+                        color: blueHex
+                    },
+                    ticks: {
+                        font: { family: fontStack, size: 11 },
+                        color: blueHex,
+                        callback: function(v) { return v.toLocaleString(); }
+                    }
+                }
+            }
+        }
+    });
+
+    // ==========================================
+    // TOGGLE LOGIC — only charts animate
+    // Stats stay fixed at reality values
+    // ==========================================
+    var act3Toggle = document.getElementById('act3Toggle');
+    var act3LabelIll = document.getElementById('act3LabelIllusion');
+    var act3LabelReal = document.getElementById('act3LabelReality');
+    var act3IsReality = false;
+    var act3Initialized = false;
+    var insightEl = document.getElementById('act3Insight');
+    var statsEl = document.getElementById('act3Stats');
+
+    function act3SwitchToReality() {
+        if (act3IsReality) return;
+        act3IsReality = true;
+        act3Toggle.classList.add('reality');
+        act3Toggle.setAttribute('aria-checked', 'true');
+        act3LabelIll.classList.remove('active-label');
+        act3LabelReal.classList.add('active-label');
+
+        // Duck curve → reality shapes
+        duckChart.data.datasets[0].data = realDkWind.slice();
+        duckChart.data.datasets[1].data = realDkSolar.slice();
+        duckChart.data.datasets[2].data = dkDemand.slice();
+        duckChart.options.plugins.annotation.annotations = duckRealityAnnotations;
+        duckChart.update('active');
+
+        // LMP → reality curves
+        lmpChart.data.datasets[0].data = pts(TData, realP90);
+        lmpChart.data.datasets[1].data = pts(TData, realP50);
+        lmpChart.data.datasets[2].data = pts(TData, realP10);
+        lmpChart.data.datasets[3].data = pts(TData, realZero);
+        lmpChart.options.plugins.annotation.annotations = lmpRealityAnnotations;
+        lmpChart.update('active');
+
+        // Show stats tiles and insight after chart animation
+        setTimeout(function() {
+            if (statsEl) statsEl.classList.add('stats-visible');
+            insightEl.classList.add('insight-visible');
+        }, 1200);
+    }
+
+    function act3SwitchToIllusion() {
+        if (!act3IsReality) return;
+        act3IsReality = false;
+        act3Toggle.classList.remove('reality');
+        act3Toggle.setAttribute('aria-checked', 'false');
+        act3LabelIll.classList.add('active-label');
+        act3LabelReal.classList.remove('active-label');
+
+        // Duck curve → flat illusion
+        duckChart.data.datasets[0].data = illDkWind.slice();
+        duckChart.data.datasets[1].data = illDkSolar.slice();
+        duckChart.data.datasets[2].data = illDkDemand.slice();
+        duckChart.options.plugins.annotation.annotations = duckIllusionAnnotations;
+        duckChart.update('active');
+
+        // LMP → flat illusion
+        lmpChart.data.datasets[0].data = pts(TData, flatP90);
+        lmpChart.data.datasets[1].data = pts(TData, flatP50);
+        lmpChart.data.datasets[2].data = pts(TData, flatP10);
+        lmpChart.data.datasets[3].data = pts(TData, flatZero);
+        lmpChart.options.plugins.annotation.annotations = {};
+        lmpChart.update('active');
+
+        // Hide stats tiles and insight
+        if (statsEl) statsEl.classList.remove('stats-visible');
+        insightEl.classList.remove('insight-visible');
+    }
+
+    act3Toggle.addEventListener('click', function() {
+        if (act3IsReality) act3SwitchToIllusion();
+        else act3SwitchToReality();
+    });
+    act3Toggle.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            act3Toggle.click();
+        }
+    });
+
+    // Auto-transition on scroll — sit on illusion for 3s first
+    if (typeof IntersectionObserver !== 'undefined') {
+        var obs3 = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !act3Initialized) {
+                    act3Initialized = true;
+                    setTimeout(function() {
+                        act3SwitchToReality();
+                    }, 3000);
+                    obs3.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.25 });
+        obs3.observe(document.getElementById('act3'));
+    }
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 4 SCRIPT: The Stranded Asset Cliff — Unified Timeline           -->
+<!-- Uses DEPLOYMENT_DATA from deployment-data.js (step 5.2 pipeline)    -->
+<!-- PJM only: 5 HMS milestones comparing 1B vs 2C strategies            -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    // --- Validate data source ---
+    if (typeof DEPLOYMENT_DATA === 'undefined') {
+        console.error('Act 4: deployment-data.js not loaded');
+        return;
+    }
+
+    var PJM_1B = DEPLOYMENT_DATA.data['1B']['PJM'];
+    var PJM_2C = DEPLOYMENT_DATA.data['2C']['PJM'];
+    var PJM_BASE_DEMAND = 843.331; // TWh
+    var EXISTING_CLEAN_PCT = 38.5; // PJM existing grid clean %
+    var EXISTING_CLEAN_TWH = PJM_BASE_DEMAND * EXISTING_CLEAN_PCT / 100;
+    var EXISTING_GAS_GW = 145; // PJM existing gas capacity
+
+    // --- 5 HMS milestone definitions ---
+    // Each maps to specific participation/target combos in deployment-data.js
+    var MILESTONE_DEFS = [
+        { label: '50%',  s1b: {part:'20',tgt:'92.5'}, s2c: {part:'20',tgt:'92.5'} },
+        { label: '60%',  s1b: {part:'40',tgt:'92.5'}, s2c: {part:'25',tgt:'95'}   },
+        { label: '75%',  s1b: {part:'40',tgt:'95'},   s2c: {part:'40',tgt:'95'}   },
+        { label: '90%',  s1b: {part:'50',tgt:'97.5'}, s2c: {part:'50',tgt:'97.5'} },
+        { label: '95%',  s1b: {part:'70',tgt:'97.5'}, s2c: 'interpolate'          }
+    ];
+
+    // --- Linear interpolation helper ---
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function lerpEntry(entryA, entryB, t) {
+        // Interpolate all numeric fields between two deployment data entries
+        var result = {};
+        var numericFields = ['hms','gasGw','gridCleanPct','curtTwh','fossilCo2Mt','c','tc'];
+        for (var i = 0; i < numericFields.length; i++) {
+            var k = numericFields[i];
+            result[k] = lerp(entryA[k] || 0, entryB[k] || 0, t);
+        }
+        // Interpolate resource breakdown (n field)
+        result.n = {};
+        var allKeys = {};
+        if (entryA.n) Object.keys(entryA.n).forEach(function(k) { allKeys[k] = true; });
+        if (entryB.n) Object.keys(entryB.n).forEach(function(k) { allKeys[k] = true; });
+        Object.keys(allKeys).forEach(function(k) {
+            result.n[k] = lerp((entryA.n && entryA.n[k]) || 0, (entryB.n && entryB.n[k]) || 0, t);
+        });
+        // Interpolate existing (e field)
+        result.e = {};
+        var eKeys = {};
+        if (entryA.e) Object.keys(entryA.e).forEach(function(k) { eKeys[k] = true; });
+        if (entryB.e) Object.keys(entryB.e).forEach(function(k) { eKeys[k] = true; });
+        Object.keys(eKeys).forEach(function(k) {
+            result.e[k] = lerp((entryA.e && entryA.e[k]) || 0, (entryB.e && entryB.e[k]) || 0, t);
+        });
+        return result;
+    }
+
+    // --- Build pathway data for each milestone ---
+    var pathway1B = [];
+    var pathway2C = [];
+
+    for (var mi = 0; mi < MILESTONE_DEFS.length; mi++) {
+        var def = MILESTONE_DEFS[mi];
+        // 1B is always a direct lookup
+        pathway1B.push(PJM_1B[def.s1b.part][def.s1b.tgt]);
+
+        // 2C: either direct lookup or interpolation for Row 5
+        if (def.s2c === 'interpolate') {
+            // Interpolate between 60%/95% (HMS=91.8) and 60%/97.5% (HMS=99.3) to hit ~95%
+            var entryA = PJM_2C['60']['95'];
+            var entryB = PJM_2C['60']['97.5'];
+            var t = (95 - entryA.hms) / (entryB.hms - entryA.hms);
+            pathway2C.push(lerpEntry(entryA, entryB, t));
+        } else {
+            pathway2C.push(PJM_2C[def.s2c.part][def.s2c.tgt]);
+        }
+    }
+
+    // --- Colors ---
+    var RC = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
+    var solarC = RC.solar || '#F59E0B';
+    var windC = RC.wind || '#22C55E';
+    var firmC = RC.cleanFirm || '#6366F1';
+    var battC = RC.battery || '#06B6D4';
+    var ldesC = RC.ldes || '#E91E63';
+    var existC = '#94A3B8';
+    var fossilC = '#9CA3AF';
+    var gasC = '#6B7280';
+
+    var alpha = typeof withAlpha !== 'undefined' ? withAlpha : function(hex, a) {
+        var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    };
+
+    // --- Crosshatch pattern for curtailment ---
+    function hatchBg(hexColor) {
+        var r = parseInt(hexColor.slice(1,3),16), g = parseInt(hexColor.slice(3,5),16), b = parseInt(hexColor.slice(5,7),16);
+        return 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(' +
+            r + ',' + g + ',' + b + ',0.45) 3px, rgba(' + r + ',' + g + ',' + b + ',0.45) 5px)' +
+            ', rgba(' + r + ',' + g + ',' + b + ',0.12)';
+    }
+
+    // Pre-compute max curtailment for consistent bar widths
+    var maxCurtPct = 0;
+    for (var pi = 0; pi < pathway1B.length; pi++) {
+        var c1 = (pathway1B[pi].curtTwh / PJM_BASE_DEMAND) * 100;
+        var c2 = (pathway2C[pi].curtTwh / PJM_BASE_DEMAND) * 100;
+        maxCurtPct = Math.max(maxCurtPct, c1, c2);
+    }
+    var maxBarPct = 100 + Math.max(maxCurtPct, 5);
+
+    // --- Extract resource TWh for bar segments ---
+    function getResourceBreakdown(d, stratKey) {
+        var n = d.n || {};
+        var e = d.e || {};
+        var hms = d.hms;
+
+        // Existing clean TWh
+        var existingTwh;
+        if (stratKey === '2C' && (e.existing_merchant || e.sss_allocation)) {
+            existingTwh = (e.existing_merchant || 0) + (e.sss_allocation || 0);
+        } else {
+            // 1B: existing clean is the grid baseline
+            existingTwh = EXISTING_CLEAN_TWH;
+        }
+
+        var solarTwh = n.solar || 0;
+        var windTwh = (n.wind || 0) + (n.offshore_wind || 0);
+        var firmTwh = (n.clean_firm || 0) + (n.nuclear_uprate || 0);
+        var battTwh = n.battery || 0;
+        var ldesTotalTwh = n.ldes || 0;
+        var curtTwh = d.curtTwh || 0;
+
+        // Fossil fills the remaining gap
+        var fossilPct = Math.max(0, 100 - hms);
+        var fossilTwh = PJM_BASE_DEMAND * fossilPct / 100;
+
+        return {
+            existingTwh: existingTwh,
+            solarTwh: solarTwh,
+            windTwh: windTwh,
+            firmTwh: firmTwh,
+            battTwh: battTwh,
+            ldesTwh: ldesTotalTwh,
+            fossilTwh: fossilTwh,
+            curtTwh: curtTwh
+        };
+    }
+
+    // --- Build milestone row ---
+    function buildRow(d, stratKey, stratColor) {
+        var hms = d.hms;
+        var rb = getResourceBreakdown(d, stratKey);
+
+        var row = document.createElement('div');
+        row.className = 'act4-milestone-row';
+
+        // Strategy label
+        var label = document.createElement('div');
+        label.className = 'act4-strat-label';
+        label.style.color = stratColor;
+        label.textContent = stratKey;
+
+        // Metrics
+        var metrics = document.createElement('div');
+        metrics.className = 'act4-row-metrics';
+        var gasWarn = d.gasGw > EXISTING_GAS_GW * 0.9;
+        var gasGood = d.gasGw < EXISTING_GAS_GW * 0.5;
+        var totalCostB = Math.round(d.tc / 1000); // tc is in $M, display as $B
+        metrics.innerHTML =
+            '<div class="act4-row-metric ' + (gasWarn ? 'metric-warn' : gasGood ? 'metric-good' : '') +
+            '">Gas: <strong>' + Math.round(d.gasGw) + ' GW</strong></div>' +
+            '<div class="act4-row-metric">$/MWh: <strong>$' + Math.round(d.c) + '</strong></div>' +
+            '<div class="act4-row-metric">System: <strong>$' + totalCostB + 'B</strong></div>';
+
+        // Stacked bar — normalized to demand
+        var barWrap = document.createElement('div');
+        barWrap.className = 'act4-bar-wrap';
+
+        function addSeg(twh, color, opacity, tooltipLabel, isHatch) {
+            if (twh < 0.3) return;
+            var pct = (twh / PJM_BASE_DEMAND) / (maxBarPct / 100) * 100;
+            var seg = document.createElement('div');
+            seg.className = 'act4-bar-seg' + (isHatch ? ' act4-bar-seg-hatch' : '');
+            seg.style.width = pct.toFixed(2) + '%';
+            if (isHatch) {
+                seg.style.background = hatchBg(color);
+            } else {
+                seg.style.background = alpha(color, opacity);
+            }
+            seg.setAttribute('data-tooltip', tooltipLabel);
+            barWrap.appendChild(seg);
+        }
+
+        // === Main bar segments ===
+        addSeg(rb.existingTwh, existC, 1.0,
+            'Existing Clean: ' + Math.round(rb.existingTwh) + ' TWh', false);
+        addSeg(rb.solarTwh, solarC, 0.5,
+            'Solar (new): ' + Math.round(rb.solarTwh) + ' TWh', false);
+        addSeg(rb.windTwh, windC, 0.5,
+            'Wind (new): ' + Math.round(rb.windTwh) + ' TWh', false);
+        addSeg(rb.firmTwh, firmC, 0.5,
+            'Clean Firm (new): ' + Math.round(rb.firmTwh) + ' TWh', false);
+        addSeg(rb.battTwh, battC, 0.5,
+            'Battery: ' + Math.round(rb.battTwh) + ' TWh', false);
+        addSeg(rb.ldesTwh, ldesC, 0.5,
+            'LDES: ' + Math.round(rb.ldesTwh) + ' TWh', false);
+        addSeg(rb.fossilTwh, fossilC, 0.5,
+            'Fossil: ' + Math.round(rb.fossilTwh) + ' TWh (' + Math.round(100 - hms) + '%)', false);
+
+        // === 100% demand mark ===
+        var mark = document.createElement('div');
+        mark.className = 'act4-bar-100-mark';
+        mark.style.left = (100 / maxBarPct * 100).toFixed(1) + '%';
+        var markLabel = document.createElement('span');
+        markLabel.className = 'act4-bar-100-label';
+        markLabel.textContent = '100%';
+        mark.appendChild(markLabel);
+        barWrap.appendChild(mark);
+
+        // === Curtailment — crosshatch PAST the 100% line ===
+        addSeg(rb.curtTwh, fossilC, 0.3,
+            'Curtailment: ' + Math.round(rb.curtTwh) + ' TWh', true);
+
+        row.appendChild(label);
+        row.appendChild(metrics);
+        row.appendChild(barWrap);
+        return row;
+    }
+
+    // --- Build milestone group ---
+    function buildMilestoneGroup(idx) {
+        var d1B = pathway1B[idx];
+        var d2C = pathway2C[idx];
+        var milestoneLabel = MILESTONE_DEFS[idx].label;
+
+        var group = document.createElement('div');
+        group.className = 'act4-milestone-group';
+
+        var header = document.createElement('div');
+        header.className = 'act4-milestone-group-header';
+        header.innerHTML = '<span class="act4-group-target">' + milestoneLabel +
+            ' Hourly Matching</span>' +
+            '<span class="act4-group-target" style="margin-left:auto; font-size:0.85em; opacity:0.7;">HMS: ' +
+            d1B.hms.toFixed(1) + '% (1B) / ' + d2C.hms.toFixed(1) + '% (2C)</span>';
+        group.appendChild(header);
+
+        group.appendChild(buildRow(d1B, '1B', gasC));
+        group.appendChild(buildRow(d2C, '2C', firmC));
+
+        return group;
+    }
+
+    // --- Summary stats ---
+    function buildSummary(containerId, finalEntry, stratColor) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        var totalCostB = Math.round(finalEntry.tc / 1000);
+        var stats = [
+            { value: Math.round(finalEntry.gasGw) + ' GW', label: 'Gas Remaining',
+              color: finalEntry.gasGw > EXISTING_GAS_GW * 0.5 ? '#DC2626' : '#16A34A' },
+            { value: '$' + Math.round(finalEntry.c) + '/MWh', label: 'Buyer Cost', color: stratColor },
+            { value: '$' + totalCostB + 'B', label: 'Total System Cost', color: stratColor }
+        ];
+        el.innerHTML = stats.map(function(s) {
+            return '<div class="act4-summary-stat">' +
+                '<div class="act4-summary-stat-value" style="color:' + s.color + ';">' + s.value + '</div>' +
+                '<div class="act4-summary-stat-label">' + s.label + '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    // --- Scroll animation ---
+    var act4Animated = false;
+
+    function animateAct4() {
+        if (act4Animated) return;
+        act4Animated = true;
+
+        var timeline = document.getElementById('act4Timeline');
+
+        MILESTONE_DEFS.forEach(function(def, i) {
+            var group = buildMilestoneGroup(i);
+            if (timeline) timeline.appendChild(group);
+
+            setTimeout(function() {
+                group.classList.add('group-visible');
+                var rows = group.querySelectorAll('.act4-milestone-row');
+                rows.forEach(function(r, ri) {
+                    setTimeout(function() { r.classList.add('row-visible'); }, ri * 100);
+                });
+            }, 200 + i * 200);
+        });
+
+        setTimeout(function() {
+            // Summary shows the final milestone (95% HMS)
+            var final1B = pathway1B[pathway1B.length - 1];
+            var final2C = pathway2C[pathway2C.length - 1];
+            buildSummary('act4SummaryStats1B', final1B, gasC);
+            buildSummary('act4SummaryStats2C', final2C, firmC);
+            var s1 = document.getElementById('act4Summary1B');
+            var s2 = document.getElementById('act4Summary2C');
+            if (s1) s1.classList.add('card-visible');
+            if (s2) s2.classList.add('card-visible');
+        }, 200 + MILESTONE_DEFS.length * 200 + 200);
+
+        setTimeout(function() {
+            var ins = document.getElementById('act4Insight');
+            if (ins) ins.classList.add('insight-visible');
+        }, 200 + MILESTONE_DEFS.length * 200 + 600);
+    }
+
+    // --- Legend ---
+    var legendEl = document.getElementById('act4Legend');
+    if (legendEl) {
+        var items = [
+            { color: existC, label: 'Existing Clean', opacity: 1.0 },
+            { color: solarC, label: 'Solar (new)', opacity: 0.5 },
+            { color: windC, label: 'Wind (new)', opacity: 0.5 },
+            { color: firmC, label: 'Clean Firm (new)', opacity: 0.5 },
+            { color: battC, label: 'Battery', opacity: 0.5 },
+            { color: ldesC, label: 'LDES', opacity: 0.5 },
+            { color: fossilC, label: 'Fossil', opacity: 0.5 },
+            { color: null, label: 'Curtailment', hatch: true }
+        ];
+        items.forEach(function(item) {
+            var el = document.createElement('div');
+            el.className = 'act4-legend-item';
+            var swatch = document.createElement('span');
+            swatch.className = 'act4-legend-swatch';
+            if (item.hatch) {
+                swatch.style.background = 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(107,114,128,0.5) 2px, rgba(107,114,128,0.5) 3px)';
+                swatch.style.height = '10px';
+                swatch.style.width = '18px';
+                swatch.style.borderRadius = '2px';
+            } else {
+                swatch.style.background = alpha(item.color, item.opacity);
+            }
+            el.appendChild(swatch);
+            el.appendChild(document.createTextNode(item.label));
+            legendEl.appendChild(el);
+        });
+    }
+
+    // --- Scroll trigger ---
+    if (typeof IntersectionObserver !== 'undefined') {
+        var obs4 = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    animateAct4();
+                    obs4.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        obs4.observe(document.getElementById('act4'));
+    }
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 5 SCRIPT: The True Endpoint — 24-hour dispatch stack            -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    /* --- Config --- */
+    var PROFILE_KEY = '40_65_40_0_0_0.1_0.0_0.0'; /* ERCOT 99.1% match — balanced mix */
+    var ISO = 'ERCOT';
+    var HOURS = [];
+    for (var h = 0; h < 24; h++) HOURS.push(h + ':00');
+
+    /* Resource layers in stack order (bottom to top).
+       Each layer's step controls when it appears during the scroll animation.
+       Order: clean_firm (baseload floor) → wind (broad fill) → solar (midday) → battery (time-shift) */
+    var LAYERS = [
+        { key: 'clean_firm', label: 'Clean Firm',  color: RESOURCE_COLORS.cleanFirm, step: 1 },
+        { key: 'wind',       label: 'Wind',        color: RESOURCE_COLORS.wind,      step: 2 },
+        { key: 'solar',      label: 'Solar',       color: RESOURCE_COLORS.solar,     step: 3 },
+        { key: 'battery',    label: 'Battery',     color: RESOURCE_COLORS.battery,   step: 4 }
+    ];
+
+    /* Animation steps:
+       0 = demand line only
+       1 = + clean firm (always-on baseload)
+       2 = + wind (broad coverage, stronger at night)
+       3 = + solar (midday bell curve)
+       4 = + battery (time-shifts solar to evening/night)
+       5 = final — badge + stats
+       Click any step dot to replay from start up to that step.
+    */
+    var STEP_TEXT = [
+        'The challenge: meet demand every hour, cleanly.',
+        'Clean firm provides a constant baseload floor\u2026',
+        'Wind fills broadly\u2014strongest when solar can\u2019t reach\u2026',
+        'Solar captures the midday peak\u2026',
+        'Battery shifts daytime surplus into the night.',
+        'System integral solved \u2014 99% hourly matched.'
+    ];
+    /* Match percentages are computed dynamically from actual profile data — see computeStepMatch() */
+    var STEP_MATCH = [0, 0, 0, 0, 0, 0];
+
+    var chart6 = null;
+    var cumulData = null;
+    var currentStep = -1;
+    var profileData = null;
+    var animated = false;
+
+    /* --- Hex to alpha helper --- */
+    function hexAlpha(hex, a) {
+        var r = parseInt(hex.slice(1,3), 16);
+        var g = parseInt(hex.slice(3,5), 16);
+        var b = parseInt(hex.slice(5,7), 16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+
+    /* --- Build legend --- */
+    function buildLegend() {
+        var el = document.getElementById('act5Legend');
+        if (!el) return;
+        var items = [
+            { color: '#1A2744', label: 'Demand', dashed: true }
+        ];
+        LAYERS.forEach(function(l) {
+            items.push({ color: l.color, label: l.label, dashed: false });
+        });
+        items.forEach(function(it) {
+            var d = document.createElement('div');
+            d.className = 'act5-legend-item';
+            d.setAttribute('data-layer', it.label.toLowerCase().replace(/\s+/g, '_'));
+            var sw = document.createElement('span');
+            sw.className = 'act5-legend-swatch';
+            sw.style.background = it.color;
+            if (it.dashed) {
+                sw.style.background = 'transparent';
+                sw.style.borderTop = '2px dashed ' + it.color;
+                sw.style.height = '0';
+                sw.style.marginTop = '1px';
+            }
+            d.appendChild(sw);
+            d.appendChild(document.createTextNode(it.label));
+            el.appendChild(d);
+        });
+    }
+
+    /* --- Normalize data to fraction of peak demand --- */
+    function normalizeProfile(prof) {
+        var demand = prof.demand;
+        var maxD = Math.max.apply(null, demand);
+        var norm = { demand: [], layers: {} };
+        for (var h = 0; h < 24; h++) {
+            norm.demand.push(demand[h] / maxD);
+        }
+        LAYERS.forEach(function(l) {
+            var src = prof.matched[l.key] || [];
+            norm.layers[l.key] = [];
+            for (var h = 0; h < 24; h++) {
+                norm.layers[l.key].push((src[h] || 0) / maxD);
+            }
+        });
+        return norm;
+    }
+
+    /* --- Compute cumulative match % for each scroll step from actual data --- */
+    function computeStepMatch(norm) {
+        for (var step = 0; step <= 5; step++) {
+            if (step === 0) { STEP_MATCH[0] = 0; continue; }
+            if (step === 5) { STEP_MATCH[5] = STEP_MATCH[4]; continue; }
+            var totalMatched = 0;
+            var totalDemand = 0;
+            for (var h = 0; h < 24; h++) {
+                var supply = 0;
+                LAYERS.forEach(function(l) {
+                    if (l.step <= step) supply += norm.layers[l.key][h] || 0;
+                });
+                totalDemand += norm.demand[h];
+                totalMatched += Math.min(supply, norm.demand[h]);
+            }
+            STEP_MATCH[step] = totalDemand > 0 ? (totalMatched / totalDemand * 100) : 0;
+        }
+    }
+
+    /* --- Precompute cumulative stack data ---
+       Chart.js stacked line + fill is unreliable, so we precompute cumulative
+       upper bounds ourselves and use fill: '-1' (fill down to previous dataset).
+       Each dataset[i].data = sum of layers 0..i.  The visual band for layer i
+       is the area between dataset[i-1] and dataset[i]. */
+    function buildCumulativeData(norm) {
+        var cumul = {};
+        var running = new Array(24).fill(0);
+        LAYERS.forEach(function(l) {
+            var upper = [];
+            for (var h = 0; h < 24; h++) {
+                running[h] += (norm.layers[l.key][h] || 0);
+                upper.push(running[h]);
+            }
+            cumul[l.key] = upper.slice();
+        });
+        return cumul;
+    }
+
+    /* --- Create Chart --- */
+    function createChart(norm) {
+        var ctx = document.getElementById('act5Chart');
+        if (!ctx) return;
+
+        cumulData = buildCumulativeData(norm);
+        var datasets = [];
+
+        /* Stacked area datasets — precomputed cumulative, fill to previous */
+        LAYERS.forEach(function(l, idx) {
+            datasets.push({
+                label: l.label,
+                data: new Array(24).fill(0),
+                _cumulData: cumulData[l.key],
+                _rawData: norm.layers[l.key],
+                fill: idx === 0 ? 'origin' : '-1',
+                backgroundColor: hexAlpha(l.color, 0.55),
+                borderColor: l.color,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHitRadius: 8,
+                tension: 0.35
+            });
+        });
+
+        /* Demand line — always visible, not stacked */
+        datasets.push({
+            label: 'Demand',
+            data: norm.demand.slice(),
+            fill: false,
+            borderColor: '#1A2744',
+            borderWidth: 2.5,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            pointHitRadius: 8,
+            tension: 0.35
+        });
+
+        chart6 = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: HOURS,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { family: 'DM Sans', size: 11 },
+                            color: '#94A3B8',
+                            maxRotation: 0,
+                            callback: function(val, idx) {
+                                return idx % 3 === 0 ? HOURS[idx] : '';
+                            }
+                        }
+                    },
+                    y: {
+                        stacked: false,
+                        beginAtZero: true,
+                        max: 1.08,
+                        grid: {
+                            color: 'rgba(148,163,184,0.1)'
+                        },
+                        ticks: {
+                            font: { family: 'DM Sans', size: 11 },
+                            color: '#94A3B8',
+                            callback: function(val) {
+                                return Math.round(val * 100) + '%';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Share of Peak Demand',
+                            font: { family: 'Plus Jakarta Sans', size: 12, weight: 600 },
+                            color: '#64748B'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,39,68,0.92)',
+                        titleFont: { family: 'Plus Jakarta Sans', size: 13, weight: 700 },
+                        bodyFont: { family: 'DM Sans', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(tip) {
+                                if (tip.dataset.label === 'Demand') {
+                                    return 'Demand: ' + (tip.parsed.y * 100).toFixed(1) + '%';
+                                }
+                                /* Show the individual layer value, not cumulative */
+                                var raw = tip.dataset._rawData;
+                                if (!raw) return null;
+                                var val = raw[tip.dataIndex] || 0;
+                                if (val < 0.001) return null;
+                                return tip.dataset.label + ': ' + (val * 100).toFixed(1) + '%';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 800,
+                    easing: 'easeInOutCubic'
+                }
+            }
+        });
+    }
+
+    /* --- Reveal layers for a given step --- */
+    function revealStep(step) {
+        if (!chart6 || !profileData || step === currentStep) return;
+        currentStep = step;
+
+        /* For each layer dataset, show its cumulative data if revealed, else zero.
+           Each revealed dataset gets its precomputed cumulative upper bound.
+           Hidden datasets get the same data as the previous revealed one
+           (so fill: '-1' produces a zero-height band). */
+        var dsCount = LAYERS.length;
+        var lastRevealed = new Array(24).fill(0);
+        for (var i = 0; i < dsCount; i++) {
+            var ds = chart6.data.datasets[i];
+            if (LAYERS[i].step <= step) {
+                ds.data = ds._cumulData.slice();
+                lastRevealed = ds.data;
+            } else {
+                /* Collapsed to the top of the last revealed layer */
+                ds.data = lastRevealed.slice();
+            }
+        }
+        chart6.update('default');
+
+        /* Update match counter */
+        var pctEl = document.getElementById('act5MatchPct');
+        if (pctEl) {
+            var pct = STEP_MATCH[step] || 0;
+            animateCounter(pctEl, pct);
+            if (pct >= 99) {
+                pctEl.classList.add('matched-high');
+            } else {
+                pctEl.classList.remove('matched-high');
+            }
+        }
+
+        /* Update step text */
+        var textEl = document.getElementById('act5StepText');
+        if (textEl) {
+            textEl.style.opacity = '0';
+            setTimeout(function() {
+                textEl.textContent = STEP_TEXT[step] || '';
+                textEl.style.opacity = '1';
+            }, 200);
+        }
+
+        /* Update step dots */
+        var dots = document.querySelectorAll('#act5StepDots .act5-step-dot');
+        dots.forEach(function(dot, idx) {
+            dot.classList.remove('step-active', 'step-done');
+            if (idx < step) dot.classList.add('step-done');
+            else if (idx === step) dot.classList.add('step-active');
+        });
+
+        /* Update legend highlights */
+        var legendItems = document.querySelectorAll('#act5Legend .act5-legend-item');
+        legendItems.forEach(function(item) {
+            var isdemand = item.getAttribute('data-layer') === 'demand';
+            if (isdemand) { item.classList.add('legend-active'); return; }
+            /* Check if any layer matching this legend item is revealed */
+            var active = false;
+            LAYERS.forEach(function(l) {
+                if (l.label.toLowerCase().replace(/\s+/g, '_') === item.getAttribute('data-layer') && l.step <= step) {
+                    active = true;
+                }
+            });
+            if (active) item.classList.add('legend-active');
+            else item.classList.remove('legend-active');
+        });
+
+        /* Final step — show badge and stats */
+        if (step >= 5) {
+            showFinalState();
+        }
+    }
+
+    /* --- Animate counter --- */
+    function animateCounter(el, target) {
+        var start = parseFloat(el.textContent) || 0;
+        var diff = target - start;
+        var duration = 700;
+        var startTime = null;
+        function tick(ts) {
+            if (!startTime) startTime = ts;
+            var p = Math.min((ts - startTime) / duration, 1);
+            var e = 1 - Math.pow(1 - p, 3);
+            var cur = start + diff * e;
+            if (target >= 99) {
+                el.textContent = cur.toFixed(1) + '%';
+            } else {
+                el.textContent = Math.round(cur) + '%';
+            }
+            if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    /* --- Show final state (badge + stats) --- */
+    function showFinalState() {
+        var badge = document.getElementById('act5Badge');
+        if (badge) badge.classList.add('badge-visible');
+
+        var stats = document.getElementById('act5Stats');
+        if (stats) stats.classList.add('stats-visible');
+
+        /* Populate stats with computed values */
+        var finalMatch = STEP_MATCH[4] || 99;
+        var statMatch = document.querySelector('#act5StatMatch .act5-stat-value');
+        if (statMatch) {
+            statMatch.textContent = finalMatch.toFixed(1) + '%';
+            document.getElementById('act5StatMatch').classList.add('stat-success');
+        }
+        var badgeText = document.getElementById('act5BadgeText');
+        if (badgeText) {
+            badgeText.textContent = Math.round(finalMatch) + '% Hourly Matched \u2014 System Integral Solved';
+        }
+        var statRes = document.querySelector('#act5StatResources .act5-stat-value');
+        if (statRes) {
+            /* Count non-zero resources */
+            var count = 0;
+            LAYERS.forEach(function(l) {
+                var sum = 0;
+                profileData.layers[l.key].forEach(function(v) { sum += v; });
+                if (sum > 0.001) count++;
+            });
+            statRes.textContent = count;
+        }
+        var statGap = document.querySelector('#act5StatGap .act5-stat-value');
+        if (statGap) {
+            /* Max hourly gap as % */
+            var maxGap = 0;
+            profileData.demand.forEach(function(d, h) {
+                var totalClean = 0;
+                LAYERS.forEach(function(l) {
+                    totalClean += profileData.layers[l.key][h] || 0;
+                });
+                var gap = Math.max(0, d - totalClean);
+                if (gap > maxGap) maxGap = gap;
+            });
+            statGap.textContent = (maxGap * 100).toFixed(1) + '%';
+        }
+    }
+
+    /* --- Fetch data and initialize --- */
+    var dataReady = false;
+
+    function init() {
+        buildLegend();
+
+        fetch('compressed_day_profiles.json')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data[ISO] || !data[ISO].profiles || !data[ISO].profiles[PROFILE_KEY]) {
+                    console.warn('Act 5: profile not found for', ISO, PROFILE_KEY);
+                    return;
+                }
+                var raw = data[ISO].profiles[PROFILE_KEY];
+                profileData = normalizeProfile(raw);
+                computeStepMatch(profileData);
+                createChart(profileData);
+                setupDotClicks();
+                dataReady = true;
+                /* If already visible (e.g. scrolled there before data loaded), start now */
+                startIfVisible();
+            })
+            .catch(function(err) {
+                console.error('Act 5: failed to load dispatch profiles', err);
+            });
+
+        /* Start animation only when Act 5 scrolls into view */
+        if (typeof IntersectionObserver !== 'undefined') {
+            var act5El = document.getElementById('act5');
+            var obs5 = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting && dataReady && !animated) {
+                        animated = true;
+                        autoPlayAnimation();
+                    }
+                    /* Pause loop when scrolled away, resume when back */
+                    if (!entry.isIntersecting && autoPlayTimer) {
+                        clearInterval(autoPlayTimer);
+                        autoPlayTimer = null;
+                    }
+                    if (entry.isIntersecting && animated && !autoPlayTimer && !loopPaused) {
+                        autoPlayAnimation();
+                    }
+                });
+            }, { threshold: 0.15 });
+            if (act5El) obs5.observe(act5El);
+        }
+    }
+
+    function startIfVisible() {
+        var el = document.getElementById('act5');
+        if (!el) return;
+        var rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0 && !animated) {
+            animated = true;
+            autoPlayAnimation();
+        }
+    }
+
+    /* --- Auto-play animation: loops continuously while visible --- */
+    var autoPlayTimer = null;
+    var STEP_DELAY = 1200; /* ms between steps */
+    var LOOP_PAUSE = 2500; /* ms pause before restarting loop */
+    var loopPaused = false; /* true when user clicks a dot */
+
+    function autoPlayAnimation() {
+        if (loopPaused) return;
+        currentStep = -1;
+        revealStep(0);
+        var step = 0;
+        autoPlayTimer = setInterval(function() {
+            if (loopPaused) { clearInterval(autoPlayTimer); autoPlayTimer = null; return; }
+            step++;
+            if (step > 5) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                /* Restart loop after a pause */
+                setTimeout(function() {
+                    if (!loopPaused) {
+                        /* Reset badge and stats before restarting */
+                        var badge = document.getElementById('act5Badge');
+                        if (badge) badge.classList.remove('badge-visible');
+                        var stats = document.getElementById('act5Stats');
+                        if (stats) stats.classList.remove('stats-visible');
+                        autoPlayAnimation();
+                    }
+                }, LOOP_PAUSE);
+                return;
+            }
+            revealStep(step);
+        }, STEP_DELAY);
+    }
+
+    /* --- Clickable step dots to replay from any step --- */
+    function setupDotClicks() {
+        var dots = document.querySelectorAll('#act5StepDots .act5-step-dot');
+        dots.forEach(function(dot) {
+            dot.addEventListener('click', function() {
+                var targetStep = parseInt(dot.getAttribute('data-step'), 10);
+                if (isNaN(targetStep)) return;
+                /* Pause the auto-loop */
+                loopPaused = true;
+                if (autoPlayTimer) {
+                    clearInterval(autoPlayTimer);
+                    autoPlayTimer = null;
+                }
+                /* Reset badge/stats */
+                var badge = document.getElementById('act5Badge');
+                if (badge) badge.classList.remove('badge-visible');
+                var stats = document.getElementById('act5Stats');
+                if (stats) stats.classList.remove('stats-visible');
+                /* Reset to step 0 then play up to clicked step */
+                currentStep = -1;
+                revealStep(0);
+                if (targetStep === 0) return;
+                var s = 0;
+                var playTimer = setInterval(function() {
+                    s++;
+                    if (s > targetStep) {
+                        clearInterval(playTimer);
+                        return;
+                    }
+                    revealStep(s);
+                }, STEP_DELAY);
+            });
+        });
+
+        /* Click the chart area to restart the loop */
+        var chartWrap = document.querySelector('.act5-chart-wrap');
+        if (chartWrap) {
+            chartWrap.addEventListener('click', function(e) {
+                /* Don't interfere with dot clicks */
+                if (e.target.closest('.act5-step-dot')) return;
+                if (!loopPaused) return;
+                loopPaused = false;
+                var badge = document.getElementById('act5Badge');
+                if (badge) badge.classList.remove('badge-visible');
+                var stats = document.getElementById('act5Stats');
+                if (stats) stats.classList.remove('stats-visible');
+                autoPlayAnimation();
+            });
+        }
+    }
+
+    /* --- Boot --- */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+
+</body>
+</html>

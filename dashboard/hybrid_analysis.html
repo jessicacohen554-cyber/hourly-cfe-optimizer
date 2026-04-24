@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem - Solar/Wind Hybrid Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+html, body { overflow-x: hidden; max-width: 100vw; }
+.hybrid-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); margin: var(--space-lg) 0; }
+.hybrid-stat-card { background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; }
+.hybrid-stat-card .val { font-family: var(--font-data, 'DM Sans', sans-serif); font-size: 2rem; font-weight: 700; color: var(--text-primary); }
+.hybrid-stat-card .lbl { font-family: var(--font-body, 'DM Sans', sans-serif); font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
+.cost-toggle-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: var(--space-md) 0; }
+.cost-toggle-label { font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); min-width: 100px; }
+.cost-toggle-btn { padding: 6px 16px; border: 1px solid var(--border-light); border-radius: var(--radius-pill, 999px); background: white; cursor: pointer; font-family: var(--font-body, 'DM Sans', sans-serif); font-size: 0.8rem; transition: all 0.2s; min-height: 44px; }
+.cost-toggle-btn.active { background: var(--primary, #6366F1); color: white; border-color: var(--primary, #6366F1); }
+.dimension-selector { display: flex; gap: 8px; flex-wrap: wrap; margin: var(--space-sm) 0 var(--space-md); }
+.dim-btn { padding: 6px 14px; border: 1px solid var(--border-light); border-radius: var(--radius-pill, 999px); background: white; cursor: pointer; font-size: 0.8rem; font-family: var(--font-body, 'DM Sans', sans-serif); min-height: 44px; transition: all 0.2s; }
+.dim-btn.active { background: var(--navy, #1E293B); color: white; border-color: var(--navy, #1E293B); }
+.takeaway-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-lg); margin: var(--space-xl) 0; }
+.takeaway-card { background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: var(--space-xl); position: relative; overflow: hidden; }
+.takeaway-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--solar), var(--wind), var(--battery)); }
+.takeaway-card h4 { font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif); font-size: 1.05rem; color: var(--text-primary); margin-bottom: 8px; }
+.takeaway-card p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+.peak-table { width: 100%; border-collapse: collapse; margin: var(--space-lg) 0; font-size: 0.85rem; }
+.peak-table th, .peak-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-light); }
+.peak-table th { font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif); font-weight: 600; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.peak-table td { font-family: var(--font-data, 'DM Sans', sans-serif); }
+.peak-table tr:hover { background: var(--bg-page, #F8FAFC); }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
+<div id="backBar" data-back-href="about.html" data-back-label="Back to Home"></div>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <h1>The Hybrid Premium</h1>
+    <p class="subtitle">How battery-paired renewables reshape cost-optimal portfolios above 90% CFE</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ================================================================== -->
+<!-- ACT 1: THE 90% CLIFF                                               -->
+<!-- ================================================================== -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>The 90% Cliff</h2>
+    <p>Below 90% CFE, standalone renewables handle hourly matching cheaply. Above it, battery-paired hybrids become essential.</p>
+</div>
+<section class="content-section">
+    <div class="content-section-narrow scroll-reveal">
+        <p>Solar+battery and wind+battery hybrids are virtually absent from cost-optimal portfolios below 90% hourly CFE matching. Then, between 90% and 95%, they surge into 60% or more of all optimal mixes. This step-function behavior reveals a fundamental physics threshold: below 90%, cheap standalone renewables plus firm power handle the matching. Above it, the temporal mismatch between generation and demand becomes too costly to solve with overbuilding alone.</p>
+    </div>
+
+    <div class="glass-chart-panel scroll-reveal">
+        <div style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);padding:0 0 8px;">Hybrid Prevalence: % of Cost-Optimal Mixes Containing Any Hybrid Resource</div>
+        <div class="chart-container" style="min-height:380px;">
+            <canvas id="prevalenceChart"></canvas>
+        </div>
+        <div class="chart-legend" style="margin-top:12px;">
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-ercot);"></span>ERCOT</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-pjm);"></span>PJM</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-caiso);"></span>CAISO</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-neiso);"></span>NEISO</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-miso);"></span>MISO</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-spp);"></span>SPP</span>
+        </div>
+    </div>
+
+    <div class="hybrid-stat-grid scroll-reveal">
+        <div class="hybrid-stat-card">
+            <div class="val">80%</div>
+            <div class="lbl">of optimal mixes include hybrids at 99.9% CFE</div>
+        </div>
+        <div class="hybrid-stat-card">
+            <div class="val">&lt;1%</div>
+            <div class="lbl">hybrid prevalence below 85% CFE threshold</div>
+        </div>
+        <div class="hybrid-stat-card">
+            <div class="val">90%</div>
+            <div class="lbl">CFE threshold where hybrids become cost-optimal</div>
+        </div>
+        <div class="hybrid-stat-card">
+            <div class="val">15&ndash;35%</div>
+            <div class="lbl">of demand served by hybrids in high-CFE portfolios</div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================== -->
+<!-- ACT 2: REGIONAL FINGERPRINTS                                       -->
+<!-- ================================================================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>Regional Fingerprints</h2>
+    <p>Each ISO has a distinct hybrid signature driven by its renewable resource mix and load shape.</p>
+</div>
+<section class="content-section">
+    <!-- ISO Selector Tabs -->
+    <div class="iso-selector" id="hybridIsoSelector">
+        <button class="iso-tab active" data-iso="ERCOT" onclick="switchISO('ERCOT')"><span class="tab-dot" style="background:var(--iso-ercot);"></span>ERCOT</button>
+        <button class="iso-tab" data-iso="PJM" onclick="switchISO('PJM')"><span class="tab-dot" style="background:var(--iso-pjm);"></span>PJM</button>
+        <button class="iso-tab" data-iso="CAISO" onclick="switchISO('CAISO')"><span class="tab-dot" style="background:var(--iso-caiso);"></span>CAISO</button>
+        <button class="iso-tab" data-iso="NEISO" onclick="switchISO('NEISO')"><span class="tab-dot" style="background:var(--iso-neiso);"></span>NEISO</button>
+        <button class="iso-tab" data-iso="MISO" onclick="switchISO('MISO')"><span class="tab-dot" style="background:var(--iso-miso);"></span>MISO</button>
+        <button class="iso-tab" data-iso="SPP" onclick="switchISO('SPP')"><span class="tab-dot" style="background:var(--iso-spp);"></span>SPP</button>
+    </div>
+
+    <!-- Region Narrative -->
+    <div class="region-step-card visible scroll-reveal" style="opacity:1;transform:none;" id="regionNarrative">
+        <span class="region-tag" id="regionTag" style="background:rgba(34,197,94,0.1);color:#15803D;">ERCOT</span>
+        <h3 id="regionTitle">Loading...</h3>
+        <p id="regionText"></p>
+        <div class="hybrid-stat-grid" id="regionStats"></div>
+    </div>
+
+    <!-- Type Breakdown Chart -->
+    <div class="glass-chart-panel scroll-reveal" style="margin-top:var(--space-lg);">
+        <div style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);padding:0 0 8px;" id="typeBreakdownTitle">Hybrid Type Composition by Threshold</div>
+        <div class="chart-container" style="min-height:360px;">
+            <canvas id="typeBreakdownChart"></canvas>
+        </div>
+        <div class="chart-legend" style="margin-top:12px;">
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--solar-batt4);"></span>Solar+Batt 4hr</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--solar-batt8);"></span>Solar+Batt 8hr</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--wind-batt4);"></span>Wind+Batt 4hr</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--wind-batt8);"></span>Wind+Batt 8hr</span>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================== -->
+<!-- ACT 3: THE EFFICIENCY PLAY                                         -->
+<!-- ================================================================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>The Efficiency Play</h2>
+    <p>Hybrids don't just add capacity &mdash; they dramatically reduce total renewable overbuilding.</p>
+</div>
+<section class="content-section">
+    <div class="content-section-narrow scroll-reveal">
+        <p>When hybrids are part of the cost-optimal portfolio, total solar+wind capacity drops significantly compared to standalone-only mixes at the same CFE threshold. In MISO, hybrids reduce total renewable capacity needs by 37%. The optimizer chooses hybrids not because they add more clean energy, but because battery-paired generation matches demand more efficiently &mdash; eliminating the need to massively overbuild standalone resources.</p>
+    </div>
+
+    <!-- Substitution Chart -->
+    <div class="glass-chart-panel scroll-reveal">
+        <div style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);padding:0 0 8px;" id="substitutionTitle">Total Solar+Wind Capacity: With vs Without Hybrids</div>
+        <div class="chart-container" style="min-height:360px;">
+            <canvas id="substitutionChart"></canvas>
+        </div>
+        <div class="chart-legend" style="margin-top:12px;">
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#6366F1;"></span>With Hybrids (total S+W)</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#94A3B8;"></span>Without Hybrids (total S+W)</span>
+        </div>
+    </div>
+
+    <div class="insight-box insight-success scroll-reveal" style="margin-top:var(--space-lg);">
+        <strong>Key finding:</strong> Across all regions at &ge;92.5% CFE, hybrids reduce total renewable capacity needs by 12&ndash;37% compared to standalone-only portfolios. The savings are largest in wind-heavy grids (MISO, ERCOT) where temporal shifting unlocks the most value.
+    </div>
+</section>
+
+<!-- ================================================================== -->
+<!-- ACT 4: WHAT DRIVES HYBRID ADOPTION                                 -->
+<!-- ================================================================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>What Drives Hybrid Adoption</h2>
+    <p>Explore how battery, LDES, renewable, and firm generation cost assumptions reshape hybrid deployment.</p>
+</div>
+<section class="content-section">
+    <div class="content-section-narrow scroll-reveal">
+        <p>Not all cost toggles affect hybrid adoption equally. Battery costs are the dominant driver: when batteries are cheap, hybrids surge to 25&ndash;40% of demand; when expensive, they retreat to 5&ndash;15%. LDES and firm generation costs also matter &mdash; expensive firm power pushes the optimizer toward hybrids as an alternative dispatchable resource.</p>
+    </div>
+
+    <!-- Dimension Selector -->
+    <div class="dimension-selector scroll-reveal" id="dimSelector">
+        <button class="dim-btn active" data-dim="byBatteryCost" onclick="switchDimension('byBatteryCost')">Battery Cost</button>
+        <button class="dim-btn" data-dim="byLDESCost" onclick="switchDimension('byLDESCost')">LDES Cost</button>
+        <button class="dim-btn" data-dim="byRenewableCost" onclick="switchDimension('byRenewableCost')">Renewable Cost</button>
+        <button class="dim-btn" data-dim="byFirmCost" onclick="switchDimension('byFirmCost')">Firm Gen Cost</button>
+    </div>
+
+    <!-- Cost Sensitivity Chart -->
+    <div class="glass-chart-panel scroll-reveal">
+        <div style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);padding:0 0 8px;" id="costSensTitle">Hybrid Share by Battery Cost Level</div>
+        <div class="chart-container" style="min-height:380px;">
+            <canvas id="costSensitivityChart"></canvas>
+        </div>
+        <div class="chart-legend" style="margin-top:12px;">
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low Cost</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Medium Cost</span>
+            <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High Cost</span>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg);">
+        <strong>Implication for procurement:</strong> Battery cost trajectory is the single most important variable for hybrid economics. Organizations targeting &ge;90% CFE should monitor battery price curves closely &mdash; every $10/MWh reduction in battery LCOS shifts the optimal portfolio 5&ndash;10 percentage points toward hybrid resources.
+    </div>
+</section>
+
+<!-- ================================================================== -->
+<!-- ACT 5: KEY TAKEAWAYS                                               -->
+<!-- ================================================================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
+    <h2>Key Takeaways</h2>
+    <p>What the data tells us about the role of solar/wind hybrids in deep decarbonization.</p>
+</div>
+<section class="content-section">
+    <div class="takeaway-grid scroll-reveal">
+        <div class="takeaway-card">
+            <h4>Hybrids Are a &gt;90% Phenomenon</h4>
+            <p>Below 90% CFE, standalone renewables dominate. Above 90%, battery-paired resources appear in 60&ndash;80% of all cost-optimal portfolios across every region.</p>
+        </div>
+        <div class="takeaway-card">
+            <h4>8-Hour Batteries Dominate</h4>
+            <p>Longer-duration pairing (8hr) is preferred over 4hr in most regions. CAISO exclusively uses solar+batt8; only PJM shows roughly equal 4hr/8hr preference.</p>
+        </div>
+        <div class="takeaway-card">
+            <h4>20&ndash;40% Less Overbuilding</h4>
+            <p>Hybrids reduce total renewable capacity needs by shifting generation to match demand, not by adding more volume. Efficiency, not scale.</p>
+        </div>
+        <div class="takeaway-card">
+            <h4>Battery Cost Is the Key Driver</h4>
+            <p>Cheap batteries push hybrid share to 25&ndash;40% of demand. Expensive batteries cut it to 5&ndash;15%. No other cost toggle has as large an effect.</p>
+        </div>
+        <div class="takeaway-card">
+            <h4>Peak: 40&ndash;57% of Demand</h4>
+            <p>Under favorable cost scenarios, more than half the clean energy portfolio can be battery-paired. ERCOT reaches 57% hybrid at 97.5% CFE.</p>
+        </div>
+        <div class="takeaway-card">
+            <h4>Regional Signatures Differ</h4>
+            <p>CAISO: solar+batt8 only. ERCOT/MISO: wind+batt heavy. PJM: balanced across all types. NEISO: minimal hybrid role (hydro + wind flexibility suffice).</p>
+        </div>
+    </div>
+
+    <!-- Peak Hybrid Table -->
+    <div class="glass-chart-panel scroll-reveal" style="margin-top:var(--space-xl);">
+        <div style="font-family:var(--font-heading);font-size:1rem;font-weight:600;color:var(--text-primary);padding:0 0 12px;">Peak Hybrid Penetration by Region</div>
+        <table class="peak-table" id="peakTable">
+            <thead>
+                <tr><th>ISO</th><th>Peak Hybrid</th><th>At Threshold</th><th>S+B4</th><th>S+B8</th><th>W+B4</th><th>W+B8</th></tr>
+            </thead>
+            <tbody id="peakTableBody">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="content-section-narrow scroll-reveal" style="margin-top:var(--space-xl);">
+        <h3 style="font-family:var(--font-heading);color:var(--text-primary);">What This Means for Procurement</h3>
+        <p>For organizations targeting ambitious CFE goals (&ge;90%), hybrid solar+battery and wind+battery resources should be a core part of the procurement strategy. The data shows that ~15&ndash;35% of demand should come from hybrid resources at high CFE targets, with 8-hour duration preferred. This isn't optional &mdash; portfolios that exclude hybrids require 20&ndash;40% more total renewable capacity to achieve the same hourly matching score, making them significantly more expensive.</p>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; 2025 Snapshot Model"></footer>
+
+<!-- ================================================================== -->
+<!-- SCRIPTS                                                             -->
+<!-- ================================================================== -->
+<script src="js/hybrid-analysis-data.js"></script>
+<script>
+// ============================================================================
+// STATE
+// ============================================================================
+const ISOS = ['ERCOT', 'PJM', 'CAISO', 'NEISO', 'MISO', 'SPP'];
+const ISO_LABEL = { ERCOT:'ERCOT', PJM:'PJM', CAISO:'CAISO', NEISO:'NEISO', MISO:'MISO', SPP:'SPP' };
+let currentISO = 'ERCOT';
+let currentDimension = 'byBatteryCost';
+let prevalenceChart = null;
+let typeBreakdownChart = null;
+let substitutionChart = null;
+let costSensitivityChart = null;
+
+const DIM_LABELS = {
+    byBatteryCost: 'Battery Cost',
+    byLDESCost: 'LDES Cost',
+    byRenewableCost: 'Renewable Cost',
+    byFirmCost: 'Firm Gen Cost'
+};
+
+const REGION_TAG_COLORS = {
+    CAISO: { bg: 'rgba(245,158,11,0.1)', text: '#92400E' },
+    ERCOT: { bg: 'rgba(34,197,94,0.1)', text: '#15803D' },
+    PJM:   { bg: 'rgba(14,165,233,0.1)', text: '#0369A1' },
+    NEISO: { bg: 'rgba(156,39,176,0.1)', text: '#7B1FA2' },
+    MISO:  { bg: 'rgba(249,115,22,0.1)', text: '#9A3412' },
+    SPP:   { bg: 'rgba(20,184,166,0.1)', text: '#0F766E' }
+};
+
+const REGION_NARRATIVES = {
+    ERCOT: {
+        title: 'ERCOT: Wind+Battery Powerhouse',
+        text: 'ERCOT\'s strong wind resource makes wind+battery hybrids essential at high CFE targets. Both solar and wind hybrids appear, with 8hr duration strongly preferred. At 95% CFE under medium costs, 35% of demand comes from hybrids &mdash; split between solar+batt8 and wind+batt8.'
+    },
+    PJM: {
+        title: 'PJM: Balanced Hybrid Portfolio',
+        text: 'PJM is the only region where all four hybrid types play a significant role. Solar+batt4, solar+batt8, wind+batt4, and wind+batt8 all appear at comparable frequencies. At 90% CFE, 20% of demand already comes from hybrids &mdash; the earliest onset of any ISO.'
+    },
+    CAISO: {
+        title: 'CAISO: Solar+Batt8 Exclusive',
+        text: 'CAISO\'s duck curve makes solar+batt8 the only hybrid that matters here. The deep midday surplus and evening ramp require exactly 8 hours of shift. 4hr pairings and wind hybrids barely appear. Geothermal as a 5th dimension further reduces the need for diverse hybrid types.'
+    },
+    NEISO: {
+        title: 'NEISO: Minimal Hybrid Role',
+        text: 'New England\'s existing hydro flexibility and wind profile mean hybrids play the smallest role of any region. Only 9% of optimal mixes include hybrids across all thresholds. When they appear (mainly at 99%+), it\'s solar+batt8 &mdash; shifting summer solar into winter evening peaks.'
+    },
+    MISO: {
+        title: 'MISO: Hybrid-Heavy at High Targets',
+        text: 'MISO sees the largest hybrid shares at high CFE targets. At 95% CFE, 41% of demand comes from hybrids &mdash; the highest of any region. Solar+batt8 and wind+batt8 dominate, reflecting MISO\'s need to shift both solar and wind production to match Midwestern load patterns.'
+    },
+    SPP: {
+        title: 'SPP: Wind-Centric with Selective Hybrids',
+        text: 'SPP\'s exceptional wind resource means standalone wind dominates the portfolio. Hybrids appear only above 95% CFE, primarily as solar+batt8 and wind+batt8. The low overall hybrid share (15% when present) reflects how far standalone wind can carry matching in this region.'
+    }
+};
+
+// ============================================================================
+// CHART BUILDERS
+// ============================================================================
+
+function buildPrevalenceChart() {
+    if (prevalenceChart) { prevalenceChart.destroy(); prevalenceChart = null; }
+    var ctx = document.getElementById('prevalenceChart').getContext('2d');
+    var data = HYBRID_DATA.prevalence;
+    var datasets = [];
+    ISOS.forEach(function(iso) {
+        if (!data.byISO[iso]) return;
+        datasets.push({
+            label: iso,
+            data: data.byISO[iso].pct_with_hybrid,
+            borderColor: ISO_COLORS[iso],
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            tension: 0.3
+        });
+    });
+    prevalenceChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: data.thresholds.map(function(t) { return t + '%'; }), datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                annotation: {
+                    annotations: {
+                        inflection: {
+                            type: 'line',
+                            xMin: 13, xMax: 13,
+                            borderColor: 'rgba(239,68,68,0.5)',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            label: {
+                                display: true,
+                                content: '90% inflection',
+                                position: 'start',
+                                backgroundColor: 'rgba(239,68,68,0.8)',
+                                color: '#fff',
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(items) { return 'CFE Threshold: ' + items[0].label; },
+                        label: function(item) { return item.dataset.label + ': ' + item.formattedValue + '% of mixes'; }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'CFE Threshold', font: { weight: 600 } }, ticks: { maxRotation: 45 } },
+                y: { title: { display: true, text: '% of Optimal Mixes with Hybrids', font: { weight: 600 } }, min: 0, max: 100 }
+            }
+        }
+    });
+}
+
+function buildTypeBreakdownChart(iso) {
+    if (typeBreakdownChart) { typeBreakdownChart.destroy(); typeBreakdownChart = null; }
+    var data = HYBRID_DATA.typeBreakdown;
+    if (!data.byISO[iso]) return;
+    var ctx = document.getElementById('typeBreakdownChart').getContext('2d');
+    // Filter to thresholds >= 85
+    var startIdx = data.thresholds.findIndex(function(t) { return t >= 85; });
+    var labels = data.thresholds.slice(startIdx).map(function(t) { return t + '%'; });
+    var isoData = data.byISO[iso];
+
+    var colors = {
+        solar_batt4: RESOURCE_COLORS.solarBatt4,
+        solar_batt8: RESOURCE_COLORS.solarBatt8,
+        wind_batt4: RESOURCE_COLORS.windBatt4,
+        wind_batt8: RESOURCE_COLORS.windBatt8
+    };
+    var labelMap = {
+        solar_batt4: 'Solar+Batt 4hr',
+        solar_batt8: 'Solar+Batt 8hr',
+        wind_batt4: 'Wind+Batt 4hr',
+        wind_batt8: 'Wind+Batt 8hr'
+    };
+    var datasets = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'].map(function(key) {
+        return {
+            label: labelMap[key],
+            data: isoData[key].slice(startIdx),
+            backgroundColor: colors[key] + 'CC',
+            borderColor: colors[key],
+            borderWidth: 1
+        };
+    });
+
+    document.getElementById('typeBreakdownTitle').textContent = 'Hybrid Type Composition by Threshold \u2014 ' + iso;
+
+    typeBreakdownChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(item) { return item.dataset.label + ': ' + item.formattedValue + '% of demand'; }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, title: { display: true, text: 'CFE Threshold', font: { weight: 600 } } },
+                y: { stacked: true, title: { display: true, text: '% of Demand (avg across scenarios)', font: { weight: 600 } } }
+            }
+        }
+    });
+}
+
+function buildSubstitutionChart(iso) {
+    if (substitutionChart) { substitutionChart.destroy(); substitutionChart = null; }
+    var data = HYBRID_DATA.substitution;
+    if (!data.byISO[iso]) return;
+    var ctx = document.getElementById('substitutionChart').getContext('2d');
+    // Filter to 90+
+    var startIdx = data.thresholds.findIndex(function(t) { return t >= 90; });
+    var labels = data.thresholds.slice(startIdx).map(function(t) { return t + '%'; });
+    var withH = data.byISO[iso].with_hybrid.total_sw.slice(startIdx);
+    var withoutH = data.byISO[iso].without_hybrid.total_sw.slice(startIdx);
+
+    document.getElementById('substitutionTitle').textContent = 'Total Solar+Wind Capacity: With vs Without Hybrids \u2014 ' + iso;
+
+    substitutionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'With Hybrids',
+                    data: withH,
+                    backgroundColor: '#6366F1CC',
+                    borderColor: '#6366F1',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Without Hybrids',
+                    data: withoutH,
+                    backgroundColor: '#94A3B8CC',
+                    borderColor: '#94A3B8',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(item) { return item.dataset.label + ': ' + (item.raw !== null ? item.formattedValue : 'N/A') + '% of demand'; }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'CFE Threshold', font: { weight: 600 } } },
+                y: { title: { display: true, text: 'Total Solar+Wind (% of demand)', font: { weight: 600 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+function buildCostSensitivityChart(iso, dimension) {
+    if (costSensitivityChart) { costSensitivityChart.destroy(); costSensitivityChart = null; }
+    var data = HYBRID_DATA.costSensitivity;
+    if (!data.byISO[iso] || !data.byISO[iso][dimension]) return;
+    var ctx = document.getElementById('costSensitivityChart').getContext('2d');
+    var dimData = data.byISO[iso][dimension];
+    var labels = data.thresholds.map(function(t) { return t + '%'; });
+
+    var dimLabel = DIM_LABELS[dimension] || dimension;
+    document.getElementById('costSensTitle').textContent = 'Hybrid Share by ' + dimLabel + ' Level \u2014 ' + iso;
+
+    costSensitivityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Low ' + dimLabel,
+                    data: dimData.L,
+                    borderColor: '#22C55E',
+                    backgroundColor: 'rgba(34,197,94,0.1)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: 'Medium ' + dimLabel,
+                    data: dimData.M,
+                    borderColor: '#0EA5E9',
+                    backgroundColor: 'rgba(14,165,233,0.1)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: 'High ' + dimLabel,
+                    data: dimData.H,
+                    borderColor: '#EF4444',
+                    backgroundColor: 'rgba(239,68,68,0.1)',
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(item) { return item.dataset.label + ': ' + item.formattedValue + '% of demand'; }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'CFE Threshold', font: { weight: 600 } } },
+                y: { title: { display: true, text: 'Average Hybrid Share (% of demand)', font: { weight: 600 } }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// NARRATIVE & TABLE
+// ============================================================================
+
+function updateRegionNarrative(iso) {
+    var narr = REGION_NARRATIVES[iso];
+    var tag = document.getElementById('regionTag');
+    var tagColors = REGION_TAG_COLORS[iso] || REGION_TAG_COLORS.ERCOT;
+    tag.style.background = tagColors.bg;
+    tag.style.color = tagColors.text;
+    tag.textContent = iso;
+
+    document.getElementById('regionTitle').textContent = narr ? narr.title : iso;
+    document.getElementById('regionText').innerHTML = narr ? narr.text : '';
+
+    // Duration preference stats
+    var dur = HYBRID_DATA.durationPreference[iso];
+    var statsEl = document.getElementById('regionStats');
+    if (dur) {
+        statsEl.innerHTML =
+            '<div class="hybrid-stat-card"><div class="val">' + dur.solar_8hr_freq + '%</div><div class="lbl">Solar+8hr frequency (&ge;90%)</div></div>' +
+            '<div class="hybrid-stat-card"><div class="val">' + dur.solar_4hr_freq + '%</div><div class="lbl">Solar+4hr frequency (&ge;90%)</div></div>' +
+            '<div class="hybrid-stat-card"><div class="val">' + dur.wind_8hr_freq + '%</div><div class="lbl">Wind+8hr frequency (&ge;90%)</div></div>' +
+            '<div class="hybrid-stat-card"><div class="val">' + dur.wind_4hr_freq + '%</div><div class="lbl">Wind+4hr frequency (&ge;90%)</div></div>';
+    } else {
+        statsEl.innerHTML = '';
+    }
+}
+
+function populatePeakTable() {
+    var tbody = document.getElementById('peakTableBody');
+    var html = '';
+    ISOS.forEach(function(iso) {
+        var p = HYBRID_DATA.peakHybrid[iso];
+        if (!p) return;
+        html += '<tr>' +
+            '<td style="font-weight:600;">' + iso + '</td>' +
+            '<td>' + p.max_pct + '%</td>' +
+            '<td>' + p.threshold + '%</td>' +
+            '<td>' + p.solar_batt4 + '%</td>' +
+            '<td>' + p.solar_batt8 + '%</td>' +
+            '<td>' + p.wind_batt4 + '%</td>' +
+            '<td>' + p.wind_batt8 + '%</td>' +
+            '</tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+// ============================================================================
+// INTERACTION
+// ============================================================================
+
+function switchISO(iso) {
+    currentISO = iso;
+    // Update all ISO tabs on page
+    document.querySelectorAll('.iso-tab').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-iso') === iso);
+    });
+    buildTypeBreakdownChart(iso);
+    buildSubstitutionChart(iso);
+    buildCostSensitivityChart(iso, currentDimension);
+    updateRegionNarrative(iso);
+}
+
+function switchDimension(dim) {
+    currentDimension = dim;
+    document.querySelectorAll('.dim-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-dim') === dim);
+    });
+    buildCostSensitivityChart(currentISO, dim);
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    buildPrevalenceChart();
+    switchISO('ERCOT');
+    populatePeakTable();
+});
+</script>
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>
