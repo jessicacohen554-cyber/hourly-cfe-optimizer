@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-“””
+"""
 regenerate_peakclean.py — Replace cache-based peakclean with inline vectorized dispatch.
 
 Iterates over every step_2_1_EF_{ISO}_{threshold}[_part*].parquet in data/step2.1-ef/,
@@ -27,7 +27,7 @@ python scripts/step2_3a_regenerate_peakclean.py –iso ERCOT
 python scripts/step2_3a_regenerate_peakclean.py –iso ERCOT –threshold 95
 python scripts/step2_3a_regenerate_peakclean.py –validate
 python scripts/step2_3a_regenerate_peakclean.py –workers 4
-“””
+"""
 from **future** import annotations
 
 import argparse
@@ -79,8 +79,8 @@ from dispatch_utils import _dispatch_battery, _dispatch_ldes
 HAS_DISPATCH_UTILS = True
 except ImportError:
 HAS_DISPATCH_UTILS = False
-print(”[peakclean] WARNING: dispatch_utils not importable — storage mixes “
-“will use no-storage fallback”, flush=True)
+print("[peakclean] WARNING: dispatch_utils not importable — storage mixes "
+"will use no-storage fallback", flush=True)
 
 # —————————————————————————
 
@@ -92,21 +92,21 @@ H = 8760
 WORST_HOUR_PCTILE = 99.97
 SCORE_FLOOR_PCT = 10.0
 NUMPY_CHUNK_SIZE = 40_000    # only used in numpy fallback path
-STAGE1_VERSION = “4”
+STAGE1_VERSION = "4"
 
-EF_DIR           = PROJECT_ROOT / “data” / “step2.1-ef”
-GEN_PROF_PATH    = PROJECT_ROOT / “data” / “eia-930” / “eia_generation_profiles.parquet”
-DEMAND_PROF_PATH = PROJECT_ROOT / “data” / “eia-930” / “eia_demand_profiles.parquet”
-HYBRID_DIR       = PROJECT_ROOT / “data” / “hybrid_profiles”
+EF_DIR           = PROJECT_ROOT / "data" / "step2.1-ef"
+GEN_PROF_PATH    = PROJECT_ROOT / "data" / "eia-930" / "eia_generation_profiles.parquet"
+DEMAND_PROF_PATH = PROJECT_ROOT / "data" / "eia-930" / "eia_demand_profiles.parquet"
+HYBRID_DIR       = PROJECT_ROOT / "data" / "hybrid_profiles"
 
 # Canonical resource order — columns of the profile matrix.
 
-# Must match step2_3’s _build_clean_profile_table key order.
+# Must match step2_3's _build_clean_profile_table key order.
 
 RESOURCE_ORDER = [
-“clean_firm”, “solar”, “wind”, “hydro”, “offshore_wind”,
-“ccs_ccgt”, “geothermal”,
-“solar_batt4”, “solar_batt8”, “wind_batt4”, “wind_batt8”,
+"clean_firm", "solar", "wind", "hydro", "offshore_wind",
+"ccs_ccgt", "geothermal",
+"solar_batt4", "solar_batt8", "wind_batt4", "wind_batt8",
 ]
 N_RESOURCES = len(RESOURCE_ORDER)
 
@@ -121,30 +121,30 @@ _TOP_K = int(np.ceil(H * (1.0 - WORST_HOUR_PCTILE / 100.0)))  # 3
 # —————————————————————————
 
 def _load_gen_profiles(iso: str) -> dict[str, np.ndarray]:
-“”“Return {fuel: (8760,) float64} for the latest year of the given ISO.”””
+"""Return {fuel: (8760,) float64} for the latest year of the given ISO."""
 if not GEN_PROF_PATH.exists():
 return {}
 t = pq.read_table(GEN_PROF_PATH)
-t = t.filter(pac.equal(t[“iso”], iso))
+t = t.filter(pac.equal(t["iso"], iso))
 if t.num_rows == 0:
 return {}
-max_yr = pac.max(t[“year”]).as_py()
-t = t.filter(pac.equal(t[“year”], max_yr))
+max_yr = pac.max(t["year"]).as_py()
+t = t.filter(pac.equal(t["year"], max_yr))
 out: dict[str, np.ndarray] = {}
-fuels = set(t.column(“fuel”).to_pylist())
+fuels = set(t.column("fuel").to_pylist())
 for fuel in fuels:
-tf = t.filter(pac.equal(t[“fuel”], fuel))
-hrs = tf.column(“hour”).to_numpy().astype(np.int64)
-vals = tf.column(“value”).to_numpy().astype(np.float64)
+tf = t.filter(pac.equal(t["fuel"], fuel))
+hrs = tf.column("hour").to_numpy().astype(np.int64)
+vals = tf.column("value").to_numpy().astype(np.float64)
 prof = np.zeros(H, dtype=np.float64)
 prof[hrs] = vals
 out[str(fuel)] = prof
 return out
 
 def _load_hybrid_profiles(iso: str) -> dict[str, np.ndarray]:
-“”“Return {hybrid_key: (8760,)} from the .npz file, or zeros if missing.”””
-keys = (“solar_batt4”, “solar_batt8”, “wind_batt4”, “wind_batt8”)
-npz_path = HYBRID_DIR / f”{iso}_hybrid_profiles.npz”
+"""Return {hybrid_key: (8760,)} from the .npz file, or zeros if missing."""
+keys = ("solar_batt4", "solar_batt8", "wind_batt4", "wind_batt8")
+npz_path = HYBRID_DIR / f"{iso}_hybrid_profiles.npz"
 if npz_path.exists():
 z = np.load(npz_path)
 return {k: z[k].astype(np.float64) if k in z
@@ -152,7 +152,7 @@ else np.zeros(H, dtype=np.float64) for k in keys}
 return {k: np.zeros(H, dtype=np.float64) for k in keys}
 
 def _load_demand_norm(iso: str) -> np.ndarray:
-“”“Normalized demand profile (sums to 1.0), (8760,) float64.
+"""Normalized demand profile (sums to 1.0), (8760,) float64.
 
 ```
 Falls back to flat (1/H) if the parquet doesn't exist or has no data
@@ -180,7 +180,7 @@ return norm
 ```
 
 def build_profile_matrix(iso: str) -> np.ndarray:
-“””(N_resources, 8760) supply-profile matrix in RESOURCE_ORDER.
+"""(N_resources, 8760) supply-profile matrix in RESOURCE_ORDER.
 
 ```
 Default profiles match step2_3's _build_clean_profile_table exactly:
@@ -232,11 +232,11 @@ return np.stack(rows, axis=0)  # (11, 8760)
 # —————————————————————————
 
 *EF_PAT = re.compile(
-r”^step_2_1_EF*([A-Z]+)_([0-9]+(?:.[0-9]+)?)(?:_part(\d+))?.parquet$”
+r"^step_2_1_EF*([A-Z]+)_([0-9]+(?:.[0-9]+)?)(?:_part(\d+))?.parquet$"
 )
 
 def discover_ef_files() -> dict[str, dict[str, list[Path]]]:
-“”“Return {iso: {threshold_tag: [sorted part paths]}}.
+"""Return {iso: {threshold_tag: [sorted part paths]}}.
 
 ```
 Skips files containing 'peakclean' or 'interp' in the name.
@@ -262,7 +262,7 @@ return result
 ```
 
 def *peakclean_path(iso: str, threshold_tag: str) -> Path:
-return EF_DIR / f”step_2_1_EF*{iso}_{threshold_tag}_peakclean.parquet”
+return EF_DIR / f"step_2_1_EF*{iso}_{threshold_tag}_peakclean.parquet"
 
 # —————————————————————————
 
@@ -286,7 +286,7 @@ if HAS_NUMBA:
 def _inline_storage_stage(surplus, gap, total_dispatch,
 capacity, power_rating, efficiency,
 window_hours):
-“”“Run one windowed charge/discharge stage.
+"""Run one windowed charge/discharge stage.
 
 ```
     Modifies surplus and gap in-place (so downstream stages see
@@ -450,7 +450,7 @@ W: np.ndarray,         # (n, 11) float32
 P32: np.ndarray,       # (11, 8760) float32
 dm32: np.ndarray,      # (8760,) float32
 ) -> np.ndarray:
-“”“Fallback: chunked numpy path when numba is unavailable.”””
+"""Fallback: chunked numpy path when numba is unavailable."""
 n = W.shape[0]
 resid = np.empty(n, dtype=np.float32)
 for s in range(0, n, NUMPY_CHUNK_SIZE):
@@ -464,7 +464,7 @@ del gap, top_k
 return resid
 
 def _compute_resid_single_storage(
-w: np.ndarray,               # (11,) float32  — one mix’s weights
+w: np.ndarray,               # (11,) float32  — one mix's weights
 P: np.ndarray,               # (11, 8760) float64
 demand_margin: np.ndarray,   # (8760,) float64  — demand_norm * (1 + RA)
 demand_norm: np.ndarray,     # (8760,) float64  — normalized demand
@@ -472,7 +472,7 @@ batt4_pct: float,
 batt8_pct: float,
 ldes_pct: float,
 ) -> float:
-“”“Compute residual for a single mix with standalone storage dispatch.
+"""Compute residual for a single mix with standalone storage dispatch.
 
 ```
 Storage dispatch runs against demand_norm (matching reconstruct_hourly_dispatch).
@@ -525,7 +525,7 @@ demand_norm: np.ndarray,   # (8760,) float64  — for numpy fallback only
 demand_margin: np.ndarray, # (8760,) float64  — for numpy fallback only
 peak_mw: float,
 ) -> dict:
-“”“Process one EF file (or multi-part group). Returns summary dict.”””
+"""Process one EF file (or multi-part group). Returns summary dict."""
 threshold_val = float(threshold_tag)
 
 ```
@@ -662,7 +662,7 @@ return {
 # —————————————————————————
 
 def validate_all(summaries: list[dict]) -> bool:
-“”“Run basic sanity checks and print results.”””
+"""Run basic sanity checks and print results."""
 ok = True
 
 ```
@@ -743,12 +743,12 @@ demand_norm: np.ndarray,
 demand_margin: np.ndarray,
 peak_mw: float,
 ) -> dict:
-“”“Wrapper for ThreadPoolExecutor — processes one threshold and returns
-a summary dict augmented with timing info.”””
+"""Wrapper for ThreadPoolExecutor — processes one threshold and returns
+a summary dict augmented with timing info."""
 t1 = time.time()
 src_rows = sum(pq.ParquetFile(p).metadata.num_rows for p in paths)
-print(f”[peakclean] {iso} t={ttag}: {src_rows:,} mixes “
-f”({len(paths)} part{‘s’ if len(paths) > 1 else ‘’})”,
+print(f"[peakclean] {iso} t={ttag}: {src_rows:,} mixes "
+f"({len(paths)} part{'s' if len(paths) > 1 else ''})",
 flush=True)
 
 ```
@@ -768,16 +768,16 @@ return s
 
 def main() -> int:
 ap = argparse.ArgumentParser(
-description=“Regenerate peakclean sidecars with inline dispatch”)
-ap.add_argument(”–iso”, type=str, default=None,
-help=“Process single ISO (e.g. ERCOT)”)
-ap.add_argument(”–threshold”, type=str, default=None,
-help=“Process single threshold (e.g. 95 or 87.5)”)
-ap.add_argument(”–validate”, action=“store_true”,
-help=“Run validation after generation”)
-ap.add_argument(”–workers”, type=int, default=None,
-help=“Max parallel threshold workers per ISO “
-“(default: min(n_thresholds, os.cpu_count()))”)
+description="Regenerate peakclean sidecars with inline dispatch")
+ap.add_argument("–iso", type=str, default=None,
+help="Process single ISO (e.g. ERCOT)")
+ap.add_argument("–threshold", type=str, default=None,
+help="Process single threshold (e.g. 95 or 87.5)")
+ap.add_argument("–validate", action="store_true",
+help="Run validation after generation")
+ap.add_argument("–workers", type=int, default=None,
+help="Max parallel threshold workers per ISO "
+"(default: min(n_thresholds, os.cpu_count()))")
 args = ap.parse_args()
 
 ```
@@ -888,5 +888,5 @@ if args.validate:
 return 0
 ```
 
-if **name** == “**main**”:
+if **name** == "**main**":
 raise SystemExit(main())
