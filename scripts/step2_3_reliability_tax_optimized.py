@@ -420,28 +420,25 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
 
 def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
     sp = _peakclean_path(iso, threshold)
-    tgt = _cache_version(iso)
     if sp.exists():
         meta = pq.read_schema(sp).metadata or {}
         sv = meta.get(b'stage1_version', b'').decode()
-        cv = meta.get(b'source_cache_version', b'').decode()
-        # v4 sidecars (from regenerate_peakclean) use inline dispatch and
-        # are independent of the dispatch cache — accept unconditionally.
-        # v3 sidecars depend on the dispatch cache, so also check cache_version.
-        if sv == _STAGE1_VERSION:
+        # v4+ sidecars (from regenerate_peakclean) use inline dispatch —
+        # accept unconditionally regardless of cache_version.
+        if sv >= _STAGE1_VERSION:
             return pq.read_table(sp)
-        if sv == '3' and cv == tgt:
-            print(f"[stage1] {iso} t={threshold}: using v3 sidecar (run "
-                  f"regenerate_peakclean for inline-dispatch accuracy)", flush=True)
-            return pq.read_table(sp)
-    print(f"[WARN] {iso} t={threshold}: no valid peakclean sidecar found — "
-          f"rebuilding with L1-NN fallback. Run step2_3a_regenerate_peakclean.py "
-          f"for accurate residuals.", flush=True)
-    tbl = precompute_clean_peak_hour_mw(iso, threshold)
-    tmp = sp.with_suffix('.parquet.tmp')
-    pq.write_table(tbl, tmp)
-    os.replace(tmp, sp)
-    return tbl
+        # v3 sidecars have frozen-peak Bug A — reject them.
+        raise RuntimeError(
+            f"[FATAL] {iso} t={threshold}: peakclean sidecar is v{sv} "
+            f"(need v{_STAGE1_VERSION}+). Run:\n"
+            f"  python scripts/step2_3a_regenerate_peakclean.py --iso {iso}\n"
+            f"before running the optimizer. The v3 L1-NN sidecars have a "
+            f"frozen clean_peak_hour_mw bug that produces monotonic gas."
+        )
+    raise FileNotFoundError(
+        f"[FATAL] {iso} t={threshold}: no peakclean sidecar found at {sp}. Run:\n"
+        f"  python scripts/step2_3a_regenerate_peakclean.py --iso {iso}"
+    )
 
 
 # ─── Pool loader ─────────────────────────────────────────────────────────────
@@ -519,12 +516,12 @@ def _load_or_build_interp_peakclean(iso: str, interp_path: Path) -> pa.Table:
     if pc_path.exists():
         meta = pq.read_schema(pc_path).metadata or {}
         sv = meta.get(b'stage1_version', b'').decode()
-        cv = meta.get(b'source_cache_version', b'').decode()
-        # v4 sidecars: accept unconditionally (inline dispatch, cache-independent)
-        if sv == _STAGE1_VERSION:
+        # v4+ sidecars: accept unconditionally (inline dispatch)
+        if sv >= _STAGE1_VERSION:
             return pq.read_table(pc_path)
-        if sv == '3' and cv == tgt_cv:
-            return pq.read_table(pc_path)
+        # v3 sidecars: reject (frozen-peak bug)
+        print(f"[WARN] interp sidecar {pc_path.name} is v{sv} — rebuilding. "
+              f"Run regenerate_peakclean for accurate residuals.", flush=True)
 
     print(f"[stage1] building peakclean for interp {interp_path.name}", flush=True)
     ef = pq.read_table(interp_path)
