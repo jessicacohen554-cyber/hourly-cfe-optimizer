@@ -12,6 +12,8 @@ name: "Step 2.3: Pathway Sweep (+ 2.3a Peakclean)"
 # phase=full          : regenerates peakclean sidecars then runs the 32-combo sweep
 # phase=peakclean_only: only runs step2_3a_regenerate_peakclean.py (no sweep)
 # phase=sweep_only    : only runs the 32-combo sweep (assumes peakclean exists)
+# runner_size=large   : uses 16-core/64GB runner (~8x faster numba parallelism)
+# runner_size=standard: uses default 2-core/7GB runner
 #
 # Prerequisite: Step 2.1 EF parquets, Step 2.2 cost endpoints (for foresight
 # ceilings), Step 3A dispatch cache.
@@ -45,6 +47,14 @@ on:
           - full
           - peakclean_only
           - sweep_only
+      runner_size:
+        description: 'Runner size (standard = 2-core/7GB, large = 16-core/64GB — requires GitHub Team plan)'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - large
       branch:
         description: 'Branch to checkout'
         required: false
@@ -71,8 +81,8 @@ jobs:
 
   sweep:
     needs: prepare
-    runs-on: ubuntu-latest
-    timeout-minutes: 240
+    runs-on: ${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}
+    timeout-minutes: ${{ inputs.runner_size == 'large' && 90 || 240 }}
     permissions:
       contents: write
     strategy:
@@ -112,7 +122,7 @@ jobs:
         if: inputs.phase == 'full' || inputs.phase == 'peakclean_only'
         env:
           ISO: ${{ matrix.iso }}
-        timeout-minutes: 90
+        timeout-minutes: ${{ inputs.runner_size == 'large' && 20 || 90 }}
         run: |
           python scripts/step2_3a_regenerate_peakclean.py --iso "$ISO" --validate
 
@@ -125,6 +135,7 @@ jobs:
           ISO: ${{ matrix.iso }}
           # Restrict module-scope loads (dispatch cache, gen profiles, hybrid
           # profiles) to this one ISO — full 7-ISO load OOMs ubuntu-latest's 7GB.
+          # Still used on larger runners to reduce startup time.
           ISO_FILTER: ${{ matrix.iso }}
         run: |
           python - <<'PY'
@@ -253,6 +264,7 @@ jobs:
             else
               echo "- Branch: (not pushed — job failed before commit step)"
             fi
+            echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
             echo "- Outputs:"
             echo "  - \`data/step2.3-pathway/${ISO}/pathway*_ep*.json\`"
             echo "  - \`data/step2.3-pathway/MANIFEST_${ISO}.parquet\`"
