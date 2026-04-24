@@ -1,0 +1,238 @@
+name: "Step 1.1: Build Scored Mix Database (Hybrid)"
+
+# Generates co-located solar+batt / wind+batt family compositions (1a)
+# and scores them against 8760 demand profiles (1b).
+# Uses tightened per-ISO windows (CF@10%, family splits@10%, hybrid cap 40%).
+# Output: data/step1-pfs/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
+#
+# Grid sizes (approx post-filter):
+#   SPP: 3.3M | MISO: 6.1M | PJM: 7.6M | ERCOT: 9.2M
+#   NYISO: 25.5M | NEISO: 28.5M | CAISO: 87.0M
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to build'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      force:
+        description: 'Force regenerate even if parquet exists'
+        required: false
+        default: false
+        type: boolean
+      script:
+        description: 'Which stage to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - generate-mixes
+          - score-mixes
+      chunk_size:
+        description: 'Scoring chunk size (default 20000)'
+        required: false
+        default: '20000'
+        type: string
+      dry_run:
+        description: 'Dry run (print grid sizes, no output files)'
+        required: false
+        default: false
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  build-scored-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LABEL="${{ inputs.iso }}"
+        SCRIPT_LABEL="${{ inputs.script }}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1-1-scored-db-${SCRIPT_LABEL}-${ISO_LABEL}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install numpy numba pyarrow pandas
+
+    - name: Create output directories
+      run: mkdir -p data/step1-pfs
+
+    - name: "Stage 1a: Generate mix combinations"
+      if: inputs.script == 'ALL' || inputs.script == 'generate-mixes'
+      run: |
+        ISO="${{ inputs.iso }}"
+        FLAGS="--hybrid"
+        if [ "${{ inputs.force }}" = "true" ]; then FLAGS="$FLAGS --force"; fi
+        if [ "${{ inputs.dry_run }}" = "true" ]; then FLAGS="$FLAGS --dry-run"; fi
+
+        if [ "$ISO" = "ALL" ]; then
+          for iso in SPP MISO ERCOT PJM NYISO NEISO CAISO; do
+            echo ""
+            echo "=== Generating mixes for $iso ==="
+            python scripts/step1_1a_generate_mixes.py --iso "$iso" $FLAGS
+          done
+        else
+          python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FLAGS
+        fi
+
+    - name: "Stage 1b: Score mix combinations"
+      if: inputs.dry_run != true && (inputs.script == 'ALL' || inputs.script == 'score-mixes')
+      run: |
+        ISO="${{ inputs.iso }}"
+        CHUNK="${{ inputs.chunk_size || '50000' }}"
+        FLAGS="--hybrid --max-file-mb 45"
+        if [ "${{ inputs.force }}" = "true" ]; then FLAGS="$FLAGS --force"; fi
+
+        if [ "$ISO" = "ALL" ]; then
+          for iso in SPP MISO ERCOT PJM NYISO NEISO CAISO; do
+            echo ""
+            echo "=== Scoring mixes for $iso ==="
+            python scripts/step1_1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FLAGS
+          done
+        else
+          python scripts/step1_1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FLAGS
+        fi
+
+    - name: Report output sizes
+      if: inputs.dry_run != true
+      run: |
+        echo "=== Mix parquet files ==="
+        ls -lh data/step1-pfs/*_mixes.parquet 2>/dev/null || echo "No mix files"
+        echo ""
+        echo "=== Scored cache files (single) ==="
+        ls -lh data/step1-pfs/*_coarse_cache.parquet 2>/dev/null || echo "No single cache files"
+        echo ""
+        echo "=== Scored cache files (parts) ==="
+        ls -lh data/step1-pfs/*_coarse_cache_part*.parquet 2>/dev/null || echo "No part files"
+
+    - name: Commit and push results (per-file ≤45 MB)
+      if: inputs.dry_run != true && always()
+      run: |
+        ISO_LABEL="${{ inputs.iso }}"
+        if [ "$ISO_LABEL" = "ALL" ]; then
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+        else
+          ISOS="$ISO_LABEL"
+        fi
+
+        # Helper: push with retry (exponential backoff)
+        push_with_retry() {
+          for attempt in 1 2 3 4; do
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+            echo "  Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
+          done
+          echo "::error::Push failed after 4 attempts"
+          return 1
+        }
+
+        for iso in $ISOS; do
+          echo ""
+          echo "--- Committing data for $iso ---"
+
+          # Collect mixes file + cache files (single or multi-part)
+          MIXES=$(ls data/step1-pfs/${iso}_mixes.parquet 2>/dev/null || true)
+          CACHE_SINGLE=$(ls data/step1-pfs/${iso}_coarse_cache.parquet 2>/dev/null || true)
+          CACHE_PARTS=$(ls data/step1-pfs/${iso}_coarse_cache_part*.parquet 2>/dev/null || true)
+
+          # Commit mixes file first (always small)
+          if [ -n "$MIXES" ]; then
+            git add -f $MIXES
+            if ! git diff --cached --quiet; then
+              BATCH_MB=$(du -cm $MIXES | tail -1 | cut -f1)
+              echo "  Staging mixes: ~${BATCH_MB} MB"
+              git commit -m "Step 1.1: ${iso} mixes — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "  Pushing ${iso} mixes..."
+              push_with_retry
+            fi
+          fi
+
+          # Commit cache: single file or part-by-part
+          # Validate file sizes first — skip any corrupted stubs (<100 bytes).
+          # pq.ParquetWriter writes a 4-byte PAR1 header on creation; if the
+          # process OOMs before close(), the file is left as a tiny stub.
+          if [ -n "$CACHE_SINGLE" ]; then
+            CACHE_SIZE=$(stat -c%s "$CACHE_SINGLE" 2>/dev/null || echo "0")
+            if [ "$CACHE_SIZE" -lt 100 ]; then
+              echo "  SKIPPING corrupt cache $CACHE_SINGLE ($CACHE_SIZE bytes)"
+              rm -f "$CACHE_SINGLE"
+            else
+              git add -f $CACHE_SINGLE
+              if ! git diff --cached --quiet; then
+                BATCH_MB=$(du -cm $CACHE_SINGLE | tail -1 | cut -f1)
+                echo "  Staging cache: ~${BATCH_MB} MB"
+                git commit -m "Step 1.1: ${iso} scored cache — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                echo "  Pushing ${iso} cache..."
+                push_with_retry
+              fi
+            fi
+          elif [ -n "$CACHE_PARTS" ]; then
+            # Commit + push each part file individually to stay under push limits
+            for part in $CACHE_PARTS; do
+              PART_SIZE=$(stat -c%s "$part" 2>/dev/null || echo "0")
+              if [ "$PART_SIZE" -lt 100 ]; then
+                echo "  SKIPPING corrupt part $(basename "$part") ($PART_SIZE bytes)"
+                rm -f "$part"
+                continue
+              fi
+              git add -f "$part"
+              if ! git diff --cached --quiet; then
+                PART_MB=$(du -m "$part" | cut -f1)
+                PART_NAME=$(basename "$part")
+                echo "  Staging $PART_NAME: ~${PART_MB} MB"
+                git commit -m "Step 1.1: ${iso} scored cache ${PART_NAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                echo "  Pushing ${PART_NAME}..."
+                push_with_retry
+              fi
+            done
+          else
+            echo "  No cache files for $iso — skipping"
+          fi
+        done
+
+        echo ""
+        echo "════════════════════════════════════════════════════"
+        echo "  Branch: $TARGET_BRANCH"
+        echo "  Merge into master to bank the scored database."
+        echo "════════════════════════════════════════════════════"

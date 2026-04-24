@@ -1,0 +1,134 @@
+name: "Step 6.1: SMARTargets"
+
+# Runs SMARTargets V1 market simulation for reference scenarios (R1–R4).
+#
+# Prerequisite: Step 3 cost optimization parquets must exist.
+# Output: data/step6-smartargets/smartargets_{scenario}.parquet + _summary.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario to simulate'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - R1
+          - R2
+          - R3
+          - R4
+      iso:
+        description: 'ISO region (or ALL)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step10a-smartargets
+
+jobs:
+  smartargets-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          SCENARIO_LABEL="${{ inputs.scenario }}"
+          ISO_LABEL="${{ inputs.iso }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCENARIO_LABEL}-${ISO_LABEL}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify upstream data exists
+        run: |
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found. Run Step 3 first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directory
+        run: mkdir -p data/step6-smartargets
+
+      - name: Build CLI arguments
+        run: |
+          ARGS=""
+          # Scenarios
+          if [ "${{ inputs.scenario }}" = "ALL" ]; then
+            ARGS="--scenarios R1 R2 R3 R4"
+          else
+            ARGS="--scenarios ${{ inputs.scenario }}"
+          fi
+          # ISOs
+          if [ "${{ inputs.iso }}" != "ALL" ]; then
+            ARGS="$ARGS --isos ${{ inputs.iso }}"
+          fi
+          echo "SMARTARGETS_ARGS=$ARGS" >> "$GITHUB_ENV"
+          echo "Running: python scripts/step6_1_smartargets.py $ARGS"
+
+      - name: Run SMARTargets simulation
+        run: python scripts/step6_1_smartargets.py ${{ env.SMARTARGETS_ARGS }}
+
+      - name: Commit and push results
+        run: |
+          git config http.postBuffer 524288000
+
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          git add -f data/step6-smartargets/
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 10A SMARTargets: ${{ inputs.scenario }} × ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            push_with_retry "smartargets-results"
+          else
+            echo "No changes to commit"
+          fi

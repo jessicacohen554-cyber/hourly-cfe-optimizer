@@ -1,0 +1,30 @@
+{
+  "env": {
+    "MAX_THINKING_TOKENS": "64000",
+    "BASH_DEFAULT_TIMEOUT_MS": "600000"
+  },
+  "model": "claude-opus-4-6",
+  "fastMode": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-stop.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

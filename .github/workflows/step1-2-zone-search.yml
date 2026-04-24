@@ -1,0 +1,257 @@
+name: "Step 1.2: Zone Search"
+
+# Zone search around promising regions from the coarse scored database.
+# Each (ISO × zone) pair runs as a separate matrix job to keep memory usage
+# within the 7 GB limit of standard GitHub runners.
+#
+# Output: data/step1-pfs/{ISO}_*.parquet  (merged into existing PFS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      zones:
+        description: 'Zones to run: A (50-75%), B (75-90%), C (90-99.9%). Blank = all.'
+        required: false
+        default: ''
+        type: string
+      thresholds:
+        description: 'Comma-separated thresholds (e.g. "90,95,99"). Blank = all in zone.'
+        required: false
+        default: ''
+        type: string
+      branch:
+        description: 'Source branch to checkout code from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════
+  # Build the (ISO × zone) matrix
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+    steps:
+      - name: Build matrix
+        id: build
+        run: |
+          # ISOs
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            ISOS='["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]'
+          else
+            ISOS='["${{ inputs.iso }}"]'
+          fi
+
+          # Zones — if explicit zones requested, use those.
+          # Otherwise, if thresholds are specified, auto-select only the
+          # zones that contain those thresholds (saves wasted runner time).
+          # Zone mapping:
+          #   A: 50, 55, 60, 65, 70, 75
+          #   B: 75, 80, 85, 87.5, 90
+          #   C: 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99
+          REQUESTED="${{ inputs.zones }}"
+          THRESHOLDS="${{ inputs.thresholds }}"
+
+          if [ -n "$REQUESTED" ]; then
+            # Explicit zones — use as-is
+            ZONES=$(echo "$REQUESTED" | tr -d ' ' | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
+          elif [ -n "$THRESHOLDS" ]; then
+            # Auto-select zones from thresholds
+            NEED_A=false
+            NEED_B=false
+            NEED_C=false
+            for t in $(echo "$THRESHOLDS" | tr ',' ' '); do
+              # Compare as integers (multiply by 10 to handle decimals like 87.5)
+              t10=$(echo "$t * 10" | bc | cut -d. -f1)
+              if [ "$t10" -le 750 ]; then NEED_A=true; fi
+              if [ "$t10" -ge 750 ] && [ "$t10" -le 900 ]; then NEED_B=true; fi
+              if [ "$t10" -ge 900 ]; then NEED_C=true; fi
+            done
+            ZONE_LIST=""
+            if $NEED_A; then ZONE_LIST="${ZONE_LIST}\"A\","; fi
+            if $NEED_B; then ZONE_LIST="${ZONE_LIST}\"B\","; fi
+            if $NEED_C; then ZONE_LIST="${ZONE_LIST}\"C\","; fi
+            # Remove trailing comma and wrap in brackets
+            ZONE_LIST=$(echo "$ZONE_LIST" | sed 's/,$//')
+            ZONES="[${ZONE_LIST}]"
+            echo "Auto-selected zones from thresholds $THRESHOLDS: $ZONES"
+          else
+            ZONES='["A","B","C"]'
+          fi
+
+          echo "matrix={\"iso\":$ISOS,\"zone\":$ZONES}" >> "$GITHUB_OUTPUT"
+          echo "Matrix: iso=$ISOS zone=$ZONES"
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per (ISO × zone) job — one zone at a time keeps memory bounded
+  # ════════════════════════════════════════════════════════════════════════
+  zone-search:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1-2-zone${{ matrix.zone }}-${ISO_LOWER}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Ensure output directory
+      run: mkdir -p data/step1-pfs
+
+    - name: Verify scored database
+      run: |
+        ISO="${{ matrix.iso }}"
+        SINGLE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        MULTI="data/step1-pfs/${ISO}_coarse_cache_part001.parquet"
+        if [ -f "$SINGLE" ]; then
+          CACHE="$SINGLE"
+        elif [ -f "$MULTI" ]; then
+          CACHE="$MULTI"
+        else
+          echo "ERROR: Missing scored database for $ISO"
+          echo "  Expected: $SINGLE"
+          echo "  Or multi-part: ${ISO}_coarse_cache_part*.parquet"
+          echo "  Run Step 1.1 (Scored Database) first."
+          exit 1
+        fi
+        SIZE=$(du -ch data/step1-pfs/${ISO}_coarse_cache*.parquet 2>/dev/null | tail -1 | cut -f1)
+        NFILES=$(ls data/step1-pfs/${ISO}_coarse_cache*.parquet 2>/dev/null | wc -l)
+        echo "OK: $ISO scored database ($NFILES file(s), $SIZE total)"
+
+    - name: Check hybrid columns
+      run: |
+        ISO="${{ matrix.iso }}"
+        # Find first available cache file (single or multi-part)
+        CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        if [ ! -f "$CACHE" ]; then
+          CACHE="data/step1-pfs/${ISO}_coarse_cache_part001.parquet"
+        fi
+        python3 -c "import pyarrow.parquet as pq; s=pq.read_schema('$CACHE'); hyb='solar_batt4' in s.names; cols=[c for c in s.names if 'batt' in c]; print(f'Hybrid mode: {hyb}'); print(f'Hybrid columns: {cols}') if cols else None"
+
+    - name: Compute prior windows
+      continue-on-error: true
+      run: |
+        python scripts/step1_prior_windows.py --iso "${{ matrix.iso }}"
+
+    - name: "Run Zone Search — ${{ matrix.iso }} Zone ${{ matrix.zone }}"
+      run: |
+        ISO="${{ matrix.iso }}"
+        ZONE="${{ matrix.zone }}"
+        ARGS="--iso $ISO --zones $ZONE"
+
+        THRESHOLDS="${{ inputs.thresholds }}"
+        if [ -n "$THRESHOLDS" ]; then
+          ARGS="$ARGS --thresholds \"$THRESHOLDS\""
+          echo "Threshold filter: $THRESHOLDS"
+        fi
+
+        echo ""
+        echo "========================================="
+        echo "  Zone $ZONE — $ISO"
+        echo "========================================="
+        echo "Command: python scripts/step1_2_zone_search.py $ARGS"
+        eval python scripts/step1_2_zone_search.py $ARGS
+
+    - name: Split any oversized parquets (safety net)
+      if: always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        MAX_MB=45
+        for f in data/step1-pfs/"${ISO}"_*.parquet; do
+          [ -f "$f" ] || continue
+          SIZE_MB=$(du -m "$f" | cut -f1)
+          if [ "$SIZE_MB" -gt "$MAX_MB" ]; then
+            echo "⚠ $f is ${SIZE_MB}MB (>${MAX_MB}MB), re-splitting..."
+            python3 -c "import sys; sys.path.insert(0, 'scripts'); from parquet_utils import write_parquet_chunked; import pyarrow.parquet as pq; import os; t=pq.read_table('$f'); os.remove('$f'); parts=write_parquet_chunked(t, '$f', max_mb=$MAX_MB); print(f'Re-split into {len(parts)} parts')"
+          fi
+        done
+
+    - name: Commit and push results (per-file ≤45 MB)
+      if: always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        COMMITTED=0
+
+        push_with_retry() {
+          for attempt in 1 2 3 4; do
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+            echo "  Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
+          done
+          echo "::error::Push failed after 4 attempts"
+          return 1
+        }
+
+        for f in data/step1-pfs/"${ISO}"_*.parquet; do
+          [ -f "$f" ] || continue
+          SIZE_MB=$(du -m "$f" | cut -f1)
+          if [ "$SIZE_MB" -gt 49 ]; then
+            echo "ERROR: $f is ${SIZE_MB}MB — still over limit after splitting, skipping"
+            continue
+          fi
+          git add -f "$f"
+          if ! git diff --cached --quiet; then
+            FNAME=$(basename "$f")
+            git commit -m "Step 1.2 Zone${{ matrix.zone }}: ${ISO} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            COMMITTED=$((COMMITTED + 1))
+            echo "  Pushing ${FNAME}..."
+            push_with_retry
+          fi
+        done
+        if [ "$COMMITTED" -eq 0 ]; then
+          echo "No new results"
+        else
+          echo "Committed and pushed $COMMITTED file(s)"
+        fi
+        echo "Branch: $TARGET_BRANCH"
+        echo "Merge this branch into master to bank the PFS results."

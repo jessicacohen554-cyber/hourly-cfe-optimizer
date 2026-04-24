@@ -1,0 +1,730 @@
+{
+  "nodes": {
+    "sources": [
+      {
+        "id": "P1_vintage_2040",
+        "pathway": "1",
+        "vintage_year": 2040,
+        "stranded_capex_usd": 7310154549.0,
+        "stranded_mw": 29746.0,
+        "iso_count": 1,
+        "isos": [
+          "MISO"
+        ]
+      },
+      {
+        "id": "P1a_vintage_2040",
+        "pathway": "1a",
+        "vintage_year": 2040,
+        "stranded_capex_usd": 7310154549.0,
+        "stranded_mw": 29746.0,
+        "iso_count": 1,
+        "isos": [
+          "MISO"
+        ]
+      }
+    ],
+    "sinks": [
+      {
+        "id": "stranded_new_gas",
+        "label": "Stranded new-build gas capital",
+        "total_usd": 14620309098.0,
+        "total_mw": 59492.0,
+        "definition": "Unrecovered capital on new-build gas vintages that hit the Card F' trigger (CF<15% for 2 consecutive years before book-life). When the trigger fires the vintage locks recovered_revenue_per_kw and the remainder of the $/kW book value is charged as stranded."
+      }
+    ]
+  },
+  "flows": [
+    {
+      "source": "P1_vintage_2040",
+      "target": "stranded_new_gas",
+      "value_usd": 7310154549.0,
+      "mw": 29746.0,
+      "pathway": "1",
+      "vintage_year": 2040
+    },
+    {
+      "source": "P1a_vintage_2040",
+      "target": "stranded_new_gas",
+      "value_usd": 7310154549.0,
+      "mw": 29746.0,
+      "pathway": "1a",
+      "vintage_year": 2040
+    }
+  ],
+  "pathway_totals": {
+    "1": {
+      "new_gas_stranded_capex_usd": 7310154549.0,
+      "new_gas_stranded_mw": 29746.5,
+      "new_gas_all_vintages_mw": 272990.89999999997,
+      "vre_storage_comparative_stranded_usd": 18426552483609.0,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_of_new_gas_pct": 10.9
+    },
+    "1a": {
+      "new_gas_stranded_capex_usd": 7310154549.0,
+      "new_gas_stranded_mw": 29746.5,
+      "new_gas_all_vintages_mw": 284854.0,
+      "vre_storage_comparative_stranded_usd": 17236307778701.0,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_of_new_gas_pct": 10.4
+    },
+    "2a": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0,
+      "new_gas_all_vintages_mw": 227765.9,
+      "vre_storage_comparative_stranded_usd": 3060609157549.0,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_of_new_gas_pct": 0.0
+    },
+    "2b": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0,
+      "new_gas_all_vintages_mw": 227765.9,
+      "vre_storage_comparative_stranded_usd": 1366095603958.0,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_of_new_gas_pct": 0.0
+    },
+    "3": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0,
+      "new_gas_all_vintages_mw": 227765.9,
+      "vre_storage_comparative_stranded_usd": 0.0,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_of_new_gas_pct": 0.0
+    }
+  },
+  "iso_totals": {
+    "CAISO": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0
+    },
+    "ERCOT": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0
+    },
+    "MISO": {
+      "new_gas_stranded_capex_usd": 14620309098.0,
+      "new_gas_stranded_mw": 59493.0
+    },
+    "NEISO": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0
+    },
+    "NYISO": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0
+    },
+    "PJM": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0
+    },
+    "SPP": {
+      "new_gas_stranded_capex_usd": 0.0,
+      "new_gas_stranded_mw": 0.0
+    }
+  },
+  "per_iso_pathway": {
+    "new_gas_stranding": {
+      "CAISO": {
+        "1": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 18857.8,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 19904.4,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 6758.4,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 6758.4,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 6758.4,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      },
+      "ERCOT": {
+        "1": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 94389.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 94389.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 94389.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 94389.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 94389.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      },
+      "MISO": {
+        "1": {
+          "feasible": true,
+          "vintages": [
+            {
+              "year_built": 2040,
+              "initial_cap_mw": 29746.5,
+              "stranded_year": 2050,
+              "stranded_capex_usd": 7310154549.0,
+              "recovered_revenue_per_kw": 0.0
+            }
+          ],
+          "total_stranded_mw": 29746.5,
+          "total_stranded_capex_usd": 7310154549.0,
+          "all_new_gas_vintages_mw": 29746.5,
+          "stranded_share_of_new_gas_pct": 100.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [
+            {
+              "year_built": 2040,
+              "initial_cap_mw": 29746.5,
+              "stranded_year": 2050,
+              "stranded_capex_usd": 7310154549.0,
+              "recovered_revenue_per_kw": 0.0
+            }
+          ],
+          "total_stranded_mw": 29746.5,
+          "total_stranded_capex_usd": 7310154549.0,
+          "all_new_gas_vintages_mw": 29746.5,
+          "stranded_share_of_new_gas_pct": 100.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 36916.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 36916.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 36916.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      },
+      "NEISO": {
+        "1": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 4067.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 6990.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 2004.3,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 2004.3,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 2004.3,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      },
+      "NYISO": {
+        "1": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 4663.4,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 7265.4,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 2071.0,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 2071.0,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 2071.0,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      },
+      "PJM": {
+        "1": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 93509.8,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 98801.2,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 57869.8,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 57869.8,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 57869.8,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      },
+      "SPP": {
+        "1": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 27757.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "1a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 27757.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2a": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 27757.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "2b": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 27757.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        },
+        "3": {
+          "feasible": true,
+          "vintages": [],
+          "total_stranded_mw": 0,
+          "total_stranded_capex_usd": 0,
+          "all_new_gas_vintages_mw": 27757.1,
+          "stranded_share_of_new_gas_pct": 0.0
+        }
+      }
+    },
+    "vre_storage_comparative_stranding": {
+      "CAISO": {
+        "1": {
+          "by_resource_usd": {
+            "solar": 2847677144260.0,
+            "battery4": 3092443745.0,
+            "battery8": 1108675546.0,
+            "ldes": 44187948.0
+          },
+          "total_usd": 2851922451499.0
+        },
+        "1a": {
+          "by_resource_usd": {
+            "solar": 1770537616108.0,
+            "wind": 175557607640.0,
+            "battery4": 2090619973.0,
+            "battery8": 1049409484.0,
+            "ldes": 44187948.0
+          },
+          "total_usd": 1949279441153.0
+        },
+        "2a": {
+          "by_resource_usd": {
+            "solar": 507196628152.0,
+            "battery4": 136692393.0,
+            "battery8": 37556980.0,
+            "ldes": 62439446.0
+          },
+          "total_usd": 507433316971.0
+        },
+        "2b": {
+          "by_resource_usd": {
+            "solar": 507196628152.0,
+            "battery4": 136692393.0,
+            "battery8": 37556980.0
+          },
+          "total_usd": 507370877525.0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      },
+      "ERCOT": {
+        "1": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "1a": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "2a": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "2b": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      },
+      "MISO": {
+        "1": {
+          "by_resource_usd": {
+            "solar": 8401629846211.0,
+            "wind": 1440113307099.0,
+            "battery4": 7234104767.0,
+            "battery8": 2941074934.0
+          },
+          "total_usd": 9851918333011.0
+        },
+        "1a": {
+          "by_resource_usd": {
+            "solar": 8401629846211.0,
+            "wind": 1440113307099.0,
+            "battery4": 7234104767.0,
+            "battery8": 2941074934.0
+          },
+          "total_usd": 9851918333011.0
+        },
+        "2a": {
+          "by_resource_usd": {
+            "solar": 441402699391.0,
+            "wind": 87290954392.0,
+            "battery4": 2031079624.0,
+            "battery8": 402136493.0
+          },
+          "total_usd": 531126869900.0
+        },
+        "2b": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      },
+      "NEISO": {
+        "1": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "1a": {
+          "by_resource_usd": {
+            "wind": 48426388836.0
+          },
+          "total_usd": 48426388836.0
+        },
+        "2a": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "2b": {
+          "by_resource_usd": {
+            "wind": 21664186611.0
+          },
+          "total_usd": 21664186611.0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      },
+      "NYISO": {
+        "1": {
+          "by_resource_usd": {
+            "solar": 14393066565.0,
+            "wind": 2013758328.0,
+            "offshore_wind": 11282820402.0
+          },
+          "total_usd": 27689645295.0
+        },
+        "1a": {
+          "by_resource_usd": {
+            "wind": 30345305653.0
+          },
+          "total_usd": 30345305653.0
+        },
+        "2a": {
+          "by_resource_usd": {
+            "wind": 2013758328.0,
+            "offshore_wind": 11282820402.0
+          },
+          "total_usd": 13296578730.0
+        },
+        "2b": {
+          "by_resource_usd": {
+            "wind": 2013758328.0,
+            "offshore_wind": 11282820402.0
+          },
+          "total_usd": 13296578730.0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      },
+      "PJM": {
+        "1": {
+          "by_resource_usd": {
+            "solar": 2985120714471.0,
+            "wind": 2497886181995.0,
+            "offshore_wind": 87632848194.0,
+            "battery8": 1263353359.0,
+            "ldes": 1042057840.0
+          },
+          "total_usd": 5572945155859.0
+        },
+        "1a": {
+          "by_resource_usd": {
+            "wind": 5229638953961.0,
+            "battery8": 4003710958.0,
+            "ldes": 618747184.0
+          },
+          "total_usd": 5234261412103.0
+        },
+        "2a": {
+          "by_resource_usd": {
+            "solar": 993578772192.0,
+            "wind": 801281350388.0,
+            "offshore_wind": 90974266237.0,
+            "ldes": 841105186.0
+          },
+          "total_usd": 1886675494003.0
+        },
+        "2b": {
+          "by_resource_usd": {
+            "solar": 736131112898.0,
+            "offshore_wind": 87632848194.0
+          },
+          "total_usd": 823763961092.0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      },
+      "SPP": {
+        "1": {
+          "by_resource_usd": {
+            "solar": 122076897945.0
+          },
+          "total_usd": 122076897945.0
+        },
+        "1a": {
+          "by_resource_usd": {
+            "solar": 122076897945.0
+          },
+          "total_usd": 122076897945.0
+        },
+        "2a": {
+          "by_resource_usd": {
+            "solar": 122076897945.0
+          },
+          "total_usd": 122076897945.0
+        },
+        "2b": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        },
+        "3": {
+          "by_resource_usd": {},
+          "total_usd": 0
+        }
+      }
+    }
+  },
+  "headline": {
+    "total_stranded_new_gas_capex_usd": 14620309098.0,
+    "total_stranded_new_gas_mw": 59492.0,
+    "n_vintages": 2,
+    "endpoint_cfe_pct": 95.0
+  },
+  "framing_copy": "Every dollar to the right of this diagram is capital that ratepayers put into new-build gas which the plant will never earn back. The trigger is Card F': two consecutive years of capacity factor below 15%, which locks recovery at the revenue earned to that date.",
+  "meta": {
+    "payload_id": "section5_stranding_sankey",
+    "schema_version": 2,
+    "endpoint": 0.95,
+    "endpoint_pct": 95.0,
+    "stranding_definition": "Absolute stranded capex per SPEC Card K'/F'. Not comparative to P3.",
+    "primary_source": "tables.new_gas_fleet[] where stranded_flag=True",
+    "secondary_source": "tables.stranding_ledger (retained for VRE/storage context only)",
+    "sizing_basis": "New-gas capacity on each vintage is worst-hour sized (SPEC \u00a724.5 99.97th percentile residual gap), not ELCC. Stranded capex then follows from the locked revenue recovery at Card F' trigger.",
+    "note": "Flow widths proportional to absolute stranded capex ($USD). Dropped old Card K comparative framing in favor of Card K' absolute. Seed vintages in the SPEC \u00a724.8 terminal_ledger (cod_year=2024, locked_lcoe=0) represent pre-existing fleet and are NOT consumed by this Sankey \u2014 only new-gas vintages in tables.new_gas_fleet with stranded_flag=True contribute. year_built is by construction \u2265 2025."
+  }
+}

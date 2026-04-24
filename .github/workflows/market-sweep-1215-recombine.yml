@@ -1,0 +1,281 @@
+name: "Market Sweep: Recombine Per-ISO Results"
+
+# Recombines per-ISO parquets that already exist in the repo into
+# the combined output files + runs all post-processing (sensitivity,
+# fleet scenarios, dispatch data, ISO sweep data).
+#
+# Use this AFTER merging individual per-ISO sweep branches into master
+# to rebuild the combined files that downstream pages depend on.
+# This avoids re-running the expensive sweep — it only does the cheap
+# merge + post-processing (~5 minutes).
+#
+# Output: same as market-sweep-1215.yml merge job:
+#   - sweep_1215_flat.parquet         (all ISOs combined)
+#   - sweep_1215_aggregates.json      (P10/P50/P90 bands)
+#   - fleet_scenario_results_*.json   (per-ISO + combined)
+#   - sweep_dispatch_data_*.json      (per-ISO + combined)
+#   - iso-sweep-data.js               (dashboard)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to checkout (should have per-ISO parquets already merged)'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: market-sweep-1215-recombine
+
+jobs:
+  recombine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Verify per-ISO parquets exist
+        run: |
+          SWEEP_DIR="market-simulator/results/sweep_1215"
+          echo "Looking for per-ISO parquets in $SWEEP_DIR..."
+          FOUND=0
+          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+            FILE="$SWEEP_DIR/sweep_1215_${iso}.parquet"
+            if [ -f "$FILE" ]; then
+              echo "  ✓ $FILE ($(du -h "$FILE" | cut -f1))"
+              FOUND=$((FOUND + 1))
+            else
+              echo "  ✗ $FILE — MISSING"
+            fi
+          done
+          echo ""
+          echo "Found $FOUND / 7 per-ISO parquets."
+          if [ "$FOUND" -eq 0 ]; then
+            echo "ERROR: No per-ISO parquets found. Run individual ISO sweeps first."
+            exit 1
+          fi
+          echo "Proceeding with $FOUND ISOs."
+
+      - name: Rebuild combined parquet + aggregates from per-ISO files
+        working-directory: market-simulator/scripts
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          import pandas as pd
+          import numpy as np
+
+          sweep_dir = os.path.join(os.getcwd(), '..', 'results', 'sweep_1215')
+
+          # Collect per-ISO dataframes from existing parquets in the repo
+          iso_dfs = {}
+          for f in sorted(os.listdir(sweep_dir)):
+              if f.startswith('sweep_1215_') and f.endswith('.parquet') and f != 'sweep_1215_flat.parquet':
+                  fpath = os.path.join(sweep_dir, f)
+                  df = pd.read_parquet(fpath)
+                  isos_found = df['iso'].dropna().unique()
+                  for iso_name in isos_found:
+                      iso_slice = df[df['iso'] == iso_name]
+                      if iso_name in iso_dfs:
+                          iso_dfs[iso_name] = pd.concat(
+                              [iso_dfs[iso_name], iso_slice], ignore_index=True)
+                      else:
+                          iso_dfs[iso_name] = iso_slice.copy()
+                  print(f"  Loaded {f}: {len(df)} rows ({', '.join(isos_found)})")
+
+          if not iso_dfs:
+              print("ERROR: No per-ISO parquet data found")
+              sys.exit(1)
+
+          print(f"\nTotal ISOs loaded: {sorted(iso_dfs.keys())}")
+
+          # Write combined parquet
+          combined_df = pd.concat(list(iso_dfs.values()), ignore_index=True)
+          # Replace inf/-inf with NaN for pyarrow
+          numeric_cols = combined_df.select_dtypes(include=[np.number]).columns
+          combined_df[numeric_cols] = combined_df[numeric_cols].replace([np.inf, -np.inf], np.nan)
+          parquet_path = os.path.join(sweep_dir, 'sweep_1215_flat.parquet')
+          combined_df.to_parquet(parquet_path, index=False)
+          size_mb = os.path.getsize(parquet_path) / 1e6
+          print(f"Combined parquet: {len(combined_df)} rows x {len(combined_df.columns)} cols ({size_mb:.1f} MB)")
+
+          # Compute aggregates
+          print("Computing P10/P50/P90 aggregates...")
+          agg_cols = [
+              'avg_lmp', 'lmp_p90', 'emissions_mt', 'emission_rate_tco2_mwh',
+              'cost_per_mwh', 'revenue_per_mwh', 'clean_pct', 'demand_twh',
+              'total_new_fossil_mw', 'total_economic_retirement_mw',
+              'ordc_scarcity_hours',
+          ]
+          existing_cols = [c for c in agg_cols if c in combined_df.columns]
+
+          aggregates = {}
+          for iso in sorted(combined_df['iso'].dropna().unique()):
+              iso_df = combined_df[combined_df['iso'] == iso]
+              iso_agg = {}
+              for year in sorted(iso_df['year'].dropna().unique()):
+                  yr_df = iso_df[iso_df['year'] == year]
+                  yr_agg = {}
+                  for col in existing_cols:
+                      vals = yr_df[col].dropna()
+                      if len(vals) > 0:
+                          yr_agg[col] = {
+                              'p10': round(float(vals.quantile(0.1)), 4),
+                              'p50': round(float(vals.quantile(0.5)), 4),
+                              'p90': round(float(vals.quantile(0.9)), 4),
+                              'mean': round(float(vals.mean()), 4),
+                          }
+                  iso_agg[str(int(year))] = yr_agg
+              aggregates[iso] = iso_agg
+
+              # Write per-ISO aggregate JSON
+              iso_agg_path = os.path.join(sweep_dir, f'sweep_1215_aggregates_{iso}.json')
+              with open(iso_agg_path, 'w') as f:
+                  json.dump({iso: iso_agg}, f, indent=2)
+              print(f"  Per-ISO aggregates: {iso_agg_path}")
+
+          # Write combined aggregates JSON
+          agg_path = os.path.join(sweep_dir, 'sweep_1215_aggregates.json')
+          with open(agg_path, 'w') as f:
+              json.dump(aggregates, f, indent=2)
+          print(f"Combined aggregates: {agg_path} ({len(aggregates)} ISOs)")
+          PYEOF
+
+      - name: Run sensitivity analysis (Morris + ANOVA)
+        working-directory: market-simulator/scripts
+        run: |
+          python sensitivity_analysis.py \
+            --parquet ../results/sweep_1215/sweep_1215_flat.parquet \
+            --output-dir ../results/sensitivity
+
+      - name: Generate constellation scenarios JSON
+        working-directory: market-simulator/scripts
+        run: python generate_constellation_scenarios.py
+
+      - name: Copy constellation JSON to frontend/data for extract script
+        run: |
+          mkdir -p market-simulator/frontend/data
+          cp market-simulator/fleet_scenarios/constellation_scenarios.json \
+             market-simulator/frontend/data/constellation_scenarios.json
+
+      - name: Extract ISO sweep data for dashboard
+        working-directory: market-simulator/scripts
+        run: python extract_iso_sweep_data.py
+
+      - name: Export sweep dispatch data (per-ISO + combined JSON)
+        working-directory: market-simulator/scripts
+        run: python export_sweep_dispatch_data.py
+
+      - name: Build fleet scenario data
+        working-directory: market-simulator/scripts
+        run: python build_fleet_scenario_data.py
+
+      - name: Sync fleet data to dashboard
+        run: |
+          mkdir -p dashboard/data
+
+          # Combined fleet + sweep JSON files → dashboard/data/
+          cp -v market-simulator/frontend/data/fleet_scenario_results_sample.json \
+                dashboard/data/fleet_scenario_results_sample.json
+
+          # Per-ISO fleet result JSONs → dashboard/data/
+          for f in market-simulator/frontend/data/fleet_scenario_results_*.json; do
+            if [ -f "$f" ]; then
+              cp -v "$f" "dashboard/data/$(basename $f)"
+            fi
+          done
+
+          # Per-ISO + combined sweep dispatch JSONs → dashboard/data/
+          for f in market-simulator/frontend/data/sweep_dispatch_data*.json; do
+            if [ -f "$f" ]; then
+              cp -v "$f" "dashboard/data/$(basename $f)"
+            fi
+          done
+
+          # constellation_scenarios.json → dashboard/data/
+          cp -v market-simulator/fleet_scenarios/constellation_scenarios.json \
+                dashboard/data/constellation_scenarios.json
+
+          # fleet JS modules → dashboard/js/ (ensure parity)
+          for f in fleet-scenarios.js fleet-dispatch-engine.js fleet-sidebar.js fleet-trajectory.js; do
+            if [ -f "market-simulator/frontend/js/$f" ]; then
+              cp -v "market-simulator/frontend/js/$f" "dashboard/js/$f"
+            fi
+          done
+
+          echo ""
+          echo "Fleet data synced to dashboard/"
+          ls -la dashboard/data/fleet_scenario_results_*.json
+          ls -la dashboard/data/sweep_dispatch_data*.json
+          ls -la dashboard/data/constellation_scenarios.json
+
+      - name: Create output branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          # Sweep results
+          git add -f market-simulator/results/sweep_1215/
+          git add -f market-simulator/results/sensitivity/
+
+          # Fleet scenario data — per-ISO + combined (both locations)
+          git add -f market-simulator/frontend/data/fleet_scenario_results_*.json
+          git add -f market-simulator/frontend/data/sweep_dispatch_data*.json
+          git add -f market-simulator/fleet_scenarios/constellation_scenarios.json
+          git add -f dashboard/data/fleet_scenario_results_*.json
+          git add -f dashboard/data/sweep_dispatch_data*.json
+          git add -f dashboard/data/constellation_scenarios.json
+
+          # Dashboard JS exports
+          git add -f dashboard/js/iso-sweep-data.js
+          git add -f dashboard/js/fleet-scenarios.js
+          git add -f dashboard/js/fleet-dispatch-engine.js
+          git add -f dashboard/js/fleet-sidebar.js
+          git add -f dashboard/js/fleet-trajectory.js
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Market sweep recombine: rebuild combined outputs from per-ISO parquets — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          Recombined per-ISO parquets into sweep_1215_flat.parquet + aggregates.
+          Re-ran post-processing: sensitivity analysis (Morris + ANOVA), fleet
+          scenario trajectories, constellation scenarios, ISO sweep data, sweep
+          dispatch data. Synced to both market-simulator/frontend/ and dashboard/."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
