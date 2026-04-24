@@ -729,7 +729,8 @@ def decompose_clean_firm_tranches(cf_pct, iso, pathway, annual_mwh_vec, cfg):
     atwh = annual_mwh_vec / 1e6
     bp = float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0))
     target = (cf_pct[None, :] / 100.0) * atwh[:, None]  # (N_YEARS, n)
-    bl = (bp / 100.0) * atwh                             # (N_YEARS,)
+    # ── FIX 4b: existing nuclear = fixed TWh (base-year capacity) ──
+    bl = np.full(N_YEARS, (bp / 100.0) * float(pc.REGIONAL_DEMAND_TWH[iso]))
 
     nuke_eff, ccs_eff, geo_eff = _tranche_lcoe_vecs(iso, cfg)
     gl = cfg.geo_cost_level or ('M' if iso == 'CAISO' else None)
@@ -780,7 +781,7 @@ class _Ctx:
     delivered: np.ndarray  # (Y, R)
     nuke_eff: np.ndarray; ccs_eff: np.ndarray; geo_eff: np.ndarray
     up_eff: np.ndarray; ta: bool; is_p1: bool
-    bp: float; uc: float; uc_pct_y: np.ndarray; pf: float
+    bp: float; uc: float; uc_pct_y: np.ndarray; pf_y: np.ndarray; bl_twh: float
     cc: float; gc: float
     storage_pairs: list; grid: dict; base_dem: float; cfg: RunConfig
     ef_noncf_mat: np.ndarray   # (n, R) pre-stacked non-CF shares / 100
@@ -852,7 +853,16 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
         bp=float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)),
         uc=uc,
         uc_pct_y=uc / np.maximum(dv, 1e-6) * 100.0,
-        pf=float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)) + 0.01,
+        # ── FIX 4: Existing-nuclear baseline is fixed TWh ──────────
+        # Existing nuclear capacity doesn't grow with demand.  bl_twh is
+        # the constant TWh output (base-year share × base-year demand).
+        # pf_y is the per-year clean_firm ceiling in %, declining as demand
+        # grows: pf_y[yi] = bl_twh / demand_twh[yi] * 100 + 0.01.
+        bl_twh=float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)) / 100.0
+               * float(pc.REGIONAL_DEMAND_TWH[iso]),
+        pf_y=(float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)) / 100.0
+              * float(pc.REGIONAL_DEMAND_TWH[iso]))
+             / np.maximum(dv, 1e-6) * 100.0 + 0.01,
         cc=float(pc.CCS_CAP_TWH.get(iso, 9999.0)),
         gc=float(pc.GEOTHERMAL_CAP_TWH) if (iso == 'CAISO' and gl) else 0.0,
         storage_pairs=sp, grid=pc.GRID_MIX_SHARES[iso],
@@ -1040,7 +1050,7 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
                  ccs_eff_yi=None, eg_yi=None, cfe_tgt_yi=None,
                  cfe_ceil_yi=None,
                  uc_pct_yi=None, up_eff_yi=None, geo_eff_yi=None,
-                 delivered_yi=None):
+                 delivered_yi=None, pf_yi=None):
     """Score chunk [s,e) at year yi. Thin wrapper around numba kernel.
     Pre-computed per-year scalars can be passed to avoid redundant extraction."""
     if dy is None:
@@ -1048,7 +1058,7 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
     if amwh_y is None:
         amwh_y = float(ctx.amwh[yi])
     if bl_y is None:
-        bl_y = (ctx.bp / 100.0) * dy
+        bl_y = ctx.bl_twh
     if nuke_eff_yi is None:
         nuke_eff_yi = float(ctx.nuke_eff[yi])
     if ccs_eff_yi is None:
@@ -1067,6 +1077,8 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
         geo_eff_yi = float(ctx.geo_eff[yi])
     if delivered_yi is None:
         delivered_yi = ctx.delivered[yi]
+    if pf_yi is None:
+        pf_yi = float(ctx.pf_y[yi])
 
     return _score_chunk_inner(
         ctx.ef_noncf_mat[s:e],
@@ -1082,7 +1094,7 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
         eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
         ctx.uc, ctx.gc, ctx.cc, ctx.gaf, ctx.exist_base, ctx.gas_raw_2025,
         ctx.capex_mw, ctx.fom_mw, ctx.fuel_unit, ctx.exist_fom,
-        ctx.pf, RATCHET_TOL_PCT,
+        pf_yi, RATCHET_TOL_PCT,
         ctx.ta, ctx.is_p1,
         fr, fc, fu, fg, fn, fcc,
         delivered_yi,
@@ -1095,7 +1107,7 @@ def _update_floors(w, yi, ctx, fr, fc, fu, fg, fn, fcc):
     dy = float(ctx.demand_vec[yi])
     wr = np.array([float(ctx.ef[r][w]) / 100.0 * dy for r in _NON_CF], dtype=np.float64)
     wc = float(ctx.cf_share[w]) * dy
-    bl_y = (ctx.bp / 100.0) * dy
+    bl_y = ctx.bl_twh
 
     _, wu, wg, wn, wcc, _ = _tranche_merit_order(
         np.float64(wc), np.float64(bl_y), ctx.uc, ctx.gc, ctx.cc, ctx.ta,
@@ -1153,13 +1165,14 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         # Pre-compute per-year scalars once (Change 8)
         dy = float(ctx.demand_vec[yi])
         amwh_y = float(ctx.amwh[yi])
-        bl_y = (ctx.bp / 100.0) * dy
+        bl_y = ctx.bl_twh
         nuke_eff_yi = float(ctx.nuke_eff[yi])
         ccs_eff_yi = float(ctx.ccs_eff[yi])
         eg_yi = float(ctx.eg_vec[yi])
         cfe_tgt_yi = float(ctx.cfe_tgt[yi])
         cfe_ceil_yi = float(ctx.cfe_ceil[yi])
         uc_pct_yi = float(ctx.uc_pct_y[yi])
+        pf_yi = float(ctx.pf_y[yi])
         up_eff_yi = float(ctx.up_eff[yi])
         geo_eff_yi = float(ctx.geo_eff[yi])
         delivered_yi = ctx.delivered[yi]
@@ -1175,7 +1188,8 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                 eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
                 cfe_ceil_yi=cfe_ceil_yi,
                 uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
-                geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi)
+                geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi,
+                pf_yi=pf_yi)
             saved_rs[s:e] = rs
 
             # Single feasibility mask (replaces 4-tier cascade)
@@ -1203,7 +1217,7 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         if np.isinf(best_score):
             # Shared: pathway mask over full pool
             if ctx.is_p1:
-                _pm_full = ((ctx.ef['clean_firm'].astype(np.float64) <= ctx.pf + float(ctx.uc_pct_y[yi]) + 0.5)
+                _pm_full = ((ctx.ef['clean_firm'].astype(np.float64) <= pf_yi + float(ctx.uc_pct_y[yi]) + 0.5)
                             & (ctx.ef.get('ccs_ccgt', np.zeros(n)).astype(np.float64) <= 0.5))
             else:
                 _pm_full = np.ones(n, dtype=bool)
