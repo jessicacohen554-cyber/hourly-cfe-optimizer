@@ -786,6 +786,7 @@ VRE_WIND_MAX = 60         # max wind %
 VRE_WIND_STEP = 4         # wind step (existing pool already has 1% steps)
 HYBRID_SUM_MAX = 40       # max total hybrid %
 HMS_LO, HMS_HI = 50, 100  # hourly_match_score target range
+CHECKPOINT_GROUPS = 10    # flush band_tables to chunk files every N base_groups
 BASE_ROUND = 5            # round base resources to this step for grouping
 MAX_BASE_GROUPS = 20      # cap per ISO
 SCORE_CHUNK = 5000        # mixes per batch for dispatch scoring
@@ -816,6 +817,9 @@ def _load_iso_profiles(iso: str):
            for k in np.load(hyb_path).keys()} if hyb_path.exists() else {}
 
     sp = get_supply_profiles(iso, gen, include_hybrids=True, hybrid_profiles=hyb)
+    # CAISO geothermal as separate flat profile (matches step1 treatment)
+    if iso == 'CAISO' and 'geothermal' not in sp:
+        sp['geothermal'] = np.full(8760, 1.0 / 8760, dtype=np.float64)
     rtypes = get_resource_types(iso, include_hybrids=True)
     d_arr, s_mat = prepare_numpy_profiles(iso, demand_norm, sp,
                                           include_hybrids=True,
@@ -991,6 +995,22 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     return best_hms, best_b4, best_b8, best_ld
 
 
+def _flush_band_chunks(band_tables: dict, iso: str, chunk_idx: int) -> int:
+    """Write current band_tables to numbered chunk parquets. Returns rows written."""
+    written = 0
+    for bt in sorted(band_tables):
+        if not band_tables[bt]:
+            continue
+        merged = pa.concat_tables(band_tables[bt], promote_options='permissive')
+        out_name = f'step_2_1_EF_{iso}_{bt}_interp_dense_chunk{chunk_idx:03d}.parquet'
+        pq.write_table(merged, EF_DIR / out_name,
+                        compression='zstd', compression_level=3)
+        written += merged.num_rows
+        del merged
+    band_tables.clear()
+    return written
+
+
 def run_dense_augment(dry_run: bool = False):
     """Generate dense VRE + hybrid mixes at 2% steps, dispatch-scored.
 
@@ -1118,18 +1138,47 @@ def run_dense_augment(dry_run: bool = False):
             print(f"  [{gi+1}/{len(base_groups)}] scored={iso_scored:,} "
                   f"kept={iso_kept:,}", flush=True)
 
+            # Periodic checkpoint — flush to chunk files so work isn't lost
+            if (gi + 1) % CHECKPOINT_GROUPS == 0 and any(band_tables.values()):
+                chunk_idx = (gi + 1) // CHECKPOINT_GROUPS
+                cr = _flush_band_chunks(band_tables, iso, chunk_idx)
+                print(f"  [checkpoint {chunk_idx}] flushed {cr:,} rows",
+                      flush=True)
+
+        # ── Merge chunk files + any remaining band_tables into final parquets ──
+        # Flush any leftover band_tables as one last chunk
+        if any(band_tables.values()):
+            last_chunk = (len(base_groups) // CHECKPOINT_GROUPS) + 1
+            _flush_band_chunks(band_tables, iso, last_chunk)
+
         iso_written = 0
-        for bt in sorted(band_tables):
-            merged = pa.concat_tables(band_tables[bt], promote_options='permissive')
+        all_bands = set()
+        for f in sorted(EF_DIR.glob(
+                f'step_2_1_EF_{iso}_*_interp_dense_chunk*.parquet')):
+            # Extract band tag from chunk filename
+            bt = f.stem.split('_interp_dense_chunk')[0].split(
+                f'step_2_1_EF_{iso}_')[1]
+            all_bands.add(bt)
+
+        for bt in sorted(all_bands):
+            chunks = sorted(EF_DIR.glob(
+                f'step_2_1_EF_{iso}_{bt}_interp_dense_chunk*.parquet'))
+            if not chunks:
+                continue
+            tables = [pq.read_table(c) for c in chunks]
+            merged = pa.concat_tables(tables, promote_options='permissive')
             out_name = f'step_2_1_EF_{iso}_{bt}_interp_dense.parquet'
             pq.write_table(merged, EF_DIR / out_name,
                            compression='zstd', compression_level=3)
             iso_written += merged.num_rows
             print(f"  band {bt}: {merged.num_rows:,} → {out_name}", flush=True)
-            del merged
+            del tables, merged
+            # Clean up chunk files for this band
+            for c in chunks:
+                c.unlink()
+
         total_written += iso_written
-        print(f"  {iso}: {iso_written:,} written", flush=True)
-        band_tables.clear()
+        print(f"  {iso}: {iso_written:,} written (chunks merged)", flush=True)
         gc.collect()
 
     print(f"\n[dense] Total: {total_written:,}")
