@@ -1186,6 +1186,14 @@ def run_dense_augment(dry_run: bool = False):
     for iso in ISOS:
         print(f"\n{'='*60}\n  {iso}\n{'='*60}", flush=True)
 
+        # ── Early skip: if merged final files already exist, ISO is done ──
+        merged_exists = list(EF_DIR.glob(
+            f'step_2_1_EF_{iso}_*_interp_dense.parquet'))
+        if merged_exists and not dry_run:
+            print(f"  {len(merged_exists)} merged dense files already exist "
+                  f"— skipping {iso}", flush=True)
+            continue
+
         # Single-pass band scan → sorted numpy array for vectorized dedup
         base_groups, existing_sorted = _scan_ef_bands(iso)
         print(f"  {len(base_groups)} base groups, "
@@ -1215,6 +1223,46 @@ def run_dense_augment(dry_run: bool = False):
         n_rescols = len(_RESOURCE_COLS)
         row_bytes = n_rescols * 4
 
+        # ── Resume logic: resume from last completed checkpoint ──
+        # Find existing chunk files → resume from last completed checkpoint
+        existing_chunks = sorted(EF_DIR.glob(
+            f'step_2_1_EF_{iso}_*_interp_dense_chunk*.parquet'))
+        resume_gi = 0
+        if existing_chunks:
+            # Extract max chunk index from filenames
+            max_chunk = 0
+            for cf in existing_chunks:
+                # filename: step_2_1_EF_<ISO>_<band>_interp_dense_chunk<NNN>.parquet
+                chunk_part = cf.stem.split('_interp_dense_chunk')[1]
+                max_chunk = max(max_chunk, int(chunk_part))
+            resume_gi = max_chunk * CHECKPOINT_GROUPS
+            print(f"  found {len(existing_chunks)} chunk files "
+                  f"(max chunk={max_chunk}) — resuming from base_group "
+                  f"{resume_gi}", flush=True)
+
+            # Load existing chunk rows into dedup set so we don't duplicate
+            chunk_packed = []
+            for cf in existing_chunks:
+                schema = pq.read_schema(cf)
+                cols_present = [c for c in _RESOURCE_COLS
+                                if c in schema.names]
+                tbl = pq.read_table(cf, columns=cols_present)
+                res_arrs = np.column_stack([
+                    tbl.column(c).to_numpy().astype(np.int32)
+                    if c in tbl.column_names
+                    else np.zeros(tbl.num_rows, dtype=np.int32)
+                    for c in _RESOURCE_COLS])
+                res_c = np.ascontiguousarray(res_arrs)
+                chunk_packed.append(np.frombuffer(
+                    res_c.tobytes(), dtype=f'S{row_bytes}').copy())
+                del tbl, res_arrs, res_c
+            # Merge chunk keys into existing_sorted
+            all_keys = [existing_sorted] + chunk_packed
+            existing_sorted = np.unique(np.concatenate(all_keys))
+            del chunk_packed, all_keys
+            print(f"  dedup set updated: {len(existing_sorted):,} keys",
+                  flush=True)
+
         # Precompute column index maps once per ISO (avoids repeated .index())
         res_col_idx = [(c, rtypes.index(c) if c in rtypes else -1)
                        for c in _RESOURCE_COLS]
@@ -1226,6 +1274,12 @@ def run_dense_augment(dry_run: bool = False):
         vre_skipped = 0
 
         for gi, bg in enumerate(base_groups):
+            # Skip already-checkpointed base groups on resume
+            if gi < resume_gi:
+                if gi == 0:
+                    print(f"  skipping base_groups 0–{resume_gi-1} "
+                          f"(already checkpointed)", flush=True)
+                continue
             bs = sum(bg.get(c, 0) for c in _BASE_COLS)
 
             # ── Accumulate all VRE × hybrid mixes for this base group ──
