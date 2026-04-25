@@ -23,12 +23,21 @@ Optimizations over v1:
   - Thresholds within an ISO processed in parallel via ThreadPoolExecutor
     (numba releases the GIL).
 
+v2.0 additions:
+  - H2 seasonal storage dispatch (4th stage): duration=1000hr, eff=0.35,
+    window=30d.  Activates when h2_dispatch_pct > 0 in the EF parquet
+    (step 2.1d lowcf outputs include H2 for bands ≥ 95%).
+  - --lowcf-only flag: process only *_interp_lowcf.parquet files (targeted
+    run after step 2.1d, skips other interp/dense-augment files).
+
 Usage:
     python scripts/step2_3a_regenerate_peakclean.py
     python scripts/step2_3a_regenerate_peakclean.py --iso ERCOT
     python scripts/step2_3a_regenerate_peakclean.py --iso ERCOT --threshold 95
     python scripts/step2_3a_regenerate_peakclean.py --interp-only
     python scripts/step2_3a_regenerate_peakclean.py --interp-only --iso CAISO
+    python scripts/step2_3a_regenerate_peakclean.py --lowcf-only
+    python scripts/step2_3a_regenerate_peakclean.py --lowcf-only --iso PJM
     python scripts/step2_3a_regenerate_peakclean.py --validate
     python scripts/step2_3a_regenerate_peakclean.py --workers 4
 """
@@ -72,10 +81,13 @@ from pipeline_config import (
     BATTERY_EFFICIENCY,
     BATTERY8_DURATION_HOURS,
     BATTERY8_EFFICIENCY,
+    H2_EFFICIENCY,
+    H2_DURATION_HOURS,
+    H2_WINDOW_DAYS,
 )
 
 try:
-    from dispatch_utils import _dispatch_battery, _dispatch_ldes
+    from dispatch_utils import _dispatch_battery, _dispatch_ldes, _dispatch_h2
     HAS_DISPATCH_UTILS = True
 except ImportError:
     HAS_DISPATCH_UTILS = False
@@ -104,6 +116,9 @@ RESOURCE_ORDER = [
     "solar_batt4", "solar_batt8", "wind_batt4", "wind_batt8",
 ]
 N_RESOURCES = len(RESOURCE_ORDER)
+
+# H2 storage constants (from pipeline_config)
+H2_WINDOW_HOURS = H2_WINDOW_DAYS * 24  # 720
 
 # 99.97th pctile of 8760 values → 3rd-largest value
 _TOP_K = int(np.ceil(H * (1.0 - WORST_HOUR_PCTILE / 100.0)))  # 3
@@ -230,9 +245,16 @@ _EF_PAT = re.compile(
 #   step_2_1_EF_CAISO_90_interp_dense.parquet
 #   step_2_1_EF_CAISO_90_interp_dense_chunk003.parquet
 #   step_2_1_EF_PJM_87.5_interp_foo.parquet
+#   step_2_1_EF_PJM_90_interp_lowcf.parquet   ← step 2.1d output
 # Captures: (1) ISO, (2) threshold tag
 _INTERP_PAT = re.compile(
     r"^step_2_1_EF_([A-Z]+)_([0-9]+(?:\.[0-9]+)?)_interp_.+\.parquet$"
+)
+
+# Matches only lowcf interp files from step 2.1d:
+#   step_2_1_EF_PJM_90_interp_lowcf.parquet
+_LOWCF_PAT = re.compile(
+    r"^step_2_1_EF_([A-Z]+)_([0-9]+(?:\.[0-9]+)?)_interp_lowcf\.parquet$"
 )
 
 
@@ -262,19 +284,27 @@ def discover_ef_files() -> dict[str, dict[str, list[Path]]]:
 
 
 def discover_interp_files(iso_filter: str | None = None,
+                          lowcf_only: bool = False,
                           ) -> dict[str, list[tuple[str, Path]]]:
     """Return {iso: [(threshold_tag, path), ...]} for interp/dense-augment files.
 
     Each interp file is treated independently (not grouped by threshold) since
     they each get their own peakclean sidecar.  Skips peakclean sidecars.
+
+    Args:
+        iso_filter: If set, only return files for this ISO.
+        lowcf_only: If True, only return *_interp_lowcf.parquet files
+                    (step 2.1d output).  Useful for targeted runs after
+                    step 2.1d without reprocessing all interp files.
     """
+    pat = _LOWCF_PAT if lowcf_only else _INTERP_PAT
     result: dict[str, list[tuple[str, Path]]] = defaultdict(list)
     if not EF_DIR.exists():
         return dict(result)
     for f in sorted(EF_DIR.iterdir()):
         if "peakclean" in f.name:
             continue
-        m = _INTERP_PAT.match(f.name)
+        m = pat.match(f.name)
         if m:
             iso, ttag = m.group(1), m.group(2)
             if iso_filter and iso != iso_filter:
@@ -304,6 +334,7 @@ def _interp_peakclean_path(source_path: Path) -> Path:
 #             Eliminates O(n*11) boolean fancy-index copies.
 # Change #4: Single _resid_fused_all replaces both _resid_fused (no-storage)
 #             and _resid_fused_storage.  One prange launch, per-mix branch.
+# Change #5 (v2.0): H2 seasonal storage as 4th dispatch stage.
 
 if HAS_NUMBA:
     # ── Storage dispatch helper: single storage stage (njit, NOT parallel) ──
@@ -358,7 +389,7 @@ if HAS_NUMBA:
     # ── Unified fused kernel: parallel over mixes, branches on storage ────
     @njit(parallel=True, cache=True)
     def _resid_fused_all(resid, W, P32, dm32, dn32,
-                         batt4, batt8, ldes, compute_idx):
+                         batt4, batt8, ldes, h2, compute_idx):
         """Unified dispatch kernel — handles storage and no-storage mixes.
 
         Writes directly into the pre-allocated `resid` array at positions
@@ -366,19 +397,20 @@ if HAS_NUMBA:
         initial value (inf = infeasible).
 
         Per-mix branch:
-          - No storage (batt4+batt8+ldes == 0): float32 matmul + top-3 gap.
+          - No storage (batt4+batt8+ldes+h2 == 0): float32 matmul + top-3 gap.
             Matches original _resid_fused exactly.
-          - Has storage: float64 matmul + 3-stage dispatch + top-3 gap.
-            Matches original _resid_fused_storage exactly.
+          - Has storage: float64 matmul + 4-stage dispatch + top-3 gap.
+            Matches original _resid_fused_storage exactly, plus H2.
 
         Index-array dispatch (change #3): compute_idx is int64 array of row
-        indices into W/batt4/batt8/ldes.  Eliminates boolean fancy-index
+        indices into W/batt4/batt8/ldes/h2.  Eliminates boolean fancy-index
         copies of W[mask], batt4[mask], etc.
 
         Storage constants (from pipeline_config.py):
-          Battery 4hr:  duration=4,   eff=0.85, window=24
-          Battery 8hr:  duration=8,   eff=0.85, window=48
-          LDES:         duration=100, eff=0.50, window=168
+          Battery 4hr:  duration=4,    eff=0.85, window=24
+          Battery 8hr:  duration=8,    eff=0.85, window=48
+          LDES:         duration=100,  eff=0.50, window=168
+          H2:           duration=1000, eff=0.35, window=720
         """
         NR = W.shape[1]
         n_compute = compute_idx.shape[0]
@@ -388,7 +420,8 @@ if HAS_NUMBA:
             b4 = float(batt4[i])
             b8 = float(batt8[i])
             ld = float(ldes[i])
-            has_stor = (b4 > 0.0) or (b8 > 0.0) or (ld > 0.0)
+            h2_val = float(h2[i])
+            has_stor = (b4 > 0.0) or (b8 > 0.0) or (ld > 0.0) or (h2_val > 0.0)
 
             if not has_stor:
                 # ── Fast path: float32, no intermediates ──────────────
@@ -410,7 +443,7 @@ if HAS_NUMBA:
                         t2 = gap_val
                 resid[i] = t2
             else:
-                # ── Storage path: float64 + 3-stage dispatch ─────────
+                # ── Storage path: float64 + 4-stage dispatch ─────────
                 supply = np.empty(H, dtype=np.float64)
                 surplus = np.empty(H, dtype=np.float64)
                 gap_arr = np.empty(H, dtype=np.float64)
@@ -449,7 +482,13 @@ if HAS_NUMBA:
                     surplus, gap_arr, total_dispatch,
                     ldes_cap, ldes_cap / 100.0, 0.50, 168)
 
-                # Step 5: final gap vs demand_margin + top-3 tracking
+                # Step 5: H2 seasonal storage (duration=1000, eff=0.35, window=720)
+                h2_cap = h2_val / 100.0
+                _inline_storage_stage(
+                    surplus, gap_arr, total_dispatch,
+                    h2_cap, h2_cap / 1000.0, 0.35, 720)
+
+                # Step 6: final gap vs demand_margin + top-3 tracking
                 t0 = -1.0
                 t1 = -1.0
                 t2 = -1.0
@@ -496,6 +535,7 @@ def _compute_resid_single_storage(
     batt4_pct: float,
     batt8_pct: float,
     ldes_pct: float,
+    h2_pct: float = 0.0,
 ) -> float:
     """Compute residual for a single mix with standalone storage dispatch.
 
@@ -509,7 +549,7 @@ def _compute_resid_single_storage(
     residual_surplus = np.maximum(0.0, supply_total - demand_norm)
     residual_gap     = np.maximum(0.0, demand_norm - supply_total)
 
-    # Sequential dispatch: battery4 → battery8 → LDES
+    # Sequential dispatch: battery4 → battery8 → LDES → H2
     batt4_prof = _dispatch_battery(
         residual_surplus, residual_gap, batt4_pct,
         BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
@@ -518,8 +558,10 @@ def _compute_resid_single_storage(
         BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY, window_hours=48)
     ldes_prof = _dispatch_ldes(
         residual_surplus, residual_gap, ldes_pct, demand_norm)
+    h2_prof = _dispatch_h2(
+        residual_surplus, residual_gap, h2_pct, demand_norm)
 
-    total_clean = supply_total + batt4_prof + batt8_prof + ldes_prof
+    total_clean = supply_total + batt4_prof + batt8_prof + ldes_prof + h2_prof
 
     # Final gap against demand_margin (includes RA headroom)
     gap = np.maximum(0.0, demand_margin - total_clean)
@@ -532,6 +574,7 @@ def _compute_resid_single_storage(
 # ---------------------------------------------------------------------------
 # Change #2: P32, dm32, dn32 received as arguments (cast once at ISO level).
 # Change #3/#4: Fused kernel with index-array dispatch replaces partitioned calls.
+# Change #5 (v2.0): h2_dispatch_pct extracted and passed to kernel.
 
 def process_ef_file(
     iso: str,
@@ -557,7 +600,8 @@ def process_ef_file(
     # Columns we actually need — read only these to save memory
     needed_cols = list(RESOURCE_ORDER) + [
         "battery_dispatch_pct", "battery8_dispatch_pct",
-        "ldes_dispatch_pct", "hourly_match_score",
+        "ldes_dispatch_pct", "h2_dispatch_pct",
+        "hourly_match_score",
     ]
 
     # Load & concatenate parts — read only needed columns
@@ -599,10 +643,14 @@ def process_ef_file(
     ldes_arr = (ef_tbl.column("ldes_dispatch_pct").to_numpy().astype(np.float32)
                 if "ldes_dispatch_pct" in ef_tbl.schema.names
                 else np.zeros(n, dtype=np.float32))
+    h2_arr = (ef_tbl.column("h2_dispatch_pct").to_numpy().astype(np.float32)
+              if "h2_dispatch_pct" in ef_tbl.schema.names
+              else np.zeros(n, dtype=np.float32))
 
     # Count storage mixes for summary stats
-    stor_mask = (batt4 > 0) | (batt8 > 0) | (ldes_arr > 0)
+    stor_mask = (batt4 > 0) | (batt8 > 0) | (ldes_arr > 0) | (h2_arr > 0)
     n_storage = int(stor_mask.sum())
+    n_h2 = int((h2_arr > 0).sum())
 
     del ef_tbl
 
@@ -615,9 +663,9 @@ def process_ef_file(
 
     # ── Dispatch: fused kernel (primary) or numpy fallback ────────
     if n_computed > 0 and HAS_NUMBA:
-        # Change #4: single kernel handles both storage and no-storage
+        # Change #4/#5: single kernel handles storage (incl H2) and no-storage
         _resid_fused_all(resid, W, P32, dm32, dn32,
-                         batt4, batt8, ldes_arr, compute_idx)
+                         batt4, batt8, ldes_arr, h2_arr, compute_idx)
     elif n_computed > 0:
         # Numpy fallback — partition into storage / no-storage
         ns_idx = compute_idx[~stor_mask[compute_idx]]
@@ -632,7 +680,7 @@ def process_ef_file(
                 resid[idx] = _compute_resid_single_storage(
                     W[idx], P, demand_margin, demand_norm,
                     float(batt4[idx]), float(batt8[idx]),
-                    float(ldes_arr[idx]))
+                    float(ldes_arr[idx]), float(h2_arr[idx]))
                 if (count + 1) % 5000 == 0:
                     print(f"    storage {count+1}/{stor_idx.shape[0]}",
                           flush=True)
@@ -678,6 +726,7 @@ def process_ef_file(
         "cpk_max": float(finite_cpk.max()) if len(finite_cpk) > 0 else 0.0,
         "cpk_std": float(finite_cpk.std()) if len(finite_cpk) > 0 else 0.0,
         "n_storage": n_storage,
+        "n_h2": n_h2,
         "n_infeasible": n_infeasible,
     }
 
@@ -776,10 +825,11 @@ def _process_one_threshold(
 
     dt = time.time() - t1
     rate = s["n_computed"] / max(0.01, dt)
+    h2_tag = f"h2={s['n_h2']} " if s.get("n_h2", 0) > 0 else ""
     print(f"  → {iso} {label}: {dt:.1f}s ({rate:,.0f} dispatched/s) | "
           f"cpk [{s['cpk_min']:,.0f}, {s['cpk_max']:,.0f}] "
           f"std={s['cpk_std']:,.0f} | "
-          f"storage={s['n_storage']} "
+          f"storage={s['n_storage']} {h2_tag}"
           f"skipped={s['n_infeasible']}",
           flush=True)
     return s
@@ -800,10 +850,18 @@ def main() -> int:
     ap.add_argument("--interp-only", action="store_true",
                     help="Process only interp/dense-augment files, "
                          "skip standard EF bands")
+    ap.add_argument("--lowcf-only", action="store_true",
+                    help="Process only *_interp_lowcf.parquet files "
+                         "(step 2.1d output — skip standard bands and "
+                         "other interp files)")
     ap.add_argument("--skip-interp", action="store_true",
                     help="Skip interp/dense-augment files "
                          "(process standard bands only, original behavior)")
     args = ap.parse_args()
+
+    # --lowcf-only implies --interp-only behavior (skip standard bands)
+    if args.lowcf_only:
+        args.interp_only = True
 
     t_global = time.time()
 
@@ -891,14 +949,18 @@ def main() -> int:
 
             gc.collect()  # once per ISO, not per threshold
 
-    # ── Pass 2: Interp / dense-augment files ──────────────────────
+    # ── Pass 2: Interp / dense-augment / lowcf files ─────────────
     if not args.skip_interp:
         iso_filter = args.iso.upper() if args.iso else None
-        interp_tree = discover_interp_files(iso_filter=iso_filter)
+        interp_tree = discover_interp_files(
+            iso_filter=iso_filter,
+            lowcf_only=args.lowcf_only,
+        )
 
         if interp_tree:
+            label = "lowcf" if args.lowcf_only else "interp/dense-augment"
             print(f"\n{'='*60}")
-            print("[peakclean] Processing interp/dense-augment files")
+            print(f"[peakclean] Processing {label} files")
             print(f"{'='*60}")
 
         # Cache profiles per ISO to avoid reloading if already done above
@@ -911,7 +973,7 @@ def main() -> int:
 
             # Load or reuse profiles
             if iso not in _profile_cache:
-                print(f"\n[peakclean] Loading profiles for {iso} (interp pass)")
+                print(f"\n[peakclean] Loading profiles for {iso} ({label} pass)")
                 P = build_profile_matrix(iso)
                 dn = _load_demand_norm(iso)
                 dm = dn * (1.0 + RESOURCE_ADEQUACY_MARGIN)
@@ -924,7 +986,7 @@ def main() -> int:
             P, P32, dm32, dn32, demand_norm, demand_margin, peak_mw = (
                 _profile_cache[iso])
 
-            print(f"  {iso}: {len(entries)} interp file(s)", flush=True)
+            print(f"  {iso}: {len(entries)} {label} file(s)", flush=True)
 
             for ttag, src_path in entries:
                 out = _interp_peakclean_path(src_path)
@@ -942,13 +1004,14 @@ def main() -> int:
     print(f"\n{'='*100}")
     print(f"{'ISO':<8}{'threshold':>10}{'n_mixes':>12}{'computed':>10}"
           f"{'cpk_min':>12}{'cpk_max':>12}{'cpk_std':>12}"
-          f"{'n_storage':>10}{'skipped':>10}")
+          f"{'n_storage':>10}{'n_h2':>6}{'skipped':>10}")
     print("-" * 100)
     for s in summaries:
         print(f"{s['iso']:<8}{s['threshold']:>10}{s['n_mixes']:>12,}"
               f"{s['n_computed']:>10,}"
               f"{s['cpk_min']:>12,.0f}{s['cpk_max']:>12,.0f}"
               f"{s['cpk_std']:>12,.0f}{s['n_storage']:>10,}"
+              f"{s.get('n_h2', 0):>6,}"
               f"{s['n_infeasible']:>10,}")
     print("-" * 100)
     print(f"Total: {total_mixes:,} mixes in {elapsed:.0f}s "
