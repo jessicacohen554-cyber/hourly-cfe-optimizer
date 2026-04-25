@@ -1,0 +1,201 @@
+name: "Step 2.1c: Dense Hybrid Augmentation"
+
+# Generates dense VRE+hybrid+battery mixes at 2% steps with dispatch scoring.
+# Fills 8-10% gaps in hybrid resource coverage that cause P1 ratchet traps.
+#
+# Runs AFTER Step 2.1 (needs EF parquets), BEFORE Step 2.3 sweep.
+# After this completes, run Step 2.3 with phase=full (peakclean + sweep).
+#
+# Compute-intensive: dispatch-scores ~5-11M mixes per ISO with 60 storage
+# configs each. Use large runner for faster Numba parallelism (~30 min vs ~3 hr).
+#
+# Prerequisite: Step 2.1 EF parquets + hybrid profiles + demand/gen profiles
+# Output: data/step2.1-ef/step_2_1_EF_<ISO>_*_interp_dense.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = parallel across 7)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      runner_size:
+        description: 'Runner size (large recommended — 16-core Numba parallelism)'
+        required: true
+        default: 'large'
+        type: choice
+        options:
+          - standard
+          - large
+      dry_run:
+        description: 'Dry run (estimate output size without writing)'
+        required: false
+        default: false
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-1c-dense-hybrid
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  augment:
+    needs: prepare
+    runs-on: ${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}
+    timeout-minutes: ${{ inputs.runner_size == 'large' && 60 || 240 }}
+    permissions:
+      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    concurrency:
+      group: step2-1c-dense-${{ matrix.iso }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Verify prerequisites
+        run: |
+          ISO="${{ matrix.iso }}"
+          EF_COUNT=$(ls data/step2.1-ef/step_2_1_EF_${ISO}_*.parquet 2>/dev/null | grep -v '_peakclean\|_interp_\|_dense' | wc -l)
+          HYB=$(ls data/hybrid_profiles/${ISO}_hybrid_profiles.npz 2>/dev/null | wc -l)
+          if [ "$EF_COUNT" -eq 0 ]; then
+            echo "ERROR: No EF parquets for ${ISO}. Run Step 2.1 first."
+            exit 1
+          fi
+          if [ "$HYB" -eq 0 ]; then
+            echo "ERROR: No hybrid profiles for ${ISO}."
+            exit 1
+          fi
+          echo "Found ${EF_COUNT} EF parquets and hybrid profiles for ${ISO}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow scipy
+
+      - name: "Run dense hybrid augmentation — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          ISO_FILTER: ${{ matrix.iso }}
+        timeout-minutes: ${{ inputs.runner_size == 'large' && 45 || 210 }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python scripts/step2_1_rel_tax_augment.py --dense-hybrid --dry-run
+          else
+            python scripts/step2_1_rel_tax_augment.py --dense-hybrid
+          fi
+
+      - name: Report output sizes
+        if: inputs.dry_run != true
+        run: |
+          ISO="${{ matrix.iso }}"
+          echo "Dense augmentation output for ${ISO}:"
+          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null || echo "  (no files)"
+          TOTAL=$(du -sh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null | tail -1 | cut -f1 || echo "0")
+          echo "Total size: ${TOTAL}"
+
+      - name: "Commit + push — ${{ matrix.iso }}"
+        if: inputs.dry_run != true
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git checkout -b "${branch}"
+
+          git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "::warning::No new dense augmentation files for ${ISO}"
+            exit 0
+          fi
+
+          FILE_COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 2.1c: dense hybrid augmentation for ${ISO} (${FILE_COUNT} band files)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "${branch}" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          {
+            echo "## Step 2.1c — ${ISO} dense hybrid augmentation"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "- Branch: \`${BRANCH}\`"
+            elif [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "- Mode: **dry run** (no files written)"
+            else
+              echo "- Branch: (not pushed)"
+            fi
+            echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
+            echo ""
+            echo "### Next steps"
+            echo "1. Run **Squash Pipeline Branches** with pattern \`auto/.*step2-1c-dense\`"
+            echo "2. Run **Step 2.3 Pathway Sweep** with \`phase=full\` to regenerate peakclean + sweep"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always() && inputs.dry_run != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-1c-${{ matrix.iso }}-${{ github.run_id }}
+          path: data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_dense.parquet
+          retention-days: 14
+          if-no-files-found: warn
