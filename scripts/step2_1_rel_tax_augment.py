@@ -799,6 +799,42 @@ _BAT4_LEVELS = np.array([0, 0.005, 0.01, 0.02, 0.04], dtype=np.float64)
 _BAT8_LEVELS = np.array([0, 0.01, 0.02, 0.04], dtype=np.float64)
 _LDES_LEVELS = np.array([0, 0.05, 0.1], dtype=np.float64)
 
+# Cached storage config arrays — built once on first use
+_STORAGE_CFGS: dict | None = None
+
+
+def _get_storage_cfgs():
+    """Build and cache the K storage config arrays (constant across calls)."""
+    global _STORAGE_CFGS
+    if _STORAGE_CFGS is not None:
+        return _STORAGE_CFGS
+    from pipeline_config import (
+        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
+        LDES_DURATION_HOURS,
+    )
+    n_b4, n_b8, n_ld = len(_BAT4_LEVELS), len(_BAT8_LEVELS), len(_LDES_LEVELS)
+    K = n_b4 * n_b8 * n_ld
+    cfgs = {k: np.empty(K, dtype=np.float64) for k in (
+        'b4_cap', 'b4_pow', 'b8_cap', 'b8_pow', 'ld_cap', 'ld_pow',
+        'b4_lvl', 'b8_lvl', 'ld_lvl')}
+    ki = 0
+    for b4 in _BAT4_LEVELS:
+        for b8 in _BAT8_LEVELS:
+            for ld in _LDES_LEVELS:
+                cfgs['b4_cap'][ki] = b4 * BATTERY_DURATION_HOURS
+                cfgs['b4_pow'][ki] = b4
+                cfgs['b8_cap'][ki] = b8 * BATTERY8_DURATION_HOURS
+                cfgs['b8_pow'][ki] = b8
+                cfgs['ld_cap'][ki] = ld * LDES_DURATION_HOURS
+                cfgs['ld_pow'][ki] = ld
+                cfgs['b4_lvl'][ki] = b4
+                cfgs['b8_lvl'][ki] = b8
+                cfgs['ld_lvl'][ki] = ld
+                ki += 1
+    cfgs['K'] = K
+    _STORAGE_CFGS = cfgs
+    return cfgs
+
 
 def _load_iso_profiles(iso: str):
     """Load demand, supply, and hybrid profiles for dispatch scoring.
@@ -816,8 +852,11 @@ def _load_iso_profiles(iso: str):
                            dtype=np.float64)
 
     hyb_path = _ROOT / 'data' / 'hybrid_profiles' / f'{iso}_hybrid_profiles.npz'
-    hyb = {k: np.load(hyb_path)[k].astype(np.float64)
-           for k in np.load(hyb_path).keys()} if hyb_path.exists() else {}
+    if hyb_path.exists():
+        hyb_npz = np.load(hyb_path)
+        hyb = {k: hyb_npz[k].astype(np.float64) for k in hyb_npz.keys()}
+    else:
+        hyb = {}
 
     sp = get_supply_profiles(iso, gen, include_hybrids=True, hybrid_profiles=hyb)
     # CAISO geothermal as separate flat profile (matches step1 treatment)
@@ -845,7 +884,7 @@ def _scan_ef_bands(iso: str):
             packed into a 44-byte string.
     """
     seen: dict[tuple, int] = {}
-    existing_keys: set = set()
+    packed_chunks: list[np.ndarray] = []      # accumulate for np.unique
     n_cols = len(_RESOURCE_COLS)
     row_bytes = n_cols * 4  # int32 = 4 bytes
 
@@ -876,7 +915,7 @@ def _scan_ef_bands(iso: str):
             # --- Existing-key set (dedup) ---
             res_c = np.ascontiguousarray(res_arrs)
             packed = np.frombuffer(res_c.tobytes(), dtype=f'S{row_bytes}')
-            existing_keys.update(packed.tolist())
+            packed_chunks.append(packed.copy())
 
             # --- Base-group frequency counting (vectorized) ---
             base_arr = res_arrs[:, base_indices].astype(np.float64)
@@ -893,9 +932,10 @@ def _scan_ef_bands(iso: str):
         {c: float(v) for c, v in zip(_BASE_COLS, vals)} | {'_count': cnt}
         for vals, cnt in ranked
     ]
-    # Convert set to sorted numpy array for vectorized searchsorted dedup
-    if existing_keys:
-        existing_arr = np.array(sorted(existing_keys))
+    # Convert accumulated chunks to sorted unique numpy array (replaces
+    # Python set + sorted — np.unique is ~10x faster on millions of S44)
+    if packed_chunks:
+        existing_arr = np.unique(np.concatenate(packed_chunks))
     else:
         existing_arr = np.array([], dtype=f'S{row_bytes}')
     return base_groups, existing_arr
@@ -950,9 +990,8 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     from step1_pfs_generator import (
         _batch_score_storage_grid, _batch_score_no_storage)
     from pipeline_config import (
-        BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY,
-        BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
-        LDES_DURATION_HOURS, LDES_EFFICIENCY, LDES_WINDOW_DAYS,
+        BATTERY_EFFICIENCY, BATTERY8_EFFICIENCY,
+        LDES_EFFICIENCY, LDES_WINDOW_DAYS,
     )
 
     N = len(mix_batch)
@@ -960,11 +999,16 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     nostorage_floor = (HMS_LO - NOSTORAGE_HEADROOM) / 100.0 * td
 
     # ── Stage 1: no-storage pre-filter ──────────────────────────────
-    # Compute supply profiles for ALL mixes
-    all_supply = (mix_batch / 100.0) @ supply_matrix   # (N, 8760)
+    # Chunk the matmul to avoid OOM on large batches (100k × 8760 = ~6.5 GB)
+    NS_CHUNK = 50_000
+    raw_ns = np.empty(N, dtype=np.float64)
+    for s0 in range(0, N, NS_CHUNK):
+        s1 = min(s0 + NS_CHUNK, N)
+        chunk_supply = (mix_batch[s0:s1] / 100.0) @ supply_matrix
+        raw_ns[s0:s1] = _batch_score_no_storage(
+            demand_arr, chunk_supply, 1.0, s1 - s0)
+        del chunk_supply
 
-    # Fast no-storage score via Numba
-    raw_ns = _batch_score_no_storage(demand_arr, all_supply, 1.0, N)
     ns_hms = raw_ns / td * 100.0
 
     survive = raw_ns >= nostorage_floor
@@ -981,56 +1025,28 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
         return best_hms, best_b4, best_b8, best_ld
 
     # ── Stage 2: full storage grid on survivors only ────────────────
-    surv_supply = all_supply[surv_idx]
-    del all_supply  # free memory
+    cfgs = _get_storage_cfgs()
+    K = cfgs['K']
 
-    n_b4 = len(_BAT4_LEVELS)
-    n_b8 = len(_BAT8_LEVELS)
-    n_ld = len(_LDES_LEVELS)
-    K = n_b4 * n_b8 * n_ld
-
-    cfgs_b4_cap = np.empty(K, dtype=np.float64)
-    cfgs_b4_pow = np.empty(K, dtype=np.float64)
-    cfgs_b8_cap = np.empty(K, dtype=np.float64)
-    cfgs_b8_pow = np.empty(K, dtype=np.float64)
-    cfgs_ld_cap = np.empty(K, dtype=np.float64)
-    cfgs_ld_pow = np.empty(K, dtype=np.float64)
-    cfgs_b4_lvl = np.empty(K, dtype=np.float64)
-    cfgs_b8_lvl = np.empty(K, dtype=np.float64)
-    cfgs_ld_lvl = np.empty(K, dtype=np.float64)
-
-    ki = 0
-    for b4 in _BAT4_LEVELS:
-        for b8 in _BAT8_LEVELS:
-            for ld in _LDES_LEVELS:
-                cfgs_b4_cap[ki] = b4 * BATTERY_DURATION_HOURS
-                cfgs_b4_pow[ki] = b4
-                cfgs_b8_cap[ki] = b8 * BATTERY8_DURATION_HOURS
-                cfgs_b8_pow[ki] = b8
-                cfgs_ld_cap[ki] = ld * LDES_DURATION_HOURS
-                cfgs_ld_pow[ki] = ld
-                cfgs_b4_lvl[ki] = b4
-                cfgs_b8_lvl[ki] = b8
-                cfgs_ld_lvl[ki] = ld
-                ki += 1
-
-    # Score survivors in chunks
+    # Score survivors in chunks — compute supply per chunk to limit memory
     for start in range(0, n_surv, SCORE_CHUNK):
         end = min(start + SCORE_CHUNK, n_surv)
         cn = end - start
+        chunk_idx = surv_idx[start:end]
+        surv_supply = (mix_batch[chunk_idx] / 100.0) @ supply_matrix
 
         scores, idxs = _batch_score_storage_grid(
-            demand_arr, surv_supply[start:end], 1.0, cn,
-            cfgs_b4_cap, cfgs_b4_pow, BATTERY_EFFICIENCY,
-            cfgs_b8_cap, cfgs_b8_pow, BATTERY8_EFFICIENCY,
-            cfgs_ld_cap, cfgs_ld_pow, LDES_EFFICIENCY,
+            demand_arr, surv_supply, 1.0, cn,
+            cfgs['b4_cap'], cfgs['b4_pow'], BATTERY_EFFICIENCY,
+            cfgs['b8_cap'], cfgs['b8_pow'], BATTERY8_EFFICIENCY,
+            cfgs['ld_cap'], cfgs['ld_pow'], LDES_EFFICIENCY,
             ldes_wh, K)
 
-        orig_idx = surv_idx[start:end]
-        best_hms[orig_idx] = scores / td * 100.0
-        best_b4[orig_idx] = cfgs_b4_lvl[idxs]
-        best_b8[orig_idx] = cfgs_b8_lvl[idxs]
-        best_ld[orig_idx] = cfgs_ld_lvl[idxs]
+        best_hms[chunk_idx] = scores / td * 100.0
+        best_b4[chunk_idx] = cfgs['b4_lvl'][idxs]
+        best_b8[chunk_idx] = cfgs['b8_lvl'][idxs]
+        best_ld[chunk_idx] = cfgs['ld_lvl'][idxs]
+        del surv_supply
 
         if start > 0 and start % (SCORE_CHUNK * 4) == 0:
             print(f"    scored {start:,}/{n_surv:,} survivors "
@@ -1096,8 +1112,12 @@ def _git_checkpoint(iso: str, chunk_idx: int, rows: int):
 
 
 def _score_and_bin(demand_arr, supply_matrix, mb, td, rtypes,
-                   band_tables):
+                   band_tables, res_col_idx=None):
     """Score a batch of mixes, filter to HMS_LO..HMS_HI, bin into band_tables.
+
+    res_col_idx: precomputed list of (col_name, mb_col_index_or_-1) pairs
+                 for _RESOURCE_COLS → rtypes mapping. Avoids repeated
+                 rtypes.index() calls.
 
     Returns (n_scored, n_kept).
     """
@@ -1113,8 +1133,10 @@ def _score_and_bin(demand_arr, supply_matrix, mb, td, rtypes,
     b4, b8, ld = b4[keep], b8[keep], ld[keep]
 
     out = {}
-    for c in _RESOURCE_COLS:
-        idx = rtypes.index(c) if c in rtypes else -1
+    if res_col_idx is None:
+        res_col_idx = [(c, rtypes.index(c) if c in rtypes else -1)
+                       for c in _RESOURCE_COLS]
+    for c, idx in res_col_idx:
         out[c] = pa.array((mb[:, idx] if idx >= 0
                            else np.zeros(len(mb))).astype(np.float32))
     out['battery_dispatch_pct'] = pa.array(b4.astype(np.float32))
@@ -1193,6 +1215,12 @@ def run_dense_augment(dry_run: bool = False):
         n_rescols = len(_RESOURCE_COLS)
         row_bytes = n_rescols * 4
 
+        # Precompute column index maps once per ISO (avoids repeated .index())
+        res_col_idx = [(c, rtypes.index(c) if c in rtypes else -1)
+                       for c in _RESOURCE_COLS]
+        dedup_col_idx = [rtypes.index(c) if c in rtypes else -1
+                         for c in _RESOURCE_COLS]
+
         band_tables: dict[str, list[pa.Table]] = defaultdict(list)
         iso_scored, iso_kept = 0, 0
         vre_skipped = 0
@@ -1231,9 +1259,9 @@ def run_dense_augment(dry_run: bool = False):
             del bg_batches
 
             mk = np.column_stack([
-                mb[:, rtypes.index(c)].astype(np.int32) if c in rtypes
+                mb[:, di].astype(np.int32) if di >= 0
                 else np.zeros(len(mb), dtype=np.int32)
-                for c in _RESOURCE_COLS])
+                for di in dedup_col_idx])
             mk_c = np.ascontiguousarray(mk)
             mk_packed = np.frombuffer(
                 mk_c.tobytes(), dtype=f'S{row_bytes}')
@@ -1246,7 +1274,8 @@ def run_dense_augment(dry_run: bool = False):
 
             # ── Score entire base group in one call ──
             n_s, n_k = _score_and_bin(
-                demand_arr, supply_matrix, mb, td, rtypes, band_tables)
+                demand_arr, supply_matrix, mb, td, rtypes, band_tables,
+                res_col_idx=res_col_idx)
             iso_scored += n_s
             iso_kept += n_k
             del mb
