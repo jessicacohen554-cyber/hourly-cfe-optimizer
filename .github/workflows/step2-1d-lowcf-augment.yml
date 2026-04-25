@@ -1,0 +1,275 @@
+name: "Step 2.1d: Low-CF Augmentation"
+
+# Generates low-nuclear mixes for ISOs where Step 1's CF_WINDOW floor
+# excluded mixes below cf=20 (NEISO), cf=10 (NYISO), cf=30 (PJM).
+#
+# Runs AFTER Step 2.1 EF, BEFORE Step 2.3 pathway sweep.
+# After this completes, run step2_3a_regenerate_peakclean.py --interp-only
+# for each target ISO to generate peakclean sidecars.
+#
+# Compute-intensive: fused Numba kernel scores ~50K candidates per band
+# with 4-stage storage dispatch. Large runner recommended for prange
+# parallelism (~5 min vs ~30 min on standard runner).
+#
+# Prerequisite: Step 2.1 EF parquets + hybrid profiles + demand/gen profiles
+# Output: data/step2.1-ef/step_2_1_EF_<ISO>_*_interp_lowcf.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = NEISO + NYISO + PJM in parallel)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - NEISO
+          - NYISO
+          - PJM
+      runner_size:
+        description: 'Runner size (large recommended — 16-core Numba prange)'
+        required: true
+        default: 'large'
+        type: choice
+        options:
+          - standard
+          - large
+      dry_run:
+        description: 'Dry run (count candidates without scoring)'
+        required: false
+        default: false
+        type: boolean
+      band:
+        description: 'Single band to process (e.g. "90"). Leave blank for all ≥ 50.'
+        required: false
+        default: ''
+        type: string
+      workers:
+        description: 'Parallel band workers within each ISO job (1–4)'
+        required: false
+        default: '2'
+        type: string
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-1d-lowcf
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_PYTHON_VERSION_WARNING: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["NEISO","NYISO","PJM"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  augment:
+    needs: prepare
+    runs-on: ${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}
+    timeout-minutes: ${{ inputs.runner_size == 'large' && 45 || 180 }}
+    permissions:
+      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    concurrency:
+      group: step2-1d-lowcf-${{ matrix.iso }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 1
+
+      - name: Verify prerequisites
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ISO="${{ matrix.iso }}"
+
+          # Check EF parquets exist (exclude peakclean/interp/dense)
+          EF_FILES=(data/step2.1-ef/step_2_1_EF_${ISO}_*.parquet)
+          EF_COUNT=0
+          for f in "${EF_FILES[@]}"; do
+            case "$f" in
+              *_peakclean.parquet|*_interp_*.parquet|*_dense.parquet) ;;
+              *) EF_COUNT=$((EF_COUNT + 1)) ;;
+            esac
+          done
+
+          # Check hybrid profiles
+          HYB_COUNT=0
+          [[ -f "data/hybrid_profiles/${ISO}_hybrid_profiles.npz" ]] && HYB_COUNT=1
+
+          if [ "$EF_COUNT" -eq 0 ]; then
+            echo "ERROR: No EF parquets for ${ISO}. Run Step 2.1 first."
+            exit 1
+          fi
+          if [ "$HYB_COUNT" -eq 0 ]; then
+            echo "ERROR: No hybrid profiles for ${ISO}."
+            exit 1
+          fi
+          echo "Found ${EF_COUNT} EF parquets and hybrid profiles for ${ISO}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: python -m pip install --prefer-binary numpy numba pyarrow scipy pandas
+
+      - name: Set up git branch
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          echo "BRANCH=${BRANCH}" >> "${GITHUB_ENV}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git checkout -b "${BRANCH}"
+
+      - name: "Run low-CF augmentation — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          NUMBA_NUM_THREADS: ${{ inputs.runner_size == 'large' && '16' || '4' }}
+          OMP_NUM_THREADS: ${{ inputs.runner_size == 'large' && '16' || '4' }}
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          VECLIB_MAXIMUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
+        timeout-minutes: ${{ inputs.runner_size == 'large' && 30 || 150 }}
+        run: |
+          ARGS="--iso ${{ matrix.iso }} --workers ${{ inputs.workers || '2' }}"
+
+          BAND="${{ inputs.band }}"
+          if [ -n "$BAND" ]; then
+            ARGS="$ARGS --band $BAND"
+          fi
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+
+          python scripts/step2_1d_lowcfaug.py $ARGS
+
+      - name: Report output sizes
+        if: inputs.dry_run != true
+        run: |
+          ISO="${{ matrix.iso }}"
+          echo "Low-CF augmentation output for ${ISO}:"
+          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || echo "  (no files)"
+          echo ""
+          echo "Row counts:"
+          python3 -c "
+          import glob, pyarrow.parquet as pq
+          files = sorted(glob.glob('data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet'))
+          total = 0
+          for f in files:
+              n = pq.read_metadata(f).num_rows
+              total += n
+              band = f.split('_')[-3]
+              print(f'  band {band}: {n:,} rows')
+          print(f'  TOTAL: {total:,} rows across {len(files)} bands')
+          " 2>/dev/null || echo "  (could not read parquets)"
+
+      - name: "Rescue commit — ${{ matrix.iso }}"
+        if: always() && inputs.dry_run != true && failure()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
+          git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "::warning::No lowcf files to rescue for ${ISO}"
+            exit 0
+          fi
+          FILE_COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 2.1d RESCUE: ${ISO} partial (${FILE_COUNT} files, job failed)"
+          for i in 1 2 3 4; do
+            git push -u origin "${BRANCH}" 2>&1 && break
+            [ "$i" -eq 4 ] && { echo "::error::Rescue push failed"; exit 1; }
+            sleep $((2 ** i))
+          done
+          echo "::warning::Rescue commit pushed — ${FILE_COUNT} files saved from failed run"
+
+      - name: "Commit + push — ${{ matrix.iso }}"
+        if: inputs.dry_run != true && success()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
+          git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "::warning::No new low-CF augmentation files for ${ISO}"
+            exit 0
+          fi
+
+          FILE_COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 2.1d: low-CF augmentation for ${ISO} (${FILE_COUNT} band files)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "${BRANCH}" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          {
+            echo "## Step 2.1d — ${ISO} low-CF augmentation"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "- Branch: \`${BRANCH}\`"
+            elif [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "- Mode: **dry run** (no files written)"
+            else
+              echo "- Branch: (not pushed)"
+            fi
+            echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
+            echo "- Workers: ${{ inputs.workers || '2' }}"
+            echo ""
+            echo "### Next steps"
+            echo "1. Run **Squash Pipeline Branches** with pattern \`auto/.*step2-1d-lowcf\`"
+            echo "2. Run \`python scripts/step2_3a_regenerate_peakclean.py --iso ${ISO} --interp-only\` to build peakclean sidecars"
+            echo "3. Run **Step 2.3 Pathway Sweep** to verify P1 CFE improvement"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always() && inputs.dry_run != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-1d-${{ matrix.iso }}-${{ github.run_id }}
+          path: data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_lowcf.parquet
+          retention-days: 14
+          if-no-files-found: warn
