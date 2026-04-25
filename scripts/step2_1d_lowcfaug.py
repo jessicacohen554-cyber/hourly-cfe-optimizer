@@ -75,10 +75,16 @@ STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct',
 STORAGE_SCALE = 20  # 0.05% resolution → integer keys
 
 # Target ISOs and their current CF floors from step1's CF_WINDOW
+# ISOs with cf_floor=0 (CAISO, ERCOT, SPP) have full coverage — selecting
+# them is a safe no-op (no seeds found at cf=0, script exits with 0 mixes).
 TARGET_ISOS = {
+    'CAISO': {'cf_floor': 0, 'cf_floor_above': 1},
+    'ERCOT': {'cf_floor': 0, 'cf_floor_above': 1},
+    'MISO':  {'cf_floor': 10, 'cf_floor_above': 11},
     'NEISO': {'cf_floor': 20, 'cf_floor_above': 21},
     'NYISO': {'cf_floor': 10, 'cf_floor_above': 11},
     'PJM':   {'cf_floor': 30, 'cf_floor_above': 31},
+    'SPP':   {'cf_floor': 0, 'cf_floor_above': 1},
 }
 
 # CF reduction steps below current floor
