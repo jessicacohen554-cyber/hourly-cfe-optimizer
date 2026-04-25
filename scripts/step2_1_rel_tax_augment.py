@@ -790,7 +790,9 @@ HMS_LO, HMS_HI = 50, 100  # hourly_match_score target range
 CHECKPOINT_GROUPS = 10    # flush band_tables to chunk files every N base_groups
 BASE_ROUND = 5            # round base resources to this step for grouping
 MAX_BASE_GROUPS = 20      # cap per ISO
-SCORE_CHUNK = 5000        # mixes per batch for dispatch scoring
+SCORE_CHUNK = 25_000      # mixes per batch for dispatch scoring (was 5k)
+NOSTORAGE_HEADROOM = 15   # HMS headroom for no-storage pre-filter
+MIX_ACCUM_FLUSH = 100_000 # flush accumulated mixes at this count
 
 # Coarse storage sweep levels (fraction of annual demand)
 _BAT4_LEVELS = np.array([0, 0.005, 0.01, 0.02, 0.04], dtype=np.float64)
@@ -891,7 +893,12 @@ def _scan_ef_bands(iso: str):
         {c: float(v) for c, v in zip(_BASE_COLS, vals)} | {'_count': cnt}
         for vals, cnt in ranked
     ]
-    return base_groups, existing_keys
+    # Convert set to sorted numpy array for vectorized searchsorted dedup
+    if existing_keys:
+        existing_arr = np.array(sorted(existing_keys))
+    else:
+        existing_arr = np.array([], dtype=f'S{row_bytes}')
+    return base_groups, existing_arr
 
 
 def _build_mix_batch(base, rtypes, solar_val, wind_val, hyb_combos):
@@ -911,18 +918,37 @@ def _build_mix_batch(base, rtypes, solar_val, wind_val, hyb_combos):
     return batch
 
 
+def _vectorized_dedup(mk_packed, existing_sorted):
+    """Vectorized dedup via sorted searchsorted — replaces Python list comp.
+
+    mk_packed:        (N,) array of S44 byte strings for new candidate mixes
+    existing_sorted:  (M,) sorted array of S44 byte strings from EF pool
+
+    Returns boolean mask of length N — True where mix is NOT in existing pool.
+    """
+    M = len(existing_sorted)
+    if M == 0:
+        return np.ones(len(mk_packed), dtype=bool)
+    idx = np.searchsorted(existing_sorted, mk_packed)
+    found = (idx < M) & (existing_sorted[np.minimum(idx, M - 1)] == mk_packed)
+    return ~found
+
+
 # ── FIX 4 (caller): Single-kernel storage sweep ───────────────────────────
 
 def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
-    """Score mixes via dispatch + coarse storage sweep.
+    """Score mixes via dispatch + coarse storage sweep — two-stage.
 
-    Uses _batch_score_storage_grid: one parallel Numba kernel call per chunk
-    evaluates all N mixes × K storage configs. Replaces the old triple-nested
-    Python loop that made 60 separate kernel calls per chunk.
+    Stage 1: Fast no-storage score (vectorized min-sum).  Mixes scoring below
+    HMS_LO - NOSTORAGE_HEADROOM can't reach HMS_LO even with max storage,
+    so they're skipped.
+
+    Stage 2: Full N×K storage grid sweep on survivors only.
 
     Returns (hms, bat4_pct, bat8_pct, ldes_pct) — best storage config per mix.
     """
-    from step1_pfs_generator import _batch_score_storage_grid
+    from step1_pfs_generator import (
+        _batch_score_storage_grid, _batch_score_no_storage)
     from pipeline_config import (
         BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY,
         BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
@@ -931,8 +957,33 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
 
     N = len(mix_batch)
     ldes_wh = int(LDES_WINDOW_DAYS * 24)
+    nostorage_floor = (HMS_LO - NOSTORAGE_HEADROOM) / 100.0 * td
 
-    # ── Build config arrays once from Cartesian product ──────────────
+    # ── Stage 1: no-storage pre-filter ──────────────────────────────
+    # Compute supply profiles for ALL mixes
+    all_supply = (mix_batch / 100.0) @ supply_matrix   # (N, 8760)
+
+    # Fast no-storage score via Numba
+    raw_ns = _batch_score_no_storage(demand_arr, all_supply, 1.0, N)
+    ns_hms = raw_ns / td * 100.0
+
+    survive = raw_ns >= nostorage_floor
+    surv_idx = np.where(survive)[0]
+    n_surv = len(surv_idx)
+
+    # Initialize results — non-survivors get their no-storage score
+    best_hms = ns_hms.copy()
+    best_b4 = np.zeros(N, dtype=np.float64)
+    best_b8 = np.zeros(N, dtype=np.float64)
+    best_ld = np.zeros(N, dtype=np.float64)
+
+    if n_surv == 0:
+        return best_hms, best_b4, best_b8, best_ld
+
+    # ── Stage 2: full storage grid on survivors only ────────────────
+    surv_supply = all_supply[surv_idx]
+    del all_supply  # free memory
+
     n_b4 = len(_BAT4_LEVELS)
     n_b8 = len(_BAT8_LEVELS)
     n_ld = len(_LDES_LEVELS)
@@ -944,7 +995,6 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     cfgs_b8_pow = np.empty(K, dtype=np.float64)
     cfgs_ld_cap = np.empty(K, dtype=np.float64)
     cfgs_ld_pow = np.empty(K, dtype=np.float64)
-    # Raw levels for recovering best config per mix
     cfgs_b4_lvl = np.empty(K, dtype=np.float64)
     cfgs_b8_lvl = np.empty(K, dtype=np.float64)
     cfgs_ld_lvl = np.empty(K, dtype=np.float64)
@@ -964,34 +1014,27 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
                 cfgs_ld_lvl[ki] = ld
                 ki += 1
 
-    # ── Score chunks ─────────────────────────────────────────────────
-    best_hms = np.full(N, -1.0, dtype=np.float64)
-    best_b4 = np.zeros(N, dtype=np.float64)
-    best_b8 = np.zeros(N, dtype=np.float64)
-    best_ld = np.zeros(N, dtype=np.float64)
-
-    for start in range(0, N, SCORE_CHUNK):
-        end = min(start + SCORE_CHUNK, N)
+    # Score survivors in chunks
+    for start in range(0, n_surv, SCORE_CHUNK):
+        end = min(start + SCORE_CHUNK, n_surv)
         cn = end - start
-        # Precompute supply profiles for chunk: (cn, 8760)
-        supply_rows = (mix_batch[start:end] / 100.0) @ supply_matrix
 
-        # Single kernel call: N mixes × K configs, parallel over mixes
         scores, idxs = _batch_score_storage_grid(
-            demand_arr, supply_rows, 1.0, cn,
+            demand_arr, surv_supply[start:end], 1.0, cn,
             cfgs_b4_cap, cfgs_b4_pow, BATTERY_EFFICIENCY,
             cfgs_b8_cap, cfgs_b8_pow, BATTERY8_EFFICIENCY,
             cfgs_ld_cap, cfgs_ld_pow, LDES_EFFICIENCY,
             ldes_wh, K)
 
-        # Convert to HMS % and recover config levels
-        best_hms[start:end] = scores / td * 100.0
-        best_b4[start:end] = cfgs_b4_lvl[idxs]
-        best_b8[start:end] = cfgs_b8_lvl[idxs]
-        best_ld[start:end] = cfgs_ld_lvl[idxs]
+        orig_idx = surv_idx[start:end]
+        best_hms[orig_idx] = scores / td * 100.0
+        best_b4[orig_idx] = cfgs_b4_lvl[idxs]
+        best_b8[orig_idx] = cfgs_b8_lvl[idxs]
+        best_ld[orig_idx] = cfgs_ld_lvl[idxs]
 
-        if start > 0 and start % (SCORE_CHUNK * 10) == 0:
-            print(f"    scored {start:,}/{N:,}", flush=True)
+        if start > 0 and start % (SCORE_CHUNK * 4) == 0:
+            print(f"    scored {start:,}/{n_surv:,} survivors "
+                  f"(skipped {N - n_surv:,})", flush=True)
 
     return best_hms, best_b4, best_b8, best_ld
 
@@ -1052,16 +1095,53 @@ def _git_checkpoint(iso: str, chunk_idx: int, rows: int):
               flush=True)
 
 
+def _score_and_bin(demand_arr, supply_matrix, mb, td, rtypes,
+                   band_tables):
+    """Score a batch of mixes, filter to HMS_LO..HMS_HI, bin into band_tables.
+
+    Returns (n_scored, n_kept).
+    """
+    hms, b4, b8, ld = _score_with_storage_sweep(
+        demand_arr, supply_matrix, mb, td)
+    n_scored = len(mb)
+
+    keep = (hms >= HMS_LO) & (hms <= HMS_HI)
+    if not keep.any():
+        return n_scored, 0
+
+    mb, hms = mb[keep], hms[keep]
+    b4, b8, ld = b4[keep], b8[keep], ld[keep]
+
+    out = {}
+    for c in _RESOURCE_COLS:
+        idx = rtypes.index(c) if c in rtypes else -1
+        out[c] = pa.array((mb[:, idx] if idx >= 0
+                           else np.zeros(len(mb))).astype(np.float32))
+    out['battery_dispatch_pct'] = pa.array(b4.astype(np.float32))
+    out['battery8_dispatch_pct'] = pa.array(b8.astype(np.float32))
+    out['ldes_dispatch_pct'] = pa.array(ld.astype(np.float32))
+    out['h2_dispatch_pct'] = pa.array(np.zeros(len(mb), dtype=np.float32))
+    out['hourly_match_score'] = pa.array(hms.astype(np.float32))
+    tbl = pa.table(out)
+
+    for blo, bhi in zip(_SORTED_BANDS, _SORTED_BANDS[1:]):
+        bmask = (hms >= blo) & (hms < bhi)
+        if bmask.any():
+            band_tables[_threshold_tag(blo)].append(
+                tbl.filter(pa.array(bmask)))
+
+    return n_scored, len(mb)
+
+
 def run_dense_augment(dry_run: bool = False):
     """Generate dense VRE + hybrid mixes at 2% steps, dispatch-scored.
 
-    For each ISO:
-    1. Load profiles for temporal dispatch scoring
-    2. Enumerate hybrids at 2% steps (0-30%), VRE at 4% steps
-    3. Dedup against existing EF pool
-    4. Score via dispatch + coarse storage sweep (bat4/bat8/LDES)
-    5. Filter to HMS 50-100
-    6. Write as *_interp_dense.parquet per score band
+    Optimizations (v2):
+      - Vectorized dedup via sorted searchsorted (was Python list comp)
+      - Early VRE pre-filter: skip solar/wind combos where bs+sv+wv > HMS_HI
+      - Accumulated batching: dedup + score per base_group, not per VRE combo
+      - Two-stage storage: no-storage pre-filter before full 60-config sweep
+      - Larger SCORE_CHUNK (25k vs 5k) for better Numba utilization
     """
     import gc
 
@@ -1077,16 +1157,17 @@ def run_dense_augment(dry_run: bool = False):
           f"(max {HYBRID_MAX}%, sum≤{HYBRID_SUM_MAX}%)", flush=True)
     print(f"[dense] VRE: sol {len(sol_vals)}@{VRE_SOLAR_STEP}%, "
           f"wnd {len(wnd_vals)}@{VRE_WIND_STEP}%  "
-          f"Storage sweep: {n_storage} configs", flush=True)
+          f"Storage sweep: {n_storage} configs  "
+          f"SCORE_CHUNK={SCORE_CHUNK:,}", flush=True)
 
     total_written = 0
     for iso in ISOS:
         print(f"\n{'='*60}\n  {iso}\n{'='*60}", flush=True)
 
-        # FIX 3: single-pass band scan (was two separate calls)
-        base_groups, existing = _scan_ef_bands(iso)
+        # Single-pass band scan → sorted numpy array for vectorized dedup
+        base_groups, existing_sorted = _scan_ef_bands(iso)
         print(f"  {len(base_groups)} base groups, "
-              f"{len(existing):,} existing keys", flush=True)
+              f"{len(existing_sorted):,} existing keys", flush=True)
 
         if dry_run:
             for bg in base_groups[:5]:
@@ -1108,76 +1189,70 @@ def run_dense_augment(dry_run: bool = False):
         demand_arr, supply_matrix, rtypes, td = _load_iso_profiles(iso)
         print(f"  supply_matrix {supply_matrix.shape}  rtypes={rtypes}", flush=True)
 
+        n_res = len(rtypes)
+        n_rescols = len(_RESOURCE_COLS)
+        row_bytes = n_rescols * 4
+
         band_tables: dict[str, list[pa.Table]] = defaultdict(list)
         iso_scored, iso_kept = 0, 0
+        vre_skipped = 0
 
         for gi, bg in enumerate(base_groups):
-            bg_batches = []
             bs = sum(bg.get(c, 0) for c in _BASE_COLS)
+
+            # ── Accumulate all VRE × hybrid mixes for this base group ──
+            bg_batches = []
+            bg_batch_rows = 0
             for sv in sol_vals:
+                # FIX: early VRE pre-filter — skip entire wind loop
+                if bs + sv > HMS_HI:
+                    vre_skipped += len(wnd_vals)
+                    continue
                 for wv in wnd_vals:
+                    # FIX: early VRE pre-filter — skip this combo
+                    if bs + sv + wv > HMS_HI:
+                        vre_skipped += 1
+                        continue
                     lo = max(0, HMS_LO - bs - sv - wv)
                     hi = HMS_HI - bs - sv - wv
-                    if hi < 0 or lo > HYBRID_SUM_MAX:
+                    if lo > HYBRID_SUM_MAX:
                         continue
                     valid = hyb_grid[(hyb_sums >= lo) & (hyb_sums <= hi)]
                     if len(valid) == 0:
                         continue
                     bg_batches.append(_build_mix_batch(bg, rtypes, sv, wv, valid))
+                    bg_batch_rows += len(valid)
 
             if not bg_batches:
                 continue
+
+            # ── Single vectorized dedup for entire base group ──
             mb = np.vstack(bg_batches)
             del bg_batches
 
-            # Dedup
             mk = np.column_stack([
                 mb[:, rtypes.index(c)].astype(np.int32) if c in rtypes
                 else np.zeros(len(mb), dtype=np.int32)
                 for c in _RESOURCE_COLS])
-            # Vectorized row->bytes, then set membership check
             mk_c = np.ascontiguousarray(mk)
-            mk_packed = np.frombuffer(mk_c.tobytes(), dtype=f'S{mk_c.shape[1]*4}')
-            new = np.array([b not in existing for b in mk_packed], dtype=bool)
+            mk_packed = np.frombuffer(
+                mk_c.tobytes(), dtype=f'S{row_bytes}')
+            # Vectorized searchsorted dedup (replaces Python list comp)
+            new = _vectorized_dedup(mk_packed, existing_sorted)
             mb = mb[new]
-            del mk, new
+            del mk, mk_c, mk_packed, new
             if len(mb) == 0:
                 continue
 
-            # Dispatch score + storage sweep
-            hms, b4, b8, ld = _score_with_storage_sweep(
-                demand_arr, supply_matrix, mb, td)
-            iso_scored += len(mb)
-
-            keep = (hms >= HMS_LO) & (hms <= HMS_HI)
-            if not keep.any():
-                del mb, hms, b4, b8, ld
-                continue
-            mb, hms, b4, b8, ld = mb[keep], hms[keep], b4[keep], b8[keep], ld[keep]
-            iso_kept += len(mb)
-
-            # Build table
-            out = {}
-            for c in _RESOURCE_COLS:
-                idx = rtypes.index(c) if c in rtypes else -1
-                out[c] = pa.array((mb[:, idx] if idx >= 0
-                                   else np.zeros(len(mb))).astype(np.float32))
-            out['battery_dispatch_pct'] = pa.array(b4.astype(np.float32))
-            out['battery8_dispatch_pct'] = pa.array(b8.astype(np.float32))
-            out['ldes_dispatch_pct'] = pa.array(ld.astype(np.float32))
-            out['h2_dispatch_pct'] = pa.array(np.zeros(len(mb), dtype=np.float32))
-            out['hourly_match_score'] = pa.array(hms.astype(np.float32))
-            tbl = pa.table(out)
-
-            for blo, bhi in zip(_SORTED_BANDS, _SORTED_BANDS[1:]):
-                bmask = (hms >= blo) & (hms < bhi)
-                if bmask.any():
-                    band_tables[_threshold_tag(blo)].append(
-                        tbl.filter(pa.array(bmask)))
-            del mb, hms, b4, b8, ld, tbl
+            # ── Score entire base group in one call ──
+            n_s, n_k = _score_and_bin(
+                demand_arr, supply_matrix, mb, td, rtypes, band_tables)
+            iso_scored += n_s
+            iso_kept += n_k
+            del mb
 
             print(f"  [{gi+1}/{len(base_groups)}] scored={iso_scored:,} "
-                  f"kept={iso_kept:,}", flush=True)
+                  f"kept={iso_kept:,} vre_skip={vre_skipped:,}", flush=True)
 
             # Periodic checkpoint — flush to chunk files so work isn't lost
             if (gi + 1) % CHECKPOINT_GROUPS == 0 and any(band_tables.values()):
