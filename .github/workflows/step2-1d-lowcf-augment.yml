@@ -1,15 +1,19 @@
 name: "Step 2.1d: Low-CF Augmentation"
 
 # Generates low-nuclear mixes for ISOs where Step 1's CF_WINDOW floor
-# excluded mixes below cf=20 (NEISO), cf=10 (NYISO), cf=30 (PJM).
+# excluded mixes below a nonzero cf level.
+#
+#   MISO:  cf floor = 10  (13.1% nuclear)
+#   NYISO: cf floor = 10  (18.4% nuclear)
+#   NEISO: cf floor = 20  (23.8% nuclear)
+#   PJM:   cf floor = 30  (32.1% nuclear)
+#
+# CAISO, ERCOT, SPP have cf floor = 0 — full coverage, no augmentation
+# needed. Selecting them is a safe no-op (script exits with 0 new mixes).
 #
 # Runs AFTER Step 2.1 EF, BEFORE Step 2.3 pathway sweep.
 # After this completes, run step2_3a_regenerate_peakclean.py --interp-only
 # for each target ISO to generate peakclean sidecars.
-#
-# Compute-intensive: fused Numba kernel scores ~50K candidates per band
-# with 4-stage storage dispatch. Large runner recommended for prange
-# parallelism (~5 min vs ~30 min on standard runner).
 #
 # Prerequisite: Step 2.1 EF parquets + hybrid profiles + demand/gen profiles
 # Output: data/step2.1-ef/step_2_1_EF_<ISO>_*_interp_lowcf.parquet
@@ -18,15 +22,19 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region (ALL = NEISO + NYISO + PJM in parallel)'
+        description: 'ISO region (ALL = 4 gap ISOs: MISO, NEISO, NYISO, PJM)'
         required: true
         default: 'ALL'
         type: choice
         options:
           - ALL
+          - CAISO
+          - ERCOT
+          - MISO
           - NEISO
           - NYISO
           - PJM
+          - SPP
       runner_size:
         description: 'Runner size (large recommended — 16-core Numba prange)'
         required: true
@@ -71,7 +79,7 @@ jobs:
       - id: set-matrix
         run: |
           if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo 'matrix={"iso":["NEISO","NYISO","PJM"]}' >> "$GITHUB_OUTPUT"
+            echo 'matrix={"iso":["MISO","NEISO","NYISO","PJM"]}' >> "$GITHUB_OUTPUT"
           else
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
           fi
