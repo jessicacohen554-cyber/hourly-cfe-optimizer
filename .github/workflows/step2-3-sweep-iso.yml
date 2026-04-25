@@ -15,6 +15,8 @@ name: "Step 2.3: Pathway Sweep (+ 2.3a Peakclean)"
 #                             bands + interp files (no sweep)
 # phase=peakclean_interp_only : runs step2_3a_regenerate_peakclean.py --interp-only
 #                             (only interp/dense-augment sidecars, no standard bands)
+# phase=peakclean_lowcf_only : runs step2_3a_regenerate_peakclean.py --lowcf-only
+#                             (only *_interp_lowcf.parquet sidecars from step 2.1d)
 # phase=sweep_only         : only runs the 32-combo sweep (assumes peakclean exists)
 # runner_size=large        : uses 16-core/64GB runner (~8x faster numba parallelism)
 # runner_size=standard     : uses default 2-core/7GB runner
@@ -51,6 +53,7 @@ on:
           - full
           - peakclean_only
           - peakclean_interp_only
+          - peakclean_lowcf_only
           - sweep_only
       runner_size:
         description: 'Runner size (standard = 2-core/7GB, large = 16-core/64GB — requires GitHub Team plan)'
@@ -124,13 +127,15 @@ jobs:
         run: pip install numpy numba pyarrow scipy
 
       - name: "Phase: Regenerate peakclean sidecars — ${{ matrix.iso }}"
-        if: inputs.phase == 'full' || inputs.phase == 'peakclean_only' || inputs.phase == 'peakclean_interp_only'
+        if: inputs.phase == 'full' || inputs.phase == 'peakclean_only' || inputs.phase == 'peakclean_interp_only' || inputs.phase == 'peakclean_lowcf_only'
         env:
           ISO: ${{ matrix.iso }}
         timeout-minutes: ${{ inputs.runner_size == 'large' && 20 || 90 }}
         run: |
           if [ "${{ inputs.phase }}" = "peakclean_interp_only" ]; then
             python scripts/step2_3a_regenerate_peakclean.py --iso "$ISO" --interp-only --validate
+          elif [ "${{ inputs.phase }}" = "peakclean_lowcf_only" ]; then
+            python scripts/step2_3a_regenerate_peakclean.py --iso "$ISO" --lowcf-only --validate
           else
             python scripts/step2_3a_regenerate_peakclean.py --iso "$ISO" --validate
           fi
@@ -219,7 +224,7 @@ jobs:
         run: |
           set -euo pipefail
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          if [ "${{ inputs.phase }}" = "peakclean_only" ] || [ "${{ inputs.phase }}" = "peakclean_interp_only" ]; then
+          if [ "${{ inputs.phase }}" = "peakclean_only" ] || [ "${{ inputs.phase }}" = "peakclean_interp_only" ] || [ "${{ inputs.phase }}" = "peakclean_lowcf_only" ]; then
             branch="auto/${TIMESTAMP}-step2-3a-peakclean-${ISO}"
           else
             branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
@@ -242,6 +247,8 @@ jobs:
             git commit -m "Step 2.3a: regenerate peakclean sidecars for ${ISO} (standard + interp)"
           elif [ "${{ inputs.phase }}" = "peakclean_interp_only" ]; then
             git commit -m "Step 2.3a: regenerate peakclean sidecars for ${ISO} (interp-only)"
+          elif [ "${{ inputs.phase }}" = "peakclean_lowcf_only" ]; then
+            git commit -m "Step 2.3a: regenerate peakclean sidecars for ${ISO} (lowcf-only)"
           else
             total=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null | wc -l)
             git commit -m "Step 2.3 pathway sweep: ${ISO} (${total} JSONs)"
