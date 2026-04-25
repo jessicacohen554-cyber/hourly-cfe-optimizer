@@ -1182,7 +1182,7 @@ def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, chunk_size=10000):
     return scores
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, parallel=True, fastmath=True)
 def _batch_score_no_storage(demand, supply_rows, procurement, N):
     """Score N mixes without storage, using Numba parallel if available.
 
@@ -1203,7 +1203,7 @@ def _batch_score_no_storage(demand, supply_rows, procurement, N):
     return scores
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, parallel=True, fastmath=True)
 def _batch_score_storage(demand, supply_rows, procurement, N,
                          batt_cap, batt_pow, batt_eff,
                          batt8_cap, batt8_pow, batt8_eff,
@@ -1222,6 +1222,43 @@ def _batch_score_storage(demand, supply_rows, procurement, N,
             ldes_cap, ldes_pow, ldes_eff,
             ldes_window_hours)
     return scores
+
+
+@njit(cache=True, parallel=True, fastmath=True)
+def _batch_score_storage_grid(demand, supply_rows, procurement, N,
+                              cfgs_b4_cap, cfgs_b4_pow, batt_eff,
+                              cfgs_b8_cap, cfgs_b8_pow, batt8_eff,
+                              cfgs_ld_cap, cfgs_ld_pow, ldes_eff,
+                              ldes_window_hours, K):
+    """Score N mixes x K storage configs, return best score and config index per mix.
+
+    Outer prange(N) distributes mixes across cores. Inner range(K) sweeps all
+    storage configs per mix. Replaces 60 sequential Python-to-Numba round-trips
+    with a single parallel kernel call.
+
+    Args:
+        supply_rows: (N, 8760) pre-mixed supply profiles
+        cfgs_*_cap/pow: (K,) arrays of storage capacity/power per config
+        K: number of storage configs (e.g. 5 x 4 x 3 = 60)
+
+    Returns:
+        best_scores: (N,) best matched-energy score per mix (raw, not %)
+        best_idx: (N,) index into config arrays for the winning config
+    """
+    best_scores = np.full(N, -1.0, dtype=np.float64)
+    best_idx = np.zeros(N, dtype=np.int64)
+    for i in prange(N):
+        for k in range(K):
+            score = _score_with_all_storage(
+                demand, supply_rows[i], procurement,
+                cfgs_b4_cap[k], cfgs_b4_pow[k], batt_eff,
+                cfgs_b8_cap[k], cfgs_b8_pow[k], batt8_eff,
+                cfgs_ld_cap[k], cfgs_ld_pow[k], ldes_eff,
+                ldes_window_hours)
+            if score > best_scores[i]:
+                best_scores[i] = score
+                best_idx[i] = k
+    return best_scores, best_idx
 
 
 # ══════════════════════════════════════════════════════════════════════════════
