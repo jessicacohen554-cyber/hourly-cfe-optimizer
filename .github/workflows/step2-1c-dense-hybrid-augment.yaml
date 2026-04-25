@@ -11,6 +11,10 @@ name: "Step 2.1c: Dense Hybrid Augmentation"
 #
 # Prerequisite: Step 2.1 EF parquets + hybrid profiles + demand/gen profiles
 # Output: data/step2.1-ef/step_2_1_EF_<ISO>_*_interp_dense.parquet
+#
+# Checkpointing: the Python script flushes chunk parquets every 10 base_groups.
+# A background committer pushes them every 10 minutes. On failure, a rescue
+# commit saves whatever chunks exist so work isn't lost.
 
 on:
   workflow_dispatch:
@@ -124,6 +128,50 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --prefer-binary numpy numba pyarrow scipy pandas
 
+      - name: Set up git branch
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          echo "BRANCH=${BRANCH}" >> "${GITHUB_ENV}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git checkout -b "${BRANCH}"
+
+      - name: Start background committer
+        if: inputs.dry_run != true
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          cat > /tmp/bg_commit.sh << 'BGEOF'
+          #!/usr/bin/env bash
+          set -uo pipefail
+          ISO="$1"
+          BRANCH="$2"
+          COMMIT_COUNT=0
+          while true; do
+            sleep 600
+            CHUNKS=$(find data/step2.1-ef/ -name "step_2_1_EF_${ISO}_*_interp_dense_chunk*.parquet" -newer /tmp/bg_commit_marker 2>/dev/null | wc -l)
+            if [ "$CHUNKS" -gt 0 ]; then
+              git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense_chunk*.parquet 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                COMMIT_COUNT=$((COMMIT_COUNT + 1))
+                git commit -m "Step 2.1c checkpoint ${COMMIT_COUNT}: ${ISO} (${CHUNKS} chunk files)"
+                git push -u origin "${BRANCH}" 2>/dev/null || true
+                touch /tmp/bg_commit_marker
+                echo "[bg-commit] checkpoint ${COMMIT_COUNT}: ${CHUNKS} chunks pushed"
+              fi
+            fi
+          done
+          BGEOF
+          chmod +x /tmp/bg_commit.sh
+          touch /tmp/bg_commit_marker
+          nohup /tmp/bg_commit.sh "$ISO" "$BRANCH" > /tmp/bg_commit.log 2>&1 &
+          echo "BG_COMMIT_PID=$!" >> "${GITHUB_ENV}"
+          echo "Background committer started (PID $!)"
+
       - name: "Run dense hybrid augmentation — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
@@ -142,28 +190,50 @@ jobs:
             python scripts/step2_1_rel_tax_augment.py --dense-hybrid
           fi
 
+      - name: Stop background committer
+        if: always()
+        run: |
+          if [ -n "${BG_COMMIT_PID:-}" ]; then
+            kill "$BG_COMMIT_PID" 2>/dev/null || true
+            echo "Background committer log:"
+            cat /tmp/bg_commit.log 2>/dev/null || true
+          fi
+
       - name: Report output sizes
         if: inputs.dry_run != true
         run: |
           ISO="${{ matrix.iso }}"
           echo "Dense augmentation output for ${ISO}:"
-          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null || echo "  (no files)"
-          TOTAL=$(du -sh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null | tail -1 | cut -f1 || echo "0")
-          echo "Total size: ${TOTAL}"
+          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null || echo "  (no final files)"
+          echo "Chunk files remaining:"
+          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense_chunk*.parquet 2>/dev/null || echo "  (none — all merged)"
 
-      - name: "Commit + push — ${{ matrix.iso }}"
-        if: inputs.dry_run != true
+      - name: "Rescue commit — ${{ matrix.iso }}"
+        if: always() && inputs.dry_run != true && failure()
         env:
           ISO: ${{ matrix.iso }}
         run: |
           set -euo pipefail
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config http.postBuffer 524288000
-          git checkout -b "${branch}"
+          git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense*.parquet 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "::warning::No dense files to rescue for ${ISO}"
+            exit 0
+          fi
+          FILE_COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 2.1c RESCUE: ${ISO} partial (${FILE_COUNT} files, job failed)"
+          for i in 1 2 3 4; do
+            git push -u origin "${BRANCH}" 2>&1 && break
+            [ "$i" -eq 4 ] && { echo "::error::Rescue push failed"; exit 1; }
+            sleep $((2 ** i))
+          done
+          echo "::warning::Rescue commit pushed — ${FILE_COUNT} files saved from failed run"
 
+      - name: "Commit + push — ${{ matrix.iso }}"
+        if: inputs.dry_run != true && success()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
           git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense.parquet 2>/dev/null || true
 
           if git diff --cached --quiet; then
@@ -177,7 +247,7 @@ jobs:
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "${branch}" 2>&1 && break
+            git push -u origin "${BRANCH}" 2>&1 && break
             if [ "$i" -eq "$MAX_RETRIES" ]; then
               echo "::error::Push failed after $MAX_RETRIES attempts"
               exit 1
@@ -186,7 +256,6 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
 
       - name: Summary
         if: always()
@@ -215,6 +284,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: step2-1c-${{ matrix.iso }}-${{ github.run_id }}
-          path: data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_dense.parquet
+          path: |
+            data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_dense.parquet
+            data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_dense_chunk*.parquet
           retention-days: 14
           if-no-files-found: warn
