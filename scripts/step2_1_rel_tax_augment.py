@@ -772,36 +772,351 @@ def run_augment(diag_results: dict, dry_run: bool = False):
     return total_written
 
 
+# ── Dense VRE + hybrid + storage augmentation (dispatch-scored) ─────────────
+
+_HYBRID_COLS = ('solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8')
+_BASE_COLS = ('clean_firm', 'hydro', 'offshore_wind', 'geothermal', 'ccs_ccgt')
+
+# Grid parameters
+DENSE_STEP = 2            # % step for hybrid enumeration
+HYBRID_MAX = 30           # max % per hybrid resource
+VRE_SOLAR_MAX = 80        # max solar %
+VRE_SOLAR_STEP = 4        # solar step (existing pool already has 1% steps)
+VRE_WIND_MAX = 60         # max wind %
+VRE_WIND_STEP = 4         # wind step (existing pool already has 1% steps)
+HYBRID_SUM_MAX = 40       # max total hybrid %
+HMS_LO, HMS_HI = 50, 100  # hourly_match_score target range
+BASE_ROUND = 5            # round base resources to this step for grouping
+MAX_BASE_GROUPS = 20      # cap per ISO
+SCORE_CHUNK = 5000        # mixes per batch for dispatch scoring
+
+# Coarse storage sweep levels (fraction of annual demand)
+_BAT4_LEVELS = np.array([0, 0.005, 0.01, 0.02, 0.04], dtype=np.float64)
+_BAT8_LEVELS = np.array([0, 0.01, 0.02, 0.04], dtype=np.float64)
+_LDES_LEVELS = np.array([0, 0.05, 0.1], dtype=np.float64)
+
+
+def _load_iso_profiles(iso: str):
+    """Load demand, supply, and hybrid profiles for dispatch scoring.
+
+    Returns (demand_arr, supply_matrix, resource_types, total_demand).
+    """
+    from eia_data_io import load_generation_profiles, load_demand_profiles
+    from dispatch_utils import get_supply_profiles
+    from step1_pfs_generator import prepare_numpy_profiles, get_resource_types
+
+    gen = load_generation_profiles()
+    demand_data = load_demand_profiles()
+    d_iso = demand_data[iso]
+    demand_norm = np.array(d_iso[max(d_iso.keys())]['normalized'][:8760],
+                           dtype=np.float64)
+
+    hyb_path = _ROOT / 'data' / 'hybrid_profiles' / f'{iso}_hybrid_profiles.npz'
+    hyb = {k: np.load(hyb_path)[k].astype(np.float64)
+           for k in np.load(hyb_path).keys()} if hyb_path.exists() else {}
+
+    sp = get_supply_profiles(iso, gen, include_hybrids=True, hybrid_profiles=hyb)
+    rtypes = get_resource_types(iso, include_hybrids=True)
+    d_arr, s_mat = prepare_numpy_profiles(iso, demand_norm, sp,
+                                          include_hybrids=True,
+                                          hybrid_profiles=hyb)
+    return d_arr, s_mat, rtypes, float(d_arr.sum())
+
+
+def _dense_base_groups(iso: str) -> list[dict]:
+    """Top MAX_BASE_GROUPS base-resource combos by frequency."""
+    seen: dict[tuple, int] = {}
+    for t in _EF_BAND_THRESHOLDS:
+        name = _threshold_tag(t)
+        parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
+        if not parts:
+            main = EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet'
+            if main.exists():
+                parts = [main]
+        for p in parts:
+            schema = pq.read_schema(p)
+            load = [c for c in _BASE_COLS if c in schema.names]
+            tbl = pq.read_table(p, columns=load)
+            arrs = {c: (np.round(tbl.column(c).to_numpy() / BASE_ROUND) * BASE_ROUND
+                        if c in tbl.column_names else np.zeros(tbl.num_rows))
+                    for c in _BASE_COLS}
+            keys = np.column_stack([arrs[c] for c in _BASE_COLS]).astype(np.int32)
+            for row in keys:
+                k = tuple(row)
+                seen[k] = seen.get(k, 0) + 1
+            del tbl, arrs, keys
+    ranked = sorted(seen.items(), key=lambda x: -x[1])[:MAX_BASE_GROUPS]
+    return [{c: float(v) for c, v in zip(_BASE_COLS, vals)} | {'_count': cnt}
+            for vals, cnt in ranked]
+
+
+def _existing_mix_keys(iso: str) -> set:
+    """Load existing EF mix keys (tuple of rounded resource %) for dedup."""
+    keys = set()
+    for t in _EF_BAND_THRESHOLDS:
+        name = _threshold_tag(t)
+        parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
+        if not parts:
+            main = EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet'
+            if main.exists():
+                parts = [main]
+        for p in parts:
+            schema = pq.read_schema(p)
+            cols_present = [c for c in _RESOURCE_COLS if c in schema.names]
+            tbl = pq.read_table(p, columns=cols_present)
+            arrs = np.column_stack([
+                tbl.column(c).to_numpy().astype(np.int32) if c in tbl.column_names
+                else np.zeros(tbl.num_rows, dtype=np.int32)
+                for c in _RESOURCE_COLS])
+            for row in arrs:
+                keys.add(tuple(row))
+            del tbl, arrs
+    return keys
+
+
+def _build_mix_batch(base, rtypes, solar_val, wind_val, hyb_combos):
+    """Build (N, n_resources) mix array for one base × VRE × hybrid set."""
+    n, n_res = len(hyb_combos), len(rtypes)
+    batch = np.zeros((n, n_res), dtype=np.float64)
+    for c in _BASE_COLS:
+        if c in rtypes:
+            batch[:, rtypes.index(c)] = base.get(c, 0.0)
+    if 'solar' in rtypes:
+        batch[:, rtypes.index('solar')] = solar_val
+    if 'wind' in rtypes:
+        batch[:, rtypes.index('wind')] = wind_val
+    for hi, hc in enumerate(_HYBRID_COLS):
+        if hc in rtypes:
+            batch[:, rtypes.index(hc)] = hyb_combos[:, hi]
+    return batch
+
+
+def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
+    """Score mixes via dispatch + coarse storage sweep.
+
+    Returns (hms, bat4_pct, bat8_pct, ldes_pct) — best storage config per mix.
+    """
+    from step1_pfs_generator import _score_with_all_storage
+    from pipeline_config import (
+        BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY,
+        BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
+        LDES_DURATION_HOURS, LDES_EFFICIENCY, LDES_WINDOW_DAYS,
+    )
+
+    N = len(mix_batch)
+    best_hms = np.full(N, -1.0, dtype=np.float64)
+    best_b4 = np.zeros(N, dtype=np.float64)
+    best_b8 = np.zeros(N, dtype=np.float64)
+    best_ld = np.zeros(N, dtype=np.float64)
+    ldes_wh = int(LDES_WINDOW_DAYS * 24)
+
+    for start in range(0, N, SCORE_CHUNK):
+        end = min(start + SCORE_CHUNK, N)
+        supply_rows = (mix_batch[start:end] / 100.0) @ supply_matrix
+        cn = end - start
+
+        for b4 in _BAT4_LEVELS:
+            b4c = b4 * BATTERY_DURATION_HOURS
+            for b8 in _BAT8_LEVELS:
+                b8c = b8 * BATTERY8_DURATION_HOURS
+                for ld in _LDES_LEVELS:
+                    ldc = ld * LDES_DURATION_HOURS
+                    for i in range(cn):
+                        s = _score_with_all_storage(
+                            demand_arr, supply_rows[i], 1.0,
+                            b4c, b4, BATTERY_EFFICIENCY,
+                            b8c, b8, BATTERY8_EFFICIENCY,
+                            ldc, ld, LDES_EFFICIENCY, ldes_wh)
+                        hms = s / td * 100.0
+                        gi = start + i
+                        if hms > best_hms[gi]:
+                            best_hms[gi] = hms
+                            best_b4[gi] = b4
+                            best_b8[gi] = b8
+                            best_ld[gi] = ld
+
+        if start > 0 and start % (SCORE_CHUNK * 5) == 0:
+            print(f"    scored {start:,}/{N:,}", flush=True)
+
+    return best_hms, best_b4, best_b8, best_ld
+
+
+def run_dense_augment(dry_run: bool = False):
+    """Generate dense VRE + hybrid mixes at 2% steps, dispatch-scored.
+
+    For each ISO:
+    1. Load profiles for temporal dispatch scoring
+    2. Enumerate hybrids at 2% steps (0-30%), VRE at 4% steps
+    3. Dedup against existing EF pool
+    4. Score via dispatch + coarse storage sweep (bat4/bat8/LDES)
+    5. Filter to HMS 50-100
+    6. Write as *_interp_dense.parquet per score band
+    """
+    import gc
+
+    hyb_vals = np.arange(0, HYBRID_MAX + 1, DENSE_STEP, dtype=np.int32)
+    hg = np.meshgrid(hyb_vals, hyb_vals, hyb_vals, hyb_vals, indexing='ij')
+    hyb_grid = np.column_stack([x.ravel() for x in hg])
+    hyb_grid = hyb_grid[hyb_grid.sum(axis=1) <= HYBRID_SUM_MAX]
+    hyb_sums = hyb_grid.sum(axis=1)
+    sol_vals = np.arange(0, VRE_SOLAR_MAX + 1, VRE_SOLAR_STEP, dtype=np.int32)
+    wnd_vals = np.arange(0, VRE_WIND_MAX + 1, VRE_WIND_STEP, dtype=np.int32)
+    n_storage = len(_BAT4_LEVELS) * len(_BAT8_LEVELS) * len(_LDES_LEVELS)
+    print(f"[dense] Hybrid: {len(hyb_grid):,} combos @{DENSE_STEP}% "
+          f"(max {HYBRID_MAX}%, sum≤{HYBRID_SUM_MAX}%)", flush=True)
+    print(f"[dense] VRE: sol {len(sol_vals)}@{VRE_SOLAR_STEP}%, "
+          f"wnd {len(wnd_vals)}@{VRE_WIND_STEP}%  "
+          f"Storage sweep: {n_storage} configs", flush=True)
+
+    total_written = 0
+    for iso in ISOS:
+        print(f"\n{'='*60}\n  {iso}\n{'='*60}", flush=True)
+        base_groups = _dense_base_groups(iso)
+        print(f"  {len(base_groups)} base groups", flush=True)
+
+        if dry_run:
+            for bg in base_groups[:5]:
+                bs = sum(bg.get(c, 0) for c in _BASE_COLS)
+                print(f"    cf={bg['clean_firm']:.0f} hyd={bg['hydro']:.0f} "
+                      f"osw={bg['offshore_wind']:.0f} base={bs:.0f} "
+                      f"n={bg['_count']}")
+            est = sum(
+                sum(int(((hyb_sums >= max(0, HMS_LO - sum(bg.get(c,0) for c in _BASE_COLS) - sv - wv))
+                         & (hyb_sums <= HMS_HI - sum(bg.get(c,0) for c in _BASE_COLS) - sv - wv)).sum())
+                    for sv in sol_vals for wv in wnd_vals
+                    if HMS_HI - sum(bg.get(c,0) for c in _BASE_COLS) - sv - wv >= 0
+                    and max(0, HMS_LO - sum(bg.get(c,0) for c in _BASE_COLS) - sv - wv) <= HYBRID_SUM_MAX)
+                for bg in base_groups)
+            print(f"  Est: ~{est:,} mixes (pre-dedup)")
+            continue
+
+        print(f"  loading profiles...", flush=True)
+        demand_arr, supply_matrix, rtypes, td = _load_iso_profiles(iso)
+        print(f"  supply_matrix {supply_matrix.shape}  rtypes={rtypes}", flush=True)
+
+        print(f"  loading existing EF for dedup...", flush=True)
+        existing = _existing_mix_keys(iso)
+        print(f"  {len(existing):,} existing keys", flush=True)
+
+        band_tables: dict[str, list[pa.Table]] = defaultdict(list)
+        iso_scored, iso_kept = 0, 0
+
+        for gi, bg in enumerate(base_groups):
+            bg_batches = []
+            bs = sum(bg.get(c, 0) for c in _BASE_COLS)
+            for sv in sol_vals:
+                for wv in wnd_vals:
+                    lo = max(0, HMS_LO - bs - sv - wv)
+                    hi = HMS_HI - bs - sv - wv
+                    if hi < 0 or lo > HYBRID_SUM_MAX:
+                        continue
+                    valid = hyb_grid[(hyb_sums >= lo) & (hyb_sums <= hi)]
+                    if len(valid) == 0:
+                        continue
+                    bg_batches.append(_build_mix_batch(bg, rtypes, sv, wv, valid))
+
+            if not bg_batches:
+                continue
+            mb = np.vstack(bg_batches)
+            del bg_batches
+
+            # Dedup
+            mk = np.column_stack([
+                mb[:, rtypes.index(c)].astype(np.int32) if c in rtypes
+                else np.zeros(len(mb), dtype=np.int32)
+                for c in _RESOURCE_COLS])
+            new = np.array([tuple(r) not in existing for r in mk], dtype=bool)
+            mb = mb[new]
+            del mk, new
+            if len(mb) == 0:
+                continue
+
+            # Dispatch score + storage sweep
+            hms, b4, b8, ld = _score_with_storage_sweep(
+                demand_arr, supply_matrix, mb, td)
+            iso_scored += len(mb)
+
+            keep = (hms >= HMS_LO) & (hms <= HMS_HI)
+            if not keep.any():
+                del mb, hms, b4, b8, ld
+                continue
+            mb, hms, b4, b8, ld = mb[keep], hms[keep], b4[keep], b8[keep], ld[keep]
+            iso_kept += len(mb)
+
+            # Build table
+            out = {}
+            for c in _RESOURCE_COLS:
+                idx = rtypes.index(c) if c in rtypes else -1
+                out[c] = pa.array((mb[:, idx] if idx >= 0
+                                   else np.zeros(len(mb))).astype(np.float32))
+            out['battery_dispatch_pct'] = pa.array(b4.astype(np.float32))
+            out['battery8_dispatch_pct'] = pa.array(b8.astype(np.float32))
+            out['ldes_dispatch_pct'] = pa.array(ld.astype(np.float32))
+            out['h2_dispatch_pct'] = pa.array(np.zeros(len(mb), dtype=np.float32))
+            out['hourly_match_score'] = pa.array(hms.astype(np.float32))
+            tbl = pa.table(out)
+
+            for blo, bhi in zip(_SORTED_BANDS, _SORTED_BANDS[1:]):
+                bmask = (hms >= blo) & (hms < bhi)
+                if bmask.any():
+                    band_tables[_threshold_tag(blo)].append(
+                        tbl.filter(pa.array(bmask)))
+            del mb, hms, b4, b8, ld, tbl
+
+            print(f"  [{gi+1}/{len(base_groups)}] scored={iso_scored:,} "
+                  f"kept={iso_kept:,}", flush=True)
+
+        iso_written = 0
+        for bt in sorted(band_tables):
+            merged = pa.concat_tables(band_tables[bt], promote_options='permissive')
+            out_name = f'step_2_1_EF_{iso}_{bt}_interp_dense.parquet'
+            pq.write_table(merged, EF_DIR / out_name,
+                           compression='zstd', compression_level=3)
+            iso_written += merged.num_rows
+            print(f"  band {bt}: {merged.num_rows:,} → {out_name}", flush=True)
+            del merged
+        total_written += iso_written
+        print(f"  {iso}: {iso_written:,} written", flush=True)
+        band_tables.clear()
+        gc.collect()
+
+    print(f"\n[dense] Total: {total_written:,}")
+    return total_written
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 def main(argv=None) -> int:
+    global MIN_CANDIDATES, INTERP_ROWS_PER_GAP
     ap = argparse.ArgumentParser(
         description='Diagnose EF pool gaps and optionally augment sparse bands')
     ap.add_argument('--diagnose', action='store_true',
                     help='Scan all ISOs and report sparse band windows')
     ap.add_argument('--augment', action='store_true',
                     help='Generate interpolated rows for sparse windows')
+    ap.add_argument('--dense-hybrid', action='store_true',
+                    help='Generate dense VRE+hybrid+battery grid via dispatch scoring')
     ap.add_argument('--all', action='store_true',
                     help='Run diagnose then augment')
     ap.add_argument('--dry-run', action='store_true',
-                    help='Show what augment would do without writing files')
+                    help='Show what would be generated without writing files')
     ap.add_argument('--min-candidates', type=int, default=MIN_CANDIDATES,
                     help=f'Sparsity threshold (default: {MIN_CANDIDATES})')
     ap.add_argument('--interp-rows', type=int, default=INTERP_ROWS_PER_GAP,
-                    help=f'Rows to generate per gap (default: {INTERP_ROWS_PER_GAP})')
+                    help=f'Rows per gap (default: {INTERP_ROWS_PER_GAP})')
     ap.add_argument('--report', type=str, default=None,
                     help='Path to write JSON diagnostic report')
     args = ap.parse_args(argv)
 
-    global MIN_CANDIDATES, INTERP_ROWS_PER_GAP
     MIN_CANDIDATES = args.min_candidates
     INTERP_ROWS_PER_GAP = args.interp_rows
 
     if args.all:
         args.diagnose = args.augment = True
 
-    if not (args.diagnose or args.augment):
-        print('Specify --diagnose, --augment, or --all', file=sys.stderr)
+    if not (args.diagnose or args.augment or args.dense_hybrid):
+        print('Specify --diagnose, --augment, --dense-hybrid, or --all',
+              file=sys.stderr)
         return 2
 
     diag_results = None
@@ -812,6 +1127,9 @@ def main(argv=None) -> int:
 
     if args.augment and diag_results:
         run_augment(diag_results, dry_run=args.dry_run)
+
+    if args.dense_hybrid:
+        run_dense_augment(dry_run=args.dry_run)
 
     return 0
 
