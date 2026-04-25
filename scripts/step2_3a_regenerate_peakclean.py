@@ -1,3 +1,10 @@
+# scripts/step2_3a_regenerate_peakclean.py
+
+**Version:** 2.0 | **Updated:** 2026-04-24 | **Status:** draft
+
+**Changelog:** Add interp/dense-augment file support. New `discover_interp_files()`, `--interp-only` flag, `out_path` parameter on `process_ef_file`. Interp sidecars now get inline dispatch instead of L1-NN fallback.
+
+```python
 #!/usr/bin/env python3
 """
 regenerate_peakclean.py — Replace cache-based peakclean with inline vectorized dispatch.
@@ -5,6 +12,9 @@ regenerate_peakclean.py — Replace cache-based peakclean with inline vectorized
 Iterates over every step_2_1_EF_{ISO}_{threshold}[_part*].parquet in data/step2.1-ef/,
 computes resid_norm_p9997 and clean_peak_hour_mw per mix via inline dispatch, and
 writes/overwrites the matching _peakclean.parquet sidecar.
+
+Also processes interp/dense-augment files (step_2_1_EF_{ISO}_*_interp_*.parquet)
+so the optimizer doesn't fall back to L1-NN approximations for those mixes.
 
 Performance: uses a fused numba kernel that computes matmul + gap + 99.97th-pctile
 in a single pass per mix with zero intermediate arrays.  ~3x faster and ~875x less
@@ -24,6 +34,8 @@ Usage:
     python scripts/step2_3a_regenerate_peakclean.py
     python scripts/step2_3a_regenerate_peakclean.py --iso ERCOT
     python scripts/step2_3a_regenerate_peakclean.py --iso ERCOT --threshold 95
+    python scripts/step2_3a_regenerate_peakclean.py --interp-only
+    python scripts/step2_3a_regenerate_peakclean.py --interp-only --iso CAISO
     python scripts/step2_3a_regenerate_peakclean.py --validate
     python scripts/step2_3a_regenerate_peakclean.py --workers 4
 """
@@ -221,6 +233,15 @@ _EF_PAT = re.compile(
     r"^step_2_1_EF_([A-Z]+)_([0-9]+(?:\.[0-9]+)?)(?:_part(\d+))?\.parquet$"
 )
 
+# Matches interp/dense-augment files:
+#   step_2_1_EF_CAISO_90_interp_dense.parquet
+#   step_2_1_EF_CAISO_90_interp_dense_chunk003.parquet
+#   step_2_1_EF_PJM_87.5_interp_foo.parquet
+# Captures: (1) ISO, (2) threshold tag
+_INTERP_PAT = re.compile(
+    r"^step_2_1_EF_([A-Z]+)_([0-9]+(?:\.[0-9]+)?)_interp_.+\.parquet$"
+)
+
 
 def discover_ef_files() -> dict[str, dict[str, list[Path]]]:
     """Return {iso: {threshold_tag: [sorted part paths]}}.
@@ -247,8 +268,39 @@ def discover_ef_files() -> dict[str, dict[str, list[Path]]]:
     return result
 
 
+def discover_interp_files(iso_filter: str | None = None,
+                          ) -> dict[str, list[tuple[str, Path]]]:
+    """Return {iso: [(threshold_tag, path), ...]} for interp/dense-augment files.
+
+    Each interp file is treated independently (not grouped by threshold) since
+    they each get their own peakclean sidecar.  Skips peakclean sidecars.
+    """
+    result: dict[str, list[tuple[str, Path]]] = defaultdict(list)
+    if not EF_DIR.exists():
+        return dict(result)
+    for f in sorted(EF_DIR.iterdir()):
+        if "peakclean" in f.name:
+            continue
+        m = _INTERP_PAT.match(f.name)
+        if m:
+            iso, ttag = m.group(1), m.group(2)
+            if iso_filter and iso != iso_filter:
+                continue
+            result[iso].append((ttag, f))
+    return dict(result)
+
+
 def _peakclean_path(iso: str, threshold_tag: str) -> Path:
     return EF_DIR / f"step_2_1_EF_{iso}_{threshold_tag}_peakclean.parquet"
+
+
+def _interp_peakclean_path(source_path: Path) -> Path:
+    """Peakclean sidecar path for an interp file.
+
+    Matches the optimizer's convention: {stem}_peakclean.parquet
+    e.g. step_2_1_EF_CAISO_90_interp_dense_peakclean.parquet
+    """
+    return source_path.with_name(source_path.stem + "_peakclean.parquet")
 
 
 # ---------------------------------------------------------------------------
@@ -499,8 +551,14 @@ def process_ef_file(
     demand_norm: np.ndarray,   # (8760,) float64  — for numpy fallback only
     demand_margin: np.ndarray, # (8760,) float64  — for numpy fallback only
     peak_mw: float,
+    out_path: Path | None = None,
 ) -> dict:
-    """Process one EF file (or multi-part group). Returns summary dict."""
+    """Process one EF file (or multi-part group). Returns summary dict.
+
+    Args:
+        out_path: Override for the peakclean sidecar destination.
+                  If None, uses _peakclean_path(iso, threshold_tag).
+    """
     threshold_val = float(threshold_tag)
 
     # Columns we actually need — read only these to save memory
@@ -599,7 +657,8 @@ def process_ef_file(
     cpk = ((1.0 - safe) * peak_mw).astype(np.float32)
 
     # ── Write parquet ─────────────────────────────────────────────
-    out_path = _peakclean_path(iso, threshold_tag)
+    if out_path is None:
+        out_path = _peakclean_path(iso, threshold_tag)
     tbl = pa.table({
         "resid_norm_p9997": pa.array(resid, type=pa.float32()),
         "clean_peak_hour_mw": pa.array(cpk, type=pa.float32()),
@@ -619,6 +678,7 @@ def process_ef_file(
     return {
         "iso": iso,
         "threshold": threshold_tag,
+        "out_path": str(out_path),
         "n_mixes": n,
         "n_computed": n_computed,
         "cpk_min": float(finite_cpk.min()) if len(finite_cpk) > 0 else 0.0,
@@ -642,8 +702,7 @@ def validate_all(summaries: list[dict]) -> bool:
     print(f"{'='*90}")
 
     for s in summaries:
-        iso, ttag = s["iso"], s["threshold"]
-        pc_path = _peakclean_path(iso, ttag)
+        pc_path = Path(s["out_path"])
         if not pc_path.exists():
             print(f"  FAIL: {pc_path.name} missing")
             ok = False
@@ -707,21 +766,24 @@ def _process_one_threshold(
     demand_norm: np.ndarray,
     demand_margin: np.ndarray,
     peak_mw: float,
+    out_path: Path | None = None,
 ) -> dict:
     """Wrapper for ThreadPoolExecutor — processes one threshold and returns
     a summary dict augmented with timing info."""
     t1 = time.time()
     src_rows = sum(pq.ParquetFile(p).metadata.num_rows for p in paths)
-    print(f"[peakclean] {iso} t={ttag}: {src_rows:,} mixes "
+    label = paths[0].name if out_path else f"t={ttag}"
+    print(f"[peakclean] {iso} {label}: {src_rows:,} mixes "
           f"({len(paths)} part{'s' if len(paths) > 1 else ''})",
           flush=True)
 
     s = process_ef_file(iso, ttag, paths, P, P32, dm32, dn32,
-                        demand_norm, demand_margin, peak_mw)
+                        demand_norm, demand_margin, peak_mw,
+                        out_path=out_path)
 
     dt = time.time() - t1
     rate = s["n_computed"] / max(0.01, dt)
-    print(f"  → {iso} t={ttag}: {dt:.1f}s ({rate:,.0f} dispatched/s) | "
+    print(f"  → {iso} {label}: {dt:.1f}s ({rate:,.0f} dispatched/s) | "
           f"cpk [{s['cpk_min']:,.0f}, {s['cpk_max']:,.0f}] "
           f"std={s['cpk_std']:,.0f} | "
           f"storage={s['n_storage']} "
@@ -742,6 +804,12 @@ def main() -> int:
     ap.add_argument("--workers", type=int, default=None,
                     help="Max parallel threshold workers per ISO "
                          "(default: min(n_thresholds, os.cpu_count()))")
+    ap.add_argument("--interp-only", action="store_true",
+                    help="Process only interp/dense-augment files, "
+                         "skip standard EF bands")
+    ap.add_argument("--skip-interp", action="store_true",
+                    help="Skip interp/dense-augment files "
+                         "(process standard bands only, original behavior)")
     args = ap.parse_args()
 
     t_global = time.time()
@@ -752,80 +820,129 @@ def main() -> int:
         print("[peakclean] numba not found — using numpy fallback "
               "(~3x slower)", flush=True)
 
-    ef_tree = discover_ef_files()
-
-    if args.iso:
-        iso_up = args.iso.upper()
-        if iso_up not in ef_tree:
-            print(f"[peakclean] No EF files found for {iso_up}")
-            return 1
-        isos_to_process = [iso_up]
-    else:
-        isos_to_process = sorted(ef_tree.keys())
-
     summaries: list[dict] = []
     total_mixes = 0
 
-    for iso in isos_to_process:
-        print(f"\n{'='*60}")
-        print(f"[peakclean] Loading profiles for {iso}")
-        print(f"{'='*60}")
+    # ── Pass 1: Standard EF bands ─────────────────────────────────
+    if not args.interp_only:
+        ef_tree = discover_ef_files()
 
-        P = build_profile_matrix(iso)
-        demand_norm = _load_demand_norm(iso)
-        demand_margin = demand_norm * (1.0 + RESOURCE_ADEQUACY_MARGIN)
-        peak_mw = float(PEAK_DEMAND_MW[iso])
+        if args.iso:
+            iso_up = args.iso.upper()
+            if iso_up not in ef_tree:
+                print(f"[peakclean] No EF files found for {iso_up}")
+                if args.skip_interp:
+                    return 1
+                # Fall through to interp pass
+            else:
+                ef_tree = {iso_up: ef_tree[iso_up]}
 
-        # Change #2: cast once per ISO, reuse across all thresholds
-        P32 = P.astype(np.float32)
-        dm32 = demand_margin.astype(np.float32)
-        dn32 = demand_norm.astype(np.float32)
+        for iso in sorted(ef_tree.keys()):
+            print(f"\n{'='*60}")
+            print(f"[peakclean] Loading profiles for {iso}")
+            print(f"{'='*60}")
 
-        print(f"  demand TWh={float(REGIONAL_DEMAND_TWH[iso]):.1f}  "
-              f"peak MW={peak_mw:,.0f}  RA={RESOURCE_ADEQUACY_MARGIN}",
-              flush=True)
+            P = build_profile_matrix(iso)
+            demand_norm = _load_demand_norm(iso)
+            demand_margin = demand_norm * (1.0 + RESOURCE_ADEQUACY_MARGIN)
+            peak_mw = float(PEAK_DEMAND_MW[iso])
 
-        thresholds = ef_tree[iso]
-        if args.threshold:
-            if args.threshold not in thresholds:
-                print(f"  Threshold {args.threshold} not found for {iso}, "
-                      f"skipping")
-                continue
-            thresholds = {args.threshold: thresholds[args.threshold]}
+            # Change #2: cast once per ISO, reuse across all thresholds
+            P32 = P.astype(np.float32)
+            dm32 = demand_margin.astype(np.float32)
+            dn32 = demand_norm.astype(np.float32)
 
-        sorted_ttags = sorted(thresholds, key=lambda t: float(t))
+            print(f"  demand TWh={float(REGIONAL_DEMAND_TWH[iso]):.1f}  "
+                  f"peak MW={peak_mw:,.0f}  RA={RESOURCE_ADEQUACY_MARGIN}",
+                  flush=True)
 
-        # Change #1: parallel threshold processing
-        n_thresh = len(sorted_ttags)
-        max_workers = args.workers or min(n_thresh, os.cpu_count() or 1)
-        max_workers = max(1, min(max_workers, n_thresh))
+            thresholds = ef_tree[iso]
+            if args.threshold:
+                if args.threshold not in thresholds:
+                    print(f"  Threshold {args.threshold} not found for {iso}, "
+                          f"skipping")
+                    continue
+                thresholds = {args.threshold: thresholds[args.threshold]}
 
-        if max_workers == 1 or n_thresh == 1:
-            # Serial path — no thread overhead
-            for ttag in sorted_ttags:
-                s = _process_one_threshold(
-                    iso, ttag, thresholds[ttag], P, P32, dm32, dn32,
-                    demand_norm, demand_margin, peak_mw)
-                summaries.append(s)
-                total_mixes += s["n_mixes"]
-        else:
-            print(f"  [parallel] {n_thresh} thresholds × "
-                  f"{max_workers} workers", flush=True)
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = {
-                    pool.submit(
-                        _process_one_threshold,
+            sorted_ttags = sorted(thresholds, key=lambda t: float(t))
+
+            # Change #1: parallel threshold processing
+            n_thresh = len(sorted_ttags)
+            max_workers = args.workers or min(n_thresh, os.cpu_count() or 1)
+            max_workers = max(1, min(max_workers, n_thresh))
+
+            if max_workers == 1 or n_thresh == 1:
+                # Serial path — no thread overhead
+                for ttag in sorted_ttags:
+                    s = _process_one_threshold(
                         iso, ttag, thresholds[ttag], P, P32, dm32, dn32,
-                        demand_norm, demand_margin, peak_mw,
-                    ): ttag
-                    for ttag in sorted_ttags
-                }
-                for fut in as_completed(futures):
-                    s = fut.result()
+                        demand_norm, demand_margin, peak_mw)
                     summaries.append(s)
                     total_mixes += s["n_mixes"]
+            else:
+                print(f"  [parallel] {n_thresh} thresholds × "
+                      f"{max_workers} workers", flush=True)
+                with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                    futures = {
+                        pool.submit(
+                            _process_one_threshold,
+                            iso, ttag, thresholds[ttag], P, P32, dm32, dn32,
+                            demand_norm, demand_margin, peak_mw,
+                        ): ttag
+                        for ttag in sorted_ttags
+                    }
+                    for fut in as_completed(futures):
+                        s = fut.result()
+                        summaries.append(s)
+                        total_mixes += s["n_mixes"]
 
-        gc.collect()  # once per ISO, not per threshold
+            gc.collect()  # once per ISO, not per threshold
+
+    # ── Pass 2: Interp / dense-augment files ──────────────────────
+    if not args.skip_interp:
+        iso_filter = args.iso.upper() if args.iso else None
+        interp_tree = discover_interp_files(iso_filter=iso_filter)
+
+        if interp_tree:
+            print(f"\n{'='*60}")
+            print("[peakclean] Processing interp/dense-augment files")
+            print(f"{'='*60}")
+
+        # Cache profiles per ISO to avoid reloading if already done above
+        _profile_cache: dict[str, tuple] = {}
+
+        for iso in sorted(interp_tree.keys()):
+            entries = interp_tree[iso]
+            if not entries:
+                continue
+
+            # Load or reuse profiles
+            if iso not in _profile_cache:
+                print(f"\n[peakclean] Loading profiles for {iso} (interp pass)")
+                P = build_profile_matrix(iso)
+                dn = _load_demand_norm(iso)
+                dm = dn * (1.0 + RESOURCE_ADEQUACY_MARGIN)
+                pmw = float(PEAK_DEMAND_MW[iso])
+                _profile_cache[iso] = (
+                    P, P.astype(np.float32),
+                    dm.astype(np.float32), dn.astype(np.float32),
+                    dn, dm, pmw,
+                )
+            P, P32, dm32, dn32, demand_norm, demand_margin, peak_mw = (
+                _profile_cache[iso])
+
+            print(f"  {iso}: {len(entries)} interp file(s)", flush=True)
+
+            for ttag, src_path in entries:
+                out = _interp_peakclean_path(src_path)
+                s = _process_one_threshold(
+                    iso, ttag, [src_path], P, P32, dm32, dn32,
+                    demand_norm, demand_margin, peak_mw,
+                    out_path=out)
+                summaries.append(s)
+                total_mixes += s["n_mixes"]
+
+            gc.collect()
 
     # ── Summary table ─────────────────────────────────────────────
     elapsed = time.time() - t_global
@@ -853,3 +970,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+```
