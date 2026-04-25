@@ -823,43 +823,28 @@ def _load_iso_profiles(iso: str):
     return d_arr, s_mat, rtypes, float(d_arr.sum())
 
 
-def _dense_base_groups(iso: str) -> list[dict]:
-    """Top MAX_BASE_GROUPS base-resource combos by frequency."""
-    seen: dict[tuple, int] = {}
-    for t in _EF_BAND_THRESHOLDS:
-        name = _threshold_tag(t)
-        parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
-        if not parts:
-            main = EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet'
-            if main.exists():
-                parts = [main]
-        for p in parts:
-            schema = pq.read_schema(p)
-            load = [c for c in _BASE_COLS if c in schema.names]
-            tbl = pq.read_table(p, columns=load)
-            arrs = {c: (np.round(tbl.column(c).to_numpy() / BASE_ROUND) * BASE_ROUND
-                        if c in tbl.column_names else np.zeros(tbl.num_rows))
-                    for c in _BASE_COLS}
-            keys = np.column_stack([arrs[c] for c in _BASE_COLS]).astype(np.int32)
-            for row in keys:
-                k = tuple(row)
-                seen[k] = seen.get(k, 0) + 1
-            del tbl, arrs, keys
-    ranked = sorted(seen.items(), key=lambda x: -x[1])[:MAX_BASE_GROUPS]
-    return [{c: float(v) for c, v in zip(_BASE_COLS, vals)} | {'_count': cnt}
-            for vals, cnt in ranked]
+# ── FIX 2+3: Single-pass EF band scanner (replaces _dense_base_groups
+#    and _existing_mix_keys — reads each parquet once, not twice) ────────────
 
+def _scan_ef_bands(iso: str):
+    """Single pass over all EF band parquets for an ISO.
 
-def _existing_mix_keys(iso: str) -> set:
-    """Load existing EF mix keys as bytes for O(1) dedup.
-
-    Each row’s 11 int32 resource columns are packed into a 44-byte string.
-    Uses np.frombuffer to vectorize the row→bytes conversion instead of
-    looping over millions of rows in Python.
+    Returns:
+        base_groups: list[dict] — top MAX_BASE_GROUPS base-resource combos
+            by frequency, each dict mapping _BASE_COLS to float values
+            plus '_count'.
+        existing_keys: set — packed byte strings of all existing mixes
+            for O(1) dedup. Each row's 11 int32 resource columns are
+            packed into a 44-byte string.
     """
-    keys = set()
+    seen: dict[tuple, int] = {}
+    existing_keys: set = set()
     n_cols = len(_RESOURCE_COLS)
     row_bytes = n_cols * 4  # int32 = 4 bytes
+
+    # Indices of _BASE_COLS within _RESOURCE_COLS for extracting base groups
+    base_indices = [_RESOURCE_COLS.index(c) for c in _BASE_COLS]
+
     for t in _EF_BAND_THRESHOLDS:
         name = _threshold_tag(t)
         parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
@@ -871,16 +856,37 @@ def _existing_mix_keys(iso: str) -> set:
             schema = pq.read_schema(p)
             cols_present = [c for c in _RESOURCE_COLS if c in schema.names]
             tbl = pq.read_table(p, columns=cols_present)
-            arrs = np.column_stack([
-                tbl.column(c).to_numpy().astype(np.int32) if c in tbl.column_names
-                else np.zeros(tbl.num_rows, dtype=np.int32)
-                for c in _RESOURCE_COLS])
-            # Vectorized: pack all rows into byte strings at once
-            arrs_c = np.ascontiguousarray(arrs)
-            packed = np.frombuffer(arrs_c.tobytes(), dtype=f'S{row_bytes}')
-            keys.update(packed.tolist())
-            del tbl, arrs, arrs_c, packed
-    return keys
+            n_rows = tbl.num_rows
+
+            # Build full resource array (11 cols) — zero-fill missing
+            res_arrs = np.column_stack([
+                tbl.column(c).to_numpy().astype(np.int32)
+                if c in tbl.column_names
+                else np.zeros(n_rows, dtype=np.int32)
+                for c in _RESOURCE_COLS
+            ])
+
+            # --- Existing-key set (dedup) ---
+            res_c = np.ascontiguousarray(res_arrs)
+            packed = np.frombuffer(res_c.tobytes(), dtype=f'S{row_bytes}')
+            existing_keys.update(packed.tolist())
+
+            # --- Base-group frequency counting (vectorized) ---
+            base_arr = res_arrs[:, base_indices].astype(np.float64)
+            base_rounded = (np.round(base_arr / BASE_ROUND) * BASE_ROUND).astype(np.int32)
+            urows, ucounts = np.unique(base_rounded, axis=0, return_counts=True)
+            for row, cnt in zip(urows, ucounts):
+                k = tuple(row)
+                seen[k] = seen.get(k, 0) + int(cnt)
+
+            del tbl, res_arrs, res_c, packed, base_arr, base_rounded
+
+    ranked = sorted(seen.items(), key=lambda x: -x[1])[:MAX_BASE_GROUPS]
+    base_groups = [
+        {c: float(v) for c, v in zip(_BASE_COLS, vals)} | {'_count': cnt}
+        for vals, cnt in ranked
+    ]
+    return base_groups, existing_keys
 
 
 def _build_mix_batch(base, rtypes, solar_val, wind_val, hyb_combos):
@@ -900,16 +906,18 @@ def _build_mix_batch(base, rtypes, solar_val, wind_val, hyb_combos):
     return batch
 
 
+# ── FIX 4 (caller): Single-kernel storage sweep ───────────────────────────
+
 def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     """Score mixes via dispatch + coarse storage sweep.
 
-    Uses Numba-parallelized _batch_score_storage: all mixes in a chunk
-    scored in parallel across cores per storage config. 60 configs x 1
-    parallel call per chunk instead of 60 x N sequential Python calls.
+    Uses _batch_score_storage_grid: one parallel Numba kernel call per chunk
+    evaluates all N mixes × K storage configs. Replaces the old triple-nested
+    Python loop that made 60 separate kernel calls per chunk.
 
     Returns (hms, bat4_pct, bat8_pct, ldes_pct) — best storage config per mix.
     """
-    from step1_pfs_generator import _batch_score_storage
+    from step1_pfs_generator import _batch_score_storage_grid
     from pipeline_config import (
         BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY,
         BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
@@ -917,11 +925,45 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     )
 
     N = len(mix_batch)
+    ldes_wh = int(LDES_WINDOW_DAYS * 24)
+
+    # ── Build config arrays once from Cartesian product ──────────────
+    n_b4 = len(_BAT4_LEVELS)
+    n_b8 = len(_BAT8_LEVELS)
+    n_ld = len(_LDES_LEVELS)
+    K = n_b4 * n_b8 * n_ld
+
+    cfgs_b4_cap = np.empty(K, dtype=np.float64)
+    cfgs_b4_pow = np.empty(K, dtype=np.float64)
+    cfgs_b8_cap = np.empty(K, dtype=np.float64)
+    cfgs_b8_pow = np.empty(K, dtype=np.float64)
+    cfgs_ld_cap = np.empty(K, dtype=np.float64)
+    cfgs_ld_pow = np.empty(K, dtype=np.float64)
+    # Raw levels for recovering best config per mix
+    cfgs_b4_lvl = np.empty(K, dtype=np.float64)
+    cfgs_b8_lvl = np.empty(K, dtype=np.float64)
+    cfgs_ld_lvl = np.empty(K, dtype=np.float64)
+
+    ki = 0
+    for b4 in _BAT4_LEVELS:
+        for b8 in _BAT8_LEVELS:
+            for ld in _LDES_LEVELS:
+                cfgs_b4_cap[ki] = b4 * BATTERY_DURATION_HOURS
+                cfgs_b4_pow[ki] = b4
+                cfgs_b8_cap[ki] = b8 * BATTERY8_DURATION_HOURS
+                cfgs_b8_pow[ki] = b8
+                cfgs_ld_cap[ki] = ld * LDES_DURATION_HOURS
+                cfgs_ld_pow[ki] = ld
+                cfgs_b4_lvl[ki] = b4
+                cfgs_b8_lvl[ki] = b8
+                cfgs_ld_lvl[ki] = ld
+                ki += 1
+
+    # ── Score chunks ─────────────────────────────────────────────────
     best_hms = np.full(N, -1.0, dtype=np.float64)
     best_b4 = np.zeros(N, dtype=np.float64)
     best_b8 = np.zeros(N, dtype=np.float64)
     best_ld = np.zeros(N, dtype=np.float64)
-    ldes_wh = int(LDES_WINDOW_DAYS * 24)
 
     for start in range(0, N, SCORE_CHUNK):
         end = min(start + SCORE_CHUNK, N)
@@ -929,27 +971,19 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
         # Precompute supply profiles for chunk: (cn, 8760)
         supply_rows = (mix_batch[start:end] / 100.0) @ supply_matrix
 
-        for b4 in _BAT4_LEVELS:
-            b4c = b4 * BATTERY_DURATION_HOURS
-            for b8 in _BAT8_LEVELS:
-                b8c = b8 * BATTERY8_DURATION_HOURS
-                for ld in _LDES_LEVELS:
-                    ldc = ld * LDES_DURATION_HOURS
-                    # Numba prange — all cn mixes scored in parallel
-                    scores = _batch_score_storage(
-                        demand_arr, supply_rows, 1.0, cn,
-                        b4c, b4, BATTERY_EFFICIENCY,
-                        b8c, b8, BATTERY8_EFFICIENCY,
-                        ldc, ld, LDES_EFFICIENCY, ldes_wh)
-                    hms_chunk = scores / td * 100.0
-                    improved = hms_chunk > best_hms[start:end]
-                    idx = np.where(improved)[0]
-                    if len(idx) > 0:
-                        gi = idx + start
-                        best_hms[gi] = hms_chunk[idx]
-                        best_b4[gi] = b4
-                        best_b8[gi] = b8
-                        best_ld[gi] = ld
+        # Single kernel call: N mixes × K configs, parallel over mixes
+        scores, idxs = _batch_score_storage_grid(
+            demand_arr, supply_rows, 1.0, cn,
+            cfgs_b4_cap, cfgs_b4_pow, BATTERY_EFFICIENCY,
+            cfgs_b8_cap, cfgs_b8_pow, BATTERY8_EFFICIENCY,
+            cfgs_ld_cap, cfgs_ld_pow, LDES_EFFICIENCY,
+            ldes_wh, K)
+
+        # Convert to HMS % and recover config levels
+        best_hms[start:end] = scores / td * 100.0
+        best_b4[start:end] = cfgs_b4_lvl[idxs]
+        best_b8[start:end] = cfgs_b8_lvl[idxs]
+        best_ld[start:end] = cfgs_ld_lvl[idxs]
 
         if start > 0 and start % (SCORE_CHUNK * 10) == 0:
             print(f"    scored {start:,}/{N:,}", flush=True)
@@ -987,8 +1021,11 @@ def run_dense_augment(dry_run: bool = False):
     total_written = 0
     for iso in ISOS:
         print(f"\n{'='*60}\n  {iso}\n{'='*60}", flush=True)
-        base_groups = _dense_base_groups(iso)
-        print(f"  {len(base_groups)} base groups", flush=True)
+
+        # FIX 3: single-pass band scan (was two separate calls)
+        base_groups, existing = _scan_ef_bands(iso)
+        print(f"  {len(base_groups)} base groups, "
+              f"{len(existing):,} existing keys", flush=True)
 
         if dry_run:
             for bg in base_groups[:5]:
@@ -1009,10 +1046,6 @@ def run_dense_augment(dry_run: bool = False):
         print(f"  loading profiles...", flush=True)
         demand_arr, supply_matrix, rtypes, td = _load_iso_profiles(iso)
         print(f"  supply_matrix {supply_matrix.shape}  rtypes={rtypes}", flush=True)
-
-        print(f"  loading existing EF for dedup...", flush=True)
-        existing = _existing_mix_keys(iso)
-        print(f"  {len(existing):,} existing keys", flush=True)
 
         band_tables: dict[str, list[pa.Table]] = defaultdict(list)
         iso_scored, iso_kept = 0, 0
