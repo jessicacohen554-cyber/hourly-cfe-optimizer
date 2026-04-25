@@ -1,10 +1,3 @@
-# scripts/step2_3a_regenerate_peakclean.py
-
-**Version:** 2.0 | **Updated:** 2026-04-24 | **Status:** draft
-
-**Changelog:** Add interp/dense-augment file support. New `discover_interp_files()`, `--interp-only` flag, `out_path` parameter on `process_ef_file`. Interp sidecars now get inline dispatch instead of L1-NN fallback.
-
-```python
 #!/usr/bin/env python3
 """
 regenerate_peakclean.py — Replace cache-based peakclean with inline vectorized dispatch.
@@ -970,4 +963,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-```
