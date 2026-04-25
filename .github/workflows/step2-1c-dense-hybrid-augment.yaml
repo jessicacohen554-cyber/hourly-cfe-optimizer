@@ -51,6 +51,8 @@ on:
 env:
   BRANCH_PREFIX: step2-1c-dense-hybrid
   PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_PYTHON_VERSION_WARNING: "1"
 
 jobs:
   prepare:
@@ -85,18 +87,29 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Verify prerequisites
         run: |
+          set -euo pipefail
+          shopt -s nullglob
           ISO="${{ matrix.iso }}"
-          EF_COUNT=$(ls data/step2.1-ef/step_2_1_EF_${ISO}_*.parquet 2>/dev/null | grep -v '_peakclean\|_interp_\|_dense' | wc -l)
-          HYB=$(ls data/hybrid_profiles/${ISO}_hybrid_profiles.npz 2>/dev/null | wc -l)
+          EF_FILES=(data/step2.1-ef/step_2_1_EF_${ISO}_*.parquet)
+          EF_COUNT=0
+          for f in "${EF_FILES[@]}"; do
+            case "$f" in
+              *_peakclean.parquet|*_interp_*.parquet|*_dense.parquet) ;;
+              *) EF_COUNT=$((EF_COUNT + 1)) ;;
+            esac
+          done
+          HYB_COUNT=0
+          [[ -f "data/hybrid_profiles/${ISO}_hybrid_profiles.npz" ]] && HYB_COUNT=1
+
           if [ "$EF_COUNT" -eq 0 ]; then
             echo "ERROR: No EF parquets for ${ISO}. Run Step 2.1 first."
             exit 1
           fi
-          if [ "$HYB" -eq 0 ]; then
+          if [ "$HYB_COUNT" -eq 0 ]; then
             echo "ERROR: No hybrid profiles for ${ISO}."
             exit 1
           fi
@@ -109,12 +122,18 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install numpy numba pyarrow scipy pandas
+        run: python -m pip install --prefer-binary numpy numba pyarrow scipy pandas
 
       - name: "Run dense hybrid augmentation — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
           ISO_FILTER: ${{ matrix.iso }}
+          NUMBA_NUM_THREADS: ${{ inputs.runner_size == 'large' && '16' || '4' }}
+          OMP_NUM_THREADS: ${{ inputs.runner_size == 'large' && '16' || '4' }}
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+          VECLIB_MAXIMUM_THREADS: "1"
+          NUMEXPR_NUM_THREADS: "1"
         timeout-minutes: ${{ inputs.runner_size == 'large' && 45 || 210 }}
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
