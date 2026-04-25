@@ -12,9 +12,9 @@ name: "Step 2.1c: Dense Hybrid Augmentation"
 # Prerequisite: Step 2.1 EF parquets + hybrid profiles + demand/gen profiles
 # Output: data/step2.1-ef/step_2_1_EF_<ISO>_*_interp_dense.parquet
 #
-# Checkpointing: the Python script flushes chunk parquets every 10 base_groups.
-# A background committer pushes them every 10 minutes. On failure, a rescue
-# commit saves whatever chunks exist so work isn't lost.
+# Checkpointing: the Python script flushes chunk parquets every 10 base_groups
+# and commits+pushes them directly via subprocess (GIT_AUTO_COMMIT=1).
+# On failure, a rescue commit saves any uncommitted chunks.
 
 on:
   workflow_dispatch:
@@ -139,43 +139,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config http.postBuffer 524288000
           git checkout -b "${BRANCH}"
-
-      - name: Start background committer
-        if: inputs.dry_run != true
-        env:
-          ISO: ${{ matrix.iso }}
-        run: |
-          cat > /tmp/bg_commit.sh << 'BGEOF'
-          #!/usr/bin/env bash
-          set -uo pipefail
-          ISO="$1"
-          BRANCH="$2"
-          COMMIT_COUNT=0
-          while true; do
-            sleep 600
-            CHUNKS=$(find data/step2.1-ef/ -name "step_2_1_EF_${ISO}_*_interp_dense_chunk*.parquet" -newer /tmp/bg_commit_marker 2>/dev/null | wc -l)
-            if [ "$CHUNKS" -gt 0 ]; then
-              git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_dense_chunk*.parquet 2>/dev/null || true
-              if ! git diff --cached --quiet; then
-                COMMIT_COUNT=$((COMMIT_COUNT + 1))
-                git commit -m "Step 2.1c checkpoint ${COMMIT_COUNT}: ${ISO} (${CHUNKS} chunk files)"
-                git push -u origin "${BRANCH}" 2>/dev/null || true
-                touch /tmp/bg_commit_marker
-                echo "[bg-commit] checkpoint ${COMMIT_COUNT}: ${CHUNKS} chunks pushed"
-              fi
-            fi
-          done
-          BGEOF
-          chmod +x /tmp/bg_commit.sh
-          touch /tmp/bg_commit_marker
-          nohup /tmp/bg_commit.sh "$ISO" "$BRANCH" > /tmp/bg_commit.log 2>&1 &
-          echo "BG_COMMIT_PID=$!" >> "${GITHUB_ENV}"
-          echo "Background committer started (PID $!)"
+          git push -u origin "${BRANCH}"
 
       - name: "Run dense hybrid augmentation — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
           ISO_FILTER: ${{ matrix.iso }}
+          GIT_AUTO_COMMIT: "1"
           NUMBA_NUM_THREADS: ${{ inputs.runner_size == 'large' && '16' || '4' }}
           OMP_NUM_THREADS: ${{ inputs.runner_size == 'large' && '16' || '4' }}
           OPENBLAS_NUM_THREADS: "1"
@@ -188,15 +158,6 @@ jobs:
             python scripts/step2_1_rel_tax_augment.py --dense-hybrid --dry-run
           else
             python scripts/step2_1_rel_tax_augment.py --dense-hybrid
-          fi
-
-      - name: Stop background committer
-        if: always()
-        run: |
-          if [ -n "${BG_COMMIT_PID:-}" ]; then
-            kill "$BG_COMMIT_PID" 2>/dev/null || true
-            echo "Background committer log:"
-            cat /tmp/bg_commit.log 2>/dev/null || true
           fi
 
       - name: Report output sizes
@@ -222,7 +183,7 @@ jobs:
           FILE_COUNT=$(git diff --cached --name-only | wc -l)
           git commit -m "Step 2.1c RESCUE: ${ISO} partial (${FILE_COUNT} files, job failed)"
           for i in 1 2 3 4; do
-            git push -u origin "${BRANCH}" 2>&1 && break
+            git push origin HEAD 2>&1 && break
             [ "$i" -eq 4 ] && { echo "::error::Rescue push failed"; exit 1; }
             sleep $((2 ** i))
           done
@@ -247,7 +208,7 @@ jobs:
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "${BRANCH}" 2>&1 && break
+            git push origin HEAD 2>&1 && break
             if [ "$i" -eq "$MAX_RETRIES" ]; then
               echo "::error::Push failed after $MAX_RETRIES attempts"
               exit 1
