@@ -851,8 +851,15 @@ def _dense_base_groups(iso: str) -> list[dict]:
 
 
 def _existing_mix_keys(iso: str) -> set:
-    """Load existing EF mix keys (tuple of rounded resource %) for dedup."""
+    """Load existing EF mix keys as bytes for O(1) dedup.
+
+    Each row’s 11 int32 resource columns are packed into a 44-byte string.
+    Uses np.frombuffer to vectorize the row→bytes conversion instead of
+    looping over millions of rows in Python.
+    """
     keys = set()
+    n_cols = len(_RESOURCE_COLS)
+    row_bytes = n_cols * 4  # int32 = 4 bytes
     for t in _EF_BAND_THRESHOLDS:
         name = _threshold_tag(t)
         parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
@@ -868,9 +875,11 @@ def _existing_mix_keys(iso: str) -> set:
                 tbl.column(c).to_numpy().astype(np.int32) if c in tbl.column_names
                 else np.zeros(tbl.num_rows, dtype=np.int32)
                 for c in _RESOURCE_COLS])
-            for row in arrs:
-                keys.add(tuple(row))
-            del tbl, arrs
+            # Vectorized: pack all rows into byte strings at once
+            arrs_c = np.ascontiguousarray(arrs)
+            packed = np.frombuffer(arrs_c.tobytes(), dtype=f'S{row_bytes}')
+            keys.update(packed.tolist())
+            del tbl, arrs, arrs_c, packed
     return keys
 
 
@@ -894,9 +903,13 @@ def _build_mix_batch(base, rtypes, solar_val, wind_val, hyb_combos):
 def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
     """Score mixes via dispatch + coarse storage sweep.
 
+    Uses Numba-parallelized _batch_score_storage: all mixes in a chunk
+    scored in parallel across cores per storage config. 60 configs x 1
+    parallel call per chunk instead of 60 x N sequential Python calls.
+
     Returns (hms, bat4_pct, bat8_pct, ldes_pct) — best storage config per mix.
     """
-    from step1_pfs_generator import _score_with_all_storage
+    from step1_pfs_generator import _batch_score_storage
     from pipeline_config import (
         BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY,
         BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
@@ -912,8 +925,9 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
 
     for start in range(0, N, SCORE_CHUNK):
         end = min(start + SCORE_CHUNK, N)
-        supply_rows = (mix_batch[start:end] / 100.0) @ supply_matrix
         cn = end - start
+        # Precompute supply profiles for chunk: (cn, 8760)
+        supply_rows = (mix_batch[start:end] / 100.0) @ supply_matrix
 
         for b4 in _BAT4_LEVELS:
             b4c = b4 * BATTERY_DURATION_HOURS
@@ -921,21 +935,23 @@ def _score_with_storage_sweep(demand_arr, supply_matrix, mix_batch, td):
                 b8c = b8 * BATTERY8_DURATION_HOURS
                 for ld in _LDES_LEVELS:
                     ldc = ld * LDES_DURATION_HOURS
-                    for i in range(cn):
-                        s = _score_with_all_storage(
-                            demand_arr, supply_rows[i], 1.0,
-                            b4c, b4, BATTERY_EFFICIENCY,
-                            b8c, b8, BATTERY8_EFFICIENCY,
-                            ldc, ld, LDES_EFFICIENCY, ldes_wh)
-                        hms = s / td * 100.0
-                        gi = start + i
-                        if hms > best_hms[gi]:
-                            best_hms[gi] = hms
-                            best_b4[gi] = b4
-                            best_b8[gi] = b8
-                            best_ld[gi] = ld
+                    # Numba prange — all cn mixes scored in parallel
+                    scores = _batch_score_storage(
+                        demand_arr, supply_rows, 1.0, cn,
+                        b4c, b4, BATTERY_EFFICIENCY,
+                        b8c, b8, BATTERY8_EFFICIENCY,
+                        ldc, ld, LDES_EFFICIENCY, ldes_wh)
+                    hms_chunk = scores / td * 100.0
+                    improved = hms_chunk > best_hms[start:end]
+                    idx = np.where(improved)[0]
+                    if len(idx) > 0:
+                        gi = idx + start
+                        best_hms[gi] = hms_chunk[idx]
+                        best_b4[gi] = b4
+                        best_b8[gi] = b8
+                        best_ld[gi] = ld
 
-        if start > 0 and start % (SCORE_CHUNK * 5) == 0:
+        if start > 0 and start % (SCORE_CHUNK * 10) == 0:
             print(f"    scored {start:,}/{N:,}", flush=True)
 
     return best_hms, best_b4, best_b8, best_ld
@@ -1025,7 +1041,10 @@ def run_dense_augment(dry_run: bool = False):
                 mb[:, rtypes.index(c)].astype(np.int32) if c in rtypes
                 else np.zeros(len(mb), dtype=np.int32)
                 for c in _RESOURCE_COLS])
-            new = np.array([tuple(r) not in existing for r in mk], dtype=bool)
+            # Vectorized row->bytes, then set membership check
+            mk_c = np.ascontiguousarray(mk)
+            mk_packed = np.frombuffer(mk_c.tobytes(), dtype=f'S{mk_c.shape[1]*4}')
+            new = np.array([b not in existing for b in mk_packed], dtype=bool)
             mb = mb[new]
             del mk, new
             if len(mb) == 0:
