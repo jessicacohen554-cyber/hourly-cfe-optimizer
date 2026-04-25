@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -1011,6 +1012,46 @@ def _flush_band_chunks(band_tables: dict, iso: str, chunk_idx: int) -> int:
     return written
 
 
+def _git_checkpoint(iso: str, chunk_idx: int, rows: int):
+    """git add + commit + push chunk parquets.  Only runs when GIT_AUTO_COMMIT=1.
+
+    Called from the scoring loop after _flush_band_chunks writes files.
+    Non-fatal: a failed push prints a warning but doesn't kill the run.
+    """
+    if os.environ.get('GIT_AUTO_COMMIT') != '1':
+        return
+    pattern = f'data/step2.1-ef/step_2_1_EF_{iso}_*_interp_dense_chunk*.parquet'
+    try:
+        subprocess.run(['git', 'add', '-f'] + sorted(
+            str(p) for p in Path('.').glob(pattern)),
+            check=True, capture_output=True, timeout=30)
+        # Skip if nothing staged (e.g. all chunks already committed)
+        diff = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                              capture_output=True)
+        if diff.returncode == 0:
+            return
+        subprocess.run(
+            ['git', 'commit', '-m',
+             f'Step 2.1c checkpoint {chunk_idx}: {iso} ({rows:,} rows)'],
+            check=True, capture_output=True, timeout=30)
+        # Push with retry — non-fatal on failure
+        for attempt in range(1, 4):
+            result = subprocess.run(
+                ['git', 'push', '-u', 'origin', 'HEAD'],
+                capture_output=True, timeout=120)
+            if result.returncode == 0:
+                print(f"  [git] checkpoint {chunk_idx} pushed", flush=True)
+                return
+            if attempt < 3:
+                import time
+                time.sleep(2 ** attempt)
+        print(f"  [git] WARNING: push failed for checkpoint {chunk_idx}, "
+              f"will retry at next checkpoint or rescue step", flush=True)
+    except Exception as exc:
+        print(f"  [git] WARNING: checkpoint {chunk_idx} failed: {exc}",
+              flush=True)
+
+
 def run_dense_augment(dry_run: bool = False):
     """Generate dense VRE + hybrid mixes at 2% steps, dispatch-scored.
 
@@ -1144,6 +1185,7 @@ def run_dense_augment(dry_run: bool = False):
                 cr = _flush_band_chunks(band_tables, iso, chunk_idx)
                 print(f"  [checkpoint {chunk_idx}] flushed {cr:,} rows",
                       flush=True)
+                _git_checkpoint(iso, chunk_idx, cr)
 
         # ── Merge chunk files + any remaining band_tables into final parquets ──
         # Flush any leftover band_tables as one last chunk
