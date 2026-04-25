@@ -11,12 +11,17 @@ name: "Step 2.1d: Low-CF Augmentation"
 # CAISO, ERCOT, SPP have cf floor = 0 — full coverage, no augmentation
 # needed. Selecting them is a safe no-op (script exits with 0 new mixes).
 #
+# v2.0: --extend-to-40 adds band 40 for MISO/NEISO/NYISO (P1 year-0).
+#        --dense-band40 generates _interp_dense at band 40.
+#        NYISO bands 50-65 gap filled via P1-ceiling seed fallback.
+#
 # Runs AFTER Step 2.1 EF, BEFORE Step 2.3 pathway sweep.
 # After this completes, run step2_3a_regenerate_peakclean.py --interp-only
 # for each target ISO to generate peakclean sidecars.
 #
 # Prerequisite: Step 2.1 EF parquets + hybrid profiles + demand/gen profiles
 # Output: data/step2.1-ef/step_2_1_EF_<ISO>_*_interp_lowcf.parquet
+#         data/step2.1-ef/step_2_1_EF_<ISO>_40_interp_dense.parquet (dense-band40)
 
 on:
   workflow_dispatch:
@@ -57,6 +62,21 @@ on:
         description: 'Parallel band workers within each ISO job (1–4)'
         required: false
         default: '2'
+        type: string
+      extend_to_40:
+        description: 'Include band 40 lowcf for MISO/NEISO/NYISO (P1 year-0)'
+        required: false
+        default: true
+        type: boolean
+      dense_band40:
+        description: 'Generate _interp_dense at band 40 for MISO/NEISO/NYISO'
+        required: false
+        default: true
+        type: boolean
+      max_per_band:
+        description: 'Max rows per output band file (default: 8000)'
+        required: false
+        default: '8000'
         type: string
       branch:
         description: 'Branch to checkout'
@@ -178,26 +198,50 @@ jobs:
             ARGS="$ARGS --dry-run"
           fi
 
+          if [ "${{ inputs.extend_to_40 }}" = "true" ]; then
+            ARGS="$ARGS --extend-to-40"
+          fi
+
+          if [ "${{ inputs.dense_band40 }}" = "true" ]; then
+            ARGS="$ARGS --dense-band40"
+          fi
+
+          MAX_PER_BAND="${{ inputs.max_per_band }}"
+          if [ -n "$MAX_PER_BAND" ] && [ "$MAX_PER_BAND" != "8000" ]; then
+            ARGS="$ARGS --max-per-band $MAX_PER_BAND"
+          fi
+
           python scripts/step2_1d_lowcfaug.py $ARGS
 
       - name: Report output sizes
         if: inputs.dry_run != true
         run: |
           ISO="${{ matrix.iso }}"
-          echo "Low-CF augmentation output for ${ISO}:"
-          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || echo "  (no files)"
+          echo "=== Low-CF augmentation output for ${ISO} ==="
+          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || echo "  (no lowcf files)"
+          echo ""
+          echo "=== Dense band-40 output for ${ISO} ==="
+          ls -lh data/step2.1-ef/step_2_1_EF_${ISO}_40_interp_dense.parquet 2>/dev/null || echo "  (no dense band-40 file)"
           echo ""
           echo "Row counts:"
           python3 -c "
           import glob, pyarrow.parquet as pq
-          files = sorted(glob.glob('data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet'))
           total = 0
+          # lowcf files
+          files = sorted(glob.glob('data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet'))
           for f in files:
               n = pq.read_metadata(f).num_rows
               total += n
-              band = f.split('_')[-3]
-              print(f'  band {band}: {n:,} rows')
-          print(f'  TOTAL: {total:,} rows across {len(files)} bands')
+              band = f.split('_EF_${ISO}_')[1].split('_interp')[0]
+              print(f'  [lowcf] band {band}: {n:,} rows')
+          # dense band-40
+          dense = 'data/step2.1-ef/step_2_1_EF_${ISO}_40_interp_dense.parquet'
+          import os
+          if os.path.exists(dense):
+              n = pq.read_metadata(dense).num_rows
+              total += n
+              print(f'  [dense] band 40: {n:,} rows')
+          print(f'  TOTAL: {total:,} rows across {len(files) + (1 if os.path.exists(dense) else 0)} files')
           " 2>/dev/null || echo "  (could not read parquets)"
 
       - name: "Rescue commit — ${{ matrix.iso }}"
@@ -207,8 +251,9 @@ jobs:
         run: |
           set -euo pipefail
           git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${ISO}_40_interp_dense.parquet 2>/dev/null || true
           if git diff --cached --quiet; then
-            echo "::warning::No lowcf files to rescue for ${ISO}"
+            echo "::warning::No files to rescue for ${ISO}"
             exit 0
           fi
           FILE_COUNT=$(git diff --cached --name-only | wc -l)
@@ -227,14 +272,15 @@ jobs:
         run: |
           set -euo pipefail
           git add -f data/step2.1-ef/step_2_1_EF_${ISO}_*_interp_lowcf.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${ISO}_40_interp_dense.parquet 2>/dev/null || true
 
           if git diff --cached --quiet; then
-            echo "::warning::No new low-CF augmentation files for ${ISO}"
+            echo "::warning::No new augmentation files for ${ISO}"
             exit 0
           fi
 
           FILE_COUNT=$(git diff --cached --name-only | wc -l)
-          git commit -m "Step 2.1d: low-CF augmentation for ${ISO} (${FILE_COUNT} band files)"
+          git commit -m "Step 2.1d: low-CF augmentation for ${ISO} (${FILE_COUNT} files, incl. band-40 extension)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
@@ -266,6 +312,9 @@ jobs:
             fi
             echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
             echo "- Workers: ${{ inputs.workers || '2' }}"
+            echo "- Extend to band 40: ${{ inputs.extend_to_40 }}"
+            echo "- Dense band-40: ${{ inputs.dense_band40 }}"
+            echo "- Max per band: ${{ inputs.max_per_band || '8000' }}"
             echo ""
             echo "### Next steps"
             echo "1. Run **Squash Pipeline Branches** with pattern \`auto/.*step2-1d-lowcf\`"
@@ -278,6 +327,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: step2-1d-${{ matrix.iso }}-${{ github.run_id }}
-          path: data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_lowcf.parquet
+          path: |
+            data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_interp_lowcf.parquet
+            data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_40_interp_dense.parquet
           retention-days: 14
           if-no-files-found: warn
