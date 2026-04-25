@@ -1266,68 +1266,60 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
             if float(v[li]) < best_score:
                 best_score, best_idx = float(v[li]), s + li
 
-        # ── FIX 2: Three-tier constrained fallback (safety net) ──
-        # Tier 1: keep endpoint ceiling, relax ratchet / foresight ceilings.
-        # Tier 2: drop ceiling entirely (floor + pathway only).
-        # Tier 3: hold previous year's winner.
+        # ── Fallback: hold previous year's winner ──
+        # No tier-1/tier-2 relaxation — constraint failures surface immediately.
+        # Diagnostic pass counts which constraints are blocking.
         if np.isinf(best_score):
-            # ── Extend scoring above ceiling for Tier-2 fallback ──
-            # Tier 2 drops the ceiling, so it needs saved_rs for candidates
-            # above cfe_ceil.  Score [we, n) now — only runs on safety-net
-            # triggers, so zero cost on the happy path.
-            if we < n:
-                for s in range(we, n, _POOL_CHUNK):
-                    e = min(s + _POOL_CHUNK, n)
-                    rs_ext, _, _, _, _, _, _, _, _, _, _, _ = _score_chunk(
-                        s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
-                        dy=dy, amwh_y=amwh_y, bl_y=bl_y,
-                        nuke_eff_yi=nuke_eff_yi, ccs_eff_yi=ccs_eff_yi,
-                        eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
-                        cfe_ceil_yi=cfe_ceil_yi,
-                        uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
-                        geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi,
-                        pf_yi=pf_yi)
-                    saved_rs[s:e] = rs_ext
-
-            # Shared: pathway mask over full pool
-            if ctx.is_p1:
-                _pm_full = ((ctx.ef['clean_firm'].astype(np.float64) <= pf_yi + float(ctx.uc_pct_y[yi]) + 0.5)
-                            & (ctx.ef.get('ccs_ccgt', np.zeros(n)).astype(np.float64) <= 0.5))
+            # ── Diagnostic: identify which constraints killed all candidates ──
+            _diag_n = we - ws
+            if _diag_n > 0:
+                # Re-score window in one chunk just for constraint diagnostics
+                _d_rs, _d_ra, _d_pm, _d_fe, _d_cs, _, _, _, _, _, _, _d_snr = _score_chunk(
+                    ws, we, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
+                    dy=dy, amwh_y=amwh_y, bl_y=bl_y,
+                    nuke_eff_yi=nuke_eff_yi, ccs_eff_yi=ccs_eff_yi,
+                    eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
+                    cfe_ceil_yi=cfe_ceil_yi,
+                    uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
+                    geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi,
+                    pf_yi=pf_yi)
+                _n_ratch_fail = int((~_d_ra).sum())
+                _n_path_fail = int((~_d_pm).sum())
+                _n_feas_fail = int((~_d_fe).sum())
+                _n_cfe_fail = int((~_d_cs).sum())
+                _n_ceil_fail = 0
+                if ceilings is not None:
+                    progress = yi / max(1, eyi)
+                    headroom = 1.0 - progress
+                    _ceil_ok = np.all(
+                        _d_snr <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL_PCT,
+                        axis=1)
+                    _ceil_ok &= (ctx.cf_share[ws:we] <= ceilings['cf_share'] * (1.0 + headroom) + RATCHET_TOL_PCT)
+                    _n_ceil_fail = int((~_ceil_ok).sum())
+                print(f"[DIAG] year {YEARS[yi]}: {_diag_n} candidates in window, "
+                      f"all failed — ratchet:{_n_ratch_fail} pathway:{_n_path_fail} "
+                      f"tranche:{_n_feas_fail} cfe_band:{_n_cfe_fail} "
+                      f"ceiling:{_n_ceil_fail}", flush=True)
             else:
-                _pm_full = np.ones(n, dtype=bool)
-            _cfe_floor = ctx.score >= (cfe_tgt_yi - 0.5)
-            _cfe_cap = ctx.score < cfe_ceil_yi  # endpoint band ceiling
+                print(f"[DIAG] year {YEARS[yi]}: empty window "
+                      f"[{cfe_tgt_yi - 0.5:.1f}, {cfe_ceil_yi:.1f}) — "
+                      f"0 candidates in CFE band", flush=True)
 
-            # Tier 1: floor + ceiling + pathway (drop ratchet / foresight)
-            _t1_mask = _pm_full & _cfe_floor & _cfe_cap
-            _t1_scores = np.where(_t1_mask, saved_rs, np.inf)
-            if not np.all(np.isinf(_t1_scores)):
-                best_idx = int(np.argmin(_t1_scores))
-                best_score = float(_t1_scores[best_idx])
-                print(f"[warn] year {YEARS[yi]}: tier-1 fallback "
-                      f"(ceiling preserved, ratchet relaxed)", flush=True)
+            if yi > 0:
+                best_idx = int(winners[yi - 1])
+                best_score = float(saved_rs[best_idx]) if np.isfinite(saved_rs[best_idx]) else 0.0
+                _prev_cfe = float(ctx.score[best_idx])
+                print(f"[HOLD] year {YEARS[yi]}: holding winner from "
+                      f"{YEARS[yi - 1]} (mix {best_idx}, CFE {_prev_cfe:.1f}%)",
+                      flush=True)
             else:
-                # Tier 2: floor + pathway only (ceiling dropped — last resort)
-                _t2_mask = _pm_full & _cfe_floor
-                _t2_scores = np.where(_t2_mask, saved_rs, np.inf)
-                if not np.all(np.isinf(_t2_scores)):
-                    best_idx = int(np.argmin(_t2_scores))
-                    best_score = float(_t2_scores[best_idx])
-                    print(f"[WARN] year {YEARS[yi]}: tier-2 fallback "
-                          f"(ceiling dropped — no mix in band)", flush=True)
-                elif yi > 0:
-                    # Tier 3: hold previous year's winner
-                    best_idx = int(winners[yi - 1])
-                    best_score = float(saved_rs[best_idx]) if np.isfinite(saved_rs[best_idx]) else 0.0
-                    print(f"[warn] year {YEARS[yi]}: holding previous winner "
-                          f"(no feasible candidate)", flush=True)
-                else:
-                    # Year 0 with no candidates — true infeasibility
-                    best_idx = int(np.argmin(saved_rs))
-                    best_score = float(saved_rs[best_idx])
-                    print(f"[WARN] year {YEARS[yi]}: no P1-feasible candidate "
-                          f"at CFE>={cfe_tgt_yi:.1f}%, using global fallback",
-                          flush=True)
+                # Year 0 with no candidates — true infeasibility
+                best_idx = int(np.argmin(saved_rs))
+                best_score = float(saved_rs[best_idx])
+                print(f"[WARN] year {YEARS[yi]}: no feasible candidate "
+                      f"at CFE>={cfe_tgt_yi:.1f}%, using lowest-cost mix "
+                      f"(idx {best_idx}, score {best_score:.2f})",
+                      flush=True)
 
         winners[yi] = best_idx
         fr, fc, fu, fg, fn, fcc = _update_floors(
