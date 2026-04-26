@@ -336,14 +336,40 @@ def _iter_ef_bands(iso: str):
                 yield t, [main]
 
 
+_POOL_READ_COLS = list(_RESOURCE_COLS + _STORAGE_COLS) + ['hourly_match_score']
+_PC_READ_COLS = ['clean_peak_hour_mw', 'resid_norm_p9997']
+
+# ISOs where specific resources are structurally zero — skip reading from disk
+_OFFSHORE_COLS = frozenset({'offshore_wind'})
+_GEO_COLS = frozenset({'geothermal'})
+_INLAND_ISOS = frozenset({'ERCOT', 'SPP', 'MISO'})  # no offshore wind
+_NON_GEO_ISOS = frozenset({'ERCOT', 'SPP', 'MISO', 'PJM', 'NYISO', 'NEISO'})
+
+
+def _read_ef_parquet(path, iso: str = ''):
+    """Read EF parquet with column selection + per-ISO pruning."""
+    schema = pq.read_schema(path)
+    available = set(schema.names)
+    skip = set()
+    if iso in _INLAND_ISOS:
+        skip |= _OFFSHORE_COLS
+    if iso in _NON_GEO_ISOS:
+        skip |= _GEO_COLS
+    cols = [c for c in _POOL_READ_COLS if c in available and c not in skip]
+    return pq.read_table(path, columns=cols)
+
+
 @functools.lru_cache(maxsize=4)
 def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
     """Full-pool EF loader: stream parquets into float32 arrays.
 
-    Streams one file at a time to stay under 7 GB on standard GitHub runners.
-    Uses float32 for pool storage (~1.6 GB for CAISO's 23M rows);
-    solver upcasts to float64 as needed via .astype().
-    Cached so the pool is loaded once per ISO across all 32 combos.
+    Memory-optimised for 7 GB GitHub runners:
+    1. Column selection — only reads the 16 needed columns from parquet
+    2. Per-ISO pruning — skips offshore_wind / geothermal where structurally zero
+    3. Streaming — one file at a time, no pa.concat_tables
+    4. float32 — halves pool footprint vs float64
+    5. Pre-sort — avoids transient sort-copy memory in solve_pathway
+    6. lru_cache — loads once per ISO across all 32 combos
     """
     all_cols = _RESOURCE_COLS + _STORAGE_COLS + ('hourly_match_score',)
     col_parts = {c: [] for c in all_cols}
@@ -373,7 +399,7 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
     # Standard EF bands — load and convert one file at a time
     for t, paths in _iter_ef_bands(iso):
         for p in paths:
-            tbl = pq.read_table(p)
+            tbl = _read_ef_parquet(p, iso)
             _ingest_ef(tbl)
             del tbl
         pc_tbl = _require_peakclean_sidecar(
@@ -385,7 +411,7 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
     interp_files = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_*_interp_*.parquet'))
     interp_files = [p for p in interp_files if '_peakclean' not in p.name]
     for ip in interp_files:
-        tbl = pq.read_table(ip)
+        tbl = _read_ef_parquet(ip, iso)
         nr = tbl.num_rows
         _ingest_ef(tbl)
         del tbl
@@ -416,9 +442,17 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
         raise RuntimeError(
             f"Peakclean rows ({len(arrs['clean_peak_hour_mw'])}) != "
             f"EF rows ({n}) for {iso}")
+
+    # Pre-sort by hourly_match_score so solve_pathway skips the in-place sort
+    # (avoids ~275 MB transient copy from fancy-index reordering)
+    sort_idx = np.argsort(arrs['hourly_match_score'], kind='mergesort')
+    for k in arrs:
+        arrs[k] = arrs[k][sort_idx]
+    del sort_idx
+
     gc.collect()
     pool_gb = n * (len(all_cols) + 2) * 4 / 1e9
-    print(f"[pool] {iso}: {n:,} rows, ~{pool_gb:.2f} GB (float32, cached)",
+    print(f"[pool] {iso}: {n:,} rows, ~{pool_gb:.2f} GB (float32, pre-sorted, cached)",
           flush=True)
     return arrs
 
@@ -643,16 +677,17 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
           for sc, lk in slm.items() if float(ef[sc].sum()) > 0]
     storage_col_names = tuple(sc for sc, _ in sp)
     uc = float(pc.UPRATE_CAP_TWH[iso])
+    # float32 matrices — numba upcasts per-element; saves ~0.9 GB vs float64
     ef_noncf_mat = np.column_stack(
-        [ef[r].astype(np.float64) for r in _NON_CF]
-    ) / 100.0
+        [ef[r] for r in _NON_CF]
+    ) / np.float32(100.0)
     if sp:
         storage_mat = np.column_stack(
-            [ef[sc].astype(np.float64) for sc, _ in sp]
-        ) / 100.0
+            [ef[sc] for sc, _ in sp]
+        ) / np.float32(100.0)
         storage_costs = np.array([c for _, c in sp], dtype=np.float64)
     else:
-        storage_mat = np.empty((n, 0), dtype=np.float64)
+        storage_mat = np.empty((n, 0), dtype=np.float32)
         storage_costs = np.empty(0, dtype=np.float64)
 
     bl_twh = (float(pc.GRID_MIX_SHARES[iso].get('clean_firm', 0.0)) / 100.0
@@ -689,10 +724,8 @@ def _build_ctx(cfg: RunConfig, ef: dict) -> _Ctx:
         storage_mat=storage_mat, storage_costs=storage_costs,
         storage_col_names=storage_col_names,
     )
-    _keep = {'clean_firm', 'hourly_match_score', 'clean_peak_hour_mw', 'resid_norm_p9997'}
-    for _del_key in list(ef.keys()):
-        if _del_key not in _keep:
-            del ef[_del_key]
+    # NOTE: pool key deletion removed — pool is lru_cached and shared across
+    # all 32 combos. Deleting keys would break subsequent solve_pathway calls.
     return ctx
 
 
