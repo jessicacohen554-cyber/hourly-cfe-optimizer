@@ -350,6 +350,24 @@ def _peakclean_path(iso: str, threshold) -> Path:
     return EF_DIR / f'step_2_1_EF_{iso}_{_threshold_tag(threshold)}_peakclean.parquet'
 
 
+def _load_peakclean_with_chunks(base_path: Path) -> pa.Table | None:
+    """Load a peakclean sidecar that may be split into chunks.
+
+    Checks for {stem}_chunk*.parquet first (chunked output from
+    step2_3a_regenerate_peakclean when files exceed GitHub's 100 MB limit).
+    Falls back to the monolithic file if no chunks exist.
+    Returns None if neither exists.
+    """
+    chunks = sorted(base_path.parent.glob(base_path.stem + '_chunk*.parquet'))
+    if chunks:
+        return pa.concat_tables(
+            [pq.read_table(c) for c in chunks],
+            promote_options='permissive')
+    if base_path.exists():
+        return pq.read_table(base_path)
+    return None
+
+
 def _per_archetype_resid(iso: str, cache: pa.Table) -> np.ndarray:
     """Vectorized 99.97th-pctile margin-on-demand residual per archetype.
     Uses pyarrow list_flatten + reshape instead of per-row Python loop."""
@@ -411,13 +429,14 @@ def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
 
 def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
     sp = _peakclean_path(iso, threshold)
-    if sp.exists():
-        meta = pq.read_schema(sp).metadata or {}
+    tbl = _load_peakclean_with_chunks(sp)
+    if tbl is not None:
+        meta = tbl.schema.metadata or {}
         sv = meta.get(b'stage1_version', b'').decode()
         # v4+ sidecars (from regenerate_peakclean) use inline dispatch —
         # accept unconditionally regardless of cache_version.
         if sv >= _STAGE1_VERSION:
-            return pq.read_table(sp)
+            return tbl
         # v3 sidecars have frozen-peak Bug A — reject them.
         raise RuntimeError(
             f"[FATAL] {iso} t={threshold}: peakclean sidecar is v{sv} "
@@ -498,18 +517,21 @@ def _load_or_build_interp_peakclean(iso: str, interp_path: Path) -> pa.Table:
     """Load or build peakclean for a single interp parquet file.
 
     Caches the sidecar next to the interp file with a _peakclean suffix.
+    Supports chunked sidecars (from regenerate_peakclean when files exceed
+    GitHub's 100 MB limit).
     The score-floor threshold is derived from the minimum hourly_match_score
     in the file.
     """
     pc_path = interp_path.with_name(
         interp_path.stem + '_peakclean.parquet')
     tgt_cv = _cache_version(iso)
-    if pc_path.exists():
-        meta = pq.read_schema(pc_path).metadata or {}
+    tbl = _load_peakclean_with_chunks(pc_path)
+    if tbl is not None:
+        meta = tbl.schema.metadata or {}
         sv = meta.get(b'stage1_version', b'').decode()
         # v4+ sidecars: accept unconditionally (inline dispatch)
         if sv >= _STAGE1_VERSION:
-            return pq.read_table(pc_path)
+            return tbl
         # v3 sidecars: reject (frozen-peak bug)
         print(f"[WARN] interp sidecar {pc_path.name} is v{sv} — rebuilding. "
               f"Run regenerate_peakclean for accurate residuals.", flush=True)
