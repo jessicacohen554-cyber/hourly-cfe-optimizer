@@ -2026,12 +2026,13 @@ def _prebuild_sidecar(pair):
     _load_or_build_peakclean(*pair)
 
 
-def _run_iso_all(iso):
+def _run_iso_all(iso, beam_width=1):
     for p in PATHWAYS:
         for ep in ENDPOINT_TO_THRESHOLD:
-            _run_one(iso, p, ep)
+            _run_one(iso, p, ep, beam_width=beam_width)
             if p in _FORESIGHT_PATHWAYS:
-                _run_one(iso, p, ep, solver_mode='foresight')
+                _run_one(iso, p, ep, solver_mode='foresight',
+                         beam_width=beam_width)
     _lcoe.cache_clear(); _tx.cache_clear()
     gc.collect()
 
