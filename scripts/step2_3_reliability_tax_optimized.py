@@ -590,6 +590,13 @@ def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
         raise RuntimeError(f"Peakclean rows ({pctbl.num_rows}) != EF rows ({n}) for {iso}")
     arrs = {c: (ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n))
             for c in _RESOURCE_COLS + _STORAGE_COLS + ('hourly_match_score',)}
+    # ── FIX: NaN → 0 for resource/storage columns ──────────────────
+    # Some interp files omit columns like ccs_ccgt, producing NaN after
+    # concat.  Missing resource = zero resource.  Without this, NaN fails
+    # the P1 pathway mask (ccs_ccgt <= 0.5 → False for NaN), killing
+    # otherwise-valid mixes (observed: NYISO cf=18-19% all rejected).
+    for c in _RESOURCE_COLS + _STORAGE_COLS:
+        np.nan_to_num(arrs[c], copy=False, nan=0.0)
     arrs['clean_peak_hour_mw'] = pctbl.column('clean_peak_hour_mw').to_numpy()
     arrs['resid_norm_p9997'] = (pctbl.column('resid_norm_p9997').to_numpy()
                                 if 'resid_norm_p9997' in pctbl.column_names
@@ -2092,3 +2099,4 @@ def main(argv=None) -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
