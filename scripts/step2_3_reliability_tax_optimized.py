@@ -336,40 +336,90 @@ def _iter_ef_bands(iso: str):
                 yield t, [main]
 
 
+@functools.lru_cache(maxsize=4)
 def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
-    """Full-pool EF loader: concatenate all threshold bands + peakclean sidecars."""
-    ef_tables, pc_tables = [], []
+    """Full-pool EF loader: stream parquets into float32 arrays.
 
+    Streams one file at a time to stay under 7 GB on standard GitHub runners.
+    Uses float32 for pool storage (~1.6 GB for CAISO's 23M rows);
+    solver upcasts to float64 as needed via .astype().
+    Cached so the pool is loaded once per ISO across all 32 combos.
+    """
+    all_cols = _RESOURCE_COLS + _STORAGE_COLS + ('hourly_match_score',)
+    col_parts = {c: [] for c in all_cols}
+    pc_peak_parts, pc_resid_parts = [], []
+    total_rows = 0
+
+    def _ingest_ef(arrow_tbl):
+        nonlocal total_rows
+        nr = arrow_tbl.num_rows
+        total_rows += nr
+        for c in all_cols:
+            if c in arrow_tbl.column_names:
+                col_parts[c].append(
+                    arrow_tbl.column(c).to_numpy().astype(np.float32))
+            else:
+                col_parts[c].append(np.zeros(nr, dtype=np.float32))
+
+    def _ingest_pc(pc_tbl):
+        pc_peak_parts.append(
+            pc_tbl.column('clean_peak_hour_mw').to_numpy().astype(np.float32))
+        if 'resid_norm_p9997' in pc_tbl.column_names:
+            pc_resid_parts.append(
+                pc_tbl.column('resid_norm_p9997').to_numpy().astype(np.float32))
+        else:
+            pc_resid_parts.append(np.zeros(pc_tbl.num_rows, dtype=np.float32))
+
+    # Standard EF bands — load and convert one file at a time
     for t, paths in _iter_ef_bands(iso):
         for p in paths:
-            ef_tables.append(pq.read_table(p))
-        sp = _peakclean_path(iso, t)
-        pc_tables.append(_require_peakclean_sidecar(sp, f"{iso} t={t}"))
+            tbl = pq.read_table(p)
+            _ingest_ef(tbl)
+            del tbl
+        pc_tbl = _require_peakclean_sidecar(
+            _peakclean_path(iso, t), f"{iso} t={t}")
+        _ingest_pc(pc_tbl)
+        del pc_tbl
 
+    # Interp / dense-augment / lowcf files
     interp_files = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_*_interp_*.parquet'))
     interp_files = [p for p in interp_files if '_peakclean' not in p.name]
     for ip in interp_files:
-        ef_tables.append(pq.read_table(ip))
+        tbl = pq.read_table(ip)
+        nr = tbl.num_rows
+        _ingest_ef(tbl)
+        del tbl
         pc_path = ip.with_name(ip.stem + '_peakclean.parquet')
-        pc_tables.append(_require_peakclean_sidecar(pc_path, f"interp {ip.name}"))
-        print(f"[pool] loaded interp file {ip.name} "
-              f"({ef_tables[-1].num_rows} rows)", flush=True)
+        pc_tbl = _require_peakclean_sidecar(pc_path, f"interp {ip.name}")
+        _ingest_pc(pc_tbl)
+        del pc_tbl
+        print(f"[pool] loaded interp file {ip.name} ({nr:,} rows)", flush=True)
 
-    if not ef_tables:
+    if total_rows == 0:
         raise FileNotFoundError(f"No EF bands for {iso} under {EF_DIR}")
-    ef = pa.concat_tables(ef_tables, promote_options='permissive')
-    pctbl = pa.concat_tables(pc_tables, promote_options='permissive')
-    n = ef.num_rows
-    if pctbl.num_rows != n:
-        raise RuntimeError(f"Peakclean rows ({pctbl.num_rows}) != EF rows ({n}) for {iso}")
-    arrs = {c: (ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n))
-            for c in _RESOURCE_COLS + _STORAGE_COLS + ('hourly_match_score',)}
+
+    # Concatenate float32 parts into final pool arrays
+    arrs = {}
+    for c in all_cols:
+        arrs[c] = np.concatenate(col_parts[c])
+        del col_parts[c]
+    del col_parts
     for c in _RESOURCE_COLS + _STORAGE_COLS:
         np.nan_to_num(arrs[c], copy=False, nan=0.0)
-    arrs['clean_peak_hour_mw'] = pctbl.column('clean_peak_hour_mw').to_numpy()
-    arrs['resid_norm_p9997'] = (pctbl.column('resid_norm_p9997').to_numpy()
-                                if 'resid_norm_p9997' in pctbl.column_names
-                                else np.zeros(n, dtype=np.float32))
+    arrs['clean_peak_hour_mw'] = np.concatenate(pc_peak_parts)
+    del pc_peak_parts
+    arrs['resid_norm_p9997'] = np.concatenate(pc_resid_parts)
+    del pc_resid_parts
+
+    n = len(arrs['clean_firm'])
+    if len(arrs['clean_peak_hour_mw']) != n:
+        raise RuntimeError(
+            f"Peakclean rows ({len(arrs['clean_peak_hour_mw'])}) != "
+            f"EF rows ({n}) for {iso}")
+    gc.collect()
+    pool_gb = n * (len(all_cols) + 2) * 4 / 1e9
+    print(f"[pool] {iso}: {n:,} rows, ~{pool_gb:.2f} GB (float32, cached)",
+          flush=True)
     return arrs
 
 
@@ -1655,6 +1705,7 @@ def _run_iso_all(iso, beam_width=1):
                 _run_one(iso, p, ep, solver_mode='foresight',
                          beam_width=beam_width)
     _lcoe.cache_clear(); _tx.cache_clear()
+    load_ef_pool.cache_clear()
     gc.collect()
 
 
