@@ -103,18 +103,6 @@ def _next_band_ceiling(target_pct: float) -> float:
 
 # ─── Module-scope loads (once at import) ─────────────────────────────────────
 
-with open(_ROOT / 'data' / 'egrid_emission_rates.json') as _f:
-    _EGRID = json.load(_f)
-with open(_ROOT / 'data' / 'step5-wrights' / 'wrights_law_curves.json') as _f:
-    _WRIGHTS = json.load(_f)
-
-
-def _load_fossil_mix():
-    t = pq.read_table(_ROOT / 'data' / 'eia-930' / 'eia_fossil_mix.parquet')
-    return {iso: t.filter(pacompute.equal(t['iso'], iso)) for iso in ISOS}
-
-_FOSSIL_MIX = _load_fossil_mix()
-
 
 def _load_dispatch_caches():
     caches, manifests = {}, {}
@@ -913,17 +901,16 @@ def _score_chunk_inner(
         ef_noncf_chunk,     # (k, R) float64 — non-CF shares / 100
         cf_share_chunk,     # (k,) float64 — clean_firm share / 100
         score_chunk,        # (k,) float64 — hourly_match_score
-        resid_chunk,        # (k,) float64 — resid_norm_p9997
-        rmg_chunk,          # (k,) float64 — running max gas, MUTATED in-place
+        rmg_chunk,          # (k,) float64 — running max gas (read-only, pre-pass updates)
         storage_chunk,      # (k, S) float64 — storage dispatch / 100
         ef_cf_raw_chunk,    # (k,) float64 — raw clean_firm % (for pathway mask)
         ef_ccs_raw_chunk,   # (k,) float64 — raw ccs_ccgt % (for pathway mask)
         # Per-year scalars
-        dy, amwh_y, bl_y,
+        dy, bl_y,
         nuke_eff_yi, ccs_eff_yi, up_eff_yi, geo_eff_yi,
-        eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
+        cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
         # Structural scalars
-        uc, gc, cc_cap, gaf, exist_base, gas_raw_2025,
+        uc, gc, cc_cap,
         capex_mw, fom_mw, fuel_unit, exist_fom,
         pf, ratchet_tol_pct,
         # Flags
@@ -952,15 +939,11 @@ def _score_chunk_inner(
     nk_out = np.empty(k, dtype=numba.float64)
     cc_out = np.empty(k, dtype=numba.float64)
     tnr   = np.empty((k, R), dtype=numba.float64)
-    snr   = np.empty((k, R), dtype=numba.float64)
-
-    gaf_safe = gaf if gaf > 1e-9 else 1e-9
 
     for i in numba.prange(k):
         # ── Resource shares ──
         for j in range(R):
-            snr[i, j] = ef_noncf_chunk[i, j]
-            tnr[i, j] = snr[i, j] * dy
+            tnr[i, j] = ef_noncf_chunk[i, j] * dy
 
         cf_val = cf_share_chunk[i] * dy
         tcf[i] = cf_val
@@ -1026,12 +1009,7 @@ def _score_chunk_inner(
         cfe_s[i] = (score_chunk[i] >= cfe_tgt_yi - 0.5
                      and score_chunk[i] < cfe_ceil_yi)
 
-        # ── Gas sizing ──
-        gap = resid_chunk[i] * amwh_y / gaf_safe
-        gn = max(0.0, exist_base + gap - gas_raw_2025)
-        gr = max(0.0, gn - eg_yi)
-        if gr > rmg_chunk[i]:
-            rmg_chunk[i] = gr
+        # ── Gas sizing (fleet from pre-pass running max) ──
         fl = rmg_chunk[i]
 
         # ── Costs ──
@@ -1069,12 +1047,12 @@ def _score_chunk_inner(
 
         rs[i] = s_nr + s_cf + sc + gfx
 
-    return rs, ratch, pm, feas, cfe_s, tnr, tcf, up_out, ge_out, nk_out, cc_out, snr
+    return rs, ratch, pm, feas, cfe_s, tnr, tcf, up_out, ge_out, nk_out, cc_out
 
 
 def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
-                 dy=None, amwh_y=None, bl_y=None, nuke_eff_yi=None,
-                 ccs_eff_yi=None, eg_yi=None, cfe_tgt_yi=None,
+                 dy=None, bl_y=None, nuke_eff_yi=None,
+                 ccs_eff_yi=None, cfe_tgt_yi=None,
                  cfe_ceil_yi=None,
                  uc_pct_yi=None, up_eff_yi=None, geo_eff_yi=None,
                  delivered_yi=None, pf_yi=None):
@@ -1082,16 +1060,12 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
     Pre-computed per-year scalars can be passed to avoid redundant extraction."""
     if dy is None:
         dy = float(ctx.demand_vec[yi])
-    if amwh_y is None:
-        amwh_y = float(ctx.amwh[yi])
     if bl_y is None:
         bl_y = ctx.bl_twh
     if nuke_eff_yi is None:
         nuke_eff_yi = float(ctx.nuke_eff[yi])
     if ccs_eff_yi is None:
         ccs_eff_yi = float(ctx.ccs_eff[yi])
-    if eg_yi is None:
-        eg_yi = float(ctx.eg_vec[yi])
     if cfe_tgt_yi is None:
         cfe_tgt_yi = float(ctx.cfe_tgt[yi])
     if cfe_ceil_yi is None:
@@ -1111,15 +1085,14 @@ def _score_chunk(s, e, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
         ctx.ef_noncf_mat[s:e],
         ctx.cf_share[s:e],
         ctx.score[s:e].astype(np.float64),
-        ctx.resid[s:e],
         rmg[s:e],
         ctx.storage_mat[s:e],
         ctx.ef['clean_firm'][s:e].astype(np.float64),
         ctx.ef_noncf_mat[s:e, _NON_CF_IDX['ccs_ccgt']] * 100.0,
-        dy, amwh_y, bl_y,
+        dy, bl_y,
         nuke_eff_yi, ccs_eff_yi, up_eff_yi, geo_eff_yi,
-        eg_yi, cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
-        ctx.uc, ctx.gc, ctx.cc, ctx.gaf, ctx.exist_base, ctx.gas_raw_2025,
+        cfe_tgt_yi, cfe_ceil_yi, uc_pct_yi,
+        ctx.uc, ctx.gc, ctx.cc,
         ctx.capex_mw, ctx.fom_mw, ctx.fuel_unit, ctx.exist_fom,
         pf_yi, RATCHET_TOL_PCT,
         ctx.ta, ctx.is_p1,
@@ -1276,16 +1249,17 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
     use_beam = cfg.beam_width > 1
     K = cfg.beam_width
 
-    # Saved kernel intermediates for beam reuse
-    saved_tnr = np.zeros((n, _N_NON_CF), dtype=np.float64)
-    saved_tcf = np.zeros(n, dtype=np.float64)
-    saved_up  = np.zeros(n, dtype=np.float64)
-    saved_ge  = np.zeros(n, dtype=np.float64)
-    saved_nk  = np.zeros(n, dtype=np.float64)
-    saved_cc  = np.zeros(n, dtype=np.float64)
-    saved_pm  = np.zeros(n, dtype=bool)
-    saved_fe  = np.zeros(n, dtype=bool)
-    saved_cs  = np.zeros(n, dtype=bool)
+    # Saved kernel intermediates for beam reuse (only allocated in beam mode)
+    if use_beam:
+        saved_tnr = np.zeros((n, _N_NON_CF), dtype=np.float64)
+        saved_tcf = np.zeros(n, dtype=np.float64)
+        saved_up  = np.zeros(n, dtype=np.float64)
+        saved_ge  = np.zeros(n, dtype=np.float64)
+        saved_nk  = np.zeros(n, dtype=np.float64)
+        saved_cc  = np.zeros(n, dtype=np.float64)
+        saved_pm  = np.zeros(n, dtype=bool)
+        saved_fe  = np.zeros(n, dtype=bool)
+        saved_cs  = np.zeros(n, dtype=bool)
 
     if use_beam:
         fr0, fc0, fu0, fg0, fn0, fcc0 = _init_floors(ctx)
@@ -1347,25 +1321,26 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         # ── Primary path: score only the window slice [ws, we) ──
         for s in range(ws, max(ws, we), _POOL_CHUNK):
             e = min(s + _POOL_CHUNK, we)
-            rs, ra, pm, fe, cs, tnr, tcf, up, ge, nk, cc, snr = _score_chunk(
+            rs, ra, pm, fe, cs, tnr, tcf, up, ge, nk, cc = _score_chunk(
                 s, e, yi, ctx, ref_fr, ref_fc, ref_fu, ref_fg, ref_fn, ref_fcc, rmg,
-                dy=dy, amwh_y=amwh_y, bl_y=bl_y,
+                dy=dy, bl_y=bl_y,
                 nuke_eff_yi=nuke_eff_yi, ccs_eff_yi=ccs_eff_yi,
-                eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
+                cfe_tgt_yi=cfe_tgt_yi,
                 cfe_ceil_yi=cfe_ceil_yi,
                 uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
                 geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi,
                 pf_yi=pf_yi)
             saved_rs[s:e]  = rs
-            saved_tnr[s:e] = tnr
-            saved_tcf[s:e] = tcf
-            saved_up[s:e]  = up
-            saved_ge[s:e]  = ge
-            saved_nk[s:e]  = nk
-            saved_cc[s:e]  = cc
-            saved_pm[s:e]  = pm
-            saved_fe[s:e]  = fe
-            saved_cs[s:e]  = cs
+            if use_beam:
+                saved_tnr[s:e] = tnr
+                saved_tcf[s:e] = tcf
+                saved_up[s:e]  = up
+                saved_ge[s:e]  = ge
+                saved_nk[s:e]  = nk
+                saved_cc[s:e]  = cc
+                saved_pm[s:e]  = pm
+                saved_fe[s:e]  = fe
+                saved_cs[s:e]  = cs
 
             if not use_beam:
                 # ── GREEDY: inline best-finding (existing logic) ──
@@ -1375,8 +1350,9 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                 if ceilings is not None:
                     progress = yi / max(1, eyi)
                     headroom = 1.0 - progress
+                    noncf_shares = ctx.ef_noncf_mat[s:e]
                     ceil_ok = np.all(
-                        snr <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL_PCT,
+                        noncf_shares <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL_PCT,
                         axis=1)
                     ceil_ok &= (ctx.cf_share[s:e] <= ceilings['cf_share'] * (1.0 + headroom) + RATCHET_TOL_PCT)
                     mask = mask & ceil_ok
@@ -1548,11 +1524,11 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                 # ── Diagnostic: identify which constraints killed all candidates ──
                 _diag_n = we - ws
                 if _diag_n > 0:
-                    _d_rs, _d_ra, _d_pm, _d_fe, _d_cs, _, _, _, _, _, _, _d_snr = _score_chunk(
+                    _d_rs, _d_ra, _d_pm, _d_fe, _d_cs, _, _, _, _, _, _ = _score_chunk(
                         ws, we, yi, ctx, fr, fc, fu, fg, fn, fcc, rmg,
-                        dy=dy, amwh_y=amwh_y, bl_y=bl_y,
+                        dy=dy, bl_y=bl_y,
                         nuke_eff_yi=nuke_eff_yi, ccs_eff_yi=ccs_eff_yi,
-                        eg_yi=eg_yi, cfe_tgt_yi=cfe_tgt_yi,
+                        cfe_tgt_yi=cfe_tgt_yi,
                         cfe_ceil_yi=cfe_ceil_yi,
                         uc_pct_yi=uc_pct_yi, up_eff_yi=up_eff_yi,
                         geo_eff_yi=geo_eff_yi, delivered_yi=delivered_yi,
@@ -1565,8 +1541,9 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                     if ceilings is not None:
                         progress = yi / max(1, eyi)
                         headroom = 1.0 - progress
+                        _d_noncf = ctx.ef_noncf_mat[ws:we]
                         _ceil_ok = np.all(
-                            _d_snr <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL_PCT,
+                            _d_noncf <= ceilings['non_cf_shares'][None, :] * (1.0 + headroom) + RATCHET_TOL_PCT,
                             axis=1)
                         _ceil_ok &= (ctx.cf_share[ws:we] <= ceilings['cf_share'] * (1.0 + headroom) + RATCHET_TOL_PCT)
                         _n_ceil_fail = int((~_ceil_ok).sum())
@@ -1616,7 +1593,6 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
         rmg = best_beam.rmg
 
         # ── Beam diagnostics ──
-        greedy_beam = min(beams, key=lambda b: b.cum_cost)
         print(f"[beam] selected beam: cum_cost={best_beam.cum_cost:.2f}, "
               f"{len(beams)} survivors", flush=True)
         if len(best_beam.history) > 0:
