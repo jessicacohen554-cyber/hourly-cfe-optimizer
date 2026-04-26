@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Pathway optimizer v3 — refactored for performance and clarity.
 
-Two-stage architecture: Stage-1 precomputes per-mix worst-hour clean MW
-via numba-accelerated L1-NN; Stage-2 streams chunked year-by-year argmins
-over multi-million-row candidate pools without materializing (Y, N) tensors.
+Two-stage architecture: Stage-1 loads per-mix worst-hour clean MW from
+pre-computed peakclean sidecars (step2_3a_regenerate_peakclean.py);
+Stage-2 streams chunked year-by-year argmins over multi-million-row
+candidate pools without materializing (Y, N) tensors.
 """
 from __future__ import annotations
 
@@ -58,7 +59,6 @@ SCORE_FLOOR_PCT = 10.0   # defensive hourly_match_score filter band
 _POOL_CHUNK = 2_000_000  # streaming chunk size for candidate argmin
 
 EF_DIR = _ROOT / 'data' / 'step2.1-ef'
-DISPATCH_DIR = _ROOT / 'data' / 'step3-dispatch'
 OUTPUT_BASE = _ROOT / 'data' / 'step2.3-pathway'
 _STEP22A_DIR = _ROOT / 'data' / 'step2.2-cost'
 
@@ -102,25 +102,6 @@ def _next_band_ceiling(target_pct: float) -> float:
 
 
 # ─── Module-scope loads (once at import) ─────────────────────────────────────
-
-
-def _load_dispatch_caches():
-    caches, manifests = {}, {}
-    for iso in ISOS:
-        cp = DISPATCH_DIR / f'{iso}_dispatch_cache.parquet'
-        mp = DISPATCH_DIR / f'{iso}_annual_manifest.parquet'
-        if cp.exists():
-            caches[iso] = pq.read_table(cp)
-            manifests[iso] = pq.read_table(mp)
-    return caches, manifests
-
-_DCACHE, _MANIFEST = _load_dispatch_caches()
-
-
-def _cache_version(iso: str) -> str:
-    pf = pq.ParquetFile(DISPATCH_DIR / f'{iso}_dispatch_cache.parquet')
-    md = pf.metadata.metadata or {}
-    return (md.get(b'cache_version') or b'unknown').decode()
 
 
 def _load_gen_profiles():
@@ -187,30 +168,42 @@ def _load_demand_profiles():
 _DEMAND = _load_demand_profiles()
 
 
+def _build_clean_profile_table(iso: str) -> dict[str, np.ndarray]:
+    gen, hyb = _GEN_PROF.get(iso, {}), _HYB_PROF.get(iso, {})
+    flat = np.full(HOURS_PER_YEAR, 1.0 / HOURS_PER_YEAR, dtype=np.float64)
+    z = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
+    return {
+        'clean_firm': gen.get('nuclear', flat), 'solar': gen.get('solar', z),
+        'wind': gen.get('wind', z), 'hydro': gen.get('hydro', flat),
+        'offshore_wind': gen.get('offshore_wind', z),
+        'geothermal': gen.get('geothermal', flat), 'ccs_ccgt': flat,
+        'solar_batt4': hyb.get('solar_batt4', z), 'solar_batt8': hyb.get('solar_batt8', z),
+        'wind_batt4': hyb.get('wind_batt4', z), 'wind_batt8': hyb.get('wind_batt8', z),
+    }
+
+
 def _compute_gas_raw_2025():
+    """Compute baseline 2025 gas capacity need per ISO from direct profile computation.
+
+    Builds the current grid mix's hourly supply from generation profiles,
+    computes the 99.97th-percentile gap vs RA-adjusted demand, and converts
+    to gas capacity via the gas availability factor.
+    """
     out: dict[str, float] = {}
-    mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
-             'mix_ccs_ccgt', 'mix_hydro']
     for iso in ISOS:
-        cache, am = _DCACHE.get(iso), _MANIFEST.get(iso)
         mwh = float(pc.REGIONAL_DEMAND_TWH[iso]) * 1e6
         gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
-        if cache is None or am is None:
-            out[iso] = float(pc.RESOURCE_ADEQUACY_MARGIN) * mwh / gaf
-            continue
         shares = pc.GRID_MIX_SHARES.get(iso, {})
-        target = np.array([float(shares.get(c[4:], 0.0)) for c in mcols], dtype=np.float64)
-        am_mat = np.column_stack([am.column(c).to_numpy() for c in mcols]).astype(np.float64)
-        nn = int(np.argmin(np.abs(am_mat - target).sum(axis=1)))
-        arch = am.column('archetype_key')[nn].as_py()
-        k2i = {k: i for i, k in enumerate(cache.column('archetype_key').to_pylist())}
-        ri = k2i.get(arch, -1)
-        if ri < 0:
-            out[iso] = float(pc.RESOURCE_ADEQUACY_MARGIN) * mwh / gaf
-            continue
-        tc = np.asarray(cache.column('total_clean')[ri].as_py(), dtype=np.float64)
+        profiles = _build_clean_profile_table(iso)
+
+        # Compose hourly supply for the current grid mix
+        supply = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
+        for res, share in shares.items():
+            if res in profiles and share > 0:
+                supply += (share / 100.0) * profiles[res]
+
         dfrac = _DEMAND[iso] / max(1.0, mwh)
-        resid = np.maximum(0.0, dfrac * (1.0 + pc.RESOURCE_ADEQUACY_MARGIN) - tc)
+        resid = np.maximum(0.0, dfrac * (1.0 + pc.RESOURCE_ADEQUACY_MARGIN) - supply)
         out[iso] = float(np.percentile(resid, 99.97)) * mwh / gaf
     return out
 
@@ -302,48 +295,7 @@ class RunConfig:
         return OUTPUT_BASE / self.iso / f'pathway{self.pathway}_{_ep_tag(self.endpoint_pct)}{mode_tag}{beam_tag}.json'
 
 
-# ─── Numba-accelerated L1 nearest-neighbor ──────────────────────────────────
-
-@numba.njit(parallel=True, cache=True)
-def _l1_nn(ef_mat, manifest_mat):
-    """For each EF row, find nearest manifest archetype by L1 distance.
-    Parallelized over EF rows (millions); ~63 archetypes is the inner loop."""
-    n, n_arch, D = ef_mat.shape[0], manifest_mat.shape[0], ef_mat.shape[1]
-    best = np.zeros(n, dtype=numba.int32)
-    for i in numba.prange(n):
-        bd = numba.int32(2147483647)
-        for a in range(n_arch):
-            d = numba.int32(0)
-            for j in range(D):
-                d += abs(ef_mat[i, j] - manifest_mat[a, j])
-            if d < bd:
-                bd = d
-                best[i] = numba.int32(a)
-    return best
-
-
-# ─── Stage-1: precompute per-mix worst-hour residual ────────────────────────
-
-def _build_clean_profile_table(iso: str) -> dict[str, np.ndarray]:
-    gen, hyb = _GEN_PROF.get(iso, {}), _HYB_PROF.get(iso, {})
-    flat = np.full(HOURS_PER_YEAR, 1.0 / HOURS_PER_YEAR, dtype=np.float64)
-    z = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
-    return {
-        'clean_firm': gen.get('nuclear', flat), 'solar': gen.get('solar', z),
-        'wind': gen.get('wind', z), 'hydro': gen.get('hydro', flat),
-        'offshore_wind': gen.get('offshore_wind', z),
-        'geothermal': gen.get('geothermal', flat), 'ccs_ccgt': flat,
-        'solar_batt4': hyb.get('solar_batt4', z), 'solar_batt8': hyb.get('solar_batt8', z),
-        'wind_batt4': hyb.get('wind_batt4', z), 'wind_batt8': hyb.get('wind_batt8', z),
-    }
-
-
-def _read_ef_table(iso: str, threshold) -> pa.Table:
-    name = _threshold_tag(threshold)
-    parts = sorted(EF_DIR.glob(f'step_2_1_EF_{iso}_{name}_part*.parquet'))
-    if parts:
-        return pa.concat_tables([pq.read_table(p) for p in parts])
-    return pq.read_table(EF_DIR / f'step_2_1_EF_{iso}_{name}.parquet')
+# ─── Stage-1: load pre-computed peakclean sidecars ───────────────────────────
 
 
 def _peakclean_path(iso: str, threshold) -> Path:
@@ -368,82 +320,23 @@ def _load_peakclean_with_chunks(base_path: Path) -> pa.Table | None:
     return None
 
 
-def _per_archetype_resid(iso: str, cache: pa.Table) -> np.ndarray:
-    """Vectorized 99.97th-pctile margin-on-demand residual per archetype.
-    Uses pyarrow list_flatten + reshape instead of per-row Python loop."""
-    dmarg = (_DEMAND[iso] / max(1.0, float(pc.REGIONAL_DEMAND_TWH[iso]) * 1e6)
-             ) * (1.0 + pc.RESOURCE_ADEQUACY_MARGIN)
-    tc = pacompute.list_flatten(cache.column('total_clean')).to_numpy(
-        ).astype(np.float64).reshape(cache.num_rows, HOURS_PER_YEAR)
-    return np.percentile(np.maximum(0.0, dmarg[None, :] - tc),
-                         WORST_HOUR_PERCENTILE, axis=1)
-
-
-def precompute_clean_peak_hour_mw(iso: str, threshold) -> pa.Table:
-    ef = _read_ef_table(iso, threshold)
-    n = ef.num_rows
-    resid = np.empty(n, dtype=np.float32)
-    cache, am = _DCACHE.get(iso), _MANIFEST.get(iso)
-    miss_val = np.float32(float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR)
-
-    if cache is None or am is None:
-        resid[:] = miss_val
-        print(f"[stage1] {iso} t={threshold}: no cache, fallback {n} rows", flush=True)
-    else:
-        resid_arch = _per_archetype_resid(iso, cache).astype(np.float32)
-        k2i = {k: i for i, k in enumerate(cache.column('archetype_key').to_pylist())}
-        mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
-                 'mix_ccs_ccgt', 'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8',
-                 'mix_wind_batt4', 'mix_wind_batt8']
-        mmat = np.column_stack([am.column(c).to_numpy() for c in mcols]).astype(np.int32)
-        m2c = np.array([k2i.get(k, -1) for k in am.column('archetype_key').to_pylist()],
-                       dtype=np.int64)
-        ef_cols = [c[4:] for c in mcols]  # strip 'mix_'
-        emat = np.column_stack([
-            ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n)
-            for c in ef_cols]).astype(np.int32)
-
-        if n > 0 and len(mmat) > 0:
-            cidx = m2c[_l1_nn(emat, mmat)]
-        else:
-            cidx = np.empty(n, dtype=np.int64)
-        hit = cidx >= 0
-        resid[:] = np.where(hit, resid_arch[np.where(hit, cidx, 0)], miss_val)
-        hits = int(hit.sum())
-        print(f"[stage1] {iso} t={threshold}: match {hits}/{n} "
-              f"= {hits / max(1, n) * 100:.1f}%", flush=True)
-
-    if 'hourly_match_score' in ef.column_names:
-        resid[ef.column('hourly_match_score').to_numpy() < (float(threshold) - SCORE_FLOOR_PCT)] = np.float32(np.inf)
-
-    peak = float(pc.PEAK_DEMAND_MW[iso])
-    safe = np.where(np.isfinite(resid), resid, 0.0).astype(np.float64)
-    return pa.table({
-        'resid_norm_p9997': pa.array(resid),
-        'clean_peak_hour_mw': pa.array(((1.0 - safe) * peak).astype(np.float32)),
-    }).replace_schema_metadata({
-        'source_cache_version': _cache_version(iso),
-        'stage1_version': _STAGE1_VERSION, 'iso': iso, 'threshold': str(threshold),
-    })
-
-
 def _load_or_build_peakclean(iso: str, threshold) -> pa.Table:
+    """Load a v4+ peakclean sidecar. Raises if missing or outdated.
+
+    All peakclean sidecars must be pre-computed by step2_3a_regenerate_peakclean.py.
+    """
     sp = _peakclean_path(iso, threshold)
     tbl = _load_peakclean_with_chunks(sp)
     if tbl is not None:
         meta = tbl.schema.metadata or {}
         sv = meta.get(b'stage1_version', b'').decode()
-        # v4+ sidecars (from regenerate_peakclean) use inline dispatch —
-        # accept unconditionally regardless of cache_version.
         if sv >= _STAGE1_VERSION:
             return tbl
-        # v3 sidecars have frozen-peak Bug A — reject them.
         raise RuntimeError(
             f"[FATAL] {iso} t={threshold}: peakclean sidecar is v{sv} "
             f"(need v{_STAGE1_VERSION}+). Run:\n"
             f"  python scripts/step2_3a_regenerate_peakclean.py --iso {iso}\n"
-            f"before running the optimizer. The v3 L1-NN sidecars have a "
-            f"frozen clean_peak_hour_mw bug that produces monotonic gas."
+            f"before running the optimizer."
         )
     raise FileNotFoundError(
         f"[FATAL] {iso} t={threshold}: no peakclean sidecar found at {sp}. Run:\n"
@@ -465,92 +358,29 @@ def _iter_ef_bands(iso: str):
                 yield t, [main]
 
 
-def _build_peakclean_from_table(iso: str, ef: pa.Table,
-                                score_floor_threshold: float) -> pa.Table:
-    """Build peakclean sidecar for an arbitrary EF table (e.g. interp files).
-
-    Same logic as precompute_clean_peak_hour_mw but accepts a pre-loaded table
-    instead of reading from disk via threshold tag.  The score_floor_threshold
-    controls the SCORE_FLOOR_PCT filter (rows with score < threshold − 10 get
-    inf residual).
-    """
-    n = ef.num_rows
-    resid = np.empty(n, dtype=np.float32)
-    cache, am = _DCACHE.get(iso), _MANIFEST.get(iso)
-    miss_val = np.float32(float(pc.RESOURCE_ADEQUACY_MARGIN) / HOURS_PER_YEAR)
-
-    if cache is None or am is None:
-        resid[:] = miss_val
-    else:
-        resid_arch = _per_archetype_resid(iso, cache).astype(np.float32)
-        k2i = {k: i for i, k in enumerate(cache.column('archetype_key').to_pylist())}
-        mcols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
-                 'mix_ccs_ccgt', 'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8',
-                 'mix_wind_batt4', 'mix_wind_batt8']
-        mmat = np.column_stack([am.column(c).to_numpy() for c in mcols]).astype(np.int32)
-        m2c = np.array([k2i.get(k, -1) for k in am.column('archetype_key').to_pylist()],
-                       dtype=np.int64)
-        ef_cols = [c[4:] for c in mcols]
-        emat = np.column_stack([
-            ef.column(c).to_numpy() if c in ef.column_names else np.zeros(n)
-            for c in ef_cols]).astype(np.int32)
-        if n > 0 and len(mmat) > 0:
-            cidx = m2c[_l1_nn(emat, mmat)]
-        else:
-            cidx = np.empty(n, dtype=np.int64)
-        hit = cidx >= 0
-        resid[:] = np.where(hit, resid_arch[np.where(hit, cidx, 0)], miss_val)
-
-    if 'hourly_match_score' in ef.column_names:
-        resid[ef.column('hourly_match_score').to_numpy()
-              < (score_floor_threshold - SCORE_FLOOR_PCT)] = np.float32(np.inf)
-
-    peak = float(pc.PEAK_DEMAND_MW[iso])
-    safe = np.where(np.isfinite(resid), resid, 0.0).astype(np.float64)
-    return pa.table({
-        'resid_norm_p9997': pa.array(resid),
-        'clean_peak_hour_mw': pa.array(((1.0 - safe) * peak).astype(np.float32)),
-    })
-
-
 def _load_or_build_interp_peakclean(iso: str, interp_path: Path) -> pa.Table:
-    """Load or build peakclean for a single interp parquet file.
+    """Load a v4+ peakclean sidecar for an interp file. Raises if missing.
 
-    Caches the sidecar next to the interp file with a _peakclean suffix.
-    Supports chunked sidecars (from regenerate_peakclean when files exceed
-    GitHub's 100 MB limit).
-    The score-floor threshold is derived from the minimum hourly_match_score
-    in the file.
+    All interp peakclean sidecars must be pre-computed by:
+      python scripts/step2_3a_regenerate_peakclean.py --interp-only
     """
     pc_path = interp_path.with_name(
         interp_path.stem + '_peakclean.parquet')
-    tgt_cv = _cache_version(iso)
     tbl = _load_peakclean_with_chunks(pc_path)
     if tbl is not None:
         meta = tbl.schema.metadata or {}
         sv = meta.get(b'stage1_version', b'').decode()
-        # v4+ sidecars: accept unconditionally (inline dispatch)
         if sv >= _STAGE1_VERSION:
             return tbl
-        # v3 sidecars: reject (frozen-peak bug)
-        print(f"[WARN] interp sidecar {pc_path.name} is v{sv} — rebuilding. "
-              f"Run regenerate_peakclean for accurate residuals.", flush=True)
-
-    print(f"[stage1] building peakclean for interp {interp_path.name}", flush=True)
-    ef = pq.read_table(interp_path)
-    # Use minimum score as the threshold for the SCORE_FLOOR_PCT filter
-    scores = ef.column('hourly_match_score').to_numpy()
-    floor_thresh = float(scores.min()) if len(scores) > 0 else 0.0
-    tbl = _build_peakclean_from_table(iso, ef, floor_thresh)
-    tbl = tbl.replace_schema_metadata({
-        'source_cache_version': tgt_cv,
-        'stage1_version': _STAGE1_VERSION,
-        'iso': iso, 'interp_source': interp_path.name,
-    })
-    tmp = pc_path.with_suffix('.parquet.tmp')
-    pq.write_table(tbl, tmp)
-    os.replace(tmp, pc_path)
-    return tbl
+        raise RuntimeError(
+            f"[FATAL] interp sidecar {pc_path.name} is v{sv} "
+            f"(need v{_STAGE1_VERSION}+). Run:\n"
+            f"  python scripts/step2_3a_regenerate_peakclean.py --interp-only"
+        )
+    raise FileNotFoundError(
+        f"[FATAL] interp peakclean not found: {pc_path.name}. Run:\n"
+        f"  python scripts/step2_3a_regenerate_peakclean.py --interp-only"
+    )
 
 
 def load_ef_pool(iso: str) -> dict[str, np.ndarray]:
@@ -1665,50 +1495,50 @@ def _get_target_shares(iso, ep_pct, dgl='Medium', gl=None, fl='M', cl='M', tl='M
 
 # ─── Output helpers ──────────────────────────────────────────────────────────
 
-def _archetype_for_mix(iso, mix_pct):
-    am = _MANIFEST.get(iso)
-    if am is None:
-        return None
-    cols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind', 'mix_ccs_ccgt',
-            'mix_hydro', 'mix_solar_batt4', 'mix_solar_batt8', 'mix_wind_batt4', 'mix_wind_batt8']
-    target = np.array([mix_pct.get(c[4:], 0.0) for c in cols])
-    M = np.column_stack([am.column(c).to_numpy() for c in cols])
-    return am.column('archetype_key')[int(np.argmin(np.abs(M - target).sum(axis=1)))].as_py()
-
-
 def _vre_curtailment(iso, mix_pct):
+    """Estimate VRE curtailment from direct profile computation.
+
+    Computes total supply, identifies surplus above demand, and attributes
+    curtailment proportionally to each VRE resource based on its share of
+    total generation.
+    """
     keys = ('solar', 'wind', 'offshore_wind', 'solar_batt4', 'solar_batt8',
             'wind_batt4', 'wind_batt8')
     out = {k: 0.0 for k in keys}
-    arch = _archetype_for_mix(iso, mix_pct)
-    cache = _DCACHE.get(iso)
-    if cache is None or arch is None:
-        return out
-    al = cache.column('archetype_key').to_pylist()
-    if arch not in al:
-        return out
-    ri = al.index(arch)
-    for r in keys:
-        if mix_pct.get(r, 0.0) <= 0:
+    profiles = _build_clean_profile_table(iso)
+    demand_norm = _DEMAND[iso] / max(1.0, float(pc.REGIONAL_DEMAND_TWH[iso]) * 1e6)
+
+    total_supply = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
+    for res, share in mix_pct.items():
+        if res in profiles and share > 0:
+            total_supply += (share / 100.0) * profiles[res]
+
+    surplus = np.maximum(0.0, total_supply - demand_norm)
+    total_surplus = surplus.sum()
+    total_supply_sum = total_supply.sum()
+
+    for k in keys:
+        share = mix_pct.get(k, 0.0)
+        if share <= 0 or total_supply_sum <= 0:
             continue
-        mc, sc = f'matched_{r}', f'surplus_{r}'
-        if mc not in cache.column_names:
-            continue
-        m = float(np.asarray(cache.column(mc)[ri].as_py()).sum())
-        s = float(np.asarray(cache.column(sc)[ri].as_py()).sum())
-        out[r] = round(s / (m + s), 4) if (m + s) > 0 else 0.0
+        res_total = ((share / 100.0) * profiles.get(k, np.zeros(HOURS_PER_YEAR))).sum()
+        if res_total > 0:
+            res_surplus = total_surplus * (res_total / total_supply_sum)
+            out[k] = round(res_surplus / res_total, 4)
     return out
 
 
 def _endpoint_dispatch(iso, mix_pct):
-    arch = _archetype_for_mix(iso, mix_pct)
-    cache = _DCACHE.get(iso)
-    if cache is None or arch is None:
-        return np.zeros(HOURS_PER_YEAR)
-    al = cache.column('archetype_key').to_pylist()
-    if arch not in al:
-        return np.zeros(HOURS_PER_YEAR)
-    return np.asarray(cache.column('total_clean')[al.index(arch)].as_py(), dtype=np.float64)
+    """Compute 8760 total clean supply profile for the endpoint mix.
+
+    Direct profile computation — no archetype lookup needed.
+    """
+    profiles = _build_clean_profile_table(iso)
+    supply = np.zeros(HOURS_PER_YEAR, dtype=np.float64)
+    for res, share in mix_pct.items():
+        if res in profiles and share > 0:
+            supply += (share / 100.0) * profiles[res]
+    return supply
 
 
 # ─── Ledger builder ──────────────────────────────────────────────────────────
