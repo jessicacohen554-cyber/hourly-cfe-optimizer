@@ -1,6 +1,6 @@
 name: "Step 2.3: Pathway Sweep (+ 2.3a Peakclean)"
 
-# Runs step_2_3_reliability_tax_optimized.py for each ISO.
+# Runs step2_3_reliability_tax_optimized.py for each ISO.
 # Each matrix job runs 20 myopic + 12 foresight = 32 combos for one ISO and
 # pushes its own auto/<TS>-step2-3-sweep-<ISO> branch. iso=ALL fans out to 7
 # parallel matrix jobs, each landing on its own branch; run
@@ -20,10 +20,12 @@ name: "Step 2.3: Pathway Sweep (+ 2.3a Peakclean)"
 # phase=sweep_only         : only runs the 32-combo sweep (assumes peakclean exists)
 # runner_size=large        : uses 16-core/64GB runner (~8x faster numba parallelism)
 # runner_size=standard     : uses default 2-core/7GB runner
+# beam_width=1             : greedy only (32 combos)
+# beam_width=3+            : runs greedy (32) THEN beam (32) = 64 combos for comparison
 #
 # Prerequisite: Step 2.1 EF parquets, Step 2.2 cost endpoints (for foresight
 # ceilings), Step 3A dispatch cache.
-# Output: data/step2.3-pathway/<ISO>/pathway*_ep*{,_foresight}.json
+# Output: data/step2.3-pathway/<ISO>/pathway*_ep*{,_foresight}{,_beam<N>}.json
 #         data/step2.3-pathway/MANIFEST_<ISO>.parquet
 #         data/step2.1-ef/step_2_1_EF_<ISO>_*_peakclean.parquet
 
@@ -63,6 +65,11 @@ on:
         options:
           - standard
           - large
+      beam_width:
+        description: 'Beam search width (1=greedy only, 3-5=run both greedy+beam for comparison)'
+        required: false
+        default: '3'
+        type: string
       branch:
         description: 'Branch to checkout'
         required: false
@@ -143,13 +150,10 @@ jobs:
       - name: Ensure output directory
         run: mkdir -p data/step2.3-pathway/${{ matrix.iso }}
 
-      - name: "Run sweep (32 combos) — ${{ matrix.iso }}"
+      - name: "Run greedy sweep (32 combos) — ${{ matrix.iso }}"
         if: inputs.phase == 'full' || inputs.phase == 'sweep_only'
         env:
           ISO: ${{ matrix.iso }}
-          # Restrict module-scope loads (dispatch cache, gen profiles, hybrid
-          # profiles) to this one ISO — full 7-ISO load OOMs ubuntu-latest's 7GB.
-          # Still used on larger runners to reduce startup time.
           ISO_FILTER: ${{ matrix.iso }}
         run: |
           python - <<'PY'
@@ -158,22 +162,53 @@ jobs:
           from step2_3_reliability_tax_optimized import _run_iso_all
           iso = os.environ['ISO']
           t0 = time.time()
-          _run_iso_all(iso)
-          print(f'[sweep] {iso} done in {time.time()-t0:.1f}s', flush=True)
+          _run_iso_all(iso, beam_width=1)
+          print(f'[sweep] {iso} greedy done in {time.time()-t0:.1f}s', flush=True)
+          PY
+
+      - name: "Run beam sweep (32 combos, width=${{ inputs.beam_width }}) — ${{ matrix.iso }}"
+        if: (inputs.phase == 'full' || inputs.phase == 'sweep_only') && inputs.beam_width != '1'
+        env:
+          ISO: ${{ matrix.iso }}
+          ISO_FILTER: ${{ matrix.iso }}
+          BEAM_WIDTH: ${{ inputs.beam_width }}
+        run: |
+          python - <<'PY'
+          import os, sys, time
+          sys.path.insert(0, 'scripts')
+          from step2_3_reliability_tax_optimized import _run_iso_all
+          iso = os.environ['ISO']
+          bw = int(os.environ.get('BEAM_WIDTH', '3'))
+          t0 = time.time()
+          _run_iso_all(iso, beam_width=bw)
+          print(f'[sweep] {iso} beam(width={bw}) done in {time.time()-t0:.1f}s', flush=True)
           PY
 
       - name: "Verify combo count — ${{ matrix.iso }}"
         if: inputs.phase == 'full' || inputs.phase == 'sweep_only'
         env:
           ISO: ${{ matrix.iso }}
+          BEAM_WIDTH: ${{ inputs.beam_width }}
         run: |
-          myopic=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null \
-                   | grep -v '_foresight\.json$' | wc -l)
-          foresight=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*_foresight.json 2>/dev/null | wc -l)
-          total=$((myopic + foresight))
-          echo "[verify] ${ISO}: ${myopic}/20 myopic + ${foresight}/12 foresight = ${total}/32 JSONs"
-          if [ "${myopic}" -lt 20 ] || [ "${foresight}" -lt 12 ]; then
-            echo "::warning::${ISO} wrote ${myopic}/20 myopic + ${foresight}/12 foresight — investigate before merging"
+          greedy_myopic=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null \
+                   | grep -v '_foresight\.json$' | grep -v '_beam' | wc -l)
+          greedy_foresight=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*_foresight.json 2>/dev/null \
+                   | grep -v '_beam' | wc -l)
+          greedy_total=$((greedy_myopic + greedy_foresight))
+          echo "[verify] ${ISO} greedy: ${greedy_myopic}/20 myopic + ${greedy_foresight}/12 foresight = ${greedy_total}/32 JSONs"
+          if [ "${greedy_myopic}" -lt 20 ] || [ "${greedy_foresight}" -lt 12 ]; then
+            echo "::warning::${ISO} greedy wrote ${greedy_myopic}/20 myopic + ${greedy_foresight}/12 foresight — investigate"
+          fi
+
+          if [ "${BEAM_WIDTH}" != "1" ]; then
+            beam_myopic=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*_beam*.json 2>/dev/null \
+                     | grep -v '_foresight' | wc -l)
+            beam_foresight=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*_foresight_beam*.json 2>/dev/null | wc -l)
+            beam_total=$((beam_myopic + beam_foresight))
+            echo "[verify] ${ISO} beam(${BEAM_WIDTH}): ${beam_myopic}/20 myopic + ${beam_foresight}/12 foresight = ${beam_total}/32 JSONs"
+            if [ "${beam_myopic}" -lt 20 ] || [ "${beam_foresight}" -lt 12 ]; then
+              echo "::warning::${ISO} beam wrote ${beam_myopic}/20 myopic + ${beam_foresight}/12 foresight — investigate"
+            fi
           fi
 
       - name: "Build MANIFEST shard — ${{ matrix.iso }}"
@@ -182,7 +217,7 @@ jobs:
           ISO: ${{ matrix.iso }}
         run: |
           python - <<'PY'
-          import glob, json, os
+          import glob, json, os, re
           import pyarrow as pa
           import pyarrow.parquet as pq
 
@@ -192,12 +227,16 @@ jobs:
               with open(p) as f:
                   d = json.load(f)
               cfg = d['config']
+              # Detect beam width from filename
+              beam_match = re.search(r'_beam(\d+)', os.path.basename(p))
+              beam_w = int(beam_match.group(1)) if beam_match else 1
               rows.append({
                   'iso':                        cfg['iso'],
                   'pathway':                    cfg['pathway'],
                   'endpoint':                   float(cfg['endpoint']),
                   'endpoint_pct':               float(cfg['endpoint_pct']),
                   'solver_mode':                str(cfg.get('solver_mode', 'myopic')),
+                  'beam_width':                 beam_w,
                   'schema_version':             int(d['schema_version']),
                   'feasibility_physical':       bool(d['feasibility']['physical']),
                   'achieved_cfe_pct':           float(d['headline']['achieved_cfe_pct']),
@@ -250,8 +289,9 @@ jobs:
           elif [ "${{ inputs.phase }}" = "peakclean_lowcf_only" ]; then
             git commit -m "Step 2.3a: regenerate peakclean sidecars for ${ISO} (lowcf-only)"
           else
-            total=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null | wc -l)
-            git commit -m "Step 2.3 pathway sweep: ${ISO} (${total} JSONs)"
+            greedy_n=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*.json 2>/dev/null | grep -v '_beam' | wc -l)
+            beam_n=$(ls data/step2.3-pathway/${ISO}/pathway*_ep*_beam*.json 2>/dev/null | wc -l)
+            git commit -m "Step 2.3 pathway sweep: ${ISO} (${greedy_n} greedy + ${beam_n} beam JSONs)"
           fi
 
           MAX_RETRIES=4
@@ -273,6 +313,7 @@ jobs:
         if: always()
         env:
           ISO: ${{ matrix.iso }}
+          BEAM_WIDTH: ${{ inputs.beam_width }}
         run: |
           {
             echo "## Step 2.3 — ${ISO} pathway sweep"
@@ -284,8 +325,12 @@ jobs:
             fi
             echo "- Phase: \`${{ inputs.phase }}\`"
             echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
+            echo "- Beam width: ${BEAM_WIDTH} (1=greedy only)"
             echo "- Outputs:"
-            echo "  - \`data/step2.3-pathway/${ISO}/pathway*_ep*.json\`"
+            echo "  - \`data/step2.3-pathway/${ISO}/pathway*_ep*.json\` (greedy)"
+            if [ "${BEAM_WIDTH}" != "1" ]; then
+              echo "  - \`data/step2.3-pathway/${ISO}/pathway*_ep*_beam${BEAM_WIDTH}.json\` (beam)"
+            fi
             echo "  - \`data/step2.3-pathway/MANIFEST_${ISO}.parquet\`"
             echo "  - \`data/step2.1-ef/step_2_1_EF_${ISO}_*_peakclean.parquet\`"
             echo ""
