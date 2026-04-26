@@ -1089,7 +1089,7 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                     full_mask = indep_mask & ratch_k
                     if ceilings is not None:
                         _base_cfe = float(ctx.cfe_tgt[0])
-                    progress = max(0.0, (yc.cfe_tgt - _base_cfe) / max(1.0, cfg.endpoint_pct - _base_cfe))
+                        progress = max(0.0, (yc.cfe_tgt - _base_cfe) / max(1.0, cfg.endpoint_pct - _base_cfe))
                         headroom = 0.25 * (1.0 - progress)
                         snr_w = w_tnr / max(yc.dy, 1e-9)
                         ceil_ok = np.all(
@@ -1191,7 +1191,7 @@ def solve_pathway(cfg: RunConfig, *, ef_override=None) -> PathwayRunResult:
                     _n_ceil_fail = 0
                     if ceilings is not None:
                         _base_cfe = float(ctx.cfe_tgt[0])
-                    progress = max(0.0, (yc.cfe_tgt - _base_cfe) / max(1.0, cfg.endpoint_pct - _base_cfe))
+                        progress = max(0.0, (yc.cfe_tgt - _base_cfe) / max(1.0, cfg.endpoint_pct - _base_cfe))
                         headroom = 0.25 * (1.0 - progress)
                         _d_noncf = ctx.ef_noncf_mat[ws:we]
                         _ceil_ok = np.all(
