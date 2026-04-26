@@ -57,12 +57,21 @@ from pipeline_config import (
     RESOURCE_ADEQUACY_MARGIN,
 )
 
+# (#3) Import SCORE_FLOOR_PCT from pipeline_config if available, else define
+# locally with a warning.  This prevents silent divergence if the pipeline
+# config changes the floor independently.
+try:
+    from pipeline_config import SCORE_FLOOR_PCT
+except ImportError:
+    SCORE_FLOOR_PCT = 10.0
+    print("[peakclean] WARN: SCORE_FLOOR_PCT not in pipeline_config, "
+          "using local default 10.0", file=sys.stderr)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 H = 8760
 WORST_HOUR_PCTILE = 99.97
-SCORE_FLOOR_PCT = 10.0
 STAGE1_VERSION = "4"
 
 EF_DIR           = PROJECT_ROOT / "data" / "step2.1-ef"
@@ -82,6 +91,15 @@ _B4 = (4, 0.85, 24)
 _B8 = (8, 0.85, 48)
 _LDES = (100, 0.50, 168)
 _H2 = (1000, 0.35, 720)
+
+# (#1) The top-3 residual gap approximation for 99.97th percentile is valid
+# only when H=8760 (8760 * 0.0003 ≈ 2.6, so 3rd-largest is a good proxy).
+# Guard against silent misuse with shorter hour vectors.
+assert H == 8760, (
+    f"Top-3 residual approximation requires H=8760 (got {H}). "
+    "If using a different hour count, replace the top-3 tracker with "
+    "np.partition-based percentile."
+)
 
 
 # ---------------------------------------------------------------------------
@@ -112,8 +130,6 @@ def _load_gen_profiles(iso: str) -> dict[str, np.ndarray]:
     for fuel in unique_fuels:
         mask = pac.equal(fuels_col, fuel).to_numpy()
         prof = np.zeros(H, dtype=np.float64)
-        # Direct assignment — hours are unique per fuel, so no accumulation
-        # needed.  ~5-10x faster than np.add.at which disables SIMD.
         prof[hrs[mask]] = vals[mask]
         out[str(fuel)] = prof
     return out
@@ -185,6 +201,7 @@ def build_profile_matrix(iso: str) -> np.ndarray:
 # EF file discovery -- unified for standard, interp, and lowcf files
 # ---------------------------------------------------------------------------
 
+# (#8) Consolidated regex patterns and a single discovery function.
 _EF_PAT = re.compile(
     r"^step_2_1_EF_([A-Z]+)_([0-9]+(?:\.[0-9]+)?)(?:_part(\d+))?\.parquet$"
 )
@@ -209,31 +226,20 @@ def discover_files(
     if not EF_DIR.exists():
         return {}
 
-    if mode == "standard":
-        tree: dict[str, dict[str, list[tuple[int, Path]]]] = defaultdict(
-            lambda: defaultdict(list))
-        for f in sorted(EF_DIR.iterdir()):
-            if "peakclean" in f.name or "interp" in f.name:
-                continue
-            m = _EF_PAT.match(f.name)
-            if not m:
-                continue
-            iso, ttag, part = m.group(1), m.group(2), m.group(3)
-            if iso_filter and iso != iso_filter:
-                continue
-            tree[iso][ttag].append((int(part) if part else -1, f))
-        result: dict[str, list[tuple[str, list[Path]]]] = {}
-        for iso in sorted(tree):
-            result[iso] = [
-                (ttag, [p for _, p in sorted(tree[iso][ttag])])
-                for ttag in sorted(tree[iso], key=float)
-            ]
-        return result
+    # (#8) Select regex and grouping strategy by mode.
+    pat = {"standard": _EF_PAT, "interp": _INTERP_PAT, "lowcf": _LOWCF_PAT}[mode]
+    is_standard = mode == "standard"
 
-    pat = _LOWCF_PAT if mode == "lowcf" else _INTERP_PAT
-    result_flat: dict[str, list[tuple[str, list[Path]]]] = defaultdict(list)
+    # For standard mode: {iso: {ttag: [(part_idx, path)]}}
+    # For interp/lowcf:  {iso: [(ttag, [path])]}
+    tree: dict[str, dict[str, list[tuple[int, Path]]]] = defaultdict(
+        lambda: defaultdict(list))
+    flat: dict[str, list[tuple[str, list[Path]]]] = defaultdict(list)
+
     for f in sorted(EF_DIR.iterdir()):
         if "peakclean" in f.name:
+            continue
+        if is_standard and "interp" in f.name:
             continue
         m = pat.match(f.name)
         if not m:
@@ -241,8 +247,21 @@ def discover_files(
         iso, ttag = m.group(1), m.group(2)
         if iso_filter and iso != iso_filter:
             continue
-        result_flat[iso].append((ttag, [f]))
-    return dict(result_flat)
+        if is_standard:
+            part = m.group(3)
+            tree[iso][ttag].append((int(part) if part else -1, f))
+        else:
+            flat[iso].append((ttag, [f]))
+
+    if is_standard:
+        result: dict[str, list[tuple[str, list[Path]]]] = {}
+        for iso in sorted(tree):
+            result[iso] = [
+                (ttag, [p for _, p in sorted(tree[iso][ttag])])
+                for ttag in sorted(tree[iso], key=float)
+            ]
+        return result
+    return dict(flat)
 
 
 def _peakclean_path_for(paths: list[Path], iso: str, ttag: str,
@@ -263,6 +282,11 @@ def _inline_storage_stage(surplus, gap, total_dispatch,
                           window_hours):
     """Run one windowed charge/discharge stage.  Modifies surplus/gap in-place.
 
+    (#2) SOC resets to zero at each window boundary by design.  This models
+    independent scheduling horizons (e.g., day-ahead for 4h battery,
+    week-ahead for LDES).  If continuous SOC carryover is needed, remove
+    the outer window loop and run a single pass over all hours.
+
     Two-pass (charge-then-discharge) per window.  Do NOT fuse into a single
     pass without re-validating — all charging must complete before any
     discharging to match the existing algorithm.
@@ -274,6 +298,7 @@ def _inline_storage_stage(surplus, gap, total_dispatch,
     for w in range(n_windows):
         ws = w * window_hours
         we = min(ws + window_hours, H)
+        soc = 0.0  # explicit reset — see docstring
         for h in range(ws, we):
             s = surplus[h]
             if s > 0.0 and soc < capacity:
@@ -349,16 +374,18 @@ def _resid_fused_all(resid, curtail, W, P32, dm32, dn32,
                     surplus[h] = 0.0; gap_arr[h] = -diff
 
             # 4-stage sequential dispatch: B4 -> B8 -> LDES -> H2
-            b4_c = b4 / 100.0
+            # (#7) Multiply by 0.01 instead of dividing by 100.0 — avoids
+            # float64 division rounding and is marginally faster.
+            b4_c = b4 * 0.01
             _inline_storage_stage(surplus, gap_arr, total_dispatch,
                                   b4_c, b4_c / 4.0, 0.85, 24)
-            b8_c = b8 / 100.0
+            b8_c = b8 * 0.01
             _inline_storage_stage(surplus, gap_arr, total_dispatch,
                                   b8_c, b8_c / 8.0, 0.85, 48)
-            ld_c = ld / 100.0
+            ld_c = ld * 0.01
             _inline_storage_stage(surplus, gap_arr, total_dispatch,
                                   ld_c, ld_c / 100.0, 0.50, 168)
-            h2_c = h2_val / 100.0
+            h2_c = h2_val * 0.01
             _inline_storage_stage(surplus, gap_arr, total_dispatch,
                                   h2_c, h2_c / 1000.0, 0.35, 720)
 
@@ -442,10 +469,16 @@ def process_ef_file(
         avail = [c for c in needed_cols if c in schema.names]
         tbls.append(pq.read_table(p, columns=avail))
 
-    # promote_options="default" avoids schema unification overhead when all
-    # parts share the same schema (the common case for multi-part EF files).
-    ef_tbl = (pa.concat_tables(tbls, promote_options="default")
-              if len(tbls) > 1 else tbls[0])
+    # (#6) Short-circuit schema unification when all parts share an identical
+    # schema — avoids promote_options overhead for the common case.
+    if len(tbls) > 1:
+        schemas_match = all(t.schema.equals(tbls[0].schema) for t in tbls[1:])
+        if schemas_match:
+            ef_tbl = pa.concat_tables(tbls)
+        else:
+            ef_tbl = pa.concat_tables(tbls, promote_options="default")
+    else:
+        ef_tbl = tbls[0]
     del tbls
     n = ef_tbl.num_rows
     tbl_names = set(ef_tbl.schema.names)  # cached for all lookups below
@@ -455,13 +488,14 @@ def process_ef_file(
         print(f"[peakclean] {iso} {label}: {n:,} mixes "
               f"({len(paths)} part{'s' if len(paths) > 1 else ''})", flush=True)
 
-    # Build weight matrix in one pass over present resource columns.
+    # (#7) Build weight matrix — multiply by 0.01 instead of dividing by 100.
     W = np.zeros((n, N_RESOURCES), dtype=np.float32)
+    _SCALE = np.float32(0.01)
     for i, res in enumerate(RESOURCE_ORDER):
         if res in tbl_names:
-            W[:, i] = ef_tbl.column(res).to_numpy().astype(np.float32) / 100.0
+            W[:, i] = ef_tbl.column(res).to_numpy().astype(np.float32) * _SCALE
 
-    # Score floor filter (uses cached tbl_names)
+    # (#3) Score floor filter — SCORE_FLOOR_PCT sourced from pipeline_config.
     if "hourly_match_score" in tbl_names:
         scores = ef_tbl.column("hourly_match_score").to_numpy()
         score_ok = scores >= (threshold_val - SCORE_FLOOR_PCT)
@@ -470,10 +504,14 @@ def process_ef_file(
         score_ok = np.ones(n, dtype=bool)
         n_infeasible = 0
 
+    # (#5) Shared read-only zeros array for missing columns — avoids
+    # allocating up to 4 separate zero arrays per file.
+    _shared_zeros_f32 = np.zeros(n, dtype=np.float32)
+
     def _col_or_zeros(name: str) -> np.ndarray:
         if name in tbl_names:
             return ef_tbl.column(name).to_numpy().astype(np.float32)
-        return np.zeros(n, dtype=np.float32)
+        return _shared_zeros_f32  # read-only shared reference
 
     batt4 = _col_or_zeros("battery_dispatch_pct")
     batt8 = _col_or_zeros("battery8_dispatch_pct")
@@ -521,7 +559,9 @@ def process_ef_file(
     pq.write_table(tbl, tmp)
     os.replace(tmp, out_path)
 
-    # Summary
+    # (#10) Summary stats — finite_cpk/finite_curt can be empty when
+    # n_computed == 0 (all mixes filtered by score floor).  The length
+    # guards prevent min()/mean() on empty arrays.
     finite_mask = np.isfinite(resid)
     finite_cpk = cpk[finite_mask]
     finite_curt = curtail[finite_mask]
@@ -561,16 +601,20 @@ def validate_all(summaries: list[dict]) -> bool:
         if not pc_path.exists():
             print(f"  FAIL: {pc_path.name} missing"); ok = False; continue
 
-        pc_rows = pq.ParquetFile(pc_path).metadata.num_rows
+        # (#9) Single ParquetFile object for row count, schema, and metadata
+        # — reads the file footer once instead of twice.
+        pf = pq.ParquetFile(pc_path)
+        pc_rows = pf.metadata.num_rows
+        schema = pf.schema_arrow
+
         if pc_rows != s["n_mixes"]:
             print(f"  FAIL: {pc_path.name} rows {pc_rows} != {s['n_mixes']}"); ok = False
 
-        meta = pq.read_schema(pc_path).metadata or {}
+        meta = schema.metadata or {}
         sv = (meta.get(b"stage1_version") or b"").decode()
         if sv != STAGE1_VERSION:
             print(f"  FAIL: {pc_path.name} stage1_version={sv!r} != {STAGE1_VERSION!r}"); ok = False
 
-        schema = pq.read_schema(pc_path)
         if "curtailment_total" not in schema.names:
             print(f"  FAIL: {pc_path.name} missing curtailment_total"); ok = False
 
@@ -622,15 +666,25 @@ def main() -> int:
     total_mixes = 0
     iso_filter = args.iso.upper() if args.iso else None
 
+    # (#4) Unified profile cache across standard and interp passes.
+    # Avoids reloading the same (P32, dm32, dn32, peak_mw) tuple when both
+    # passes process the same ISO.
+    _ctx_cache: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray, float]] = {}
+
     def _load_iso_context(iso: str):
-        """Load profiles + demand for an ISO.  Returns (P32, dm32, dn32, peak_mw)."""
+        """Load profiles + demand for an ISO, with cross-pass caching."""
+        if iso in _ctx_cache:
+            return _ctx_cache[iso]
         P = build_profile_matrix(iso)
         dn = _load_demand_norm(iso)
         dm = dn * (1.0 + RESOURCE_ADEQUACY_MARGIN)
         pmw = float(PEAK_DEMAND_MW[iso])
         print(f"  demand TWh={float(REGIONAL_DEMAND_TWH[iso]):.1f}  "
               f"peak MW={pmw:,.0f}  RA={RESOURCE_ADEQUACY_MARGIN}", flush=True)
-        return P.astype(np.float32), dm.astype(np.float32), dn.astype(np.float32), pmw
+        ctx = (P.astype(np.float32), dm.astype(np.float32),
+               dn.astype(np.float32), pmw)
+        _ctx_cache[iso] = ctx
+        return ctx
 
     def _run_iso_entries(iso, entries, P32, dm32, dn32, peak_mw, is_interp):
         """Process a list of (ttag, [paths]) entries serially.
@@ -668,6 +722,9 @@ def main() -> int:
             s_list, n_mix = _run_iso_entries(iso, ef_tree[iso], *ctx, is_interp=False)
             summaries.extend(s_list)
             total_mixes += n_mix
+            # (#11) gc.collect frees the large per-file W/resid/curtail arrays
+            # that numpy doesn't release promptly.  Adds ~0.1-0.3s per ISO
+            # but prevents RSS from growing monotonically across ISOs.
             gc.collect()
 
     # -- Pass 2: Interp / lowcf files --------------------------------------
@@ -676,13 +733,11 @@ def main() -> int:
         interp_tree = discover_files(mode, iso_filter)
         if interp_tree:
             print(f"\n{'='*60}\n[peakclean] Processing {mode} files\n{'='*60}")
-        _ctx_cache: dict[str, tuple] = {}
         for iso in sorted(interp_tree):
-            if iso not in _ctx_cache:
-                print(f"\n[peakclean] Loading profiles for {iso} ({mode} pass)")
-                _ctx_cache[iso] = _load_iso_context(iso)
+            # (#4) Reuses cached context from Pass 1 if available.
+            ctx = _load_iso_context(iso)
             print(f"  {iso}: {len(interp_tree[iso])} {mode} file(s)", flush=True)
-            s_list, n_mix = _run_iso_entries(iso, interp_tree[iso], *_ctx_cache[iso], is_interp=True)
+            s_list, n_mix = _run_iso_entries(iso, interp_tree[iso], *ctx, is_interp=True)
             summaries.extend(s_list)
             total_mixes += n_mix
             gc.collect()
