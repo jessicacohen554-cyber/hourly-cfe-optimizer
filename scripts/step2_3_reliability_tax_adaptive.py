@@ -13,9 +13,9 @@ Two pathways:
   A — VRE + hybrids + storage only. No offshore, geo, CCS, or clean_firm expansion.
   B — Full P3: all resources incl nuclear, CCS, offshore, geothermal (CAISO only).
 
-Two cost modes:
-  Mode 1 — Incremental clean cost only.
-  Mode 2 — Incremental clean cost minus gas savings.
+Cost accounting:
+  Gas-endogenous — annual system cost = vintage clean procurement + gas backup.
+  Gas backup sized to worst-hour residual; cost includes capex + FOM + fuel.
 
 Performance notes (v3.7):
   - H2 uses interleaved peaker dispatch (no windowing) — cycles freely like
@@ -156,7 +156,6 @@ class RunConfig:
     n_beams: int = 5
     stage1_samples: int = 0
     stage2_samples: int = 5000
-    cost_mode: int = 1
 
     @property
     def dim_key(self) -> str:
@@ -1111,7 +1110,6 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     ], dtype=np.float64)
 
     vintage_ledger = []
-    prev_gas_cost = 0.0
     cumulative_cost = 0.0
     threshold_snapshots = []
     thresholds_crossed = set()
@@ -1238,14 +1236,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                 total_vintage_cost += qty * unit_cost * 1e6
         total_annual = total_vintage_cost + g_cost
 
-        if cfg.cost_mode == 2:
-            gas_savings = prev_gas_cost - g_cost
-            year_net_cost = year_incremental_cost - gas_savings
-        else:
-            year_net_cost = year_incremental_cost
-
         cumulative_cost += total_annual
-        prev_gas_cost = g_cost
 
         # Update ratchet floors
         for ri in range(N_RESOURCES):
@@ -1297,7 +1288,6 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
-        "cost_mode": cfg.cost_mode,
         "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "config": {
             "demand_growth": cfg.demand_growth,
@@ -1551,7 +1541,7 @@ def write_result(result: dict):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     fname = (f"{result['iso']}__pathway{result['pathway']}__"
              f"{result.get('scenario_name', 'custom')}__"
-             f"mode{result['cost_mode']}__{result['beam_archetype']}__"
+             f"{result['beam_archetype']}__"
              f"dg_{result['config']['demand_growth']}__"
              f"{result['timestamp']}.json")
     path = OUTPUT_DIR / fname
@@ -1570,21 +1560,19 @@ def build_configs(iso: str, pathway: str, scenarios: list[str],
     for scen_name in scenarios:
         scen = COST_SCENARIOS[scen_name]
         for dg in demand_levels:
-            for mode in [1, 2]:
-                configs.append(RunConfig(
-                    iso=iso, pathway=pathway,
-                    scenario_name=scen_name,
-                    demand_growth=dg,
-                    ren_cost=scen["ren_cost"], firm_cost=scen["firm_cost"],
-                    batt_cost=scen["batt_cost"], ldes_cost=scen["ldes_cost"],
-                    fuel_cost=scen["fuel_cost"], tx_level=scen["tx_level"],
-                    ccs_cost=scen["ccs_cost"], geo_cost=scen["geo_cost"],
-                    q45=scen["q45"],
-                    n_beams=n_beams,
-                    stage1_samples=stage1_samples,
-                    stage2_samples=stage2_samples,
-                    cost_mode=mode,
-                ))
+            configs.append(RunConfig(
+                iso=iso, pathway=pathway,
+                scenario_name=scen_name,
+                demand_growth=dg,
+                ren_cost=scen["ren_cost"], firm_cost=scen["firm_cost"],
+                batt_cost=scen["batt_cost"], ldes_cost=scen["ldes_cost"],
+                fuel_cost=scen["fuel_cost"], tx_level=scen["tx_level"],
+                ccs_cost=scen["ccs_cost"], geo_cost=scen["geo_cost"],
+                q45=scen["q45"],
+                n_beams=n_beams,
+                stage1_samples=stage1_samples,
+                stage2_samples=stage2_samples,
+            ))
     return configs
 
 
@@ -1637,8 +1625,7 @@ def main():
     configs = build_configs(iso, args.pathway, scenarios, demand_levels,
                             args.n_beams, args.stage1_samples, args.stage2_samples)
     print(f"[adaptive] {len(configs)} runs queued "
-          f"({len(scenarios)} scenarios × {len(demand_levels)} demand levels "
-          f"× 2 cost modes)")
+          f"({len(scenarios)} scenarios × {len(demand_levels)} demand levels)")
     sample_cfg = configs[0]
     print(f"[adaptive] Dimensions: {sample_cfg.n_dims} | "
           f"Samples: {sample_cfg.stage2_samples}→{sample_cfg.scaled_samples} "
@@ -1655,7 +1642,7 @@ def main():
     for ci, cfg in enumerate(configs):
         print(f"\n{'─'*60}")
         print(f"[adaptive] Config {ci+1}/{len(configs)}: "
-              f"{cfg.scenario_name} | {cfg.demand_growth} | mode={cfg.cost_mode}")
+              f"{cfg.scenario_name} | {cfg.demand_growth}")
         print(f"[adaptive] dim_key: {cfg.dim_key}")
         print(f"{'─'*60}")
 
