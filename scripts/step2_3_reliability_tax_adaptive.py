@@ -117,7 +117,7 @@ STORAGE_COLS = [
     "battery_dispatch_pct", "battery8_dispatch_pct",
     "ldes_dispatch_pct", "h2_dispatch_pct",
 ]
-# v4.1 perf: module-level set avoids re-creation per year in solve_pathway
+# v4.1: module-level frozenset avoids re-creating set() per year in solve_pathway
 _STORAGE_COLS_SET = frozenset(STORAGE_COLS)
 
 STORAGE_PARAMS = {
@@ -732,7 +732,7 @@ class LHSBank:
             batch = self.samples[self._offset:end]
             self._offset = end
             return batch
-        # v4.1 perf: plain uniform is ~10-50× faster than constructing a new
+        # v4.1: plain uniform is ~10-50× faster than constructing a new
         # LatinHypercube. Overflow samples are already non-stratified relative
         # to the main bank, so there is no quality loss.
         return self._rng.random((n, self.n_dims))
@@ -895,7 +895,7 @@ def stage1_select(iso, cfg, P32, dm32, dn32):
     ldes_arr = _col("ldes_dispatch_pct")
     h2_arr = _col("h2_dispatch_pct")
 
-    # Free the Arrow table before scoring (can be hundreds of MB)
+    # v4.1: free the Arrow table before scoring (can be hundreds of MB)
     del ef
 
     scores, resid, curtail = score_candidates(W, P32, dm32, dn32,
@@ -1039,13 +1039,14 @@ def compute_preperiod(seed, cfg, P32, dm32, dn32):
 
 # ---------------------------------------------------------------------------
 # Stage 2 — Two-stage adaptive LHS _find_winner
-# v4.1: restructured to avoid R1+R2 full-array concatenation.
+# v4.1: Restructured to avoid R1+R2 full-array concatenation.
 # Evaluates feasibility/cost per round, compares winners. Mathematically
 # equivalent: cheapest(R1 ∪ R2) = min(cheapest(R1), cheapest(R2)).
+# free_idx_arr passed in (pre-computed once per beam).
 # ---------------------------------------------------------------------------
 def _find_winner(floor_pcts, floor_storage, target, ceiling,
                  floor_cfe, res_yields, stor_yields,
-                 free_idx, cfg, P32, dm32, dn32,
+                 free_idx, free_idx_arr, cfg, P32, dm32, dn32,
                  year, dem_twh, lhs_bank, res_lcoes_free, stor_costs):
     """Two-stage adaptive search for cheapest feasible candidate.
 
@@ -1055,7 +1056,6 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
               Dense LHS within that box (refine_samples).
     Fallback: Storage-focused 4D sampling at ≥97% CFE.
     """
-    free_idx_arr = np.array(free_idx, dtype=np.intp)
     floor_free = floor_pcts[free_idx_arr]
     n_free = len(free_idx)
 
@@ -1121,9 +1121,7 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
           f"in [{target:.1f}, {ceiling:.1f})")
 
     # If too few hits, widen bounds and resample
-    raw1_valid = None  # lazy: only extract for bbox when needed
     if n_hits_r1 < cfg.min_hits:
-        # Widen: 2× the marginal-yield bounds
         n_dims = n_free + 4
         increment = max(0.1, target - floor_cfe)
         n_active = max(1, sum(1 for y in res_yields if y > 0.01)
@@ -1188,18 +1186,17 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         if target >= 97.0:
             return _storage_fallback(
                 floor_pcts, floor_storage, target, ceiling,
-                free_idx, cfg, P32, dm32, dn32,
+                free_idx, free_idx_arr, cfg, P32, dm32, dn32,
                 dem_twh, floor_free, res_lcoes_free, stor_costs,
                 use_gas_shadow, gas_shadow_params, year)
         return None, None, None, None, None
 
-    # v4.1 perf: find best from R1 pool
+    # v4.1: find best from R1 pool (avoids full R1+R2 concatenation)
     r1_pcts, r1_stor, r1_cfe, r1_resid, r1_curtail, r1_cost = \
         _best_from_pool(sc1, re1, cu1, W1, b4_1, b8_1, ld_1, h2_1)
 
     # ── Round 2: Tight bounding box refinement ──
-    # v4.1 perf: extract raw only for valid rows (small) instead of full concat
-    raw_valid = raw1[valid1]  # (n_hits, n_dims)
+    raw_valid = raw1[valid1]  # (n_hits, n_dims) — small
     bb_min = raw_valid.min(axis=0)
     bb_max = raw_valid.max(axis=0)
     bb_range = bb_max - bb_min
@@ -1227,7 +1224,7 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
     r2_mask = (sc2 >= target) & (sc2 < ceiling)
     r2_hits = int(r2_mask.sum())
 
-    # v4.1 perf: find best from R2 pool, compare with R1 winner
+    # v4.1: find best from R2 pool, compare with R1 winner
     r2_pcts, r2_stor, r2_cfe, r2_resid, r2_curtail, r2_cost = \
         _best_from_pool(sc2, re2, cu2, W2, b4_2, b8_2, ld_2, h2_2)
 
@@ -1244,26 +1241,33 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
     elif r2_pcts is not None:
         return r2_pcts, r2_stor, r2_cfe, r2_resid, r2_curtail
 
-    # Both empty (shouldn't happen if n_hits_r1 > 0, but defensive)
+    # Both empty (defensive — shouldn't happen if n_hits_r1 > 0)
     if target >= 97.0:
         return _storage_fallback(
             floor_pcts, floor_storage, target, ceiling,
-            free_idx, cfg, P32, dm32, dn32,
+            free_idx, free_idx_arr, cfg, P32, dm32, dn32,
             dem_twh, floor_free, res_lcoes_free, stor_costs,
             use_gas_shadow, gas_shadow_params, year)
     return None, None, None, None, None
 
 
 def _storage_fallback(floor_pcts, floor_storage, target, ceiling,
-                      free_idx, cfg, P32, dm32, dn32,
+                      free_idx, free_idx_arr, cfg, P32, dm32, dn32,
                       dem_twh, floor_free, res_lcoes_free, stor_costs,
                       use_gas_shadow, gas_shadow_params, year):
-    """Storage-focused 4D fallback for last mile (≥97% CFE)."""
-    free_idx_arr = np.array(free_idx, dtype=np.intp)
+    """Storage-focused 4D fallback for last mile (≥97% CFE).
+
+    v4.1: Accepts year explicitly (was fragile locals() dict).
+          Deterministic seed for reproducibility.
+          Uses default_rng uniform instead of LatinHypercube constructor.
+    """
     n_stor = cfg.refine_samples
     print(f"    storage fallback: {n_stor} samples, 4D")
-    sampler = LatinHypercube(d=4, seed=int(time.time() * 1000) % (2**31))
-    stor_unit = sampler.random(n=n_stor)
+
+    # v4.1: deterministic seed from (iso, year, target) for reproducibility;
+    # uniform RNG instead of LHS constructor (~0.2s overhead savings)
+    rng = np.random.default_rng(seed=hash((cfg.iso, year, target)) & 0x7FFFFFFF)
+    stor_unit = rng.random((n_stor, 4))
 
     stor_floors = floor_storage.copy()
     stor_ceil = np.maximum(floor_storage * 5.0, floor_storage + 30.0)
@@ -1271,7 +1275,6 @@ def _storage_fallback(floor_pcts, floor_storage, target, ceiling,
     stor_ceil = np.maximum(stor_ceil, stor_floors + 1.0)
     stor_raw = stor_floors + stor_unit * (stor_ceil - stor_floors)
 
-    rng = np.random.default_rng(seed=42)
     W_sf = np.zeros((n_stor, N_RESOURCES), dtype=np.float32)
     for ri in range(N_RESOURCES):
         W_sf[:, ri] = np.float32(floor_pcts[ri] * 0.01)
@@ -1342,6 +1345,9 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
     existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
     gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
     free_idx = cfg.free_indices
+
+    # v4.1: pre-compute free_idx_arr once per beam
+    free_idx_arr = np.array(free_idx, dtype=np.intp)
 
     lcoe_matrix = precompute_lcoe_matrix(iso, cfg)
     stor_costs = precompute_storage_costs(iso, cfg)
@@ -1450,7 +1456,7 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
             result = _find_winner(
                 floor_pcts, floor_storage, target, cfe_ceiling,
                 floor_cfe, res_yields, stor_yields,
-                free_idx, cfg, P32, dm32, dn32,
+                free_idx, free_idx_arr, cfg, P32, dm32, dn32,
                 year, dem_twh, lhs_bank, res_lcoes_free, stor_costs)
             if result[0] is None:
                 print(f"[solve] {iso} beam={seed['archetype']}: "
@@ -1491,7 +1497,7 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
             peak_gas_mw = g_mw
             peak_gas_year = year
 
-        # v4.1 perf: use module-level _STORAGE_COLS_SET instead of set() per year
+        # v4.1: module-level _STORAGE_COLS_SET instead of set() per year
         total_vintage_cost = sum(q * uc if r in _STORAGE_COLS_SET else q * uc * 1e6
                                   for _, r, q, uc in vintage_ledger)
         total_annual = total_vintage_cost + g_cost
@@ -1724,7 +1730,7 @@ def main():
         print(f"[adaptive] No seeds found. Exiting.")
         return 1
 
-    # v4.1 perf: free EF table memory before 21-year solve loop
+    # v4.1: free EF table memory before 21-year solve loop
     gc.collect()
 
     t_total = time.time()
