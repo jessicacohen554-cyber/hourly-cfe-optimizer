@@ -1,0 +1,305 @@
+name: "Step 2.3 Adaptive: On-the-Fly Pathway Optimizer"
+
+# Runs step2_3_reliability_tax_adaptive.py — marginal-yield-bounded LHS
+# generation with two pathways (A = VRE-only, B = full P3 incl nuclear/CCS/
+# offshore) and two cost modes (incremental clean / clean minus gas savings).
+#
+# iso=ALL fans out to 7 parallel matrix jobs, each pushing its own branch.
+# Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-adaptive"
+# afterwards to consolidate into master.
+#
+# pathway=BOTH runs A then B sequentially within each matrix job.
+#
+# scenario=all runs all 3 named cost scenarios (base, firm_high_vre_low,
+# firm_low_vre_high). Otherwise runs only the selected scenario.
+#
+# demand_growth=all crosses Low × Medium × High (--batch-demand).
+# Otherwise runs only the selected level.
+#
+# Each (scenario × demand_growth × cost_mode) combo produces N_beams results.
+# With defaults: 3 scenarios × 3 demand × 2 modes × 5 beams = 90 JSONs per
+# ISO per pathway.
+#
+# Prerequisite: Step 2.1 EF parquets, EIA-930 profiles, hybrid profiles.
+# Output: data/step2.3-adaptive/<ISO>__pathway<A|B>__<scenario>__*.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to run (ALL = parallel across 7)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      pathway:
+        description: 'Pathway (A = VRE+storage only, B = all resources incl nuclear/CCS/offshore, BOTH = A then B)'
+        required: true
+        default: 'BOTH'
+        type: choice
+        options:
+          - BOTH
+          - A
+          - B
+      demand_growth:
+        description: 'Demand growth level (all = Low × Medium × High)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - Low
+          - Medium
+          - High
+      scenario:
+        description: 'Cost scenario (all = base × firm_high_vre_low × firm_low_vre_high)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - base
+          - firm_high_vre_low
+          - firm_low_vre_high
+      n_beams:
+        description: 'Number of seed beams per config (Pathway B auto-scales +2)'
+        required: false
+        default: '5'
+        type: string
+      stage2_samples:
+        description: 'Stage 2 LHS samples per step (auto-scaled by dimensionality)'
+        required: false
+        default: '5000'
+        type: string
+      runner_size:
+        description: 'Runner size (standard = 2-core/7GB, large = 16-core/64GB)'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - large
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-3-adaptive
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  adaptive:
+    needs: prepare
+    runs-on: ${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}
+    timeout-minutes: ${{ inputs.runner_size == 'large' && 120 || 360 }}
+    permissions:
+      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    concurrency:
+      group: step2-3-adaptive-${{ matrix.iso }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Verify step 2.1 EF parquets exist
+        run: |
+          if [ ! -d data/step2.1-ef ] || ! ls data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*.parquet >/dev/null 2>&1; then
+            echo "ERROR: Step 2.1 EF parquets not found for ${{ matrix.iso }}. Run Step 2.1 first."
+            exit 1
+          fi
+
+      - name: Verify EIA-930 profiles exist
+        run: |
+          for f in data/eia-930/eia_generation_profiles.parquet data/eia-930/eia_demand_profiles.parquet; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: $f not found. Run Step 0 data fetch first."
+              exit 1
+            fi
+          done
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow scipy
+
+      - name: Ensure output directory
+        run: mkdir -p data/step2.3-adaptive
+
+      - name: Build CLI flags
+        id: cli
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAY: ${{ inputs.pathway }}
+          DEMAND: ${{ inputs.demand_growth }}
+          SCENARIO: ${{ inputs.scenario }}
+          N_BEAMS: ${{ inputs.n_beams }}
+          S2_SAMPLES: ${{ inputs.stage2_samples }}
+        run: |
+          # Demand flags
+          if [ "$DEMAND" = "all" ]; then
+            DEMAND_FLAG="--batch-demand"
+          else
+            DEMAND_FLAG="--demand-growth $DEMAND"
+          fi
+
+          # Scenario flags
+          if [ "$SCENARIO" = "all" ]; then
+            SCENARIO_FLAG="--batch"
+          else
+            SCENARIO_FLAG="--scenario $SCENARIO"
+          fi
+
+          COMMON="--iso $ISO --n-beams $N_BEAMS --stage2-samples $S2_SAMPLES $DEMAND_FLAG $SCENARIO_FLAG"
+          echo "common=$COMMON" >> "$GITHUB_OUTPUT"
+
+          # Determine which pathways to run
+          if [ "$PATHWAY" = "BOTH" ]; then
+            echo "pathways=A B" >> "$GITHUB_OUTPUT"
+          else
+            echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Run adaptive optimizer — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          COMMON: ${{ steps.cli.outputs.common }}
+          PATHWAYS: ${{ steps.cli.outputs.pathways }}
+        timeout-minutes: ${{ inputs.runner_size == 'large' && 100 || 330 }}
+        run: |
+          set -euo pipefail
+          for pw in $PATHWAYS; do
+            echo ""
+            echo "============================================================"
+            echo "[workflow] Starting Pathway $pw for $ISO"
+            echo "============================================================"
+            t0=$SECONDS
+            python scripts/step2_3_reliability_tax_adaptive.py --pathway "$pw" $COMMON
+            echo "[workflow] Pathway $pw done in $(( SECONDS - t0 ))s"
+          done
+
+      - name: "Verify output JSONs — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAY: ${{ inputs.pathway }}
+        run: |
+          total=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
+          echo "[verify] ${ISO}: ${total} result JSONs"
+          if [ "$total" -eq 0 ]; then
+            echo "::error::No output JSONs produced for ${ISO}"
+            exit 1
+          fi
+
+          for pw in A B; do
+            if [ "$PATHWAY" = "BOTH" ] || [ "$PATHWAY" = "$pw" ]; then
+              pw_count=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json 2>/dev/null | wc -l)
+              echo "[verify] ${ISO} Pathway ${pw}: ${pw_count} JSONs"
+            fi
+          done
+
+      - name: "Commit + push to per-ISO branch — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git checkout -b "${branch}"
+
+          git add -f "data/step2.3-adaptive/" 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "::error::No changes staged — nothing to commit for ${ISO}"
+            exit 1
+          fi
+
+          total=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 2.3 adaptive: ${ISO} (${total} result JSONs)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "${branch}" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          {
+            echo "## Step 2.3 Adaptive — ${ISO}"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "- Branch: \`${BRANCH}\`"
+            else
+              echo "- Branch: (not pushed — job failed before commit step)"
+            fi
+            echo "- Pathway: \`${{ inputs.pathway }}\`"
+            echo "- Scenario: \`${{ inputs.scenario }}\`"
+            echo "- Demand growth: \`${{ inputs.demand_growth }}\`"
+            echo "- Beams: ${{ inputs.n_beams }} | Stage 2 samples: ${{ inputs.stage2_samples }}"
+            echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
+            echo "- Outputs: \`data/step2.3-adaptive/${ISO}__pathway*.json\`"
+            echo ""
+            total=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
+            echo "**${total} result JSONs produced.**"
+            echo ""
+            echo "Run the **Squash Pipeline Branches** workflow with pattern \`auto/.*step2-3-adaptive\` to consolidate."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-3-adaptive-${{ matrix.iso }}-${{ github.run_id }}
+          path: data/step2.3-adaptive/
+          retention-days: 30
+          if-no-files-found: warn
