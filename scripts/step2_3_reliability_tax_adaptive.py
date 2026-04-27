@@ -4,27 +4,34 @@ step2_3_reliability_tax_adaptive.py
 On-the-fly mix generation with marginal-yield-bounded Latin Hypercube sampling.
 
 Architecture:
-  Stage 1: Load Step 2.1 EF parquets for first threshold band above baseline.
-           Cluster into archetypes, pick N diverse low-cost seeds.
-  Stage 2: For each seed, build year-by-year pathway to 99.9% CFE via on-the-fly
-           LHS generation. Write results at every threshold crossed.
+  Pre-period: Compute single-period cost from baseline to 2030 waypoint at 2030
+              LCOEs. No year-by-year loop — just "what does it cost to get there?"
+  Stage 1:    Load Step 2.1 EF parquets at the 2030 waypoint band (50% or 60%).
+              Cluster into archetypes, pick N diverse low-cost seeds.
+  Stage 2:    For each seed, build year-by-year pathway from 2030 waypoint to
+              99.9% CFE by 2050 via on-the-fly LHS generation.
 
 Two pathways:
   A — VRE + hybrids + storage only. No offshore, geo, CCS, or clean_firm expansion.
   B — Full P3: all resources incl nuclear, CCS, offshore, geothermal (CAISO only).
 
+ISO-specific CFE waypoints:
+  High-baseline (CAISO, SPP, ERCOT):  60% (2030) → 90% (2040) → 95% (2045) → 99.9% (2050)
+  Low-baseline  (PJM, NYISO, NEISO, MISO): 50% (2030) → 90% (2040) → 95% (2045) → 99.9% (2050)
+
 Cost accounting:
   Gas-endogenous — annual system cost = vintage clean procurement + gas backup.
   Gas backup sized to worst-hour residual; cost includes capex + FOM + fuel.
 
-Performance notes (v3.7):
+Performance notes (v4.0):
   - H2 uses interleaved peaker dispatch (no windowing) — cycles freely like
     a zero-carbon peaker. LCOE_TABLE recomputed for 1000hr CAPEX basis.
   - Serial numba kernel for marginal yields (~15 candidates) avoids prange overhead.
   - LHS sample bank pre-generated at pathway start; affine-scaled per year.
   - Additive cascade: rounds accumulate instead of discarding prior results.
   - Score caching: _find_winner returns curtailment; no redundant _score_single.
-  - LCOE/storage cost matrices pre-computed for all 26 years before year loop.
+  - LCOE/storage cost matrices pre-computed for all 21 years before year loop.
+  - Pre-period cost avoids 5 years of year-by-year iteration (~19% faster).
 
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
 
@@ -78,8 +85,17 @@ import pipeline_config as pc
 # ---------------------------------------------------------------------------
 H = 8760
 BASE_YEAR, END_YEAR = 2025, 2050
+SOLVE_START_YEAR = 2030
+
+# Full range for demand model (growth from 2025 baseline)
 YEARS = list(range(BASE_YEAR, END_YEAR + 1))
 N_YEARS = len(YEARS)
+
+# Stage 2 solve range (year-by-year adaptive build)
+SOLVE_YEARS = list(range(SOLVE_START_YEAR, END_YEAR + 1))
+N_SOLVE_YEARS = len(SOLVE_YEARS)
+SOLVE_YEAR_OFFSET = SOLVE_START_YEAR - BASE_YEAR  # =5, index into demand vectors
+
 DISCOUNT_RATES = {"5pct": 0.05, "7pct": 0.07, "9pct": 0.09}
 WORST_HOUR_PCTILE = 99.97
 CCGT_OVERNIGHT_CAPEX_USD_KW = 1200.0
@@ -111,15 +127,9 @@ STORAGE_COLS = [
 ]
 STORAGE_PARAMS = {
     # name: (duration_hrs, efficiency, window_hrs, lcoe_key, cost_duration_hrs)
-    # cost_duration_hrs: used in storage_net_cost (coeff × cost_dur = $/MW-yr).
-    # Distinct from dispatch duration to allow future decoupling.
     "battery_dispatch_pct":  (4,    0.85, 24,  "battery",  4),
     "battery8_dispatch_pct": (8,    0.85, 48,  "battery8", 8),
     "ldes_dispatch_pct":     (100,  0.50, 168, "ldes",     100),
-    # H2: 1000hr seasonal salt cavern storage. LCOE_TABLE recomputed at 1000hr
-    # CAPEX basis ($54/kWh Medium). Dispatch uses _inline_storage_peaker (no
-    # windowing) — H2 cycles hour-by-hour like a zero-carbon peaker.
-    # Window field unused by peaker kernel but kept for schema consistency.
     "h2_dispatch_pct":       (1000, 0.35, 720, "h2",       1000),
 }
 
@@ -128,7 +138,23 @@ EF_BAND_THRESHOLDS = (
     80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9,
 )
 
-CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95), (2050, 99.9))
+# ---------------------------------------------------------------------------
+# Per-ISO CFE waypoints
+# ---------------------------------------------------------------------------
+# High-baseline ISOs get a 60% waypoint by 2030; low-baseline get 50%.
+# All converge: 90% (2040) → 95% (2045) → 99.9% (2050).
+# The 2030s see variability; the 2040s are identical.
+HIGH_BASELINE_ISOS = {"CAISO", "SPP", "ERCOT"}
+
+
+def get_cfe_waypoints(iso: str) -> tuple[tuple[int, float], ...]:
+    wp_2030 = 60.0 if iso in HIGH_BASELINE_ISOS else 50.0
+    return ((2030, wp_2030), (2040, 90.0), (2045, 95.0), (2050, 99.9))
+
+
+def get_waypoint_2030(iso: str) -> float:
+    return 60.0 if iso in HIGH_BASELINE_ISOS else 50.0
+
 
 PATHWAY_A_FREE = ["solar", "wind", "solar_batt4", "solar_batt8",
                   "wind_batt4", "wind_batt8"]
@@ -325,22 +351,16 @@ def _inline_storage_peaker(surplus, gap, total_dispatch,
     SOC carries across all 8760 hours — models a salt cavern + turbine
     that charges from surplus VRE whenever available and dispatches into
     deficit hours on demand, like a zero-carbon peaker.
-
-    Used for H2 (1000hr salt cavern): the enormous energy capacity means
-    SOC rarely constrains dispatch. The turbine fires hundreds of hours/yr
-    covering overnight lulls and multi-day weather events.
     """
     if capacity <= 0.0:
         return
     soc = 0.0
     for h in range(H):
-        # Charge: absorb surplus into cavern
         s = surplus[h]
         if s > 0.0 and soc < capacity:
             charge = min(s, power_rating, capacity - soc)
             soc += charge
             surplus[h] -= charge
-        # Discharge: fire turbine into deficit
         g = gap[h]
         if g > 0.0 and soc > 0.0:
             discharge = min(g, power_rating, soc * efficiency)
@@ -452,10 +472,7 @@ def _score_mixes_parallel(scores, resid, curtail, W, P32, dm32, dn32,
 @njit
 def _score_mixes_serial(scores, resid, curtail, W, P32, dm32, dn32,
                         batt4, batt8, ldes, h2):
-    """Serial scoring kernel for small batches (<50 candidates).
-
-    Avoids prange thread-pool wake overhead that dominates when N is small.
-    """
+    """Serial scoring kernel for small batches (<50 candidates)."""
     n = W.shape[0]
     for i in range(n):
         _score_one(i, W, P32, dm32, dn32,
@@ -581,13 +598,7 @@ def _tx_adder(iso: str, resource: str, tx_level: str) -> float:
 
 
 def storage_net_cost(iso: str, storage_key: str, cfg: RunConfig) -> float:
-    """Annualized cost of 1 MW of storage capacity ($/MW-yr).
-
-    Coefficient × cost_duration_hrs converts system-cost coefficient → $/MW-yr.
-    cost_duration_hrs matches the LCOE_TABLE CAPEX basis (e.g. 1000hr for H2
-    after recompute, vs dispatch duration which is also 1000hr but conceptually
-    distinct).
-    """
+    """Annualized cost of 1 MW of storage capacity ($/MW-yr)."""
     dur, _eff, _window, lcoe_key, cost_dur = STORAGE_PARAMS[storage_key]
     if lcoe_key in ("battery", "battery8"):
         cost_name = LEVEL_NAME[cfg.batt_cost]
@@ -600,12 +611,12 @@ def storage_net_cost(iso: str, storage_key: str, cfg: RunConfig) -> float:
 
 
 # ---------------------------------------------------------------------------
-# LCOE pre-computation — avoids per-year dict lookups in hot loop
+# LCOE pre-computation — covers SOLVE_YEARS (2030-2050) only
 # ---------------------------------------------------------------------------
 def precompute_lcoe_matrix(iso: str, cfg: RunConfig) -> np.ndarray:
-    """(N_YEARS, N_RESOURCES) delivered LCOE matrix."""
-    mat = np.zeros((N_YEARS, N_RESOURCES), dtype=np.float64)
-    for yi, year in enumerate(YEARS):
+    """(N_SOLVE_YEARS, N_RESOURCES) delivered LCOE matrix for 2030-2050."""
+    mat = np.zeros((N_SOLVE_YEARS, N_RESOURCES), dtype=np.float64)
+    for yi, year in enumerate(SOLVE_YEARS):
         for ri, res in enumerate(RESOURCE_ORDER):
             mat[yi, ri] = get_resource_lcoe(iso, res, year, cfg)
     return mat
@@ -618,7 +629,7 @@ def precompute_storage_costs(iso: str, cfg: RunConfig) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Demand model
+# Demand model — full 2025-2050 range for indexing flexibility
 # ---------------------------------------------------------------------------
 def demand_twh_vec(iso: str, level: str = "Medium") -> np.ndarray:
     base = float(pc.REGIONAL_DEMAND_TWH[iso])
@@ -632,8 +643,13 @@ def peak_demand_vec(iso: str, level: str = "Medium") -> np.ndarray:
     return np.array([base * (1 + rate) ** (y - BASE_YEAR) for y in YEARS])
 
 
-def cfe_target(year: int, base_pct: float) -> float:
-    pts = [(BASE_YEAR, base_pct)] + list(CFE_WAYPOINTS)
+# ---------------------------------------------------------------------------
+# CFE target trajectory — per-ISO waypoints, 2030-2050 only
+# ---------------------------------------------------------------------------
+def cfe_target(year: int, iso: str) -> float:
+    """CFE target for a given year and ISO. Linear interpolation between waypoints."""
+    waypoints = get_cfe_waypoints(iso)
+    pts = list(waypoints)
     if year <= pts[0][0]:
         return pts[0][1]
     if year >= pts[-1][0]:
@@ -645,8 +661,8 @@ def cfe_target(year: int, base_pct: float) -> float:
 
 
 def cfe_target_vec(iso: str) -> np.ndarray:
-    base = sum(pc.GRID_MIX_SHARES[iso].values())
-    return np.array([cfe_target(y, base) for y in YEARS])
+    """CFE targets for SOLVE_YEARS (2030-2050)."""
+    return np.array([cfe_target(y, iso) for y in SOLVE_YEARS])
 
 
 # ---------------------------------------------------------------------------
@@ -714,7 +730,7 @@ def gas_annual_cost(new_gas_mw: float, iso: str, cfg: RunConfig) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Marginal yield computation — uses serial kernel to avoid prange overhead
+# Marginal yield computation
 # ---------------------------------------------------------------------------
 def compute_marginal_yields(
     floor_pcts: np.ndarray,
@@ -722,11 +738,7 @@ def compute_marginal_yields(
     free_res_idx: list[int],
     P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, float, float, float]:
-    """Marginal CFE yield per +1pp of each free dimension.
-
-    Returns (res_yields, stor_yields, floor_cfe, floor_resid, floor_curtail).
-    Uses serial kernel — only ~15 candidates, prange overhead would dominate.
-    """
+    """Marginal CFE yield per +1pp of each free dimension."""
     n_free = len(free_res_idx)
     n_total = 1 + n_free + 4
 
@@ -746,7 +758,6 @@ def compute_marginal_yields(
     ld[so + 2] += np.float32(1.0)
     h2[so + 3] += np.float32(1.0)
 
-    # Serial kernel — ~15 candidates, avoids thread-pool wake
     scores = np.full(n_total, -1.0, dtype=np.float32)
     resid = np.full(n_total, np.inf, dtype=np.float32)
     curtail = np.zeros(n_total, dtype=np.float32)
@@ -762,15 +773,10 @@ def compute_marginal_yields(
 
 
 # ---------------------------------------------------------------------------
-# LHS sample bank — pre-generated at pathway start, reused across years
+# LHS sample bank
 # ---------------------------------------------------------------------------
 class LHSBank:
-    """Pre-generated unit hypercube samples. Affine-scaled per year.
-
-    LHS stratification is preserved under affine transforms, so pre-generating
-    once and scaling to [floor, ceiling] each year gives identical statistical
-    properties to fresh generation — without the O(n·d·log n) construction cost.
-    """
+    """Pre-generated unit hypercube samples. Affine-scaled per year."""
 
     def __init__(self, n_dims: int, total_samples: int, seed: int = 42):
         sampler = LatinHypercube(d=n_dims, seed=seed)
@@ -779,17 +785,14 @@ class LHSBank:
         self._offset = 0
 
     def reset(self):
-        """Reset offset for a new year's cascade."""
         self._offset = 0
 
     def draw(self, n: int) -> np.ndarray:
-        """Draw n unit samples in [0,1]^d, advancing the offset."""
         end = self._offset + n
         if end <= len(self.samples):
             batch = self.samples[self._offset:end]
             self._offset = end
             return batch
-        # Bank exhausted — fall back to fresh generation
         sampler = LatinHypercube(d=self.n_dims)
         return sampler.random(n=n).astype(np.float64)
 
@@ -810,19 +813,13 @@ def generate_candidates(
     unit_samples: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray]:
-    """Generate LHS candidates from pre-drawn unit samples.
-
-    Returns (W, batt4, batt8, ldes, h2, raw_pcts).
-    """
+    """Generate LHS candidates from pre-drawn unit samples."""
     n_free = len(free_res_idx)
     increment = max(0.1, target_cfe - floor_cfe)
 
     n_active = (sum(1 for y in res_yields if y > 0.01)
                 + sum(1 for y in stor_yields if y > 0.01))
     n_active = max(n_active, 1)
-    # Last mile (≥97% CFE): each dimension needs full headroom — overshooting
-    # is cheap (just curtailment) but undershooting is a cascade miss.
-    # Below 97%: divide by n_active so total expected CFE ≈ increment.
     if target_cfe >= 97.0:
         dim_sf = SAFETY_FACTOR * 3.0
     else:
@@ -867,7 +864,6 @@ def generate_candidates(
 
     ceilings = np.maximum(ceilings, floors + 0.01)
 
-    # Scale pre-drawn unit samples to [floor, ceiling]
     raw = floors[None, :] + unit_samples[:n_samples] * (ceilings - floors)[None, :]
 
     W = np.zeros((n_samples, N_RESOURCES), dtype=np.float32)
@@ -885,7 +881,7 @@ def generate_candidates(
 
 
 # ---------------------------------------------------------------------------
-# Stage 1 — Archetype selection from EF parquets
+# Stage 1 — Archetype selection from EF parquets at 2030 waypoint band
 # ---------------------------------------------------------------------------
 def load_ef_band(iso: str, threshold: float) -> Optional[pa.Table]:
     ttag = str(int(threshold)) if threshold == int(threshold) else str(threshold)
@@ -933,24 +929,26 @@ def classify_archetype(mix_pcts: dict[str, float], pathway: str) -> str:
 def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                   dm32: np.ndarray, dn32: np.ndarray
                   ) -> list[dict]:
-    base_pct = sum(pc.GRID_MIX_SHARES[iso].values())
-    first_threshold = None
-    for t in EF_BAND_THRESHOLDS:
-        if t > base_pct:
-            first_threshold = t
-            break
-    if first_threshold is None:
-        print(f"[stage1] {iso}: baseline {base_pct:.1f}% exceeds all thresholds")
-        return []
+    """Select seed mixes from the 2030 waypoint threshold band.
 
-    print(f"[stage1] {iso}: baseline={base_pct:.1f}%, first threshold={first_threshold}%")
-    ef = load_ef_band(iso, first_threshold)
+    Seeds are drawn from the EF parquet at the ISO's 2030 waypoint (50% or 60%),
+    scored against demand profiles, and classified into archetypes. The cheapest
+    mix per archetype (at 2030 LCOEs) becomes a seed for the stage 2 build.
+    """
+    waypoint = get_waypoint_2030(iso)
+    base_pct = sum(pc.GRID_MIX_SHARES[iso].values())
+
+    print(f"[stage1] {iso}: baseline={base_pct:.1f}%, "
+          f"2030 waypoint={waypoint:.0f}%")
+
+    ef = load_ef_band(iso, waypoint)
     if ef is None:
-        print(f"[stage1] {iso}: no EF parquet for threshold {first_threshold}")
+        print(f"[stage1] {iso}: no EF parquet for waypoint {waypoint}")
         return []
 
     n = ef.num_rows
-    print(f"[stage1] {iso}: loaded {n:,} mixes from EF parquets")
+    print(f"[stage1] {iso}: loaded {n:,} mixes from EF parquets "
+          f"(band={waypoint}%)")
 
     W = np.zeros((n, N_RESOURCES), dtype=np.float32)
     tbl_names = set(ef.schema.names)
@@ -971,12 +969,13 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
     scores, resid, curtail = score_candidates(W, P32, dm32, dn32,
                                                batt4, batt8, ldes_arr, h2_arr)
 
+    # Valid band: within ±0.5% of waypoint, up to next threshold
     next_threshold = 100.0
     for t in EF_BAND_THRESHOLDS:
-        if t > first_threshold:
+        if t > waypoint:
             next_threshold = t
             break
-    mask = (scores >= first_threshold - 0.5) & (scores < next_threshold)
+    mask = (scores >= waypoint - 0.5) & (scores < next_threshold)
     valid_idx = np.where(mask)[0]
     if len(valid_idx) == 0:
         mask = scores >= base_pct
@@ -987,9 +986,9 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
 
     print(f"[stage1] {iso}: {len(valid_idx):,} mixes in valid band")
 
-    # Vectorized cost ranking
+    # Vectorized cost ranking at 2030 LCOEs
     base_dem = float(pc.REGIONAL_DEMAND_TWH[iso])
-    res_lcoes = np.array([get_resource_lcoe(iso, res, BASE_YEAR, cfg)
+    res_lcoes = np.array([get_resource_lcoe(iso, res, SOLVE_START_YEAR, cfg)
                           for res in RESOURCE_ORDER], dtype=np.float64)
     stor_costs = precompute_storage_costs(iso, cfg)
 
@@ -1060,26 +1059,129 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
-# Stage 2 — Year-by-year on-the-fly solve
+# Pre-period cost computation (2025-2029)
+# ---------------------------------------------------------------------------
+def compute_preperiod(seed: dict, cfg: RunConfig,
+                      P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray
+                      ) -> dict:
+    """Compute single-period cost from grid baseline to seed mix at 2030 LCOEs.
+
+    The seed represents the 2030 waypoint mix. This function computes the
+    cost of building that mix from the current grid baseline, using 2030
+    technology costs. No year-by-year optimization — just delta × LCOE.
+    """
+    iso = cfg.iso
+    demand_vec = demand_twh_vec(iso, cfg.demand_growth)
+    dem_2030 = demand_vec[SOLVE_YEAR_OFFSET]
+    existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
+    gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
+
+    # LCOEs at 2030
+    lcoes_2030 = np.array([get_resource_lcoe(iso, res, SOLVE_START_YEAR, cfg)
+                           for res in RESOURCE_ORDER], dtype=np.float64)
+    stor_costs = precompute_storage_costs(iso, cfg)
+
+    # Grid baseline percentages
+    baseline_pcts = np.zeros(N_RESOURCES, dtype=np.float64)
+    for ri, res in enumerate(RESOURCE_ORDER):
+        baseline_pcts[ri] = pc.GRID_MIX_SHARES[iso].get(res, 0.0)
+
+    # Seed mix percentages
+    seed_pcts = np.zeros(N_RESOURCES, dtype=np.float64)
+    for ri, res in enumerate(RESOURCE_ORDER):
+        seed_pcts[ri] = seed["resource_pcts"].get(res, 0.0)
+
+    # Score the seed to get exact CFE and residual
+    seed_cfe, seed_resid, seed_curtail = _score_single(
+        seed_pcts,
+        np.array([seed["storage_pcts"].get(sc, 0.0) for sc in STORAGE_COLS],
+                 dtype=np.float64),
+        P32, dm32, dn32)
+
+    # Resource cost: delta from baseline at 2030 LCOEs
+    vintage_ledger = []
+    total_cost = 0.0
+    for ri, res in enumerate(RESOURCE_ORDER):
+        delta_pct = seed_pcts[ri] - baseline_pcts[ri]
+        if delta_pct > RATCHET_TOL_PCT:
+            delta_twh = delta_pct / 100.0 * dem_2030
+
+            if res == "clean_firm" and cfg.pathway == "B":
+                prev_cf_twh = baseline_pcts[ri] / 100.0 * dem_2030
+                new_cf_twh = seed_pcts[ri] / 100.0 * dem_2030
+                prev_tranches = decompose_clean_firm(
+                    prev_cf_twh, iso, SOLVE_START_YEAR, cfg)
+                new_tranches = decompose_clean_firm(
+                    new_cf_twh, iso, SOLVE_START_YEAR, cfg)
+                for tranche in ["uprate", "geo", "nuke_new", "ccs"]:
+                    t_delta = (new_tranches[f"{tranche}_twh"]
+                               - prev_tranches[f"{tranche}_twh"])
+                    if t_delta > 0.01:
+                        t_lcoe = new_tranches[f"{tranche}_lcoe"]
+                        vintage_ledger.append(
+                            (SOLVE_START_YEAR, f"clean_firm_{tranche}",
+                             t_delta, t_lcoe))
+                        total_cost += t_delta * t_lcoe * 1e6
+            else:
+                lcoe = lcoes_2030[ri]
+                vintage_ledger.append(
+                    (SOLVE_START_YEAR, res, delta_twh, lcoe))
+                total_cost += delta_twh * lcoe * 1e6
+
+    # Storage cost
+    for j, sc in enumerate(STORAGE_COLS):
+        stor_pct = seed["storage_pcts"].get(sc, 0.0)
+        if stor_pct > RATCHET_TOL_PCT:
+            capacity_mw = stor_pct / 100.0 * dem_2030 * 1e6 / 8760
+            net_cost_mw_yr = stor_costs[j]
+            annual_cost = capacity_mw * net_cost_mw_yr
+            vintage_ledger.append(
+                (SOLVE_START_YEAR, sc, capacity_mw, net_cost_mw_yr))
+            total_cost += annual_cost
+
+    # Gas backup at 2030
+    g_mw = gas_need_mw(seed_resid, dem_2030, existing_gas, gaf)
+    g_cost = gas_annual_cost(g_mw, iso, cfg)
+    total_annual = total_cost + g_cost
+
+    return {
+        "preperiod_year_range": [BASE_YEAR, SOLVE_START_YEAR - 1],
+        "costed_at_year": SOLVE_START_YEAR,
+        "demand_twh_2030": round(dem_2030, 1),
+        "seed_cfe_pct": round(seed_cfe, 2),
+        "seed_resid": round(seed_resid, 6),
+        "gas_need_mw": round(g_mw, 1),
+        "preperiod_clean_cost_usd": round(total_cost, 0),
+        "preperiod_gas_cost_usd": round(g_cost, 0),
+        "preperiod_total_cost_usd": round(total_annual, 0),
+        "vintage_ledger": vintage_ledger,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 — Year-by-year on-the-fly solve (2030-2050)
 # ---------------------------------------------------------------------------
 def solve_pathway(seed: dict, cfg: RunConfig,
                   P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray
                   ) -> dict:
-    """Build a full 2025-2050 pathway from a seed mix."""
+    """Build a pathway from 2030 waypoint to 99.9% by 2050.
+
+    Pre-period (2025-2029) is costed separately; this function handles
+    the year-by-year adaptive build from 2030 onward.
+    """
     iso = cfg.iso
     demand_vec = demand_twh_vec(iso, cfg.demand_growth)
     peak_vec = peak_demand_vec(iso, cfg.demand_growth)
-    cfe_targets = cfe_target_vec(iso)
+    cfe_targets = cfe_target_vec(iso)  # (N_SOLVE_YEARS,) for 2030-2050
     existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
     gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
     free_idx = cfg.free_indices
 
-    # Pre-compute LCOE and storage cost matrices (Patch 6)
-    lcoe_matrix = precompute_lcoe_matrix(iso, cfg)  # (N_YEARS, N_RESOURCES)
+    # Pre-compute LCOE and storage cost matrices for 2030-2050
+    lcoe_matrix = precompute_lcoe_matrix(iso, cfg)  # (N_SOLVE_YEARS, N_RESOURCES)
     stor_costs = precompute_storage_costs(iso, cfg)  # (4,)
 
-    # Pre-generate LHS sample bank (Patch 3)
-    # Bank holds enough for 5× scaled_samples per year (1× + 1× + 2× cascade + margin)
+    # Pre-generate LHS sample bank
     bank_total = cfg.scaled_samples * 5
     lhs_bank = LHSBank(cfg.n_dims, bank_total, seed=42)
 
@@ -1094,6 +1196,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     baseline_cf_twh = (pc.GRID_MIX_SHARES[iso].get("clean_firm", 0) / 100.0
                        * base_demand)
 
+    # Initialize floor from seed (the 2030 waypoint mix)
     floor_pcts = np.zeros(N_RESOURCES, dtype=np.float64)
     for ri, res in enumerate(RESOURCE_ORDER):
         floor_pcts[ri] = seed["resource_pcts"].get(res, 0.0)
@@ -1109,17 +1212,53 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         seed["storage_pcts"].get(sc, 0.0) for sc in STORAGE_COLS
     ], dtype=np.float64)
 
-    vintage_ledger = []
-    cumulative_cost = 0.0
+    # Compute pre-period cost (2025-2029)
+    preperiod = compute_preperiod(seed, cfg, P32, dm32, dn32)
+
+    vintage_ledger = list(preperiod["vintage_ledger"])
+    cumulative_cost = preperiod["preperiod_total_cost_usd"]
     threshold_snapshots = []
     thresholds_crossed = set()
-    peak_gas_mw = 0.0
-    peak_gas_year = BASE_YEAR
+    peak_gas_mw = preperiod["gas_need_mw"]
+    peak_gas_year = SOLVE_START_YEAR
     annual_records = []
 
-    for yi, year in enumerate(YEARS):
-        dem_twh = demand_vec[yi]
-        pk_mw = peak_vec[yi]
+    # Record pre-period threshold snapshots (all thresholds up to seed CFE)
+    seed_cfe = preperiod["seed_cfe_pct"]
+    dem_2030 = demand_vec[SOLVE_YEAR_OFFSET]
+    for t in EF_BAND_THRESHOLDS:
+        if t <= seed_cfe and t not in thresholds_crossed:
+            thresholds_crossed.add(t)
+            threshold_snapshots.append({
+                "threshold_pct": t,
+                "year_achieved": SOLVE_START_YEAR,
+                "achieved_cfe_pct": round(seed_cfe, 2),
+                "resource_mix_pct": {
+                    res: round(float(floor_pcts[ri]), 2)
+                    for ri, res in enumerate(RESOURCE_ORDER)
+                },
+                "storage_dispatch_pct": {
+                    STORAGE_COLS[j]: round(float(floor_storage[j]), 2)
+                    for j in range(4)
+                },
+                "gas_need_mw": round(preperiod["gas_need_mw"], 1),
+                "peak_gas_mw": round(peak_gas_mw, 1),
+                "stranded_vs_peak_mw": 0.0,
+                "total_annual_cost_usd": round(
+                    preperiod["preperiod_total_cost_usd"], 0),
+                "incremental_cost_usd": round(
+                    preperiod["preperiod_clean_cost_usd"], 0),
+                "cumulative_cost_usd": round(cumulative_cost, 0),
+                "curtailment_total": 0.0,
+                "demand_twh": round(dem_2030, 1),
+            })
+
+    # Year-by-year build: 2030-2050
+    for yi, year in enumerate(SOLVE_YEARS):
+        # Index into full demand vectors (which start at BASE_YEAR=2025)
+        full_yi = yi + SOLVE_YEAR_OFFSET
+        dem_twh = demand_vec[full_yi]
+        pk_mw = peak_vec[full_yi]
         target = cfe_targets[yi]
 
         for res, twh in frozen_twh.items():
@@ -1151,12 +1290,11 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                 floor_pcts[RES_IDX["clean_firm"]] = max(
                     floor_pcts[RES_IDX["clean_firm"]], cf_commitment)
 
-        if yi < N_YEARS - 1:
+        if yi < N_SOLVE_YEARS - 1:
             cfe_ceiling = cfe_targets[yi + 1]
         else:
-            cfe_ceiling = 100.01  # > max possible score (100.0), accepts all ≥ target
+            cfe_ceiling = 100.01
 
-        # Marginal yields — serial kernel, returns floor scores (Patch 2 + 5)
         res_yields, stor_yields, floor_cfe, floor_resid, floor_curtail = (
             compute_marginal_yields(
                 floor_pcts, floor_storage, free_idx, P32, dm32, dn32))
@@ -1168,10 +1306,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             winner_resid = floor_resid
             winner_curtail = floor_curtail
         else:
-            # Reset LHS bank offset for this year's cascade (Patch 3)
             lhs_bank.reset()
-
-            # Pre-computed LCOE row for this year (Patch 6)
             res_lcoes_free = lcoe_matrix[yi, cfg.free_indices]
 
             result = _find_winner(
@@ -1208,7 +1343,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                                 (year, f"clean_firm_{tranche}", t_delta, t_lcoe))
                             year_incremental_cost += t_delta * t_lcoe * 1e6
                 else:
-                    lcoe = lcoe_matrix[yi, ri]  # pre-computed (Patch 6)
+                    lcoe = lcoe_matrix[yi, ri]
                     vintage_ledger.append((year, res, delta_twh, lcoe))
                     year_incremental_cost += delta_twh * lcoe * 1e6
 
@@ -1216,7 +1351,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             delta_stor = winner_storage[j] - floor_storage[j]
             if delta_stor > RATCHET_TOL_PCT:
                 capacity_mw = delta_stor / 100.0 * dem_twh * 1e6 / 8760
-                net_cost_mw_yr = stor_costs[j]  # pre-computed (Patch 6)
+                net_cost_mw_yr = stor_costs[j]
                 annual_cost = capacity_mw * net_cost_mw_yr
                 vintage_ledger.append((year, sc, capacity_mw, net_cost_mw_yr))
                 year_incremental_cost += annual_cost
@@ -1243,8 +1378,8 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             floor_twh = floor_pcts[ri] / 100.0 * dem_twh
             winner_twh = winner_pcts[ri] / 100.0 * dem_twh
             new_floor_twh = max(floor_twh, winner_twh)
-            if yi < N_YEARS - 1:
-                next_dem = demand_vec[yi + 1]
+            if yi < N_SOLVE_YEARS - 1:
+                next_dem = demand_vec[full_yi + 1]
                 floor_pcts[ri] = new_floor_twh / next_dem * 100.0
             else:
                 floor_pcts[ri] = winner_pcts[ri]
@@ -1252,7 +1387,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         for j in range(4):
             floor_storage[j] = max(floor_storage[j], winner_storage[j])
 
-        # Threshold snapshots — use cached curtailment (Patch 5)
+        # Threshold snapshots
         for t in EF_BAND_THRESHOLDS:
             if t not in thresholds_crossed and winner_cfe >= t:
                 thresholds_crossed.add(t)
@@ -1284,7 +1419,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   f"gas={g_mw:,.0f}MW cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "3.7",
+        "schema_version": "4.0",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1300,10 +1435,19 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "stage2_samples_scaled": cfg.scaled_samples,
             "safety_factor": SAFETY_FACTOR,
             "wrights_law_k": WRIGHTS_LAW_K,
+            "waypoint_2030_pct": get_waypoint_2030(iso),
+            "solve_start_year": SOLVE_START_YEAR,
         },
         "beam_archetype": seed["archetype"],
         "peak_gas_mw": round(peak_gas_mw, 1),
         "peak_gas_year": peak_gas_year,
+        "preperiod": {
+            "year_range": preperiod["preperiod_year_range"],
+            "costed_at_year": preperiod["costed_at_year"],
+            "total_cost_usd": preperiod["preperiod_total_cost_usd"],
+            "clean_cost_usd": preperiod["preperiod_clean_cost_usd"],
+            "gas_cost_usd": preperiod["preperiod_gas_cost_usd"],
+        },
         "n_thresholds_achieved": len(threshold_snapshots),
         "threshold_snapshots": threshold_snapshots,
         "vintage_ledger_summary": {
@@ -1322,10 +1466,8 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                  year, dem_twh, lhs_bank, res_lcoes_free, stor_costs):
     """Find cheapest candidate in [target, ceiling) CFE band.
 
-    Additive cascade (Patch 4): rounds accumulate — prior results are kept,
+    Additive cascade: rounds accumulate — prior results are kept,
     only new samples are scored each round.
-
-    Returns (winner_pcts, winner_storage, cfe, resid, curtail) or 5× None.
     """
     free_idx_arr = np.array(free_idx, dtype=np.intp)
     floor_free = floor_pcts[free_idx_arr]
@@ -1340,8 +1482,6 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         stranding_frac = max(0.0, 1.0 - years_remaining / gas_useful_life)
         gas_capex_per_mw = CCGT_OVERNIGHT_CAPEX_USD_KW * 1000.0
 
-    # Additive cascade: accumulate results across rounds
-    # Round sizes: [1×, 1×, 2×] = 4× total in worst case
     round_sizes = [cfg.scaled_samples,
                    cfg.scaled_samples,
                    cfg.scaled_samples * 2]
@@ -1371,7 +1511,6 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         acc_h2.append(h2)
         total_scored += n_new
 
-        # Check all accumulated candidates
         all_scores = np.concatenate(acc_scores)
         mask = (all_scores >= target) & (all_scores < ceiling)
         valid = np.where(mask)[0]
@@ -1382,7 +1521,6 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                       f"0/{total_scored} in [{target:.1f}, {ceiling:.1f})")
             continue
 
-        # Found valid candidates — compute costs
         all_W = np.concatenate(acc_W)
         all_b4 = np.concatenate(acc_b4)
         all_b8 = np.concatenate(acc_b8)
@@ -1391,7 +1529,6 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         all_resid = np.concatenate(acc_resid)
         all_curtail = np.concatenate(acc_curtail)
 
-        # Vectorized incremental cost (Patch 6: uses pre-computed LCOEs)
         W_valid_pct = all_W[valid][:, free_idx_arr].astype(np.float64) * 100.0
         res_deltas = np.maximum(W_valid_pct - floor_free, 0.0)
         costs = np.sum(res_deltas * (dem_twh / 100.0 * res_lcoes_free * 1e6),
@@ -1423,25 +1560,19 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                 float(all_scores[best]), float(all_resid[best]),
                 float(all_curtail[best]))
 
-    # ── Storage-focused fallback for last mile (≥97% CFE) ──
-    # Standard cascade failed. At high CFE the binding constraint is storage
-    # depth, not VRE volume. Fix VRE near floor with small perturbation,
-    # sample storage aggressively in 4D only → much denser coverage of the
-    # feasible region.
+    # Storage-focused fallback for last mile (≥97% CFE)
     if target >= 97.0:
         n_stor_focused = cfg.scaled_samples * 2
         print(f"    storage-focused fallback: {n_stor_focused} samples, 4D")
         sampler = LatinHypercube(d=4, seed=int(time.time() * 1000) % (2**31))
         stor_unit = sampler.random(n=n_stor_focused)
 
-        # Storage ceilings: 5× floor or floor + 30pp, whichever is larger
         stor_floors = floor_storage.copy()
         stor_ceil = np.maximum(floor_storage * 5.0, floor_storage + 30.0)
-        stor_ceil = np.minimum(stor_ceil, 50.0)  # hard cap
+        stor_ceil = np.minimum(stor_ceil, 50.0)
         stor_ceil = np.maximum(stor_ceil, stor_floors + 1.0)
         stor_raw = stor_floors + stor_unit * (stor_ceil - stor_floors)
 
-        # VRE: small random perturbation above floor (0-5pp per resource)
         rng = np.random.default_rng(seed=42)
         W_sf = np.zeros((n_stor_focused, N_RESOURCES), dtype=np.float32)
         for ri in range(N_RESOURCES):
@@ -1516,14 +1647,12 @@ def warmup_jit():
     batt = np.array([0.0, 10.0], dtype=np.float32)
     zero = np.zeros(n, dtype=np.float32)
 
-    # Warm up serial kernel
     scores_s = np.full(n, -1.0, dtype=np.float32)
     resid_s = np.full(n, np.inf, dtype=np.float32)
     curtail_s = np.zeros(n, dtype=np.float32)
     _score_mixes_serial(scores_s, resid_s, curtail_s, W, P, dm, dn,
                         batt, zero, zero, zero)
 
-    # Warm up parallel kernel
     scores_p = np.full(n, -1.0, dtype=np.float32)
     resid_p = np.full(n, np.inf, dtype=np.float32)
     curtail_p = np.zeros(n, dtype=np.float32)
@@ -1603,11 +1732,16 @@ def main():
     demand_levels = (["Low", "Medium", "High"] if args.batch_demand
                      else [args.demand_growth])
 
+    wp = get_waypoint_2030(iso)
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive (v3.7)")
-    print(f"[adaptive] ISO={iso}  Pathway={args.pathway}")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive (v4.0)")
+    print(f"[adaptive] ISO={iso}  Pathway={args.pathway}  "
+          f"2030 waypoint={wp:.0f}%")
+    print(f"[adaptive] Waypoints: {get_cfe_waypoints(iso)}")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
+    print(f"[adaptive] Solve range: {SOLVE_START_YEAR}-{END_YEAR} "
+          f"({N_SOLVE_YEARS} years) + pre-period at 2030 LCOEs")
     print(f"{'='*70}\n")
 
     warmup_jit()
