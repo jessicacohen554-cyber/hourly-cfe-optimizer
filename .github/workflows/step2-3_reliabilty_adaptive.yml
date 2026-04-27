@@ -121,8 +121,10 @@ jobs:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       fail-fast: false
 
+    # Per-ISO + per-dispatch concurrency — different dispatches (e.g. one per
+    # scenario) run in parallel; re-dispatch of the SAME run queues behind it.
     concurrency:
-      group: step2-3-adaptive-${{ matrix.iso }}
+      group: step2-3-adaptive-${{ matrix.iso }}-${{ github.run_id }}
       cancel-in-progress: false
 
     steps:
