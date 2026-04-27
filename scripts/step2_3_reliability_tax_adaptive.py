@@ -690,43 +690,41 @@ def compute_marginal_yields(
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """Compute marginal CFE yield per +1pp of each free dimension.
 
+    Batches all perturbations into a single kernel call (1 launch instead
+    of 1 + n_free + 4 serial launches). Row layout:
+      [0]                 = floor (unperturbed)
+      [1 .. n_free]       = +1pp on each free resource
+      [n_free+1 .. end]   = +1pp on each storage type
+
     Returns (res_yields, stor_yields, floor_cfe).
-    res_yields[i] = dCFE/d(1pp) for free_res_idx[i].
-    stor_yields[j] = dCFE/d(1pp) for STORAGE_COLS[j].
     """
     n_free = len(free_res_idx)
-    n_dims = n_free + 4  # 4 storage types
+    n_total = 1 + n_free + 4
 
-    # Build floor weight vector
-    W_floor = np.zeros((1, N_RESOURCES), dtype=np.float32)
-    W_floor[0] = (floor_pcts * 0.01).astype(np.float32)
-
-    s_floor = floor_storage.astype(np.float32)
-    floor_scores, _, _ = score_candidates(
-        W_floor, P32, dm32, dn32,
-        s_floor[0:1], s_floor[1:2], s_floor[2:3], s_floor[3:4])
-    floor_cfe = float(floor_scores[0])
-
-    # Perturb each free resource by +1pp
-    res_yields = np.zeros(n_free, dtype=np.float64)
+    # Build batched weight matrix — all rows start as floor
+    base_w = (floor_pcts * 0.01).astype(np.float32)
+    W_batch = np.tile(base_w, (n_total, 1))  # (n_total, N_RESOURCES)
     for k, ri in enumerate(free_res_idx):
-        W_pert = W_floor.copy()
-        W_pert[0, ri] += np.float32(0.01)  # +1pp
-        sc, _, _ = score_candidates(
-            W_pert, P32, dm32, dn32,
-            s_floor[0:1], s_floor[1:2], s_floor[2:3], s_floor[3:4])
-        res_yields[k] = float(sc[0]) - floor_cfe
+        W_batch[1 + k, ri] += np.float32(0.01)  # +1pp resource perturbation
 
-    # Perturb each storage type by +1pp
-    stor_yields = np.zeros(4, dtype=np.float64)
-    for j in range(4):
-        s_pert = s_floor.copy()
-        s_pert[j] += np.float32(1.0)  # +1pp of storage dispatch capacity
-        sc, _, _ = score_candidates(
-            W_floor, P32, dm32, dn32,
-            s_pert[0:1], s_pert[1:2], s_pert[2:3], s_pert[3:4])
-        stor_yields[j] = float(sc[0]) - floor_cfe
+    # Build batched storage arrays — all rows start as floor
+    sf = floor_storage.astype(np.float32)
+    b4 = np.full(n_total, sf[0], dtype=np.float32)
+    b8 = np.full(n_total, sf[1], dtype=np.float32)
+    ld = np.full(n_total, sf[2], dtype=np.float32)
+    h2 = np.full(n_total, sf[3], dtype=np.float32)
+    so = 1 + n_free  # storage perturbation offset
+    b4[so + 0] += np.float32(1.0)
+    b8[so + 1] += np.float32(1.0)
+    ld[so + 2] += np.float32(1.0)
+    h2[so + 3] += np.float32(1.0)
 
+    # Single kernel call
+    scores, _, _ = score_candidates(W_batch, P32, dm32, dn32, b4, b8, ld, h2)
+
+    floor_cfe = float(scores[0])
+    res_yields = scores[1:1 + n_free].astype(np.float64) - floor_cfe
+    stor_yields = scores[1 + n_free:].astype(np.float64) - floor_cfe
     return res_yields, stor_yields, floor_cfe
 
 
@@ -932,24 +930,23 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
 
     print(f"[stage1] {iso}: {len(valid_idx):,} mixes in valid band")
 
-    # Compute delivered cost per mix for ranking
-    costs = np.zeros(len(valid_idx), dtype=np.float64)
+    # Vectorized cost ranking — pre-compute LCOE and storage cost vectors
     base_dem = float(pc.REGIONAL_DEMAND_TWH[iso])
-    for ki, vi in enumerate(valid_idx):
-        c = 0.0
-        for ri, res in enumerate(RESOURCE_ORDER):
-            pct = float(W[vi, ri]) * 100.0
-            if pct > 0.001:
-                # VRE/firm: pct/100 × TWh × $/MWh × 1e6 = $/yr
-                c += pct / 100.0 * base_dem * get_resource_lcoe(
-                    iso, res, BASE_YEAR, cfg) * 1e6
-        # Storage: capacity_MW × $/MW-yr
-        for j, sc in enumerate(STORAGE_COLS):
-            sv = [batt4, batt8, ldes_arr, h2_arr][j][vi]
-            if sv > 0:
-                capacity_mw = float(sv) / 100.0 * base_dem * 1e6 / 8760
-                c += capacity_mw * storage_net_cost(iso, sc, cfg)
-        costs[ki] = c
+    res_lcoes = np.array([get_resource_lcoe(iso, res, BASE_YEAR, cfg)
+                          for res in RESOURCE_ORDER], dtype=np.float64)
+    stor_costs = np.array([storage_net_cost(iso, sc, cfg)
+                           for sc in STORAGE_COLS], dtype=np.float64)
+
+    # Resource costs: (n_valid, N_RESOURCES)
+    W_valid_pct = W[valid_idx].astype(np.float64) * 100.0
+    costs = np.sum(W_valid_pct / 100.0 * base_dem * res_lcoes * 1e6, axis=1)
+
+    # Storage costs: (n_valid, 4)
+    stor_vals = np.column_stack([batt4[valid_idx], batt8[valid_idx],
+                                  ldes_arr[valid_idx], h2_arr[valid_idx]]
+                                 ).astype(np.float64)
+    stor_mw = stor_vals / 100.0 * base_dem * 1e6 / 8760
+    costs += np.sum(stor_mw * stor_costs, axis=1)
 
     # Classify archetypes
     archetypes = {}
@@ -1291,6 +1288,14 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
 
     Cascade: 1× → 2× → 4× samples, then infeasible.
     """
+    # Pre-compute cost vectors (constant across candidates)
+    free_idx_arr = np.array(free_idx, dtype=np.intp)
+    res_lcoes = np.array([get_resource_lcoe(cfg.iso, RESOURCE_ORDER[ri], year, cfg)
+                          for ri in free_idx], dtype=np.float64)
+    stor_costs = np.array([storage_net_cost(cfg.iso, sc, cfg)
+                           for sc in STORAGE_COLS], dtype=np.float64)
+    floor_free = floor_pcts[free_idx_arr]  # (n_free,)
+
     for multiplier in [1, 2, 4]:
         n = cfg.scaled_samples * multiplier
         W, b4, b8, ld, h2, raw = generate_candidates(
@@ -1310,34 +1315,27 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                       f"0 hits in [{target:.1f}, {ceiling:.1f})")
             continue
 
-        # Compute incremental cost for each valid candidate
-        costs = np.zeros(len(valid), dtype=np.float64)
-        for ki, vi in enumerate(valid):
-            c = 0.0
-            for k, ri in enumerate(free_idx):
-                delta = float(W[vi, ri]) * 100.0 - floor_pcts[ri]
-                if delta > 0:
-                    c += delta / 100.0 * dem_twh * get_resource_lcoe(
-                        cfg.iso, RESOURCE_ORDER[ri], year, cfg) * 1e6
-            for j, sc in enumerate(STORAGE_COLS):
-                sv = [b4, b8, ld, h2][j][vi]
-                delta = float(sv) - floor_storage[j]
-                if delta > 0:
-                    # Storage: capacity MW × $/MW-yr
-                    capacity_mw = delta / 100.0 * dem_twh * 1e6 / 8760
-                    c += capacity_mw * storage_net_cost(cfg.iso, sc, cfg)
-            costs[ki] = c
+        # Vectorized incremental cost: no Python loop over candidates
+        # Resource deltas: (n_valid, n_free)
+        W_valid_pct = W[valid][:, free_idx_arr].astype(np.float64) * 100.0
+        res_deltas = np.maximum(W_valid_pct - floor_free, 0.0)
+        costs = np.sum(res_deltas * (dem_twh / 100.0 * res_lcoes * 1e6), axis=1)
+
+        # Storage deltas: (n_valid, 4)
+        stor_vals = np.column_stack([b4[valid], b8[valid],
+                                     ld[valid], h2[valid]]).astype(np.float64)
+        stor_deltas = np.maximum(stor_vals - floor_storage, 0.0)
+        stor_mw = stor_deltas * (dem_twh * 1e6 / 8760 / 100.0)
+        costs += np.sum(stor_mw * stor_costs, axis=1)
 
         best = valid[np.argmin(costs)]
-        winner_pcts = np.array([float(W[best, ri]) * 100.0
-                                for ri in range(N_RESOURCES)], dtype=np.float64)
+        winner_pcts = W[best].astype(np.float64) * 100.0
         # Restore frozen resources
-        for ri in range(N_RESOURCES):
-            if ri not in free_idx:
-                winner_pcts[ri] = floor_pcts[ri]
-        winner_storage = np.array([
-            float([b4, b8, ld, h2][j][best]) for j in range(4)
-        ], dtype=np.float64)
+        frozen_mask = np.ones(N_RESOURCES, dtype=bool)
+        frozen_mask[free_idx_arr] = False
+        winner_pcts[frozen_mask] = floor_pcts[frozen_mask]
+        winner_storage = np.array([b4[best], b8[best], ld[best], h2[best]],
+                                   dtype=np.float64)
 
         return winner_pcts, winner_storage, float(scores[best]), float(resid[best])
 
