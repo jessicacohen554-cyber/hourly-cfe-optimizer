@@ -105,7 +105,9 @@ jobs:
           EF_COUNT=0
           for f in "${EF_FILES[@]}"; do
             case "$f" in
-              *_peakclean.parquet|*_interp_*.parquet) ;;
+              # FIX: also exclude _augment.parquet so prior augment files
+              # don't satisfy the prereq when base EF files are missing
+              *_peakclean.parquet|*_interp_*.parquet|*_augment.parquet) ;;
               *) EF_COUNT=$((EF_COUNT + 1)) ;;
             esac
           done
@@ -144,10 +146,11 @@ jobs:
           git config http.postBuffer 524288000
           git checkout -b "${BRANCH}"
 
+      # FIX: reference the actual filename (archetyoe typo in repo)
       - name: "Run archetype augmentation — ${{ matrix.iso }}"
         timeout-minutes: 45
         run: |
-          python scripts/step2_1e_archetype_augment.py \
+          python scripts/step2_1e_archetyoe_augment.py \
             --iso ${{ matrix.iso }} \
             --target ${{ inputs.target || '5000' }}
 
