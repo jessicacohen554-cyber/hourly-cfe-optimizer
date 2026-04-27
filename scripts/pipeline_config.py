@@ -1031,12 +1031,14 @@ LCOE_TABLES = {
         'High':   {'CAISO': 8760.00, 'ERCOT': 7533.60, 'PJM': 8234.40, 'NYISO': 9723.60, 'NEISO': 9285.60, 'MISO': 7884.00, 'SPP': 7708.80},
     },
     # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
-    # CAPEX/kWh: L=$150, M=$220, H=$310. Duration=168hr, FOM=$8/kW-yr.
-    # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
+    # CAPEX/kWh at 1000hr duration: L=$42, M=$54, H=$69.
+    # Decomposed from 168hr basis: $/kWh_1000 = P/1000 + E, where
+    # P = ($/kWh_168 - E) * 168, E ~ $20/kWh (salt cavern all-in).
+    # FOM=$8/kW-yr. Duration=1000hr (seasonal salt cavern storage).
     'h2': {
-        'Low':    {'CAISO': 17344.80, 'ERCOT': 15330.00, 'PJM': 16468.80, 'NYISO': 19096.80, 'NEISO': 18220.80, 'MISO': 15768.00, 'SPP': 15067.20},
-        'Medium': {'CAISO': 25404.00, 'ERCOT': 22425.60, 'PJM': 24177.60, 'NYISO': 27944.40, 'NEISO': 26718.00, 'MISO': 23038.80, 'SPP': 22075.20},
-        'High':   {'CAISO': 35828.40, 'ERCOT': 31623.60, 'PJM': 33988.80, 'NYISO': 39420.00, 'NEISO': 37580.40, 'MISO': 32499.60, 'SPP': 31010.40},
+        'Low':    {'CAISO': 4839.2, 'ERCOT': 4277.1, 'PJM': 4594.8, 'NYISO': 5328.0, 'NEISO': 5083.6, 'MISO': 4399.3, 'SPP': 4203.7},
+        'Medium': {'CAISO': 6224.0, 'ERCOT': 5494.3, 'PJM': 5923.5, 'NYISO': 6846.4, 'NEISO': 6545.9, 'MISO': 5644.5, 'SPP': 5408.4},
+        'High':   {'CAISO': 7953.9, 'ERCOT': 7020.4, 'PJM': 7545.5, 'NYISO': 8751.2, 'NEISO': 8342.8, 'MISO': 7214.9, 'SPP': 6884.3},
     },
 }
 
@@ -1340,9 +1342,10 @@ FOAK_LDES = {
     'CAISO': 12264.00, 'ERCOT': 10512.00, 'PJM': 11563.20, 'NYISO': 13578.00,
     'NEISO': 12964.80, 'MISO': 11037.60, 'SPP': 10774.80,
 }
+# H2 FOAK: 1.30x High at 1000hr basis.
 FOAK_H2 = {
-    'CAISO': 46603.20, 'ERCOT': 41084.40, 'PJM': 44150.40, 'NYISO': 51246.00,
-    'NEISO': 48880.80, 'MISO': 42223.20, 'SPP': 40296.00,
+    'CAISO': 10345.9, 'ERCOT': 9120.7, 'PJM': 9801.4, 'NYISO': 11376.6,
+    'NEISO': 10851.5, 'MISO': 9373.6, 'SPP': 8945.7,
 }
 
 # ============================================================================
