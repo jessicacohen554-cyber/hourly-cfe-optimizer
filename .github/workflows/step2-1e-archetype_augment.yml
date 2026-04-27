@@ -146,11 +146,10 @@ jobs:
           git config http.postBuffer 524288000
           git checkout -b "${BRANCH}"
 
-      # FIX: reference the actual filename (archetyoe typo in repo)
       - name: "Run archetype augmentation — ${{ matrix.iso }}"
         timeout-minutes: 45
         run: |
-          python scripts/step2_1e_archetyoe_augment.py \
+          python scripts/step2_1e_archetype_augment.py \
             --iso ${{ matrix.iso }} \
             --target ${{ inputs.target || '5000' }}
 
