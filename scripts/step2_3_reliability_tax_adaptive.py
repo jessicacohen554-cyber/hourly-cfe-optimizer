@@ -820,6 +820,22 @@ def generate_candidates(floor_pcts, floor_storage, target_cfe, floor_cfe,
 # ---------------------------------------------------------------------------
 # Stage 1 — Archetype selection from EF parquets at 2030 waypoint
 # ---------------------------------------------------------------------------
+def _normalize_large_strings(table):
+    """Cast large_string → string for cross-version EF parquet compat.
+
+    Step 2.1 parquets may use large_string (written by older pyarrow or
+    pandas defaults), while Step 2.1e augment parquets use string.
+    pa.concat_tables cannot auto-promote between the two.
+    """
+    schema = table.schema
+    for i, field in enumerate(schema):
+        if field.type == pa.large_string():
+            table = table.set_column(
+                i, field.name,
+                table.column(i).cast(pa.string()))
+    return table
+
+
 def load_ef_band(iso, threshold):
     """Load EF parquets for a given ISO and threshold band.
 
@@ -836,7 +852,7 @@ def load_ef_band(iso, threshold):
                    and p.suffix == ".parquet")
     if not paths:
         return None
-    tbls = [pq.read_table(p) for p in paths]
+    tbls = [_normalize_large_strings(pq.read_table(p)) for p in paths]
     if len(tbls) > 1:
         return pa.concat_tables(tbls, promote_options="default")
     return tbls[0]
