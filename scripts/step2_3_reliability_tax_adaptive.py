@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-step2_3_reliability_tax_adaptive.py  (v4.0)
+step2_3_reliability_tax_adaptive.py  (v4.1)
 On-the-fly mix generation with two-stage adaptive LHS sampling.
 
 Architecture:
   Pre-period: Single-cost from baseline to 2030 waypoint at 2030 LCOEs.
   Stage 1:    Load Step 2.1 EF parquets at the 2030 waypoint band (50%/60%).
+              Includes *_augment.parquet from step 2.1e via prefix matching.
               Cluster into archetypes, pick N diverse low-cost seeds.
   Stage 2:    For each seed, build year-by-year pathway from 2030 to 99.9% by
               2050 via two-stage adaptive LHS:
@@ -116,6 +117,9 @@ STORAGE_COLS = [
     "battery_dispatch_pct", "battery8_dispatch_pct",
     "ldes_dispatch_pct", "h2_dispatch_pct",
 ]
+# v4.1 perf: module-level set avoids re-creation per year in solve_pathway
+_STORAGE_COLS_SET = frozenset(STORAGE_COLS)
+
 STORAGE_PARAMS = {
     "battery_dispatch_pct":  (4,    0.85, 24,  "battery",  4),
     "battery8_dispatch_pct": (8,    0.85, 48,  "battery8", 8),
@@ -634,8 +638,8 @@ def decompose_clean_firm(cf_twh, iso, year, cfg):
     uprate = min(rem, uc)
     uprate_lcoe = float(pc.UPRATE_LCOE[cfg.firm_cost])
     rem -= uprate
-    gc = float(pc.GEOTHERMAL_CAP_TWH) if iso == "CAISO" else 0.0
-    geo = min(rem, gc) if gc > 0 else 0.0
+    gc_val = float(pc.GEOTHERMAL_CAP_TWH) if iso == "CAISO" else 0.0
+    geo = min(rem, gc_val) if gc_val > 0 else 0.0
     geo_lcoe = _base_lcoe(iso, "geothermal", year, cfg) + _tx_adder(
         iso, "clean_firm", cfg.tx_level)
     rem -= geo
@@ -709,7 +713,7 @@ def compute_marginal_yields(floor_pcts, floor_storage, free_res_idx,
 
 
 # ---------------------------------------------------------------------------
-# LHS sample bank
+# LHS sample bank — v4.1: fast overflow path
 # ---------------------------------------------------------------------------
 class LHSBank:
     def __init__(self, n_dims, total_samples, seed=42):
@@ -717,6 +721,7 @@ class LHSBank:
         self.samples = sampler.random(n=total_samples).astype(np.float64)
         self.n_dims = n_dims
         self._offset = 0
+        self._rng = np.random.default_rng(seed=seed + 9999)
 
     def reset(self):
         self._offset = 0
@@ -727,8 +732,10 @@ class LHSBank:
             batch = self.samples[self._offset:end]
             self._offset = end
             return batch
-        sampler = LatinHypercube(d=self.n_dims)
-        return sampler.random(n=n).astype(np.float64)
+        # v4.1 perf: plain uniform is ~10-50× faster than constructing a new
+        # LatinHypercube. Overflow samples are already non-stratified relative
+        # to the main bank, so there is no quality loss.
+        return self._rng.random((n, self.n_dims))
 
 
 # ---------------------------------------------------------------------------
@@ -814,6 +821,12 @@ def generate_candidates(floor_pcts, floor_storage, target_cfe, floor_cfe,
 # Stage 1 — Archetype selection from EF parquets at 2030 waypoint
 # ---------------------------------------------------------------------------
 def load_ef_band(iso, threshold):
+    """Load EF parquets for a given ISO and threshold band.
+
+    Picks up all parquets matching the prefix ``step_2_1_EF_{iso}_{band}``
+    in EF_DIR, including ``*_augment.parquet`` from Step 2.1e archetype
+    augmentation. Excludes ``peakclean`` and ``interp`` sidecars.
+    """
     ttag = str(int(threshold)) if threshold == int(threshold) else str(threshold)
     pattern = f"step_2_1_EF_{iso}_{ttag}"
     paths = sorted(p for p in EF_DIR.iterdir()
@@ -881,6 +894,9 @@ def stage1_select(iso, cfg, P32, dm32, dn32):
     batt8 = _col("battery8_dispatch_pct")
     ldes_arr = _col("ldes_dispatch_pct")
     h2_arr = _col("h2_dispatch_pct")
+
+    # Free the Arrow table before scoring (can be hundreds of MB)
+    del ef
 
     scores, resid, curtail = score_candidates(W, P32, dm32, dn32,
                                                batt4, batt8, ldes_arr, h2_arr)
@@ -1023,6 +1039,9 @@ def compute_preperiod(seed, cfg, P32, dm32, dn32):
 
 # ---------------------------------------------------------------------------
 # Stage 2 — Two-stage adaptive LHS _find_winner
+# v4.1: restructured to avoid R1+R2 full-array concatenation.
+# Evaluates feasibility/cost per round, compares winners. Mathematically
+# equivalent: cheapest(R1 ∪ R2) = min(cheapest(R1), cheapest(R2)).
 # ---------------------------------------------------------------------------
 def _find_winner(floor_pcts, floor_storage, target, ceiling,
                  floor_cfe, res_yields, stor_yields,
@@ -1040,8 +1059,9 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
     floor_free = floor_pcts[free_idx_arr]
     n_free = len(free_idx)
 
-    # Gas shadow cost setup (now applies to both pathways if toggled on)
+    # Gas shadow cost setup
     use_gas_shadow = cfg.use_gas_shadow
+    gas_shadow_params = None
     if use_gas_shadow:
         existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
         gaf = float(pc.GAS_AVAILABILITY_FACTOR[cfg.iso])
@@ -1049,35 +1069,42 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         years_remaining = max(1.0, float(END_YEAR - year))
         stranding_frac = max(0.0, 1.0 - years_remaining / gas_useful_life)
         gas_capex_per_mw = CCGT_OVERNIGHT_CAPEX_USD_KW * 1000.0
+        gas_shadow_params = (existing_gas, gaf, stranding_frac, gas_capex_per_mw)
 
     def _cost_valid(valid, all_W, all_b4, all_b8, all_ld, all_h2, all_resid):
         """Compute incremental cost for valid candidates."""
-        W_valid_pct = all_W[valid][:, free_idx_arr].astype(np.float64) * 100.0
-        res_deltas = np.maximum(W_valid_pct - floor_free, 0.0)
+        W_free = all_W[valid][:, free_idx_arr].astype(np.float64) * 100.0
+        res_deltas = np.maximum(W_free - floor_free, 0.0)
         costs = np.sum(res_deltas * (dem_twh / 100.0 * res_lcoes_free * 1e6), axis=1)
         sv = np.column_stack([all_b4[valid], all_b8[valid],
                                all_ld[valid], all_h2[valid]]).astype(np.float64)
         sd = np.maximum(sv - floor_storage, 0.0)
         sm = sd * (dem_twh * 1e6 / 8760 / 100.0)
         costs += np.sum(sm * stor_costs, axis=1)
-        if use_gas_shadow and stranding_frac > 0:
+        if use_gas_shadow and gas_shadow_params[2] > 0:
+            eg, gf, sf, gcpm = gas_shadow_params
             rv = all_resid[valid].astype(np.float64)
-            gm = np.maximum(rv * dem_twh * 1e6 / gaf - existing_gas, 0.0)
-            costs += gm * gas_capex_per_mw * stranding_frac
+            gm = np.maximum(rv * dem_twh * 1e6 / gf - eg, 0.0)
+            costs += gm * gcpm * sf
         return costs
 
-    def _extract_winner(valid, costs, all_W, all_b4, all_b8, all_ld, all_h2,
-                        all_scores, all_resid, all_curtail):
+    def _best_from_pool(sc, re, cu, W, b4, b8, ld, h2):
+        """Find cheapest feasible candidate in a scored pool.
+        Returns (winner_pcts, winner_storage, cfe, resid, curtail, cost) or Nones."""
+        mask = (sc >= target) & (sc < ceiling)
+        valid = np.where(mask)[0]
+        if len(valid) == 0:
+            return None, None, None, None, None, np.inf
+        costs = _cost_valid(valid, W, b4, b8, ld, h2, re)
         best_local = np.argmin(costs)
         best = valid[best_local]
-        wp = all_W[best].astype(np.float64) * 100.0
+        wp = W[best].astype(np.float64) * 100.0
         fm = np.ones(N_RESOURCES, dtype=bool)
         fm[free_idx_arr] = False
         wp[fm] = floor_pcts[fm]
-        ws = np.array([all_b4[best], all_b8[best],
-                        all_ld[best], all_h2[best]], dtype=np.float64)
-        return (wp, ws, float(all_scores[best]),
-                float(all_resid[best]), float(all_curtail[best]))
+        ws = np.array([b4[best], b8[best], ld[best], h2[best]], dtype=np.float64)
+        return (wp, ws, float(sc[best]), float(re[best]),
+                float(cu[best]), float(costs[best_local]))
 
     # ── Round 1: Coarse screen ──
     lhs_bank.reset()
@@ -1094,9 +1121,9 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
           f"in [{target:.1f}, {ceiling:.1f})")
 
     # If too few hits, widen bounds and resample
+    raw1_valid = None  # lazy: only extract for bbox when needed
     if n_hits_r1 < cfg.min_hits:
         # Widen: 2× the marginal-yield bounds
-        n_free = len(free_idx)
         n_dims = n_free + 4
         increment = max(0.1, target - floor_cfe)
         n_active = max(1, sum(1 for y in res_yields if y > 0.01)
@@ -1139,7 +1166,7 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
             bounds_override=(floors_w, ceilings_w))
         scw, rew, cuw = score_candidates(Ww, P32, dm32, dn32, b4w, b8w, ldw, h2w)
 
-        # Combine with Round 1
+        # Combine R1 + widen for scoring and bounding box
         sc1 = np.concatenate([sc1, scw])
         re1 = np.concatenate([re1, rew])
         cu1 = np.concatenate([cu1, cuw])
@@ -1158,17 +1185,20 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
 
     # If still no hits after screen + widen
     if n_hits_r1 == 0:
-        # Try storage-focused fallback at ≥97%
         if target >= 97.0:
             return _storage_fallback(
                 floor_pcts, floor_storage, target, ceiling,
                 free_idx, cfg, P32, dm32, dn32,
                 dem_twh, floor_free, res_lcoes_free, stor_costs,
-                use_gas_shadow, locals())
+                use_gas_shadow, gas_shadow_params, year)
         return None, None, None, None, None
 
+    # v4.1 perf: find best from R1 pool
+    r1_pcts, r1_stor, r1_cfe, r1_resid, r1_curtail, r1_cost = \
+        _best_from_pool(sc1, re1, cu1, W1, b4_1, b8_1, ld_1, h2_1)
+
     # ── Round 2: Tight bounding box refinement ──
-    # Compute per-dimension bounding box from feasible hits
+    # v4.1 perf: extract raw only for valid rows (small) instead of full concat
     raw_valid = raw1[valid1]  # (n_hits, n_dims)
     bb_min = raw_valid.min(axis=0)
     bb_max = raw_valid.max(axis=0)
@@ -1178,7 +1208,6 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
     bb_ceilings = bb_max + bb_range * margin
 
     # Clamp: don't go below original floor
-    n_free = len(free_idx)
     for k in range(n_free):
         bb_floors[k] = max(bb_floors[k], floor_pcts[free_idx[k]])
     for j in range(4):
@@ -1188,47 +1217,47 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
           f"(margin={margin:.0%})")
 
     unit2 = lhs_bank.draw(cfg.refine_samples)
-    W2, b4_2, b8_2, ld_2, h2_2, raw2 = generate_candidates(
+    W2, b4_2, b8_2, ld_2, h2_2, _raw2 = generate_candidates(
         floor_pcts, floor_storage, target, floor_cfe,
         res_yields, stor_yields, free_idx, cfg,
         cfg.refine_samples, unit2,
         bounds_override=(bb_floors, bb_ceilings))
     sc2, re2, cu2 = score_candidates(W2, P32, dm32, dn32, b4_2, b8_2, ld_2, h2_2)
 
-    # Combine R1 + R2 hits
-    all_sc = np.concatenate([sc1, sc2])
-    all_re = np.concatenate([re1, re2])
-    all_cu = np.concatenate([cu1, cu2])
-    all_W = np.concatenate([W1, W2])
-    all_b4 = np.concatenate([b4_1, b4_2])
-    all_b8 = np.concatenate([b8_1, b8_2])
-    all_ld = np.concatenate([ld_1, ld_2])
-    all_h2 = np.concatenate([h2_1, h2_2])
-
-    mask_all = (all_sc >= target) & (all_sc < ceiling)
-    valid_all = np.where(mask_all)[0]
-
     r2_mask = (sc2 >= target) & (sc2 < ceiling)
-    print(f"    R2 hits: {int(r2_mask.sum())}, combined: {len(valid_all)}")
+    r2_hits = int(r2_mask.sum())
 
-    if len(valid_all) == 0:
-        if target >= 97.0:
-            return _storage_fallback(
-                floor_pcts, floor_storage, target, ceiling,
-                free_idx, cfg, P32, dm32, dn32,
-                dem_twh, floor_free, res_lcoes_free, stor_costs,
-                use_gas_shadow, locals())
-        return None, None, None, None, None
+    # v4.1 perf: find best from R2 pool, compare with R1 winner
+    r2_pcts, r2_stor, r2_cfe, r2_resid, r2_curtail, r2_cost = \
+        _best_from_pool(sc2, re2, cu2, W2, b4_2, b8_2, ld_2, h2_2)
 
-    costs = _cost_valid(valid_all, all_W, all_b4, all_b8, all_ld, all_h2, all_re)
-    return _extract_winner(valid_all, costs, all_W, all_b4, all_b8, all_ld, all_h2,
-                           all_sc, all_re, all_cu)
+    print(f"    R2 hits: {r2_hits}, R1 best cost: ${r1_cost/1e9:.3f}B"
+          + (f", R2 best cost: ${r2_cost/1e9:.3f}B" if r2_pcts is not None else ""))
+
+    # Pick cheaper winner across R1 and R2
+    if r1_pcts is not None and r2_pcts is not None:
+        if r2_cost < r1_cost:
+            return r2_pcts, r2_stor, r2_cfe, r2_resid, r2_curtail
+        return r1_pcts, r1_stor, r1_cfe, r1_resid, r1_curtail
+    elif r1_pcts is not None:
+        return r1_pcts, r1_stor, r1_cfe, r1_resid, r1_curtail
+    elif r2_pcts is not None:
+        return r2_pcts, r2_stor, r2_cfe, r2_resid, r2_curtail
+
+    # Both empty (shouldn't happen if n_hits_r1 > 0, but defensive)
+    if target >= 97.0:
+        return _storage_fallback(
+            floor_pcts, floor_storage, target, ceiling,
+            free_idx, cfg, P32, dm32, dn32,
+            dem_twh, floor_free, res_lcoes_free, stor_costs,
+            use_gas_shadow, gas_shadow_params, year)
+    return None, None, None, None, None
 
 
 def _storage_fallback(floor_pcts, floor_storage, target, ceiling,
                       free_idx, cfg, P32, dm32, dn32,
                       dem_twh, floor_free, res_lcoes_free, stor_costs,
-                      use_gas_shadow, ctx):
+                      use_gas_shadow, gas_shadow_params, year):
     """Storage-focused 4D fallback for last mile (≥97% CFE)."""
     free_idx_arr = np.array(free_idx, dtype=np.intp)
     n_stor = cfg.refine_samples
@@ -1272,15 +1301,12 @@ def _storage_fallback(floor_pcts, floor_storage, target, ceiling,
         sm = sd * (dem_twh * 1e6 / 8760 / 100.0)
         costs += np.sum(sm * stor_costs, axis=1)
 
-        if use_gas_shadow:
-            existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[cfg.iso])
-            gaf = float(pc.GAS_AVAILABILITY_FACTOR[cfg.iso])
-            yrs_rem = max(1.0, float(END_YEAR - ctx.get('year', 2045)))
-            sf_frac = max(0.0, 1.0 - yrs_rem / 30.0)
+        if use_gas_shadow and gas_shadow_params is not None:
+            eg, gf, sf_frac, gcpm = gas_shadow_params
             if sf_frac > 0:
                 rv = sf_re[valid].astype(np.float64)
-                gm = np.maximum(rv * dem_twh * 1e6 / gaf - existing_gas, 0.0)
-                costs += gm * CCGT_OVERNIGHT_CAPEX_USD_KW * 1000.0 * sf_frac
+                gm = np.maximum(rv * dem_twh * 1e6 / gf - eg, 0.0)
+                costs += gm * gcpm * sf_frac
 
         bl = np.argmin(costs)
         best = valid[bl]
@@ -1465,8 +1491,8 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
             peak_gas_mw = g_mw
             peak_gas_year = year
 
-        _sn = set(STORAGE_COLS)
-        total_vintage_cost = sum(q * uc if r in _sn else q * uc * 1e6
+        # v4.1 perf: use module-level _STORAGE_COLS_SET instead of set() per year
+        total_vintage_cost = sum(q * uc if r in _STORAGE_COLS_SET else q * uc * 1e6
                                   for _, r, q, uc in vintage_ledger)
         total_annual = total_vintage_cost + g_cost
         cumulative_cost += total_annual
@@ -1507,7 +1533,7 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
                   f"gas={g_mw:,.0f}MW cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "4.0",
+        "schema_version": "4.1",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1545,9 +1571,9 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
         "vintage_ledger_summary": {
             "n_vintages": len(vintage_ledger),
             "total_gen_twh_built": round(sum(
-                t for _, r, t, _ in vintage_ledger if r not in STORAGE_COLS), 2),
+                t for _, r, t, _ in vintage_ledger if r not in _STORAGE_COLS_SET), 2),
             "total_storage_mw_built": round(sum(
-                t for _, r, t, _ in vintage_ledger if r in STORAGE_COLS), 1),
+                t for _, r, t, _ in vintage_ledger if r in _STORAGE_COLS_SET), 1),
         },
     }
 
@@ -1622,7 +1648,7 @@ def build_configs(iso, pathway, scenarios, demand_levels,
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Step 2.3 Adaptive — two-stage LHS reliability tax optimizer (v4.0)")
+        description="Step 2.3 Adaptive — two-stage LHS reliability tax optimizer (v4.1)")
     ap.add_argument("--iso", type=str, required=True)
     ap.add_argument("--pathway", type=str, required=True, choices=["A", "B"])
     ap.add_argument("--demand-growth", type=str, default="Medium",
@@ -1661,7 +1687,7 @@ def main():
     wp = get_waypoint_2030(iso)
     gas_mode = "ON" if (args.pathway == "B" or args.gas_shadow) else "OFF"
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive (v4.0)")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive (v4.1)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}  "
           f"2030 waypoint={wp:.0f}%  Gas shadow={gas_mode}")
     print(f"[adaptive] Waypoints: {get_cfe_waypoints(iso)}")
@@ -1697,6 +1723,9 @@ def main():
     if not seeds:
         print(f"[adaptive] No seeds found. Exiting.")
         return 1
+
+    # v4.1 perf: free EF table memory before 21-year solve loop
+    gc.collect()
 
     t_total = time.time()
     for ci, cfg in enumerate(configs):
