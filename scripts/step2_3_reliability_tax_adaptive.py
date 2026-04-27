@@ -821,7 +821,13 @@ def generate_candidates(
     n_active = (sum(1 for y in res_yields if y > 0.01)
                 + sum(1 for y in stor_yields if y > 0.01))
     n_active = max(n_active, 1)
-    dim_sf = SAFETY_FACTOR * 2.0 / n_active
+    # Last mile (≥97% CFE): each dimension needs full headroom — overshooting
+    # is cheap (just curtailment) but undershooting is a cascade miss.
+    # Below 97%: divide by n_active so total expected CFE ≈ increment.
+    if target_cfe >= 97.0:
+        dim_sf = SAFETY_FACTOR * 3.0
+    else:
+        dim_sf = SAFETY_FACTOR * 2.0 / n_active
 
     res_ceilings = np.zeros(n_free, dtype=np.float64)
     for k in range(n_free):
@@ -1150,7 +1156,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         if yi < N_YEARS - 1:
             cfe_ceiling = cfe_targets[yi + 1]
         else:
-            cfe_ceiling = 100.0
+            cfe_ceiling = 100.01  # > max possible score (100.0), accepts all ≥ target
 
         # Marginal yields — serial kernel, returns floor scores (Patch 2 + 5)
         res_yields, stor_yields, floor_cfe, floor_resid, floor_curtail = (
@@ -1426,6 +1432,72 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         return (winner_pcts, winner_storage,
                 float(all_scores[best]), float(all_resid[best]),
                 float(all_curtail[best]))
+
+    # ── Storage-focused fallback for last mile (≥97% CFE) ──
+    # Standard cascade failed. At high CFE the binding constraint is storage
+    # depth, not VRE volume. Fix VRE near floor with small perturbation,
+    # sample storage aggressively in 4D only → much denser coverage of the
+    # feasible region.
+    if target >= 97.0:
+        n_stor_focused = cfg.scaled_samples * 2
+        print(f"    storage-focused fallback: {n_stor_focused} samples, 4D")
+        sampler = LatinHypercube(d=4, seed=int(time.time() * 1000) % (2**31))
+        stor_unit = sampler.random(n=n_stor_focused)
+
+        # Storage ceilings: 5× floor or floor + 30pp, whichever is larger
+        stor_floors = floor_storage.copy()
+        stor_ceil = np.maximum(floor_storage * 5.0, floor_storage + 30.0)
+        stor_ceil = np.minimum(stor_ceil, 50.0)  # hard cap
+        stor_ceil = np.maximum(stor_ceil, stor_floors + 1.0)
+        stor_raw = stor_floors + stor_unit * (stor_ceil - stor_floors)
+
+        # VRE: small random perturbation above floor (0-5pp per resource)
+        rng = np.random.default_rng(seed=42)
+        W_sf = np.zeros((n_stor_focused, N_RESOURCES), dtype=np.float32)
+        for ri in range(N_RESOURCES):
+            W_sf[:, ri] = np.float32(floor_pcts[ri] * 0.01)
+        for ri in free_idx:
+            noise = rng.uniform(0, 5.0, size=n_stor_focused)
+            W_sf[:, ri] = ((floor_pcts[ri] + noise) * 0.01).astype(np.float32)
+
+        sf_b4 = stor_raw[:, 0].astype(np.float32)
+        sf_b8 = stor_raw[:, 1].astype(np.float32)
+        sf_ld = stor_raw[:, 2].astype(np.float32)
+        sf_h2 = stor_raw[:, 3].astype(np.float32)
+
+        sf_scores, sf_resid, sf_curtail = score_candidates(
+            W_sf, P32, dm32, dn32, sf_b4, sf_b8, sf_ld, sf_h2)
+
+        mask = (sf_scores >= target) & (sf_scores < ceiling)
+        valid = np.where(mask)[0]
+
+        if len(valid) > 0:
+            print(f"    storage-focused: {len(valid)} hits")
+            W_valid_pct = W_sf[valid][:, free_idx_arr].astype(np.float64) * 100.0
+            res_deltas = np.maximum(W_valid_pct - floor_free, 0.0)
+            costs = np.sum(res_deltas * (dem_twh / 100.0 * res_lcoes_free * 1e6),
+                           axis=1)
+            sf_stor_vals = np.column_stack([sf_b4[valid], sf_b8[valid],
+                                            sf_ld[valid], sf_h2[valid]]
+                                            ).astype(np.float64)
+            sf_stor_deltas = np.maximum(sf_stor_vals - floor_storage, 0.0)
+            sf_stor_mw = sf_stor_deltas * (dem_twh * 1e6 / 8760 / 100.0)
+            costs += np.sum(sf_stor_mw * stor_costs, axis=1)
+
+            best_local = np.argmin(costs)
+            best = valid[best_local]
+            winner_pcts = W_sf[best].astype(np.float64) * 100.0
+            frozen_mask = np.ones(N_RESOURCES, dtype=bool)
+            frozen_mask[free_idx_arr] = False
+            winner_pcts[frozen_mask] = floor_pcts[frozen_mask]
+            winner_storage = np.array([sf_b4[best], sf_b8[best],
+                                       sf_ld[best], sf_h2[best]],
+                                       dtype=np.float64)
+            return (winner_pcts, winner_storage,
+                    float(sf_scores[best]), float(sf_resid[best]),
+                    float(sf_curtail[best]))
+        else:
+            print(f"    storage-focused: 0 hits — infeasible")
 
     return None, None, None, None, None
 
