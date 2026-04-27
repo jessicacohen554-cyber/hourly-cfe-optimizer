@@ -78,7 +78,8 @@ GAS_CF = 0.45
 RA_MARGIN = pc.RESOURCE_ADEQUACY_MARGIN  # 0.15
 RATCHET_TOL_PCT = 0.01
 SAFETY_FACTOR = 1.5
-WRIGHTS_LAW_K = 3.0  # calibrated so curve reaches ~95% of way to NOAK by t_noak
+WRIGHTS_LAW_K = 5.0  # compressed curve — reaches ~99% of NOAK by t_noak
+NUCLEAR_FOAK_DISCOUNT = 0.80  # next builds start at 80% of Vogtle-era FOAK
 
 EF_DIR = PROJECT_ROOT / "data" / "step2.1-ef"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "step2.3-adaptive"
@@ -491,9 +492,10 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
     gl = cfg.geo_cost
 
     if resource == "clean_firm":
+        foak = pc.FOAK_NUCLEAR_NEWBUILD[iso] * NUCLEAR_FOAK_DISCOUNT
         noak = pc.NUCLEAR_NEWBUILD_LCOE[fl][iso]
         fs, ny = pc.get_pathway_noak_window("nuclear", fl, "3")
-        return wrights_law_cost(pc.FOAK_NUCLEAR_NEWBUILD[iso], noak, year, fs, ny)
+        return wrights_law_cost(foak, noak, year, fs, ny)
 
     if resource == "ccs_ccgt":
         q45_on = cfg.q45 == "1"
