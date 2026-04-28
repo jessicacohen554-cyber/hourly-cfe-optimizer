@@ -820,20 +820,68 @@ def generate_candidates(floor_pcts, floor_storage, target_cfe, floor_cfe,
 # ---------------------------------------------------------------------------
 # Stage 1 — Archetype selection from EF parquets at 2030 waypoint
 # ---------------------------------------------------------------------------
-def _normalize_large_strings(table):
-    """Cast large_string → string for cross-version EF parquet compat.
+def _unify_ef_schema(tables):
+    """Build a merged schema from *tables* and cast each table to it.
 
-    Step 2.1 parquets may use large_string (written by older pyarrow or
-    pandas defaults), while Step 2.1e augment parquets use string.
-    pa.concat_tables cannot auto-promote between the two.
+    Handles two cross-version mismatches that pa.concat_tables with
+    promote_options="default" cannot resolve:
+      1. large_string vs string  (Step 2.1 vs 2.1e iso column)
+      2. int16 vs double         (Step 2.1e augment vs original resource cols)
+
+    Strategy: for each column, pick the widest type across all tables.
+    Widening rules: any float wins over any int; larger bit-width wins
+    within a family; string wins over large_string (both lossless, but
+    string is the canonical Arrow type).
     """
-    schema = table.schema
-    for i, field in enumerate(schema):
-        if field.type == pa.large_string():
-            table = table.set_column(
-                i, field.name,
-                table.column(i).cast(pa.string()))
-    return table
+    if len(tables) <= 1:
+        return tables
+
+    # Collect all column names, preserving first-seen order
+    all_names: list[str] = []
+    seen: set[str] = set()
+    for t in tables:
+        for name in t.schema.names:
+            if name not in seen:
+                all_names.append(name)
+                seen.add(name)
+
+    # For each column, determine the unified type
+    unified: dict[str, pa.DataType] = {}
+    for name in all_names:
+        types = [t.schema.field(name).type for t in tables
+                 if name in t.schema.names]
+        # String family: normalise to string
+        if any(tp in (pa.string(), pa.large_string()) for tp in types):
+            unified[name] = pa.string()
+            continue
+        # Numeric family: if any float present, use float64; else widest int
+        has_float = any(pa.types.is_floating(tp) for tp in types)
+        if has_float:
+            unified[name] = pa.float64()
+        else:
+            # All integer — pick the widest
+            unified[name] = max(types, key=lambda tp: tp.bit_width)
+
+    # Cast each table
+    out = []
+    for t in tables:
+        casts_needed = False
+        for name in t.schema.names:
+            if name in unified and t.schema.field(name).type != unified[name]:
+                casts_needed = True
+                break
+        if not casts_needed:
+            out.append(t)
+            continue
+        cols = {}
+        for name in t.schema.names:
+            col = t.column(name)
+            target = unified.get(name)
+            if target is not None and col.type != target:
+                col = col.cast(target)
+            cols[name] = col
+        out.append(pa.table(cols))
+    return out
 
 
 def load_ef_band(iso, threshold):
@@ -852,7 +900,8 @@ def load_ef_band(iso, threshold):
                    and p.suffix == ".parquet")
     if not paths:
         return None
-    tbls = [_normalize_large_strings(pq.read_table(p)) for p in paths]
+    tbls = [pq.read_table(p) for p in paths]
+    tbls = _unify_ef_schema(tbls)
     if len(tbls) > 1:
         return pa.concat_tables(tbls, promote_options="default")
     return tbls[0]
