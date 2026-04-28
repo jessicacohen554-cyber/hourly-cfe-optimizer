@@ -27,15 +27,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import gc
 import json
-import os
 import sys
 import hashlib
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from itertools import product as iterproduct
 from pathlib import Path
 from typing import Optional
 
@@ -72,9 +69,6 @@ H = 8760
 BASE_YEAR, END_YEAR = 2025, 2050
 YEARS = list(range(BASE_YEAR, END_YEAR + 1))
 N_YEARS = len(YEARS)
-DISCOUNT_RATES = {"5pct": 0.05, "7pct": 0.07, "9pct": 0.09}
-WORST_HOUR_PCTILE = 99.97
-CCGT_OVERNIGHT_CAPEX_USD_KW = 1200.0
 GAS_CF = 0.45
 RA_MARGIN = pc.RESOURCE_ADEQUACY_MARGIN  # 0.15
 RATCHET_TOL_PCT = 0.01
@@ -102,10 +96,10 @@ STORAGE_COLS = [
 ]
 STORAGE_PARAMS = {
     # name: (duration_hrs, efficiency, window_hrs, lcoe_key)
-    "battery_dispatch_pct":  (4,    0.85, 24,  "battery"),
-    "battery8_dispatch_pct": (8,    0.85, 48,  "battery8"),
-    "ldes_dispatch_pct":     (100,  0.50, 168, "ldes"),
-    "h2_dispatch_pct":       (1000, 0.35, 720, "h2"),
+    "battery_dispatch_pct":  (4,   0.85, 24,  "battery"),
+    "battery8_dispatch_pct": (8,   0.85, 48,  "battery8"),
+    "ldes_dispatch_pct":     (100, 0.50, 168, "ldes"),
+    "h2_dispatch_pct":       (168, 0.35, 720, "h2"),  # FIX 2: peaker profile, not seasonal
 }
 
 # Combined storage power cap: 115% of peak demand.
@@ -128,8 +122,6 @@ CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95), (2050, 99.9))
 # Pathway A free dimensions (indices into RESOURCE_ORDER)
 PATHWAY_A_FREE = ["solar", "wind", "solar_batt4", "solar_batt8",
                   "wind_batt4", "wind_batt8"]
-# Pathway B adds offshore_wind and clean_firm
-PATHWAY_B_FREE = PATHWAY_A_FREE + ["offshore_wind", "clean_firm"]
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +404,7 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
                                   ld_c, ld_c / 100.0, 0.50, 168)
             h2_c = h2_val * 0.01
             leaked_h2 = _inline_storage_stage(surplus, gap_arr, total_dispatch,
-                                  h2_c, h2_c / 1000.0, 0.35, 720)
+                                  h2_c, h2_c / 168.0, 0.35, 720)
 
             # CFE score
             matched_sum = 0.0
@@ -481,7 +473,6 @@ def get_resource_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> flo
 def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
     """Base LCOE before TX adder. Uses per-dimension cost levels."""
     ren_name = LEVEL_NAME[cfg.ren_cost]
-    batt_name = LEVEL_NAME[cfg.batt_cost]
 
     if resource == "solar":
         return pc.LCOE_TABLES["solar"][ren_name][iso]
@@ -740,6 +731,7 @@ def generate_candidates(
     free_res_idx: list[int],
     cfg: RunConfig,
     n_samples: int,
+    beam_idx: int = 0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,
            np.ndarray, np.ndarray]:
     """Generate LHS candidates. Returns (W, batt4, batt8, ldes, h2, raw_pcts).
@@ -793,11 +785,12 @@ def generate_candidates(
     ceilings = np.maximum(ceilings, floors + 0.01)
 
     # Latin Hypercube sampling — deterministic seed from search context.
-    # Excludes year (threshold bands span years) so identical configs
-    # produce identical candidate pools. The 1×→2×→4× cascade in
+    # Includes beam_idx so different beams explore different LHS strata
+    # even when their floors are similar. The 1×→2×→4× cascade in
     # _find_winner still gets different candidates because n_samples
     # changes, which changes LHS stratification.
-    seed_str = f"{cfg.iso}_{cfg.pathway}_{target_cfe:.1f}_{cfg.demand_growth}"
+    seed_str = (f"{cfg.iso}_{cfg.pathway}_{target_cfe:.1f}"
+                f"_{cfg.demand_growth}_{beam_idx}")
     seed_val = int(hashlib.sha256(seed_str.encode()).hexdigest()[:8], 16)
     sampler = LatinHypercube(d=n_dims, seed=seed_val)
     unit_samples = sampler.random(n=n_samples)  # (n_samples, n_dims) in [0,1]
@@ -1032,11 +1025,9 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
         if len(seeds) >= cfg.scaled_beams:
             break
 
-    # Fill remaining slots from most-populated archetype
+    # Fill remaining slots from cost-ranked candidates
     if len(seeds) < cfg.scaled_beams:
-        # Sort all valid by cost, pick next cheapest not already selected
         rank = np.argsort(costs)
-        selected_vis = {s["resource_pcts"]["solar"] for s in seeds}  # crude dedup
         for ki in rank:
             if len(seeds) >= cfg.scaled_beams:
                 break
@@ -1067,7 +1058,8 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
 # Stage 2 — Year-by-year on-the-fly solve
 # ---------------------------------------------------------------------------
 def solve_pathway(seed: dict, cfg: RunConfig,
-                  P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray
+                  P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray,
+                  beam_idx: int = 0,
                   ) -> dict:
     """Build a full 2025-2050 pathway from a seed mix.
 
@@ -1075,7 +1067,6 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     """
     iso = cfg.iso
     demand_vec = demand_twh_vec(iso, cfg.demand_growth)
-    peak_vec = peak_demand_vec(iso, cfg.demand_growth)
     cfe_targets = cfe_target_vec(iso)
     existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
     gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
@@ -1124,11 +1115,9 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     thresholds_crossed = set()
     peak_gas_mw = 0.0
     peak_gas_year = BASE_YEAR
-    annual_records = []
 
     for yi, year in enumerate(YEARS):
         dem_twh = demand_vec[yi]
-        pk_mw = peak_vec[yi]
         target = cfe_targets[yi]
 
         # Set frozen resources to their correct % for this year's demand
@@ -1175,7 +1164,11 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                 _find_winner(floor_pcts, floor_storage, target, cfe_ceiling,
                              floor_cfe, res_yields, stor_yields,
                              free_idx, cfg, P32, dm32, dn32,
-                             year, dem_twh))
+                             year, dem_twh,
+                             beam_idx=beam_idx,
+                             existing_gas_mw=existing_gas,
+                             gaf=gaf,
+                             prev_gas_cost=prev_gas_cost))
 
             if winner_pcts is None:
                 # Beam died — infeasible
@@ -1239,13 +1232,6 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                 total_vintage_cost += qty * unit_cost * 1e6  # TWh × $/MWh → $
         total_annual = total_vintage_cost + g_cost
 
-        # Cost for winner selection (Mode 1 or 2)
-        if cfg.cost_mode == 2:
-            gas_savings = prev_gas_cost - g_cost
-            year_net_cost = year_incremental_cost - gas_savings
-        else:
-            year_net_cost = year_incremental_cost
-
         cumulative_cost += total_annual
         prev_gas_cost = g_cost
 
@@ -1301,7 +1287,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   f"gas={g_mw:,.0f}MW cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "3.0",
+        "schema_version": "3.6",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1320,6 +1306,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "wrights_law_k": WRIGHTS_LAW_K,
         },
         "beam_archetype": seed["archetype"],
+        "beam_index": beam_idx,
         "peak_gas_mw": round(peak_gas_mw, 1),
         "peak_gas_year": peak_gas_year,
         "n_thresholds_achieved": len(threshold_snapshots),
@@ -1337,16 +1324,20 @@ def solve_pathway(seed: dict, cfg: RunConfig,
 def _find_winner(floor_pcts, floor_storage, target, ceiling,
                  floor_cfe, res_yields, stor_yields,
                  free_idx, cfg, P32, dm32, dn32,
-                 year, dem_twh):
+                 year, dem_twh,
+                 beam_idx=0, existing_gas_mw=0.0, gaf=1.0,
+                 prev_gas_cost=0.0):
     """Try to find cheapest candidate in [target, ceiling) CFE band.
 
     Cascade: 1× → 2× → 4× samples, then infeasible.
+    Mode 2: ranks by (incremental clean cost − gas savings).
     """
     for multiplier in [1, 2, 4]:
         n = cfg.scaled_samples * multiplier
         W, b4, b8, ld, h2, raw = generate_candidates(
             floor_pcts, floor_storage, target, floor_cfe,
-            res_yields, stor_yields, free_idx, cfg, n)
+            res_yields, stor_yields, free_idx, cfg, n,
+            beam_idx=beam_idx)
 
         scores, resid, curtail = score_candidates(
             W, P32, dm32, dn32, b4, b8, ld, h2)
@@ -1378,6 +1369,15 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                     capacity_mw = delta / 100.0 * dem_twh * 1e6 / 8760
                     c += capacity_mw * storage_net_cost(cfg.iso, sc, cfg)
             costs[ki] = c
+
+        # Mode 2: adjust costs by gas savings vs. current gas fleet
+        if cfg.cost_mode == 2 and prev_gas_cost > 0:
+            for ki, vi in enumerate(valid):
+                g_mw = gas_need_mw(float(resid[vi]), dem_twh,
+                                   existing_gas_mw, gaf)
+                g_cost = gas_annual_cost(g_mw, cfg.iso, cfg)
+                gas_savings = prev_gas_cost - g_cost
+                costs[ki] -= gas_savings
 
         best = valid[np.argmin(costs)]
         winner_pcts = np.array([float(W[best, ri]) * 100.0
@@ -1558,8 +1558,7 @@ def main():
             print(f"\n[solve] Beam {bi+1}/{len(seeds)}: {seed['archetype']} "
                   f"(seed CFE={seed['cfe']:.1f}%)")
             t1 = time.time()
-            result = solve_pathway(seed, cfg, P32, dm32, dn32)
-            result["beam_index"] = bi
+            result = solve_pathway(seed, cfg, P32, dm32, dn32, beam_idx=bi)
             result["scenario_name"] = cfg.scenario_name
             dt = time.time() - t1
 
