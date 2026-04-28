@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-step2_3_scoring_fixes.py  v2.0
+step2_3_scoring_fixes.py  v3.0
 
 Apply these str_replace patches in order against
 scripts/step2_3_reliability_tax_adaptive.py.
 
 Patch 1 (a–d): Curtailment tracking — reporting only, no optimization impact.
-Patch 2 (a–c): Storage cap — affects candidate generation bounds.
+Patch 2 (a–b): Storage cap — physical limit from peak demand.
+Patch 3:       Zero-incremental LHS + storage cap clipping (replaces return block).
 """
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # PATCH 1a: _inline_storage_stage returns leaked SOC
@@ -162,17 +164,8 @@ PATCH1D_NEW = '''\
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# PATCH 2a: Module-level storage cap variable + compute at profile load
+# PATCH 2a: Module-level storage cap variable
 # ═══════════════════════════════════════════════════════════════════════
-#
-# Peak demand is a static property of the ISO demand shape.
-# dn is normalised (sum=1 over 8760h), so:
-#   peak / average = dn.max() * 8760
-# Storage pcts are power as % of average demand, so:
-#   peak in storage-pct units = dn.max() * 8760 * 100
-# Cap at 115% of that.
-
-# Add module-level default near the top, after STORAGE_MIN_HEADROOM block:
 
 PATCH2A_OLD = '''\
 STORAGE_MIN_HEADROOM_ARR = np.array([
@@ -186,10 +179,17 @@ STORAGE_MIN_HEADROOM_ARR = np.array([
 
 # Combined storage power cap: 115% of peak demand.
 # Set per-ISO at profile load; used in generate_candidates.
-_STORAGE_CAP_PCT = 999.0  # default (no cap); overwritten at runtime'''
+_STORAGE_CAP_PCT = 999.0  # default (no cap); overwritten at runtime
+
+# Fraction of LHS candidates per dimension pinned to floor (zero new build).
+# With ~8 free dims and 5% per dim, ~40% of tail candidates have one dim
+# pinned — enough to explore "skip resource X" without starving the search.
+ZERO_INC_FRAC = 0.05'''
 
 
-# Compute and set at profile load time:
+# ═══════════════════════════════════════════════════════════════════════
+# PATCH 2b: Compute cap at profile load
+# ═══════════════════════════════════════════════════════════════════════
 
 PATCH2B_OLD = '''\
     print(f"[adaptive] Profiles loaded. Demand TWh={float(pc.REGIONAL_DEMAND_TWH[iso]):.1f}")'''
@@ -203,10 +203,31 @@ PATCH2B_NEW = '''\
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# PATCH 2c: Clip total storage after LHS sampling in generate_candidates
+# PATCH 3: Zero-incremental LHS + storage cap (replaces return block)
 # ═══════════════════════════════════════════════════════════════════════
+#
+# After LHS sampling produces `raw`, two things happen before return:
+#
+# (A) Zero-incremental pinning: for each free dimension d, pin a fraction
+#     of candidates to floors_all[d]. This guarantees "zero new build of
+#     resource d" is explored. Uses the TAIL of the sample array so the
+#     bulk of the LHS stratification is preserved.
+#
+# (B) Storage cap: clip combined storage to 115% of peak demand,
+#     rescaling proportionally when over cap.
+#
+# Both applied to generation AND storage dims, both pathways.
 
-PATCH2C_OLD = '''\
+PATCH3_OLD = '''\
+    ceilings_all = np.maximum(ceilings_all, floors_all + 0.01)
+    raw = floors_all[None, :] + unit_samples[:n_samples] * (ceilings_all - floors_all)[None, :]
+
+    W = np.zeros((n_samples, N_RESOURCES), dtype=np.float32)
+    for ri in range(N_RESOURCES):
+        W[:, ri] = np.float32(floor_pcts[ri] * 0.01)
+    for k, ri in enumerate(free_res_idx):
+        W[:, ri] = (raw[:, k] * 0.01).astype(np.float32)
+
     batt4 = raw[:, n_free + 0].astype(np.float32)
     batt8 = raw[:, n_free + 1].astype(np.float32)
     ldes_arr = raw[:, n_free + 2].astype(np.float32)
@@ -214,13 +235,37 @@ PATCH2C_OLD = '''\
 
     return W, batt4, batt8, ldes_arr, h2_arr, raw'''
 
-PATCH2C_NEW = '''\
+PATCH3_NEW = '''\
+    ceilings_all = np.maximum(ceilings_all, floors_all + 0.01)
+    raw = floors_all[None, :] + unit_samples[:n_samples] * (ceilings_all - floors_all)[None, :]
+
+    # ── Zero-incremental exploration ──────────────────────────────────
+    # For each free dimension, pin a fraction of candidates to floor
+    # (zero new build). Lets the optimizer discover when NOT building a
+    # resource is cheaper. Uses the tail of the sample array so the bulk
+    # of the LHS stratification is preserved in the leading candidates.
+    per_dim = max(1, int(n_samples * ZERO_INC_FRAC))
+    pin_start = max(0, n_samples - per_dim * n_dims)
+    for d in range(n_dims):
+        row_lo = pin_start + d * per_dim
+        row_hi = min(row_lo + per_dim, n_samples)
+        if row_lo < n_samples:
+            raw[row_lo:row_hi, d] = floors_all[d]
+
+    # ── Build output arrays from (possibly pinned) raw ────────────────
+    W = np.zeros((n_samples, N_RESOURCES), dtype=np.float32)
+    for ri in range(N_RESOURCES):
+        W[:, ri] = np.float32(floor_pcts[ri] * 0.01)
+    for k, ri in enumerate(free_res_idx):
+        W[:, ri] = (raw[:, k] * 0.01).astype(np.float32)
+
     batt4 = raw[:, n_free + 0].astype(np.float32)
     batt8 = raw[:, n_free + 1].astype(np.float32)
     ldes_arr = raw[:, n_free + 2].astype(np.float32)
     h2_arr = raw[:, n_free + 3].astype(np.float32)
 
-    # Clip combined storage to 115% of peak demand power.
+    # ── Storage cap: 115% of peak demand ──────────────────────────────
+    # Total storage power can never exceed what the grid can absorb.
     # Rescale proportionally when over cap (preserves relative allocation).
     cap = np.float32(_STORAGE_CAP_PCT)
     stor_total = batt4 + batt8 + ldes_arr + h2_arr
@@ -244,24 +289,35 @@ PATCH2C_NEW = '''\
 #   1b  _inline_storage_peaker → returns residual SOC
 #   1c  Storage calls → capture return values
 #   1d  Curtailment sum → add leaked SOC
-#   2a  Module-level _STORAGE_CAP_PCT default
+#   2a  Module-level _STORAGE_CAP_PCT + ZERO_INC_FRAC constants
 #   2b  Compute cap at profile load
-#   2c  Clip storage in generate_candidates
+#   3   Zero-incremental pinning + storage cap clipping (replaces
+#       the sampling → return block in generate_candidates)
 #
 # Expected storage_cap_pct values by ISO:
 #   CAISO  197%  (peak/avg 1.71)
+#   ERCOT  173%  (peak/avg 1.50)
 #   MISO   181%  (peak/avg 1.57)
 #   NEISO  226%  (peak/avg 1.97)
 #   NYISO  212%  (peak/avg 1.84)
 #   PJM    192%  (peak/avg 1.67)
 #   SPP    184%  (peak/avg 1.60)
-#   ERCOT  173%  (peak/avg 1.50)
+#
+# Zero-incremental arithmetic (screen_samples=5000, ~8 free dims):
+#   per_dim = int(5000 * 0.05) = 250
+#   Total pinned = 250 × 8 = 2000 (40% of samples)
+#   pin_start = 5000 - 2000 = 3000
+#   Candidates 0–2999: pure LHS (undisturbed)
+#   Candidates 3000–3249: dim 0 pinned to floor
+#   Candidates 3250–3499: dim 1 pinned to floor
+#   ... etc
 #
 # Smoke test:
 #   python scripts/step2_3_reliability_tax_adaptive.py \
 #       --iso SPP --pathway A --demand-growth Medium
 #
 # Verify:
-#   1. All storage_dispatch_pct values sum < cap in every snapshot
+#   1. Storage pcts sum < cap in every snapshot
 #   2. curtailment_total at 99.9% >> 0 (hundreds of TWh, not 0.0)
-#   3. CFE trajectory unchanged; cumulative costs drop 10-20%
+#   3. At early thresholds (<80%), winning mix may have 0 storage
+#   4. Storage entry point should align with step 2.4 VRE-only elbow
