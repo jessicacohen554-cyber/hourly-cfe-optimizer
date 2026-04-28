@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-step2_3_reliability_tax_adaptive.py  (v4.1)
+step2_3_reliability_tax_adaptive.py  (v4.2)
 On-the-fly mix generation with two-stage adaptive LHS sampling.
+
+v4.2: Fix storage dispatch unit bug.  Storage pcts represent power capacity
+      as % of average annual demand.  The scoring kernel now divides by 8760
+      to convert to per-hour normalised units before dispatching, matching
+      the physical MW interpretation used by the cost accounting layer.
+      Previous versions treated pcts as energy in annual-demand-fraction
+      units, overpowering storage by ~8760/duration (2190× for a 4h battery).
+      This produced zero curtailment at any overbuild level and inflated CFE
+      scores.  All results from v4.1 and earlier are invalidated.
 
 Architecture:
   Pre-period: Single-cost from baseline to 2030 waypoint at 2030 LCOEs.
@@ -128,13 +137,13 @@ STORAGE_PARAMS = {
 }
 
 # Storage minimum headroom — ensures LHS explores meaningful storage depth
-# regardless of marginal yield. Physically grounded: approximate range where
-# each technology is competitive before diminishing returns.
+# regardless of marginal yield.  v4.2: widened to match correctly-powered
+# storage (previous values were negligible under the /8760 fix).
 STORAGE_MIN_HEADROOM = {
-    "battery_dispatch_pct":  15.0,  # 4hr — most liquid, widest range
-    "battery8_dispatch_pct": 10.0,  # 8hr
-    "ldes_dispatch_pct":      8.0,  # 100hr
-    "h2_dispatch_pct":        5.0,  # 1000hr — expensive, tighter range
+    "battery_dispatch_pct":  50.0,  # 4hr — explore up to ~1× peak demand
+    "battery8_dispatch_pct": 30.0,  # 8hr
+    "ldes_dispatch_pct":     20.0,  # 100hr — critical for last-mile
+    "h2_dispatch_pct":       15.0,  # 1000hr — critical for worst-hour peaking
 }
 STORAGE_MIN_HEADROOM_ARR = np.array([
     STORAGE_MIN_HEADROOM[sc] for sc in STORAGE_COLS
@@ -325,7 +334,7 @@ def build_profile_matrix(iso: str) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Numba kernels (unchanged from v3.7)
+# Numba kernels — v4.2: storage dispatch unit fix in _score_one
 # ---------------------------------------------------------------------------
 @njit
 def _inline_storage_stage(surplus, gap, total_dispatch,
@@ -418,18 +427,25 @@ def _score_one(i, W, P32, dm32, dn32, b4_val, b8_val, ld_val, h2_val,
                 surplus[h] = diff; gap_arr[h] = 0.0
             else:
                 surplus[h] = 0.0; gap_arr[h] = -diff
-        b4_c = b4_val * 0.01
+        # v4.2 FIX: storage pcts represent power capacity as % of avg annual
+        # demand.  Profiles are normalised so sum(dn32)=1 over 8760 h, meaning
+        # one "unit" of hourly flow = 1/8760 of annual demand.  Divide pct by
+        # 8760 to get power in per-hour normalised units that match the profile
+        # space.  Energy capacity = power × duration (hours).
+        # Previous code used pct*0.01 as energy directly, overpowering storage
+        # by ~8760/duration (2190× for 4h battery).
+        b4_p = b4_val * 0.01 / 8760.0
         _inline_storage_stage(surplus, gap_arr, total_dispatch,
-                              b4_c, b4_c / 4.0, 0.85, 24)
-        b8_c = b8_val * 0.01
+                              b4_p * 4.0, b4_p, 0.85, 24)
+        b8_p = b8_val * 0.01 / 8760.0
         _inline_storage_stage(surplus, gap_arr, total_dispatch,
-                              b8_c, b8_c / 8.0, 0.85, 48)
-        ld_c = ld_val * 0.01
+                              b8_p * 8.0, b8_p, 0.85, 48)
+        ld_p = ld_val * 0.01 / 8760.0
         _inline_storage_stage(surplus, gap_arr, total_dispatch,
-                              ld_c, ld_c / 100.0, 0.50, 168)
-        h2_c = h2_val * 0.01
+                              ld_p * 100.0, ld_p, 0.50, 168)
+        h2_p = h2_val * 0.01 / 8760.0
         _inline_storage_peaker(surplus, gap_arr, total_dispatch,
-                               h2_c, h2_c / 1000.0, 0.35)
+                               h2_p * 1000.0, h2_p, 0.35)
         matched_sum = 0.0
         for h in range(H):
             eff = supply[h] + total_dispatch[h]
@@ -1335,8 +1351,9 @@ def _storage_fallback(floor_pcts, floor_storage, target, ceiling,
     stor_unit = rng.random((n_stor, 4))
 
     stor_floors = floor_storage.copy()
-    stor_ceil = np.maximum(floor_storage * 5.0, floor_storage + 30.0)
-    stor_ceil = np.minimum(stor_ceil, 50.0)
+    # v4.2: removed hard cap at 50 — with correctly-powered storage the solver
+    # needs room to explore large H2/LDES builds for last-mile hours.
+    stor_ceil = np.maximum(floor_storage * 3.0, floor_storage + 100.0)
     stor_ceil = np.maximum(stor_ceil, stor_floors + 1.0)
     stor_raw = stor_floors + stor_unit * (stor_ceil - stor_floors)
 
@@ -1604,7 +1621,7 @@ def solve_pathway(seed, cfg, P32, dm32, dn32):
                   f"gas={g_mw:,.0f}MW cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "4.1",
+        "schema_version": "4.2",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1719,7 +1736,7 @@ def build_configs(iso, pathway, scenarios, demand_levels,
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Step 2.3 Adaptive — two-stage LHS reliability tax optimizer (v4.1)")
+        description="Step 2.3 Adaptive — two-stage LHS reliability tax optimizer (v4.2)")
     ap.add_argument("--iso", type=str, required=True)
     ap.add_argument("--pathway", type=str, required=True, choices=["A", "B"])
     ap.add_argument("--demand-growth", type=str, default="Medium",
@@ -1758,7 +1775,7 @@ def main():
     wp = get_waypoint_2030(iso)
     gas_mode = "ON" if (args.pathway == "B" or args.gas_shadow) else "OFF"
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive (v4.1)")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive (v4.2)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}  "
           f"2030 waypoint={wp:.0f}%  Gas shadow={gas_mode}")
     print(f"[adaptive] Waypoints: {get_cfe_waypoints(iso)}")
