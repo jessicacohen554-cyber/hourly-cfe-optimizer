@@ -30,46 +30,46 @@ on:
       iso:
         description: 'ISO region to run (ALL = parallel across 7)'
         required: true
-        default: 'ALL'
+        default: 'ERCOT'
         type: choice
         options:
-          - ALL
-          - CAISO
           - ERCOT
           - PJM
+          - CAISO
           - NYISO
           - NEISO
           - MISO
           - SPP
+          - ALL
       pathway:
         description: 'Pathway (A = VRE+storage only, B = all resources incl nuclear/CCS/offshore, BOTH = A then B)'
         required: true
-        default: 'BOTH'
+        default: 'B'
         type: choice
         options:
-          - BOTH
           - A
           - B
+          - BOTH
       demand_growth:
         description: 'Demand growth level (all = Low × Medium × High)'
         required: true
-        default: 'all'
+        default: 'Medium'
         type: choice
         options:
-          - all
-          - Low
           - Medium
+          - Low
           - High
+          - all
       scenario:
         description: 'Cost scenario (all = base × firm_high_vre_low × firm_low_vre_high)'
         required: true
-        default: 'all'
+        default: 'base'
         type: choice
         options:
-          - all
           - base
           - firm_high_vre_low
           - firm_low_vre_high
+          - all
       n_beams:
         description: 'Number of seed beams per config (Pathway B auto-scales +2)'
         required: false
