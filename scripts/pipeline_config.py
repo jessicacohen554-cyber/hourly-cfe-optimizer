@@ -1348,6 +1348,34 @@ FOAK_H2 = {
     'NEISO': 10851.5, 'MISO': 9373.6, 'SPP': 8945.7,
 }
 
+# ---------------------------------------------------------------------------
+# H2 PEAKER — deterministic gap-filling model (step 2.3 v4.0+)
+# Replaces H2-as-storage-tier. Two-part cost: capacity ($/kW-yr) + fuel ($/MWh).
+#
+# Capacity cost: annualized H2 turbine + balance of plant.
+#   FOAK based on ~8.5% premium over conv. gas CT ($600-750/kW overnight →
+#   ~$120-170/kW-yr annualized at 8% WACC, 30-yr life).
+#   Source: ScienceDirect techno-economic analysis (2024), DOE H2 Turbine Roadmap.
+#
+# Fuel cost: green H2 production + delivery to turbine.
+#   FOAK: $3.7/kg central (ICCT 2030), ~75 kg/MWh_e at 35% HHV efficiency
+#         → $225-280/MWh_e delivered.
+#   NOAK: DOE Hydrogen Shot $1/kg target → ~$75-150/MWh_e depending on
+#         electrolyzer utilization and cavern storage amortization.
+#   Source: DOE Program Record 24005, NREL 87625, ACS Omega FC peaker (2024).
+# ---------------------------------------------------------------------------
+H2_PEAKER_CAPEX_KW_YR = {
+    'Low':    {'FOAK': 120, 'NOAK': 75},
+    'Medium': {'FOAK': 140, 'NOAK': 90},
+    'High':   {'FOAK': 170, 'NOAK': 110},
+}
+
+H2_FUEL_COST_MWH = {
+    'Low':    {'FOAK': 180, 'NOAK': 75},
+    'Medium': {'FOAK': 225, 'NOAK': 112},
+    'High':   {'FOAK': 280, 'NOAK': 150},
+}
+
 # ============================================================================
 # WRIGHT'S LAW NOAK TERMINAL COSTS
 # ============================================================================
@@ -1393,6 +1421,9 @@ LEARNING_PARAMS = {
     'geo':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'ldes':    {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'h2':      {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    # H2 peaker (step 2.3 v4.0+): electrolyzer + turbine cost decline.
+    # Slower than battery, faster than nuclear. Reflects industrial H2 scale-up.
+    'h2_peaker': {'L': (2028, 2038), 'M': (2030, 2042), 'H': (2034, 2048)},
     # Battery: Wright's Law from 2025 starting cost → NOAK terminal floor.
     # Slower decline — on the mature part of the curve, not FOAK steep drops.
     'bat4':    {'L': (2025, 2042), 'M': (2025, 2048), 'H': (2025, 2050)},
