@@ -1790,7 +1790,16 @@ def main():
     ap.add_argument("--n-beams", type=int, default=5)
     ap.add_argument("--stage1-samples", type=int, default=0)
     ap.add_argument("--stage2-samples", type=int, default=5000)
+    ap.add_argument("--safety-factor", type=float, default=SAFETY_FACTOR,
+                    help=f"LHS ceiling multiplier on marginal-yield bounds (default: {SAFETY_FACTOR})")
+    ap.add_argument("--stranding-weight", type=float, default=STRANDING_SHADOW_WEIGHT,
+                    help=f"Gas stranding shadow cost weight (default: {STRANDING_SHADOW_WEIGHT}). 0.0=disabled")
     args = ap.parse_args()
+
+    # Override module-level constants from CLI
+    global SAFETY_FACTOR, STRANDING_SHADOW_WEIGHT
+    SAFETY_FACTOR = args.safety_factor
+    STRANDING_SHADOW_WEIGHT = args.stranding_weight
 
     iso = args.iso.upper()
     if iso not in pc.ISOS:
