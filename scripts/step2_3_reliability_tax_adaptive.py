@@ -19,29 +19,11 @@ Two cost modes:
 
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
 
-Learning curve model note:
-  This script intentionally uses an exponential decay learning curve
-  (wrights_law_cost: NOAK + (FOAK-NOAK)*exp(-k*progress)) rather than
-  pipeline_config's power-law interpolation (progress^0.6). The exponential
-  models demand-pull acceleration from collective corporate procurement
-  commitment — the thesis that coordinated hourly-matching investment
-  compresses technology learning timelines beyond historical rates. The
-  divergence from upstream cost surfaces (step 2.2a EF parquets) is the
-  modeling intent, not a bug. At k=3, midpoint costs are ~10% lower than
-  pipeline_config; at k=5 (sensitivity), ~23% lower.
-
 v4.1 changes:
-  - CHANGE: WRIGHTS_LAW_K = 3.0 (was 5.0). k=3 tracks Korean APR-1400
-    experience (~5-6 units to maturity). k=5 available via --fast-learning.
-  - CHANGE: H2_MAX_FILL_PP = 5.0 (was 10.0). Tighter cap prevents optimizer
-    from leaning on H2 instead of building clean capacity.
-  - ADD: --fast-learning CLI flag sets k=5 for sensitivity runs.
-  - ADD: Second-order yield probing (Finding 4) in generate_candidates —
-    widens ceilings when marginal yields decay at +5pp.
-  - ADD: Top-2 joint yield probe (Finding 5) in generate_candidates —
-    detects solar+battery synergy and boosts ceilings accordingly.
-  - ADD: RunConfig.noak_override scaffold for future NOAK window sensitivities.
-  - FIX: generate_candidates receives profile arrays for enhanced probes.
+  - ADD: --safety-factor CLI arg (default 1.5) — controls LHS ceiling multiplier
+  - ADD: --stranding-weight CLI arg (default 0.5) — controls gas stranding shadow
+  - CHANGE: Both wired through RunConfig; no more module-level hardcoded constants
+  - Enables sensitivity runs (e.g. --stranding-weight 0.0 to disable shadow)
 
 v4.0 changes:
   - REFACTOR: H2 removed from storage kernel; now deterministic gap-filling peaker
@@ -63,6 +45,8 @@ Usage:
     python scripts/step2_3_reliability_tax_adaptive.py --iso NYISO --pathway A
     python scripts/step2_3_reliability_tax_adaptive.py --iso ERCOT --pathway B --demand-growth High
     python scripts/step2_3_reliability_tax_adaptive.py --iso CAISO --pathway B --batch
+    python scripts/step2_3_reliability_tax_adaptive.py --iso PJM --pathway A --stranding-weight 0.0
+    python scripts/step2_3_reliability_tax_adaptive.py --iso NYISO --pathway B --safety-factor 2.0
 """
 from __future__ import annotations
 
@@ -112,15 +96,12 @@ N_YEARS = len(YEARS)
 GAS_CF = 0.45
 RA_MARGIN = pc.RESOURCE_ADEQUACY_MARGIN  # 0.15
 RATCHET_TOL_PCT = 0.01
-SAFETY_FACTOR = 1.5
-WRIGHTS_LAW_K = 3.0  # v4.1: k=3 base (Korean APR-1400 experience, ~5-6 units)
-WRIGHTS_LAW_K_FAST = 5.0  # sensitivity: aggressive learning (--fast-learning)
+WRIGHTS_LAW_K = 5.0  # compressed curve — reaches ~99% of NOAK by t_noak
 NUCLEAR_FOAK_DISCOUNT = 0.80  # next builds start at 80% of Vogtle-era FOAK
 
-# Gas stranding shadow price: penalizes candidates that increase peak gas MW.
-# Weight × annualized capex × years_remaining_fraction applied per MW of new peak.
-# 0.5 = charge 50% of expected stranding cost. Set to 0.0 to disable.
-STRANDING_SHADOW_WEIGHT = 0.5
+# Defaults for CLI-tunable parameters (wired through RunConfig)
+SAFETY_FACTOR_DEFAULT = 1.5
+STRANDING_WEIGHT_DEFAULT = 0.5
 
 EF_DIR = PROJECT_ROOT / "data" / "step2.1-ef"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "step2.3-adaptive"
@@ -149,8 +130,8 @@ STORAGE_PARAMS = {
 }
 
 # H2 peaker: max CFE gap (pp) that H2 is allowed to close per year.
-# v4.1: reduced from 10 to 5 to prevent optimizer leaning on H2.
-H2_MAX_FILL_PP = 5.0
+# Prevents accepting candidates far below target that lean on massive H2.
+H2_MAX_FILL_PP = 10.0
 
 # Combined storage power cap: 115% of peak demand.
 # Set per-ISO at profile load; used in generate_candidates.
@@ -198,10 +179,9 @@ class RunConfig:
     stage1_samples: int = 0   # 0 = use all from parquets
     stage2_samples: int = 5000
     cost_mode: int = 1        # 1 = incremental clean only, 2 = clean minus gas savings
-    # Sensitivity scaffold (v4.1): override NOAK year for firm clean techs.
-    # None = use LEARNING_PARAMS defaults. Set to e.g. 2038 or 2042 for
-    # NOAK window sensitivity runs. Only affects nuclear/CCS/offshore/geo.
-    noak_override: Optional[int] = None
+    # Search space / penalty tuning (v4.1)
+    safety_factor: float = SAFETY_FACTOR_DEFAULT
+    stranding_weight: float = STRANDING_WEIGHT_DEFAULT
 
     @property
     def dim_key(self) -> str:
@@ -640,25 +620,13 @@ def h2_annual_cost(h2_capacity_mw, h2_dispatched_mwh, year, cfg):
 # ---------------------------------------------------------------------------
 def wrights_law_cost(foak: float, noak: float, year: int,
                      t_start: int, t_noak: int) -> float:
-    """Concave learning curve: exponential decay from FOAK toward NOAK.
-
-    Intentionally uses exp(-k*progress) rather than pipeline_config's
-    power-law (progress^0.6). Models demand-pull acceleration from
-    coordinated corporate procurement commitment. See docstring.
-    """
+    """Concave learning curve: exponential decay from FOAK toward NOAK."""
     if year <= t_start:
         return foak
     if year >= t_noak:
         return noak
     progress = (year - t_start) / (t_noak - t_start)
     return noak + (foak - noak) * np.exp(-WRIGHTS_LAW_K * progress)
-
-
-def _noak_yr(fs: int, ny: int, cfg: RunConfig) -> tuple[int, int]:
-    """Apply noak_override if set, clamping so ny > fs."""
-    if cfg.noak_override is not None:
-        ny = max(cfg.noak_override, fs + 1)
-    return fs, ny
 
 
 def get_resource_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
@@ -696,7 +664,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
     if resource == "clean_firm":
         foak = pc.FOAK_NUCLEAR_NEWBUILD[iso] * NUCLEAR_FOAK_DISCOUNT
         noak = pc.NUCLEAR_NEWBUILD_LCOE[fl][iso]
-        fs, ny = _noak_yr(*pc.get_pathway_noak_window("nuclear", fl, "3"), cfg)
+        fs, ny = pc.get_pathway_noak_window("nuclear", fl, "3")
         return wrights_law_cost(foak, noak, year, fs, ny)
 
     if resource == "ccs_ccgt":
@@ -707,7 +675,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
         else:
             noak = pc.CCS_LCOE_45Q_OFF[cl][iso]
             foak = pc.FOAK_CCS_45Q_OFF[iso]
-        fs, ny = _noak_yr(*pc.get_pathway_noak_window("ccs", cl, "3"), cfg)
+        fs, ny = pc.get_pathway_noak_window("ccs", cl, "3")
         cost = wrights_law_cost(foak, noak, year, fs, ny)
         if iso == "NEISO":
             cost += pc.NEISO_CCS_GAS_ADDER
@@ -719,7 +687,6 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
         tech = "offshore_wind_float" if iso == "CAISO" else "offshore_wind_fixed"
         fs, ny = pc.LEARNING_PARAMS[tech][cfg.ren_cost]  # v3.8 FIX: was "M"
         ny = min(ny, 2035)  # P3 pathway: offshore hits NOAK by 2035, same as nuclear
-        fs, ny = _noak_yr(fs, ny, cfg)
         return wrights_law_cost(
             pc.FOAK_OFFSHORE_WIND.get(iso, 100),
             pc.NOAK_OFFSHORE_WIND[ren_name].get(iso, 65), year, fs, ny)
@@ -727,7 +694,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
     if resource == "geothermal":
         if iso != "CAISO":
             return 0.0
-        fs, ny = _noak_yr(*pc.get_pathway_noak_window("geo", gl, "3"), cfg)
+        fs, ny = pc.get_pathway_noak_window("geo", gl, "3")
         return wrights_law_cost(pc.FOAK_GEOTHERMAL, pc.GEOTHERMAL_LCOE[gl],
                                 year, fs, ny)
     return 0.0
@@ -907,21 +874,20 @@ def gas_annual_cost(new_gas_mw: float, iso: str, cfg: RunConfig) -> float:
 
 
 def gas_stranding_shadow(new_gas_mw: float, current_peak_gas: float,
-                         year: int, iso: str) -> float:
-    """Shadow cost penalizing increases in peak gas capacity (v3.8).
+                         year: int, iso: str, weight: float) -> float:
+    """Shadow cost penalizing increases in peak gas capacity (v3.8, v4.1).
 
-    Charges STRANDING_SHADOW_WEIGHT x annualized capex for each MW of new peak,
-    scaled by years remaining (early builds penalized more than late builds).
-    Returns 0 if new_gas_mw does not exceed current peak.
+    Charges weight × annualized capex × years_remaining_fraction applied per
+    MW of new peak. Set weight=0.0 to disable.
     """
-    if STRANDING_SHADOW_WEIGHT <= 0.0:
+    if weight <= 0.0:
         return 0.0
     marginal_peak = max(0.0, new_gas_mw - current_peak_gas)
     if marginal_peak <= 0.0:
         return 0.0
     capex_kw_yr = float(pc.NEW_CCGT_COST_KW_YR[iso])
     years_remaining_frac = max(0.0, (END_YEAR - year)) / (END_YEAR - BASE_YEAR)
-    return marginal_peak * capex_kw_yr * 1000 * years_remaining_frac * STRANDING_SHADOW_WEIGHT
+    return marginal_peak * capex_kw_yr * 1000 * years_remaining_frac * weight
 
 
 # ---------------------------------------------------------------------------
@@ -988,29 +954,21 @@ def generate_candidates(
     cfg: RunConfig,
     n_samples: int,
     beam_idx: int = 0,
-    # v4.1: profile arrays for second-order / interaction probes (F4/F5)
-    P32: np.ndarray = None,
-    dm32: np.ndarray = None,
-    dn32: np.ndarray = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Generate LHS candidates (3 storage, no H2). Returns (W, batt4, batt8, ldes, raw_pcts).
 
     raw_pcts is (n_samples, n_free_res + N_STORAGE) for cost accounting.
-
-    v4.1: When P32/dm32/dn32 are provided and floor_cfe > 80%, runs
-    second-order yield probes (Finding 4) and top-2 joint interaction
-    probes (Finding 5) to widen ceilings in concave/synergistic regions.
     """
     n_free = len(free_res_idx)
     increment = max(0.1, target_cfe - floor_cfe)
-    MAX_RESOURCE_PCT = 200.0
+    safety_factor = cfg.safety_factor
 
-    # --- Base ceilings from 1pp yields ---
+    # Compute per-dimension ceilings
     res_ceilings = np.zeros(n_free, dtype=np.float64)
     for k in range(n_free):
         yld = res_yields[k]
         if yld > 0.001:
-            res_ceilings[k] = floor_pcts[free_res_idx[k]] + increment / yld * SAFETY_FACTOR
+            res_ceilings[k] = floor_pcts[free_res_idx[k]] + increment / yld * safety_factor
         else:
             res_ceilings[k] = floor_pcts[free_res_idx[k]] + 1.0  # minimal headroom
 
@@ -1018,80 +976,12 @@ def generate_candidates(
     for j in range(N_STORAGE):
         yld = stor_yields[j]
         if yld > 0.001:
-            stor_ceilings[j] = floor_storage[j] + increment / yld * SAFETY_FACTOR
+            stor_ceilings[j] = floor_storage[j] + increment / yld * safety_factor
         else:
             stor_ceilings[j] = floor_storage[j] + 1.0
 
-    # --- Finding 4: Second-order probing at +5pp (high-CFE concavity fix) ---
-    _PROBE_PP = 5.0
-    if P32 is not None and floor_cfe > 85.0:
-        W_fl = np.zeros((1, N_RESOURCES), dtype=np.float32)
-        W_fl[0] = (floor_pcts * 0.01).astype(np.float32)
-        s_fl = floor_storage.astype(np.float32)
-
-        for k, ri in enumerate(free_res_idx):
-            yld_1 = res_yields[k]
-            if yld_1 < 0.001:
-                continue
-            W_p = W_fl.copy()
-            W_p[0, ri] += np.float32(0.05)  # +5pp
-            sc5, _, _ = score_candidates(W_p, P32, dm32, dn32,
-                                         s_fl[0:1], s_fl[1:2], s_fl[2:3])
-            yld_5 = (float(sc5[0]) - floor_cfe) / _PROBE_PP
-            if yld_5 < yld_1 * 0.9:
-                dr = max(yld_5 / max(yld_1, 1e-6), 0.1)
-                eff_yld = yld_1 * dr
-                if eff_yld > 0.001:
-                    wider = floor_pcts[free_res_idx[k]] + increment / eff_yld * SAFETY_FACTOR
-                    res_ceilings[k] = max(res_ceilings[k], wider)
-
-        for j in range(N_STORAGE):
-            yld_1 = stor_yields[j]
-            if yld_1 < 0.001:
-                continue
-            s_p = s_fl.copy()
-            s_p[j] += np.float32(5.0)
-            sc5, _, _ = score_candidates(W_fl, P32, dm32, dn32,
-                                         s_p[0:1], s_p[1:2], s_p[2:3])
-            yld_5 = (float(sc5[0]) - floor_cfe) / _PROBE_PP
-            if yld_5 < yld_1 * 0.9:
-                dr = max(yld_5 / max(yld_1, 1e-6), 0.1)
-                eff_yld = yld_1 * dr
-                if eff_yld > 0.001:
-                    wider = floor_storage[j] + increment / eff_yld * SAFETY_FACTOR
-                    stor_ceilings[j] = max(stor_ceilings[j], wider)
-
-    # --- Finding 5: Top-2 joint probe (synergy detection) ---
-    if P32 is not None and floor_cfe > 80.0:
-        all_ylds = np.concatenate([res_yields, stor_yields])
-        if (all_ylds > 0.001).sum() >= 2:
-            top2 = np.argsort(all_ylds)[-2:]
-            W_fl = np.zeros((1, N_RESOURCES), dtype=np.float32)
-            W_fl[0] = (floor_pcts * 0.01).astype(np.float32)
-            s_j = floor_storage.astype(np.float32).copy()
-            W_j = W_fl.copy()
-            for idx in top2:
-                if idx < n_free:
-                    W_j[0, free_res_idx[idx]] += np.float32(0.01)
-                else:
-                    s_j[idx - n_free] += np.float32(1.0)
-            sc_j, _, _ = score_candidates(W_j, P32, dm32, dn32,
-                                          s_j[0:1], s_j[1:2], s_j[2:3])
-            joint = float(sc_j[0]) - floor_cfe
-            indep = all_ylds[top2[0]] + all_ylds[top2[1]]
-            interaction = joint - indep
-            if interaction > 0.01:
-                boost = min(1.0 + interaction / max(indep, 1e-6), 2.0)
-                for idx in top2:
-                    if idx < n_free:
-                        res_ceilings[idx] = min(
-                            res_ceilings[idx] * boost, MAX_RESOURCE_PCT)
-                    else:
-                        jj = idx - n_free
-                        stor_ceilings[jj] = min(
-                            stor_ceilings[jj] * boost, _STORAGE_CAP_PCT)
-
-    # --- Hard caps ---
+    # Hard caps
+    MAX_RESOURCE_PCT = 200.0
     for k in range(n_free):
         res_ceilings[k] = min(res_ceilings[k], MAX_RESOURCE_PCT)
     for j in range(N_STORAGE):
@@ -1585,10 +1475,9 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "n_beams_scaled": cfg.scaled_beams,
             "stage2_samples": cfg.stage2_samples,
             "stage2_samples_scaled": cfg.scaled_samples,
-            "safety_factor": SAFETY_FACTOR,
+            "safety_factor": cfg.safety_factor,
+            "stranding_weight": cfg.stranding_weight,
             "wrights_law_k": WRIGHTS_LAW_K,
-            "h2_max_fill_pp": H2_MAX_FILL_PP,
-            "stranding_shadow_weight": STRANDING_SHADOW_WEIGHT,
         },
         "beam_archetype": seed["archetype"],
         "beam_index": beam_idx,
@@ -1627,8 +1516,7 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
         W, b4, b8, ld, raw = generate_candidates(
             floor_pcts, floor_storage, target, floor_cfe,
             res_yields, stor_yields, free_idx, cfg, n,
-            beam_idx=beam_idx,
-            P32=P32, dm32=dm32, dn32=dn32)
+            beam_idx=beam_idx)
 
         scores, resid, curtail = score_candidates(
             W, P32, dm32, dn32, b4, b8, ld)
@@ -1679,12 +1567,12 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
             costs[ki] = c
 
         # Gas stranding shadow (post-H2)
-        if STRANDING_SHADOW_WEIGHT > 0.0:
+        if cfg.stranding_weight > 0.0:
             for ki, vi in enumerate(valid):
                 g_mw = gas_need_mw(h2_results[ki]["post_h2_resid"],
                                    dem_twh, existing_gas_mw, gaf)
                 shadow = gas_stranding_shadow(g_mw, current_peak_gas,
-                                             year, cfg.iso)
+                                             year, cfg.iso, cfg.stranding_weight)
                 costs[ki] += shadow
 
         # Mode 2: gas savings
@@ -1784,7 +1672,9 @@ def write_result(result: dict):
 # ---------------------------------------------------------------------------
 def build_configs(iso: str, pathway: str, scenarios: list[str],
                   demand_levels: list[str], n_beams: int,
-                  stage1_samples: int, stage2_samples: int) -> list[RunConfig]:
+                  stage1_samples: int, stage2_samples: int,
+                  safety_factor: float, stranding_weight: float,
+                  ) -> list[RunConfig]:
     """Build RunConfig list from scenario names x demand levels x cost modes."""
     configs = []
     for scen_name in scenarios:
@@ -1804,6 +1694,8 @@ def build_configs(iso: str, pathway: str, scenarios: list[str],
                     stage1_samples=stage1_samples,
                     stage2_samples=stage2_samples,
                     cost_mode=mode,
+                    safety_factor=safety_factor,
+                    stranding_weight=stranding_weight,
                 ))
     return configs
 
@@ -1827,14 +1719,17 @@ def main():
     ap.add_argument("--n-beams", type=int, default=5)
     ap.add_argument("--stage1-samples", type=int, default=0)
     ap.add_argument("--stage2-samples", type=int, default=5000)
-    ap.add_argument("--fast-learning", action="store_true",
-                    help="Use k=5 Wright's Law exponent (sensitivity run)")
+    ap.add_argument("--safety-factor", type=float,
+                    default=SAFETY_FACTOR_DEFAULT,
+                    help="LHS ceiling multiplier on marginal-yield bounds "
+                         f"(default: {SAFETY_FACTOR_DEFAULT}). Higher = wider "
+                         "search, more compute. Lower = tighter, may miss.")
+    ap.add_argument("--stranding-weight", type=float,
+                    default=STRANDING_WEIGHT_DEFAULT,
+                    help="Gas stranding shadow cost weight "
+                         f"(default: {STRANDING_WEIGHT_DEFAULT}). "
+                         "0.0 = disabled, 1.0 = full expected stranding cost.")
     args = ap.parse_args()
-
-    # v4.1: --fast-learning overrides the module-level k constant
-    if args.fast_learning:
-        global WRIGHTS_LAW_K
-        WRIGHTS_LAW_K = WRIGHTS_LAW_K_FAST
 
     iso = args.iso.upper()
     if iso not in pc.ISOS:
@@ -1845,14 +1740,12 @@ def main():
                      else [args.demand_growth])
 
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.1")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.1 (H2 peaker)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
-    print(f"[adaptive] Wright's Law k={WRIGHTS_LAW_K}"
-          f"{'  (--fast-learning)' if args.fast_learning else ''}")
-    print(f"[adaptive] H2 max fill: {H2_MAX_FILL_PP}pp")
-    print(f"[adaptive] Stranding shadow weight: {STRANDING_SHADOW_WEIGHT}")
+    print(f"[adaptive] Safety factor: {args.safety_factor}")
+    print(f"[adaptive] Stranding shadow weight: {args.stranding_weight}")
     print(f"{'='*70}\n")
 
     warmup_jit()
@@ -1871,7 +1764,8 @@ def main():
           f" (peak/avg={dn.max()*H:.2f})")
 
     configs = build_configs(iso, args.pathway, scenarios, demand_levels,
-                            args.n_beams, args.stage1_samples, args.stage2_samples)
+                            args.n_beams, args.stage1_samples, args.stage2_samples,
+                            args.safety_factor, args.stranding_weight)
     print(f"[adaptive] {len(configs)} runs queued "
           f"({len(scenarios)} scenarios x {len(demand_levels)} demand levels "
           f"x 2 cost modes)")
