@@ -20,12 +20,13 @@ Two cost modes:
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
 
 v4.1 changes:
-  - ADD: --safety-factor CLI arg (default 1.5) — controls LHS ceiling multiplier
-  - ADD: --stranding-weight CLI arg (default 0.5) — controls gas stranding shadow
-  - CHANGE: Both wired through RunConfig; no more module-level hardcoded constants
-  - Enables sensitivity runs (e.g. --stranding-weight 0.0 to disable shadow)
+  - CHANGE: Wright's Law k from 5 to 3 (APR-1400 calibrated; Finding 8)
+  - CHANGE: H2_MAX_FILL_PP from 10 to 5 (tighter peaker cap)
+  - ADD: Second-order yield probing at +5pp for concavity detection (Finding 4)
+  - ADD: Top-2 joint interaction probe for synergy ceiling boost (Finding 5)
+  - CHANGE: compute_marginal_yields returns 5 values (raw + adjusted yields)
 
-v4.0 changes:
+v4.0 changes (carried forward):
   - REFACTOR: H2 removed from storage kernel; now deterministic gap-filling peaker
   - ADD: Two-part H2 cost (capacity $/kW-yr + fuel $/MWh dispatched)
   - ADD: _compute_post_storage_gaps Numba kernel for per-candidate H2 sizing
@@ -36,7 +37,7 @@ v4.0 changes:
 
 v3.8 changes (carried forward):
   - FIX: _inline_storage_stage now writes total_dispatch (was broken — storage invisible)
-  - ADD: Storage learning curves (Wright's Law k=5) for battery/LDES
+  - ADD: Storage learning curves (Wright's Law) for battery/LDES
   - ADD: Gas stranding shadow price in _find_winner
   - FIX: Offshore wind learning curve timing tracks cfg.ren_cost, NOAK clamped to 2035
   - FIX: gas_annual_cost fuel calc simplified
@@ -45,8 +46,6 @@ Usage:
     python scripts/step2_3_reliability_tax_adaptive.py --iso NYISO --pathway A
     python scripts/step2_3_reliability_tax_adaptive.py --iso ERCOT --pathway B --demand-growth High
     python scripts/step2_3_reliability_tax_adaptive.py --iso CAISO --pathway B --batch
-    python scripts/step2_3_reliability_tax_adaptive.py --iso PJM --pathway A --stranding-weight 0.0
-    python scripts/step2_3_reliability_tax_adaptive.py --iso NYISO --pathway B --safety-factor 2.0
 """
 from __future__ import annotations
 
@@ -96,12 +95,14 @@ N_YEARS = len(YEARS)
 GAS_CF = 0.45
 RA_MARGIN = pc.RESOURCE_ADEQUACY_MARGIN  # 0.15
 RATCHET_TOL_PCT = 0.01
-WRIGHTS_LAW_K = 5.0  # compressed curve — reaches ~99% of NOAK by t_noak
+SAFETY_FACTOR = 1.5
+WRIGHTS_LAW_K = 3.0  # APR-1400 calibrated — ~95% of NOAK by end of window
 NUCLEAR_FOAK_DISCOUNT = 0.80  # next builds start at 80% of Vogtle-era FOAK
 
-# Defaults for CLI-tunable parameters (wired through RunConfig)
-SAFETY_FACTOR_DEFAULT = 1.5
-STRANDING_WEIGHT_DEFAULT = 0.5
+# Gas stranding shadow price: penalizes candidates that increase peak gas MW.
+# Weight × annualized capex × years_remaining_fraction applied per MW of new peak.
+# 0.5 = charge 50% of expected stranding cost. Set to 0.0 to disable.
+STRANDING_SHADOW_WEIGHT = 0.5
 
 EF_DIR = PROJECT_ROOT / "data" / "step2.1-ef"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "step2.3-adaptive"
@@ -131,7 +132,7 @@ STORAGE_PARAMS = {
 
 # H2 peaker: max CFE gap (pp) that H2 is allowed to close per year.
 # Prevents accepting candidates far below target that lean on massive H2.
-H2_MAX_FILL_PP = 10.0
+H2_MAX_FILL_PP = 5.0
 
 # Combined storage power cap: 115% of peak demand.
 # Set per-ISO at profile load; used in generate_candidates.
@@ -179,9 +180,6 @@ class RunConfig:
     stage1_samples: int = 0   # 0 = use all from parquets
     stage2_samples: int = 5000
     cost_mode: int = 1        # 1 = incremental clean only, 2 = clean minus gas savings
-    # Search space / penalty tuning (v4.1)
-    safety_factor: float = SAFETY_FACTOR_DEFAULT
-    stranding_weight: float = STRANDING_WEIGHT_DEFAULT
 
     @property
     def dim_key(self) -> str:
@@ -874,36 +872,50 @@ def gas_annual_cost(new_gas_mw: float, iso: str, cfg: RunConfig) -> float:
 
 
 def gas_stranding_shadow(new_gas_mw: float, current_peak_gas: float,
-                         year: int, iso: str, weight: float) -> float:
-    """Shadow cost penalizing increases in peak gas capacity (v3.8, v4.1).
+                         year: int, iso: str) -> float:
+    """Shadow cost penalizing increases in peak gas capacity (v3.8).
 
-    Charges weight × annualized capex × years_remaining_fraction applied per
-    MW of new peak. Set weight=0.0 to disable.
+    Charges STRANDING_SHADOW_WEIGHT x annualized capex for each MW of new peak,
+    scaled by years remaining (early builds penalized more than late builds).
+    Returns 0 if new_gas_mw does not exceed current peak.
     """
-    if weight <= 0.0:
+    if STRANDING_SHADOW_WEIGHT <= 0.0:
         return 0.0
     marginal_peak = max(0.0, new_gas_mw - current_peak_gas)
     if marginal_peak <= 0.0:
         return 0.0
     capex_kw_yr = float(pc.NEW_CCGT_COST_KW_YR[iso])
     years_remaining_frac = max(0.0, (END_YEAR - year)) / (END_YEAR - BASE_YEAR)
-    return marginal_peak * capex_kw_yr * 1000 * years_remaining_frac * weight
+    return marginal_peak * capex_kw_yr * 1000 * years_remaining_frac * STRANDING_SHADOW_WEIGHT
 
 
 # ---------------------------------------------------------------------------
 # Marginal yield computation
 # ---------------------------------------------------------------------------
+# Second-order probe size for concavity detection (Finding 4).
+# Probe at +5pp in addition to +1pp. If yield decays, widen ceiling.
+SECOND_ORDER_PROBE_PP = 5.0
+CONCAVITY_THRESHOLD = 0.9  # decay below 90% of 1pp yield triggers adjustment
+
+# Joint interaction threshold (Finding 5).
+# If top-2 dimensions yield more jointly than independently, boost ceilings.
+INTERACTION_THRESHOLD = 0.01  # 0.01pp synergy to trigger
+
 def compute_marginal_yields(
     floor_pcts: np.ndarray,  # (N_RESOURCES,) current floor in %
     floor_storage: np.ndarray,  # (N_STORAGE,) current storage dispatch %
     free_res_idx: list[int],
     P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, float, np.ndarray, np.ndarray]:
     """Compute marginal CFE yield per +1pp of each free dimension.
 
-    Returns (res_yields, stor_yields, floor_cfe).
-    res_yields[i] = dCFE/d(1pp) for free_res_idx[i].
-    stor_yields[j] = dCFE/d(1pp) for STORAGE_COLS[j].
+    v4.1: Second-order probing for concavity detection (Finding 4) and
+    top-2 joint interaction testing (Finding 5). Returns adjusted yields
+    that account for nonlinear response at high CFE.
+
+    Returns (res_yields, stor_yields, floor_cfe, res_yields_adj, stor_yields_adj).
+    The _adj arrays have yields lowered where concavity is detected,
+    and ceilings should be sized from these for better search bounds.
     """
     n_free = len(free_res_idx)
 
@@ -917,7 +929,7 @@ def compute_marginal_yields(
         s_floor[0:1], s_floor[1:2], s_floor[2:3])
     floor_cfe = float(floor_scores[0])
 
-    # Perturb each free resource by +1pp
+    # --- First-order probes: +1pp each dimension ---
     res_yields = np.zeros(n_free, dtype=np.float64)
     for k, ri in enumerate(free_res_idx):
         W_pert = W_floor.copy()
@@ -927,17 +939,79 @@ def compute_marginal_yields(
             s_floor[0:1], s_floor[1:2], s_floor[2:3])
         res_yields[k] = float(sc[0]) - floor_cfe
 
-    # Perturb each of 3 storage types by +1pp
     stor_yields = np.zeros(N_STORAGE, dtype=np.float64)
     for j in range(N_STORAGE):
         s_pert = s_floor.copy()
-        s_pert[j] += np.float32(1.0)  # +1pp of storage dispatch capacity
+        s_pert[j] += np.float32(1.0)
         sc, _, _ = score_candidates(
             W_floor, P32, dm32, dn32,
             s_pert[0:1], s_pert[1:2], s_pert[2:3])
         stor_yields[j] = float(sc[0]) - floor_cfe
 
-    return res_yields, stor_yields, floor_cfe
+    # --- Second-order probes: +5pp for concavity detection (Finding 4) ---
+    # If yield at +5pp is significantly lower per-pp than at +1pp,
+    # the response surface is concave. Lower the effective yield so
+    # ceilings expand (more exploration in the nonlinear region).
+    res_yields_adj = res_yields.copy()
+    probe_pp = SECOND_ORDER_PROBE_PP
+    for k, ri in enumerate(free_res_idx):
+        if res_yields[k] < 0.001:
+            continue
+        W_pert5 = W_floor.copy()
+        W_pert5[0, ri] += np.float32(probe_pp * 0.01)
+        sc5, _, _ = score_candidates(
+            W_pert5, P32, dm32, dn32,
+            s_floor[0:1], s_floor[1:2], s_floor[2:3])
+        yield_5pp = (float(sc5[0]) - floor_cfe) / probe_pp
+        if yield_5pp < res_yields[k] * CONCAVITY_THRESHOLD:
+            # Concave: use geometric mean of the two yields as effective rate.
+            # This widens the ceiling ~1.5-2× in the concave regime.
+            decay = yield_5pp / max(res_yields[k], 1e-6)
+            res_yields_adj[k] = res_yields[k] * max(decay, 0.1)
+
+    stor_yields_adj = stor_yields.copy()
+    for j in range(N_STORAGE):
+        if stor_yields[j] < 0.001:
+            continue
+        s_pert5 = s_floor.copy()
+        s_pert5[j] += np.float32(probe_pp)
+        sc5, _, _ = score_candidates(
+            W_floor, P32, dm32, dn32,
+            s_pert5[0:1], s_pert5[1:2], s_pert5[2:3])
+        yield_5pp = (float(sc5[0]) - floor_cfe) / probe_pp
+        if yield_5pp < stor_yields[j] * CONCAVITY_THRESHOLD:
+            decay = yield_5pp / max(stor_yields[j], 1e-6)
+            stor_yields_adj[j] = stor_yields[j] * max(decay, 0.1)
+
+    # --- Joint interaction probe: top-2 dimensions (Finding 5) ---
+    # If two dimensions yield more together than independently,
+    # boost both adjusted yields by the synergy ratio.
+    all_yields = np.concatenate([res_yields, stor_yields])
+    if len(all_yields) >= 2:
+        top2 = np.argsort(all_yields)[-2:]
+        W_joint = W_floor.copy()
+        s_joint = s_floor.copy()
+        for idx in top2:
+            if idx < n_free:
+                W_joint[0, free_res_idx[idx]] += np.float32(0.01)
+            else:
+                s_joint[idx - n_free] += np.float32(1.0)
+        sc_joint, _, _ = score_candidates(
+            W_joint, P32, dm32, dn32,
+            s_joint[0:1], s_joint[1:2], s_joint[2:3])
+        joint_yield = float(sc_joint[0]) - floor_cfe
+        independent_sum = all_yields[top2[0]] + all_yields[top2[1]]
+        interaction = joint_yield - independent_sum
+
+        if interaction > INTERACTION_THRESHOLD:
+            boost = 1.0 + interaction / max(independent_sum, 1e-6)
+            for idx in top2:
+                if idx < n_free:
+                    res_yields_adj[idx] /= boost  # lower eff yield → wider ceiling
+                else:
+                    stor_yields_adj[idx - n_free] /= boost
+
+    return res_yields, stor_yields, floor_cfe, res_yields_adj, stor_yields_adj
 
 
 # ---------------------------------------------------------------------------
@@ -961,14 +1035,13 @@ def generate_candidates(
     """
     n_free = len(free_res_idx)
     increment = max(0.1, target_cfe - floor_cfe)
-    safety_factor = cfg.safety_factor
 
     # Compute per-dimension ceilings
     res_ceilings = np.zeros(n_free, dtype=np.float64)
     for k in range(n_free):
         yld = res_yields[k]
         if yld > 0.001:
-            res_ceilings[k] = floor_pcts[free_res_idx[k]] + increment / yld * safety_factor
+            res_ceilings[k] = floor_pcts[free_res_idx[k]] + increment / yld * SAFETY_FACTOR
         else:
             res_ceilings[k] = floor_pcts[free_res_idx[k]] + 1.0  # minimal headroom
 
@@ -976,7 +1049,7 @@ def generate_candidates(
     for j in range(N_STORAGE):
         yld = stor_yields[j]
         if yld > 0.001:
-            stor_ceilings[j] = floor_storage[j] + increment / yld * safety_factor
+            stor_ceilings[j] = floor_storage[j] + increment / yld * SAFETY_FACTOR
         else:
             stor_ceilings[j] = floor_storage[j] + 1.0
 
@@ -1317,7 +1390,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         else:
             cfe_ceiling = 100.0
 
-        res_yields, stor_yields, floor_cfe = compute_marginal_yields(
+        res_yields, stor_yields, floor_cfe, res_yields_adj, stor_yields_adj = compute_marginal_yields(
             floor_pcts, floor_storage, free_idx, P32, dm32, dn32)
 
         if floor_cfe >= target:
@@ -1330,9 +1403,11 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                        "h2_cf_pct": 0.0, "h2_dispatch_hours": 0,
                        "post_h2_resid": winner_resid}
         else:
+            # Pass adjusted yields (concavity + interaction corrected) for
+            # ceiling sizing; raw yields still available for diagnostics.
             result_tuple = _find_winner(
                 floor_pcts, floor_storage, target, cfe_ceiling,
-                floor_cfe, res_yields, stor_yields,
+                floor_cfe, res_yields_adj, stor_yields_adj,
                 free_idx, cfg, P32, dm32, dn32,
                 year, dem_twh,
                 beam_idx=beam_idx,
@@ -1475,9 +1550,9 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "n_beams_scaled": cfg.scaled_beams,
             "stage2_samples": cfg.stage2_samples,
             "stage2_samples_scaled": cfg.scaled_samples,
-            "safety_factor": cfg.safety_factor,
-            "stranding_weight": cfg.stranding_weight,
+            "safety_factor": SAFETY_FACTOR,
             "wrights_law_k": WRIGHTS_LAW_K,
+            "stranding_shadow_weight": STRANDING_SHADOW_WEIGHT,
         },
         "beam_archetype": seed["archetype"],
         "beam_index": beam_idx,
@@ -1567,12 +1642,12 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
             costs[ki] = c
 
         # Gas stranding shadow (post-H2)
-        if cfg.stranding_weight > 0.0:
+        if STRANDING_SHADOW_WEIGHT > 0.0:
             for ki, vi in enumerate(valid):
                 g_mw = gas_need_mw(h2_results[ki]["post_h2_resid"],
                                    dem_twh, existing_gas_mw, gaf)
                 shadow = gas_stranding_shadow(g_mw, current_peak_gas,
-                                             year, cfg.iso, cfg.stranding_weight)
+                                             year, cfg.iso)
                 costs[ki] += shadow
 
         # Mode 2: gas savings
@@ -1672,9 +1747,7 @@ def write_result(result: dict):
 # ---------------------------------------------------------------------------
 def build_configs(iso: str, pathway: str, scenarios: list[str],
                   demand_levels: list[str], n_beams: int,
-                  stage1_samples: int, stage2_samples: int,
-                  safety_factor: float, stranding_weight: float,
-                  ) -> list[RunConfig]:
+                  stage1_samples: int, stage2_samples: int) -> list[RunConfig]:
     """Build RunConfig list from scenario names x demand levels x cost modes."""
     configs = []
     for scen_name in scenarios:
@@ -1694,8 +1767,6 @@ def build_configs(iso: str, pathway: str, scenarios: list[str],
                     stage1_samples=stage1_samples,
                     stage2_samples=stage2_samples,
                     cost_mode=mode,
-                    safety_factor=safety_factor,
-                    stranding_weight=stranding_weight,
                 ))
     return configs
 
@@ -1719,16 +1790,6 @@ def main():
     ap.add_argument("--n-beams", type=int, default=5)
     ap.add_argument("--stage1-samples", type=int, default=0)
     ap.add_argument("--stage2-samples", type=int, default=5000)
-    ap.add_argument("--safety-factor", type=float,
-                    default=SAFETY_FACTOR_DEFAULT,
-                    help="LHS ceiling multiplier on marginal-yield bounds "
-                         f"(default: {SAFETY_FACTOR_DEFAULT}). Higher = wider "
-                         "search, more compute. Lower = tighter, may miss.")
-    ap.add_argument("--stranding-weight", type=float,
-                    default=STRANDING_WEIGHT_DEFAULT,
-                    help="Gas stranding shadow cost weight "
-                         f"(default: {STRANDING_WEIGHT_DEFAULT}). "
-                         "0.0 = disabled, 1.0 = full expected stranding cost.")
     args = ap.parse_args()
 
     iso = args.iso.upper()
@@ -1740,12 +1801,11 @@ def main():
                      else [args.demand_growth])
 
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.1 (H2 peaker)")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.1 (H2 peaker, k=3)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
-    print(f"[adaptive] Safety factor: {args.safety_factor}")
-    print(f"[adaptive] Stranding shadow weight: {args.stranding_weight}")
+    print(f"[adaptive] Stranding shadow weight: {STRANDING_SHADOW_WEIGHT}")
     print(f"{'='*70}\n")
 
     warmup_jit()
@@ -1764,8 +1824,7 @@ def main():
           f" (peak/avg={dn.max()*H:.2f})")
 
     configs = build_configs(iso, args.pathway, scenarios, demand_levels,
-                            args.n_beams, args.stage1_samples, args.stage2_samples,
-                            args.safety_factor, args.stranding_weight)
+                            args.n_beams, args.stage1_samples, args.stage2_samples)
     print(f"[adaptive] {len(configs)} runs queued "
           f"({len(scenarios)} scenarios x {len(demand_levels)} demand levels "
           f"x 2 cost modes)")
