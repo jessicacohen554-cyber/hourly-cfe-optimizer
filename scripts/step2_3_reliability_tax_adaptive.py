@@ -544,7 +544,11 @@ def _tx_adder(iso: str, resource: str, tx_level: str) -> float:
 
 
 def storage_net_cost(iso: str, storage_key: str, cfg: RunConfig) -> float:
-    """Net cost per unit for standalone storage: LCOE - revenue credit."""
+    """Net cost per unit for standalone storage: LCOE - revenue credit.
+
+    Returns value in LCOE_TABLES units (annualized cost per % of annual demand).
+    Callers must use: (pct/100) × net_cost × demand_MWh for $/yr.
+    """
     lcoe_key = STORAGE_PARAMS[storage_key][3]
     # Use battery or LDES cost level depending on storage type
     if lcoe_key in ("battery", "battery8"):
@@ -758,6 +762,15 @@ def generate_candidates(
         else:
             stor_ceilings[j] = floor_storage[j] + 1.0
 
+    # Hard caps — prevent yield-based formula from exploding when yield ≈ 0.
+    # Resources: 200% of demand is already massive overbuild.
+    # Storage: per-type cap at global storage cap (115% of peak demand).
+    MAX_RESOURCE_PCT = 200.0
+    for k in range(n_free):
+        res_ceilings[k] = min(res_ceilings[k], MAX_RESOURCE_PCT)
+    for j in range(4):
+        stor_ceilings[j] = min(stor_ceilings[j], _STORAGE_CAP_PCT)
+
     # Apply hard caps (CCS, geo, uprate for Pathway B)
     if cfg.pathway == "B":
         demand_twh = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
@@ -811,28 +824,18 @@ def generate_candidates(
         if row_lo < n_samples:
             raw[row_lo:row_hi, d] = floors[d]
 
-    # ── VRE-only exploration pool ─────────────────────────────────────
-    # 10% of candidates get ALL storage dims pinned to floor.
-    # VRE dims get wider ceilings to explore the VRE-only frontier.
-    # Without storage, VRE needs much more overbuild headroom — the
-    # standard yield-based ceilings assume storage is helping.
-    vre_only_count = max(1, int(n_samples * 0.10))
-    vre_start = max(0, n_samples - vre_only_count)
+    # ── Zero-storage pool ───────────────────────────────────────────
+    # 10% of candidates get ALL storage dims pinned to floor (zero).
+    # VRE dims keep the REGULAR yield-based ceilings so these candidates
+    # land in the target CFE band and compete on cost. At low thresholds,
+    # VRE-only is almost always cheapest; at high thresholds, these
+    # candidates won't reach the band and get filtered out harmlessly.
+    zs_count = max(1, int(n_samples * 0.10))
+    zs_start = max(0, n_samples - zs_count)
 
-    # Pin all 4 storage dims to floor
+    # Pin all 4 storage dims to floor — VRE dims keep their LHS values
     for j in range(4):
-        raw[vre_start:, n_free + j] = floors[n_free + j]
-
-    # Widen VRE ceilings for these candidates: 150pp headroom minimum
-    vre_ceilings = np.copy(ceilings[:n_free])
-    for k in range(n_free):
-        vre_ceilings[k] = max(vre_ceilings[k], floors[k] + 150.0)
-
-    # Re-sample VRE dims with wider bounds (fresh LHS draw)
-    vre_sampler = LatinHypercube(d=n_free, seed=(seed_val + 1) % (2**31))
-    vre_unit = vre_sampler.random(n=vre_only_count)
-    for k in range(n_free):
-        raw[vre_start:, k] = floors[k] + vre_unit[:, k] * (vre_ceilings[k] - floors[k])
+        raw[zs_start:, n_free + j] = floors[n_free + j]
 
     # ── Build output arrays from (possibly pinned) raw ────────────────
     W = np.zeros((n_samples, N_RESOURCES), dtype=np.float32)
@@ -987,12 +990,11 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                 # VRE/firm: pct/100 × TWh × $/MWh × 1e6 = $/yr
                 c += pct / 100.0 * base_dem * get_resource_lcoe(
                     iso, res, BASE_YEAR, cfg) * 1e6
-        # Storage: capacity_MW × $/MW-yr
+        # Storage: (pct/100) × LCOE_value × demand_MWh = $/yr
         for j, sc in enumerate(STORAGE_COLS):
             sv = [batt4, batt8, ldes_arr, h2_arr][j][vi]
             if sv > 0:
-                capacity_mw = float(sv) / 100.0 * base_dem * 1e6 / 8760
-                c += capacity_mw * storage_net_cost(iso, sc, cfg)
+                c += float(sv) / 100.0 * storage_net_cost(iso, sc, cfg) * base_dem * 1e6
         costs[ki] = c
 
     # Classify archetypes
@@ -1141,9 +1143,12 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             floor_pcts[RES_IDX["clean_firm"]] = max(
                 floor_pcts[RES_IDX["clean_firm"]], min_cf_pct)
 
-        # CFE ceiling: cannot exceed next year's target
+        # CFE ceiling: allow modest overshoot so zero-storage (cheapest) candidates
+        # can compete. Cost ranking still penalizes overshooting — wider band just
+        # prevents the filter from excluding VRE-only candidates that overshoot
+        # the tight year-over-year target ramp by a few percentage points.
         if yi < N_YEARS - 1:
-            cfe_ceiling = cfe_targets[yi + 1]
+            cfe_ceiling = min(target + 15.0, 100.0)
         else:
             cfe_ceiling = 100.0  # final year
 
@@ -1205,12 +1210,10 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         for j, sc in enumerate(STORAGE_COLS):
             delta_stor = winner_storage[j] - floor_storage[j]
             if delta_stor > RATCHET_TOL_PCT:
-                # Storage: dispatch_pct is capacity as % of avg hourly demand (MW)
-                # Cost is $/MW-yr, not $/MWh
-                capacity_mw = delta_stor / 100.0 * dem_twh * 1e6 / 8760
-                net_cost_mw_yr = storage_net_cost(iso, sc, cfg)  # $/MW-yr
-                annual_cost = capacity_mw * net_cost_mw_yr
-                vintage_ledger.append((year, sc, capacity_mw, net_cost_mw_yr))
+                # Storage: (pct/100) × LCOE_value × demand_MWh = $/yr
+                net_lcoe = storage_net_cost(iso, sc, cfg)
+                annual_cost = delta_stor / 100.0 * net_lcoe * dem_twh * 1e6
+                vintage_ledger.append((year, sc, annual_cost, delta_stor))
                 year_incremental_cost += annual_cost
 
         # Gas sizing
@@ -1222,12 +1225,12 @@ def solve_pathway(seed: dict, cfg: RunConfig,
 
         # Total annual cost from vintage ledger
         # VRE/firm entries: (year, res, TWh, $/MWh) → TWh × $/MWh × 1e6 = $/yr
-        # Storage entries: (year, res, MW, $/MW-yr) → MW × $/MW-yr = $/yr
+        # Storage entries: (year, res, $/yr, delta_pct) → $/yr directly
         _storage_names = set(STORAGE_COLS)
         total_vintage_cost = 0.0
         for _, res, qty, unit_cost in vintage_ledger:
             if res in _storage_names:
-                total_vintage_cost += qty * unit_cost        # MW × $/MW-yr
+                total_vintage_cost += qty                    # already $/yr
             else:
                 total_vintage_cost += qty * unit_cost * 1e6  # TWh × $/MWh → $
         total_annual = total_vintage_cost + g_cost
@@ -1287,7 +1290,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   f"gas={g_mw:,.0f}MW cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "3.6",
+        "schema_version": "3.7",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1315,8 +1318,8 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "n_vintages": len(vintage_ledger),
             "total_gen_twh_built": round(sum(
                 t for _, r, t, _ in vintage_ledger if r not in STORAGE_COLS), 2),
-            "total_storage_mw_built": round(sum(
-                t for _, r, t, _ in vintage_ledger if r in STORAGE_COLS), 1),
+            "total_storage_pct_built": round(sum(
+                dp for _, r, _, dp in vintage_ledger if r in STORAGE_COLS), 1),
         },
     }
 
@@ -1365,9 +1368,8 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                 sv = [b4, b8, ld, h2][j][vi]
                 delta = float(sv) - floor_storage[j]
                 if delta > 0:
-                    # Storage: capacity MW × $/MW-yr
-                    capacity_mw = delta / 100.0 * dem_twh * 1e6 / 8760
-                    c += capacity_mw * storage_net_cost(cfg.iso, sc, cfg)
+                    # Storage: (pct/100) × LCOE_value × demand_MWh = $/yr
+                    c += delta / 100.0 * storage_net_cost(cfg.iso, sc, cfg) * dem_twh * 1e6
             costs[ki] = c
 
         # Mode 2: adjust costs by gas savings vs. current gas fleet
