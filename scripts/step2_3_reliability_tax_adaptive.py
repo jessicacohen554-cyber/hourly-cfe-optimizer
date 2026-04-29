@@ -19,9 +19,18 @@ Two cost modes:
 
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
 
-v3.8 changes:
+v4.0 changes:
+  - REFACTOR: H2 removed from storage kernel; now deterministic gap-filling peaker
+  - ADD: Two-part H2 cost (capacity $/kW-yr + fuel $/MWh dispatched)
+  - ADD: _compute_post_storage_gaps Numba kernel for per-candidate H2 sizing
+  - ADD: h2_size_for_target binary search for minimum H2 capacity
+  - ADD: Gas sized from post-H2 residual (H2 contributes to resource adequacy)
+  - CHANGE: LHS drops 1 dim (H2 no longer sampled); 3 storage tiers only
+  - CHANGE: _find_winner returns 5 values including h2_info dict
+
+v3.8 changes (carried forward):
   - FIX: _inline_storage_stage now writes total_dispatch (was broken — storage invisible)
-  - ADD: Storage learning curves (Wright's Law k=5) for battery/LDES/H2
+  - ADD: Storage learning curves (Wright's Law k=5) for battery/LDES
   - ADD: Gas stranding shadow price in _find_winner
   - FIX: Offshore wind learning curve timing tracks cfg.ren_cost, NOAK clamped to 2035
   - FIX: gas_annual_cost fuel calc simplified
@@ -104,15 +113,19 @@ RES_IDX = {r: i for i, r in enumerate(RESOURCE_ORDER)}
 
 STORAGE_COLS = [
     "battery_dispatch_pct", "battery8_dispatch_pct",
-    "ldes_dispatch_pct", "h2_dispatch_pct",
+    "ldes_dispatch_pct",
 ]
+N_STORAGE = 3  # battery4, battery8, LDES (H2 is now a deterministic peaker)
 STORAGE_PARAMS = {
     # name: (duration_hrs, efficiency, window_hrs, lcoe_key)
     "battery_dispatch_pct":  (4,   0.85, 24,  "battery"),
     "battery8_dispatch_pct": (8,   0.85, 48,  "battery8"),
     "ldes_dispatch_pct":     (100, 0.50, 168, "ldes"),
-    "h2_dispatch_pct":       (168, 0.35, 720, "h2"),
 }
+
+# H2 peaker: max CFE gap (pp) that H2 is allowed to close per year.
+# Prevents accepting candidates far below target that lean on massive H2.
+H2_MAX_FILL_PP = 10.0
 
 # Combined storage power cap: 115% of peak demand.
 # Set per-ISO at profile load; used in generate_candidates.
@@ -185,17 +198,17 @@ class RunConfig:
 
     @property
     def n_dims(self) -> int:
-        """Total sampling dimensions = free resources + 4 storage."""
-        return len(self.free_resources) + 4
+        """Total sampling dimensions = free resources + 3 storage."""
+        return len(self.free_resources) + N_STORAGE
 
     @property
     def scaled_samples(self) -> int:
         """Stage 2 samples scaled by dimensionality.
 
-        Base sample count targets 10 dimensions (Pathway A).
-        Scales by (n_dims/10)^1.5 for higher-dimensional pathways.
+        Base sample count targets 9 dimensions (Pathway A).
+        Scales by (n_dims/9)^1.5 for higher-dimensional pathways.
         """
-        return int(self.stage2_samples * (self.n_dims / 10.0) ** 1.5)
+        return int(self.stage2_samples * (self.n_dims / 9.0) ** 1.5)
 
     @property
     def scaled_beams(self) -> int:
@@ -338,11 +351,13 @@ def _inline_storage_stage(surplus, gap, total_dispatch,
 
 @njit(parallel=True, cache=True)
 def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
-                 batt4, batt8, ldes, h2, compute_idx):
+                 batt4, batt8, ldes, compute_idx):
     """Fused kernel: hourly_match_score + resid_norm_p9997 + curtailment.
 
-    scores[i] = sum(min(supply_h, demand_h)) / sum(demand_h) * 100
-              = sum(min(supply_h, dn32[h])) * 100  (since dn32 sums to 1.0)
+    v4.0: 3 storage tiers only (battery4, battery8, LDES). H2 is a
+    deterministic peaker computed post-scoring.
+
+    scores[i] = sum(min(supply_h, dn32[h])) * 100  (dn32 sums to 1.0)
     resid[i]  = 3rd-largest residual gap against RA-adjusted demand (dm32)
     curtail[i] = total surplus above raw demand (dn32)
     """
@@ -354,8 +369,7 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
         b4 = float(batt4[i])
         b8 = float(batt8[i])
         ld = float(ldes[i])
-        h2_val = float(h2[i])
-        has_stor = (b4 > 0.0) or (b8 > 0.0) or (ld > 0.0) or (h2_val > 0.0)
+        has_stor = (b4 > 0.0) or (b8 > 0.0) or (ld > 0.0)
 
         if not has_stor:
             # Fast path: no storage
@@ -387,7 +401,7 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
             resid[i] = t2
             curtail[i] = curt_sum
         else:
-            # Storage path: float64 + 4-stage dispatch
+            # Storage path: float64 + 3-stage dispatch
             supply = np.empty(H, dtype=np.float64)
             surplus = np.empty(H, dtype=np.float64)
             gap_arr = np.empty(H, dtype=np.float64)
@@ -404,7 +418,7 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
                 else:
                     surplus[h] = 0.0; gap_arr[h] = -diff
 
-            # 4-stage sequential dispatch
+            # 3-stage sequential dispatch (battery4 -> battery8 -> LDES)
             b4_c = b4 * 0.01
             leaked_b4 = _inline_storage_stage(surplus, gap_arr, total_dispatch,
                                   b4_c, b4_c / 4.0, 0.85, 24)
@@ -414,9 +428,6 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
             ld_c = ld * 0.01
             leaked_ld = _inline_storage_stage(surplus, gap_arr, total_dispatch,
                                   ld_c, ld_c / 100.0, 0.50, 168)
-            h2_c = h2_val * 0.01
-            leaked_h2 = _inline_storage_stage(surplus, gap_arr, total_dispatch,
-                                  h2_c, h2_c / 168.0, 0.35, 720)
 
             # CFE score
             matched_sum = 0.0
@@ -425,11 +436,11 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
                 matched_sum += min(eff, float(dn32[h]))
 
             # Curtailment (post-storage surplus + leaked SOC)
-            curt_sum = leaked_b4 + leaked_b8 + leaked_ld + leaked_h2
+            curt_sum = leaked_b4 + leaked_b8 + leaked_ld
             for h in range(H):
                 curt_sum += surplus[h]
 
-            # Residual gap against RA demand (post-storage)
+            # Residual gap against RA demand (post-storage, pre-H2)
             t0 = -1.0; t1 = -1.0; t2 = -1.0
             for h in range(H):
                 fg = float(dm32[h]) - (supply[h] + total_dispatch[h])
@@ -448,17 +459,151 @@ def _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
 
 def score_candidates(W: np.ndarray, P32: np.ndarray, dm32: np.ndarray,
                      dn32: np.ndarray, batt4: np.ndarray, batt8: np.ndarray,
-                     ldes: np.ndarray, h2: np.ndarray
+                     ldes: np.ndarray,
                      ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Score N candidate mixes. Returns (scores, resid, curtail) arrays."""
+    """Score N candidate mixes (3-tier storage, no H2). Returns (scores, resid, curtail)."""
     n = W.shape[0]
     scores = np.full(n, -1.0, dtype=np.float32)
     resid = np.full(n, np.inf, dtype=np.float32)
     curtail = np.zeros(n, dtype=np.float32)
     idx = np.arange(n, dtype=np.int64)
     _score_mixes(scores, resid, curtail, W, P32, dm32, dn32,
-                 batt4, batt8, ldes, h2, idx)
+                 batt4, batt8, ldes, idx)
     return scores, resid, curtail
+
+
+# ---------------------------------------------------------------------------
+# H2 Peaker — deterministic gap-fill model (v4.0)
+# ---------------------------------------------------------------------------
+@njit(cache=True)
+def _compute_post_storage_gaps(W_row, P32, dn32, dm32,
+                                batt4_val, batt8_val, ldes_val):
+    """Compute hourly post-3-tier-storage gaps for one candidate.
+
+    Returns (cfe_gaps, ra_gaps, base_cfe) where:
+      cfe_gaps[h] = max(0, dn32[h] - effective_supply[h])
+      ra_gaps[h]  = max(0, dm32[h] - effective_supply[h])
+      base_cfe    = pre-H2 CFE score (percentage)
+    """
+    NR = W_row.shape[0]
+    cfe_gaps = np.empty(H, dtype=np.float64)
+    ra_gaps = np.empty(H, dtype=np.float64)
+    supply = np.empty(H, dtype=np.float64)
+    surplus = np.empty(H, dtype=np.float64)
+    gap_arr = np.empty(H, dtype=np.float64)
+    total_dispatch = np.zeros(H, dtype=np.float64)
+
+    for h in range(H):
+        s = 0.0
+        for r in range(NR):
+            s += float(W_row[r]) * float(P32[r, h])
+        supply[h] = s
+        diff = s - float(dn32[h])
+        if diff > 0.0:
+            surplus[h] = diff; gap_arr[h] = 0.0
+        else:
+            surplus[h] = 0.0; gap_arr[h] = -diff
+
+    if batt4_val > 0.0:
+        b4_c = batt4_val * 0.01
+        _inline_storage_stage(surplus, gap_arr, total_dispatch,
+                              b4_c, b4_c / 4.0, 0.85, 24)
+    if batt8_val > 0.0:
+        b8_c = batt8_val * 0.01
+        _inline_storage_stage(surplus, gap_arr, total_dispatch,
+                              b8_c, b8_c / 8.0, 0.85, 48)
+    if ldes_val > 0.0:
+        ld_c = ldes_val * 0.01
+        _inline_storage_stage(surplus, gap_arr, total_dispatch,
+                              ld_c, ld_c / 100.0, 0.50, 168)
+
+    matched_sum = 0.0
+    for h in range(H):
+        eff = supply[h] + total_dispatch[h]
+        g = float(dn32[h]) - eff
+        cfe_gaps[h] = g if g > 0.0 else 0.0
+        rg = float(dm32[h]) - eff
+        ra_gaps[h] = rg if rg > 0.0 else 0.0
+        matched_sum += min(eff, float(dn32[h]))
+
+    return cfe_gaps, ra_gaps, matched_sum * 100.0
+
+
+def h2_size_for_target(cfe_gaps, ra_gaps, base_cfe, target_cfe, dem_twh):
+    """Find minimum H2 peaker capacity to close CFE gap to target.
+
+    H2 turbine with rated capacity X dispatches min(cfe_gap[h], X) in
+    every gap hour. Binary search finds minimum X.
+
+    Returns dict: h2_capacity_mw, h2_dispatched_mwh, h2_cf_pct,
+                  h2_dispatch_hours, post_h2_resid.
+    """
+    needed = target_cfe - base_cfe
+    if needed <= 0:
+        sorted_ra = np.sort(ra_gaps)[::-1]
+        resid_val = float(sorted_ra[2]) if len(sorted_ra) > 2 else 0.0
+        return {"h2_capacity_mw": 0.0, "h2_dispatched_mwh": 0.0,
+                "h2_cf_pct": 0.0, "h2_dispatch_hours": 0,
+                "post_h2_resid": resid_val}
+
+    needed_norm = needed / 100.0
+    total_gap = float(cfe_gaps.sum())
+    if total_gap < needed_norm * 0.999:
+        return {"h2_capacity_mw": np.inf, "h2_dispatched_mwh": 0.0,
+                "h2_cf_pct": 0.0, "h2_dispatch_hours": 0,
+                "post_h2_resid": np.inf}
+
+    lo, hi = 0.0, float(cfe_gaps.max()) * 1.001
+    for _ in range(60):
+        mid = (lo + hi) * 0.5
+        if float(np.minimum(cfe_gaps, mid).sum()) >= needed_norm:
+            hi = mid
+        else:
+            lo = mid
+
+    h2_cap = hi
+    h2_disp = np.minimum(cfe_gaps, h2_cap)
+    h2_norm = float(h2_disp.sum())
+    h2_mw = h2_cap * dem_twh * 1e6
+    h2_mwh = h2_norm * dem_twh * 1e6
+    h2_hrs = int((h2_disp > 1e-12).sum())
+    h2_cf = (h2_mwh / (h2_mw * H) * 100) if h2_mw > 0 else 0.0
+
+    post_h2_ra = np.maximum(ra_gaps - h2_disp, 0.0)
+    sorted_ra = np.sort(post_h2_ra)[::-1]
+    resid_val = float(sorted_ra[2]) if len(sorted_ra) > 2 else 0.0
+
+    return {"h2_capacity_mw": h2_mw, "h2_dispatched_mwh": h2_mwh,
+            "h2_cf_pct": round(h2_cf, 2), "h2_dispatch_hours": h2_hrs,
+            "post_h2_resid": resid_val}
+
+
+def h2_peaker_capex_kw_yr(year: int, cfg: RunConfig) -> float:
+    """Annualized H2 peaker capacity cost ($/kW-yr) with Wright's Law."""
+    level = cfg.ldes_cost
+    level_name = LEVEL_NAME[level]
+    foak = float(pc.H2_PEAKER_CAPEX_KW_YR[level_name]['FOAK'])
+    noak = float(pc.H2_PEAKER_CAPEX_KW_YR[level_name]['NOAK'])
+    fs, ny = pc.LEARNING_PARAMS['h2_peaker'][level]
+    return wrights_law_cost(foak, noak, year, fs, ny)
+
+
+def h2_peaker_fuel_mwh(year: int, cfg: RunConfig) -> float:
+    """H2 fuel cost ($/MWh dispatched) with Wright's Law."""
+    level = cfg.ldes_cost
+    level_name = LEVEL_NAME[level]
+    foak = float(pc.H2_FUEL_COST_MWH[level_name]['FOAK'])
+    noak = float(pc.H2_FUEL_COST_MWH[level_name]['NOAK'])
+    fs, ny = pc.LEARNING_PARAMS['h2_peaker'][level]
+    return wrights_law_cost(foak, noak, year, fs, ny)
+
+
+def h2_annual_cost(h2_capacity_mw, h2_dispatched_mwh, year, cfg):
+    """Total annual H2 peaker cost = capacity + fuel."""
+    if h2_capacity_mw <= 0:
+        return 0.0
+    return (h2_capacity_mw * h2_peaker_capex_kw_yr(year, cfg) * 1000
+            + h2_dispatched_mwh * h2_peaker_fuel_mwh(year, cfg))
 
 
 # ---------------------------------------------------------------------------
@@ -565,7 +710,6 @@ def _storage_year_lcoe(lcoe_key: str, cost_name: str, iso: str,
 
     Battery 4hr/8hr: LCOE_TABLES (2025 start) -> NOAK_BATTERY (terminal floor).
     LDES: FOAK_LDES (pre-commercial) -> LCOE_TABLES (NOAK target).
-    H2: FOAK_H2 (pre-commercial) -> LCOE_TABLES (NOAK target).
     """
     current = float(pc.LCOE_TABLES[lcoe_key][cost_name][iso])
 
@@ -583,11 +727,6 @@ def _storage_year_lcoe(lcoe_key: str, cost_name: str, iso: str,
         foak = float(pc.FOAK_LDES[iso])
         noak = current  # LCOE_TABLES IS the NOAK target for LDES
         lp_key = "ldes"
-        level = cfg.ldes_cost
-    elif lcoe_key == "h2":
-        foak = float(pc.FOAK_H2[iso])
-        noak = current  # LCOE_TABLES IS the NOAK target for H2
-        lp_key = "h2"
         level = cfg.ldes_cost
     else:
         return current
@@ -748,7 +887,7 @@ def gas_stranding_shadow(new_gas_mw: float, current_peak_gas: float,
 # ---------------------------------------------------------------------------
 def compute_marginal_yields(
     floor_pcts: np.ndarray,  # (N_RESOURCES,) current floor in %
-    floor_storage: np.ndarray,  # (4,) current storage dispatch %
+    floor_storage: np.ndarray,  # (N_STORAGE,) current storage dispatch %
     free_res_idx: list[int],
     P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, float]:
@@ -767,7 +906,7 @@ def compute_marginal_yields(
     s_floor = floor_storage.astype(np.float32)
     floor_scores, _, _ = score_candidates(
         W_floor, P32, dm32, dn32,
-        s_floor[0:1], s_floor[1:2], s_floor[2:3], s_floor[3:4])
+        s_floor[0:1], s_floor[1:2], s_floor[2:3])
     floor_cfe = float(floor_scores[0])
 
     # Perturb each free resource by +1pp
@@ -777,17 +916,17 @@ def compute_marginal_yields(
         W_pert[0, ri] += np.float32(0.01)  # +1pp
         sc, _, _ = score_candidates(
             W_pert, P32, dm32, dn32,
-            s_floor[0:1], s_floor[1:2], s_floor[2:3], s_floor[3:4])
+            s_floor[0:1], s_floor[1:2], s_floor[2:3])
         res_yields[k] = float(sc[0]) - floor_cfe
 
-    # Perturb each storage type by +1pp
-    stor_yields = np.zeros(4, dtype=np.float64)
-    for j in range(4):
+    # Perturb each of 3 storage types by +1pp
+    stor_yields = np.zeros(N_STORAGE, dtype=np.float64)
+    for j in range(N_STORAGE):
         s_pert = s_floor.copy()
         s_pert[j] += np.float32(1.0)  # +1pp of storage dispatch capacity
         sc, _, _ = score_candidates(
             W_floor, P32, dm32, dn32,
-            s_pert[0:1], s_pert[1:2], s_pert[2:3], s_pert[3:4])
+            s_pert[0:1], s_pert[1:2], s_pert[2:3])
         stor_yields[j] = float(sc[0]) - floor_cfe
 
     return res_yields, stor_yields, floor_cfe
@@ -798,20 +937,19 @@ def compute_marginal_yields(
 # ---------------------------------------------------------------------------
 def generate_candidates(
     floor_pcts: np.ndarray,   # (N_RESOURCES,) floor in %
-    floor_storage: np.ndarray,  # (4,) floor storage dispatch %
+    floor_storage: np.ndarray,  # (N_STORAGE,) floor storage dispatch %
     target_cfe: float,
     floor_cfe: float,
     res_yields: np.ndarray,    # (n_free,) marginal yields for free resources
-    stor_yields: np.ndarray,   # (4,) marginal yields for storage
+    stor_yields: np.ndarray,   # (N_STORAGE,) marginal yields for storage
     free_res_idx: list[int],
     cfg: RunConfig,
     n_samples: int,
     beam_idx: int = 0,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray,
-           np.ndarray, np.ndarray]:
-    """Generate LHS candidates. Returns (W, batt4, batt8, ldes, h2, raw_pcts).
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate LHS candidates (3 storage, no H2). Returns (W, batt4, batt8, ldes, raw_pcts).
 
-    raw_pcts is (n_samples, n_free_res + 4) for cost accounting.
+    raw_pcts is (n_samples, n_free_res + N_STORAGE) for cost accounting.
     """
     n_free = len(free_res_idx)
     increment = max(0.1, target_cfe - floor_cfe)
@@ -825,8 +963,8 @@ def generate_candidates(
         else:
             res_ceilings[k] = floor_pcts[free_res_idx[k]] + 1.0  # minimal headroom
 
-    stor_ceilings = np.zeros(4, dtype=np.float64)
-    for j in range(4):
+    stor_ceilings = np.zeros(N_STORAGE, dtype=np.float64)
+    for j in range(N_STORAGE):
         yld = stor_yields[j]
         if yld > 0.001:
             stor_ceilings[j] = floor_storage[j] + increment / yld * SAFETY_FACTOR
@@ -837,7 +975,7 @@ def generate_candidates(
     MAX_RESOURCE_PCT = 200.0
     for k in range(n_free):
         res_ceilings[k] = min(res_ceilings[k], MAX_RESOURCE_PCT)
-    for j in range(4):
+    for j in range(N_STORAGE):
         stor_ceilings[j] = min(stor_ceilings[j], _STORAGE_CAP_PCT)
 
     # Apply hard caps (CCS, geo, uprate for Pathway B)
@@ -853,13 +991,13 @@ def generate_candidates(
                 res_ceilings[k] = min(res_ceilings[k], cap_pct)
 
     # Build bounds
-    n_dims = n_free + 4
+    n_dims = n_free + N_STORAGE
     floors = np.zeros(n_dims)
     ceilings = np.zeros(n_dims)
     for k in range(n_free):
         floors[k] = floor_pcts[free_res_idx[k]]
         ceilings[k] = res_ceilings[k]
-    for j in range(4):
+    for j in range(N_STORAGE):
         floors[n_free + j] = floor_storage[j]
         ceilings[n_free + j] = stor_ceilings[j]
 
@@ -887,7 +1025,7 @@ def generate_candidates(
     # Zero-storage pool (10% of candidates)
     zs_count = max(1, int(n_samples * 0.10))
     zs_start = max(0, n_samples - zs_count)
-    for j in range(4):
+    for j in range(N_STORAGE):
         raw[zs_start:, n_free + j] = floors[n_free + j]
 
     # Build output arrays
@@ -900,21 +1038,19 @@ def generate_candidates(
     batt4 = raw[:, n_free + 0].astype(np.float32)
     batt8 = raw[:, n_free + 1].astype(np.float32)
     ldes_arr = raw[:, n_free + 2].astype(np.float32)
-    h2_arr = raw[:, n_free + 3].astype(np.float32)
 
-    # Storage cap: 115% of peak demand
+    # Storage cap: 115% of peak demand (3 tiers)
     cap = np.float32(_STORAGE_CAP_PCT)
-    stor_total = batt4 + batt8 + ldes_arr + h2_arr
+    stor_total = batt4 + batt8 + ldes_arr
     over = stor_total > cap
     if over.any():
         scale = np.where(over, cap / np.maximum(stor_total, 1e-6),
                          1.0).astype(np.float32)
-        batt4 *= scale; batt8 *= scale
-        ldes_arr *= scale; h2_arr *= scale
+        batt4 *= scale; batt8 *= scale; ldes_arr *= scale
         raw[:, n_free + 0] = batt4; raw[:, n_free + 1] = batt8
-        raw[:, n_free + 2] = ldes_arr; raw[:, n_free + 3] = h2_arr
+        raw[:, n_free + 2] = ldes_arr
 
-    return W, batt4, batt8, ldes_arr, h2_arr, raw
+    return W, batt4, batt8, ldes_arr, raw
 
 
 # ---------------------------------------------------------------------------
@@ -1002,10 +1138,8 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
     batt4 = _col("battery_dispatch_pct")
     batt8 = _col("battery8_dispatch_pct")
     ldes_arr = _col("ldes_dispatch_pct")
-    h2_arr = _col("h2_dispatch_pct")
-
     scores, resid, curtail = score_candidates(W, P32, dm32, dn32,
-                                               batt4, batt8, ldes_arr, h2_arr)
+                                               batt4, batt8, ldes_arr)
 
     next_threshold = 100.0
     for t in EF_BAND_THRESHOLDS:
@@ -1033,7 +1167,7 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                 c += pct / 100.0 * base_dem * get_resource_lcoe(
                     iso, res, BASE_YEAR, cfg) * 1e6
         for j, sc in enumerate(STORAGE_COLS):
-            sv = [batt4, batt8, ldes_arr, h2_arr][j][vi]
+            sv = [batt4, batt8, ldes_arr][j][vi]
             if sv > 0:
                 c += float(sv) / 100.0 * storage_net_cost(
                     iso, sc, cfg, year=BASE_YEAR) * base_dem * 1e6
@@ -1057,7 +1191,6 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                 STORAGE_COLS[0]: float(batt4[vi]),
                 STORAGE_COLS[1]: float(batt8[vi]),
                 STORAGE_COLS[2]: float(ldes_arr[vi]),
-                STORAGE_COLS[3]: float(h2_arr[vi]),
             },
             "cfe": float(scores[vi]),
             "resid": float(resid[vi]),
@@ -1082,7 +1215,6 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                     STORAGE_COLS[0]: float(batt4[vi]),
                     STORAGE_COLS[1]: float(batt8[vi]),
                     STORAGE_COLS[2]: float(ldes_arr[vi]),
-                    STORAGE_COLS[3]: float(h2_arr[vi]),
                 },
                 "cfe": float(scores[vi]),
                 "resid": float(resid[vi]),
@@ -1142,6 +1274,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     vintage_ledger = []
     prev_gas_cost = 0.0
     cumulative_cost = 0.0
+    peak_h2_mw = 0.0
 
     threshold_snapshots = []
     thresholds_crossed = set()
@@ -1182,19 +1315,23 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             winner_pcts = floor_pcts.copy()
             winner_storage = floor_storage.copy()
             winner_cfe = floor_cfe
-            winner_resid = _score_single(floor_pcts, floor_storage,
-                                          P32, dm32, dn32)[1]
+            _, winner_resid, _ = _score_single(floor_pcts, floor_storage,
+                                               P32, dm32, dn32)
+            h2_info = {"h2_capacity_mw": 0.0, "h2_dispatched_mwh": 0.0,
+                       "h2_cf_pct": 0.0, "h2_dispatch_hours": 0,
+                       "post_h2_resid": winner_resid}
         else:
-            winner_pcts, winner_storage, winner_cfe, winner_resid = (
-                _find_winner(floor_pcts, floor_storage, target, cfe_ceiling,
-                             floor_cfe, res_yields, stor_yields,
-                             free_idx, cfg, P32, dm32, dn32,
-                             year, dem_twh,
-                             beam_idx=beam_idx,
-                             existing_gas_mw=existing_gas,
-                             gaf=gaf,
-                             prev_gas_cost=prev_gas_cost,
-                             current_peak_gas=peak_gas_mw))
+            result_tuple = _find_winner(
+                floor_pcts, floor_storage, target, cfe_ceiling,
+                floor_cfe, res_yields, stor_yields,
+                free_idx, cfg, P32, dm32, dn32,
+                year, dem_twh,
+                beam_idx=beam_idx,
+                existing_gas_mw=existing_gas,
+                gaf=gaf,
+                prev_gas_cost=prev_gas_cost,
+                current_peak_gas=peak_gas_mw)
+            winner_pcts, winner_storage, winner_cfe, winner_resid, h2_info = result_tuple
 
             if winner_pcts is None:
                 print(f"[solve] {iso} beam={seed['archetype']}: "
@@ -1234,7 +1371,15 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                 vintage_ledger.append((year, sc, annual_cost, delta_stor))
                 year_incremental_cost += annual_cost
 
-        g_mw = gas_need_mw(winner_resid, dem_twh, existing_gas, gaf)
+        # H2 cost this year
+        h2_yr_cost = h2_annual_cost(h2_info["h2_capacity_mw"],
+                                     h2_info["h2_dispatched_mwh"], year, cfg)
+        year_incremental_cost += h2_yr_cost
+        if h2_info["h2_capacity_mw"] > peak_h2_mw:
+            peak_h2_mw = h2_info["h2_capacity_mw"]
+
+        # Gas from post-H2 residual
+        g_mw = gas_need_mw(h2_info["post_h2_resid"], dem_twh, existing_gas, gaf)
         g_cost = gas_annual_cost(g_mw, iso, cfg)
         if g_mw > peak_gas_mw:
             peak_gas_mw = g_mw
@@ -1263,7 +1408,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             else:
                 floor_pcts[ri] = winner_pcts[ri]
 
-        for j in range(4):
+        for j in range(N_STORAGE):
             floor_storage[j] = max(floor_storage[j], winner_storage[j])
 
         # Check threshold crossings
@@ -1282,8 +1427,13 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                     },
                     "storage_dispatch_pct": {
                         STORAGE_COLS[j]: round(float(winner_storage[j]), 2)
-                        for j in range(4)
+                        for j in range(N_STORAGE)
                     },
+                    "h2_capacity_mw": round(h2_info["h2_capacity_mw"], 1),
+                    "h2_dispatched_mwh": round(h2_info["h2_dispatched_mwh"], 0),
+                    "h2_cf_pct": h2_info["h2_cf_pct"],
+                    "h2_dispatch_hours": h2_info["h2_dispatch_hours"],
+                    "h2_annual_cost_usd": round(h2_yr_cost, 0),
                     "gas_need_mw": round(g_mw, 1),
                     "peak_gas_mw": round(peak_gas_mw, 1),
                     "stranded_vs_peak_mw": round(peak_gas_mw - g_mw, 1),
@@ -1297,10 +1447,11 @@ def solve_pathway(seed: dict, cfg: RunConfig,
 
         if year % 5 == 0 or winner_cfe >= 99.0:
             print(f"  {year}: CFE={winner_cfe:.1f}% target={target:.1f}% "
-                  f"gas={g_mw:,.0f}MW cost=${total_annual/1e9:.2f}B")
+                  f"gas={g_mw:,.0f}MW h2={h2_info['h2_capacity_mw']:,.0f}MW "
+                  f"cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "3.8",
+        "schema_version": "4.0",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1323,6 +1474,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         "beam_index": beam_idx,
         "peak_gas_mw": round(peak_gas_mw, 1),
         "peak_gas_year": peak_gas_year,
+        "peak_h2_mw": round(peak_h2_mw, 1),
         "n_thresholds_achieved": len(threshold_snapshots),
         "threshold_snapshots": threshold_snapshots,
         "vintage_ledger_summary": {
@@ -1341,33 +1493,39 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                  year, dem_twh,
                  beam_idx=0, existing_gas_mw=0.0, gaf=1.0,
                  prev_gas_cost=0.0, current_peak_gas=0.0):
-    """Try to find cheapest candidate in [target, ceiling) CFE band.
+    """Find cheapest candidate; H2 fills remaining CFE gap post-scoring (v4.0).
 
-    Cascade: 1x -> 2x -> 4x samples, then infeasible.
-    Mode 2: ranks by (incremental clean cost - gas savings).
-    Gas stranding shadow price applied to both modes (v3.8).
+    Candidates scored with 3-tier storage. H2 sized per-candidate to close
+    gap to target. Cost ranking includes clean + storage + H2 + gas shadow.
+    Returns (winner_pcts, winner_storage, post_h2_cfe, post_h2_resid, h2_info).
     """
+    capex_yr = h2_peaker_capex_kw_yr(year, cfg)
+    fuel_mwh_cost = h2_peaker_fuel_mwh(year, cfg)
+
     for multiplier in [1, 2, 4]:
         n = cfg.scaled_samples * multiplier
-        W, b4, b8, ld, h2, raw = generate_candidates(
+        W, b4, b8, ld, raw = generate_candidates(
             floor_pcts, floor_storage, target, floor_cfe,
             res_yields, stor_yields, free_idx, cfg, n,
             beam_idx=beam_idx)
 
         scores, resid, curtail = score_candidates(
-            W, P32, dm32, dn32, b4, b8, ld, h2)
+            W, P32, dm32, dn32, b4, b8, ld)
 
-        mask = (scores >= target) & (scores < ceiling)
+        # Accept candidates below target (H2 fills gap) but not overbuilt
+        min_pre_h2 = max(target - H2_MAX_FILL_PP, floor_cfe)
+        mask = (scores >= min_pre_h2) & (scores < ceiling)
         valid = np.where(mask)[0]
 
         if len(valid) == 0:
             if multiplier < 4:
                 print(f"    cascade {multiplier}x->{multiplier*2}x: "
-                      f"0 hits in [{target:.1f}, {ceiling:.1f})")
+                      f"0 hits in [{min_pre_h2:.1f}, {ceiling:.1f})")
             continue
 
-        # Compute incremental cost for each valid candidate
         costs = np.zeros(len(valid), dtype=np.float64)
+        h2_results = []
+
         for ki, vi in enumerate(valid):
             c = 0.0
             for k, ri in enumerate(free_idx):
@@ -1376,54 +1534,86 @@ def _find_winner(floor_pcts, floor_storage, target, ceiling,
                     c += delta / 100.0 * dem_twh * get_resource_lcoe(
                         cfg.iso, RESOURCE_ORDER[ri], year, cfg) * 1e6
             for j, sc in enumerate(STORAGE_COLS):
-                sv = [b4, b8, ld, h2][j][vi]
+                sv = [b4, b8, ld][j][vi]
                 delta = float(sv) - floor_storage[j]
                 if delta > 0:
                     c += (delta / 100.0 * storage_net_cost(
                         cfg.iso, sc, cfg, year=year) * dem_twh * 1e6)
+
+            # H2 sizing
+            pre_cfe = float(scores[vi])
+            if pre_cfe >= target:
+                h2r = {"h2_capacity_mw": 0.0, "h2_dispatched_mwh": 0.0,
+                       "h2_cf_pct": 0.0, "h2_dispatch_hours": 0,
+                       "post_h2_resid": float(resid[vi])}
+            else:
+                cfe_gaps, ra_gaps, _ = _compute_post_storage_gaps(
+                    W[vi], P32, dn32, dm32,
+                    float(b4[vi]), float(b8[vi]), float(ld[vi]))
+                h2r = h2_size_for_target(cfe_gaps, ra_gaps, pre_cfe,
+                                         target, dem_twh)
+            h2_results.append(h2r)
+            c += (h2r["h2_capacity_mw"] * capex_yr * 1000
+                  + h2r["h2_dispatched_mwh"] * fuel_mwh_cost)
             costs[ki] = c
 
-        # Gas stranding shadow price (v3.8) — applied to all modes
+        # Gas stranding shadow (post-H2)
         if STRANDING_SHADOW_WEIGHT > 0.0:
             for ki, vi in enumerate(valid):
-                g_mw = gas_need_mw(float(resid[vi]), dem_twh,
-                                   existing_gas_mw, gaf)
+                g_mw = gas_need_mw(h2_results[ki]["post_h2_resid"],
+                                   dem_twh, existing_gas_mw, gaf)
                 shadow = gas_stranding_shadow(g_mw, current_peak_gas,
                                              year, cfg.iso)
                 costs[ki] += shadow
 
-        # Mode 2: adjust costs by gas savings vs. current gas fleet
+        # Mode 2: gas savings
         if cfg.cost_mode == 2 and prev_gas_cost > 0:
             for ki, vi in enumerate(valid):
-                g_mw = gas_need_mw(float(resid[vi]), dem_twh,
-                                   existing_gas_mw, gaf)
+                g_mw = gas_need_mw(h2_results[ki]["post_h2_resid"],
+                                   dem_twh, existing_gas_mw, gaf)
                 g_cost = gas_annual_cost(g_mw, cfg.iso, cfg)
-                gas_savings = prev_gas_cost - g_cost
-                costs[ki] -= gas_savings
+                costs[ki] -= (prev_gas_cost - g_cost)
 
-        best = valid[np.argmin(costs)]
-        winner_pcts = np.array([float(W[best, ri]) * 100.0
+        # Filter infeasible H2
+        feas = np.array([h2_results[ki]["h2_capacity_mw"] < np.inf
+                         for ki in range(len(valid))])
+        if not feas.any():
+            if multiplier < 4:
+                print(f"    cascade {multiplier}x->{multiplier*2}x: all H2-infeasible")
+            continue
+
+        fc = np.where(feas, costs, np.inf)
+        best_ki = int(np.argmin(fc))
+        best_vi = valid[best_ki]
+        best_h2 = h2_results[best_ki]
+
+        winner_pcts = np.array([float(W[best_vi, ri]) * 100.0
                                 for ri in range(N_RESOURCES)], dtype=np.float64)
         for ri in range(N_RESOURCES):
             if ri not in free_idx:
                 winner_pcts[ri] = floor_pcts[ri]
         winner_storage = np.array([
-            float([b4, b8, ld, h2][j][best]) for j in range(4)
+            float([b4, b8, ld][j][best_vi]) for j in range(N_STORAGE)
         ], dtype=np.float64)
 
-        return winner_pcts, winner_storage, float(scores[best]), float(resid[best])
+        post_cfe = float(scores[best_vi])
+        if best_h2["h2_dispatched_mwh"] > 0 and dem_twh > 0:
+            post_cfe += best_h2["h2_dispatched_mwh"] / (dem_twh * 1e6) * 100.0
 
-    return None, None, None, None
+        return (winner_pcts, winner_storage, post_cfe,
+                best_h2["post_h2_resid"], best_h2)
+
+    return None, None, None, None, None
 
 
 def _score_single(pcts, storage, P32, dm32, dn32):
-    """Score a single mix. Returns (cfe, resid, curtail)."""
+    """Score a single mix (3-tier storage). Returns (cfe, resid, curtail)."""
     W = np.zeros((1, N_RESOURCES), dtype=np.float32)
     W[0] = (pcts * 0.01).astype(np.float32)
     s = storage.astype(np.float32)
     scores, resid, curtail = score_candidates(
         W, P32, dm32, dn32,
-        s[0:1], s[1:2], s[2:3], s[3:4])
+        s[0:1], s[1:2], s[2:3])
     return float(scores[0]), float(resid[0]), float(curtail[0])
 
 
@@ -1444,7 +1634,11 @@ def warmup_jit():
     zero = np.zeros(n, dtype=np.float32)
     idx = np.arange(n, dtype=np.int64)
     _score_mixes(scores, resid, curtail, W, P, dm, dn,
-                 batt, zero, zero, zero, idx)
+                 batt, zero, zero, idx)
+    # Warm up H2 gap kernel
+    W_row = np.zeros(nr, dtype=np.float32)
+    P_w = np.zeros((nr, H), dtype=np.float32)
+    _compute_post_storage_gaps(W_row, P_w, dn, dm, 0.0, 0.0, 0.0)
     print(f"[adaptive] JIT warm-up: {time.time()-t0:.1f}s", flush=True)
 
 
@@ -1523,7 +1717,7 @@ def main():
                      else [args.demand_growth])
 
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v3.8")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.0 (H2 peaker)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
