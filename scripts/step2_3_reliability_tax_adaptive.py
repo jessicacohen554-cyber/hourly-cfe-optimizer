@@ -23,7 +23,7 @@ v3.8 changes:
   - FIX: _inline_storage_stage now writes total_dispatch (was broken — storage invisible)
   - ADD: Storage learning curves (Wright's Law k=5) for battery/LDES/H2
   - ADD: Gas stranding shadow price in _find_winner
-  - FIX: Offshore wind learning curve timing tracks cfg.ren_cost
+  - FIX: Offshore wind learning curve timing tracks cfg.ren_cost, NOAK clamped to 2035
   - FIX: gas_annual_cost fuel calc simplified
 
 Usage:
@@ -532,6 +532,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
             return 0.0
         tech = "offshore_wind_float" if iso == "CAISO" else "offshore_wind_fixed"
         fs, ny = pc.LEARNING_PARAMS[tech][cfg.ren_cost]  # v3.8 FIX: was "M"
+        ny = min(ny, 2035)  # P3 pathway: offshore hits NOAK by 2035, same as nuclear
         return wrights_law_cost(
             pc.FOAK_OFFSHORE_WIND.get(iso, 100),
             pc.NOAK_OFFSHORE_WIND[ren_name].get(iso, 65), year, fs, ny)
