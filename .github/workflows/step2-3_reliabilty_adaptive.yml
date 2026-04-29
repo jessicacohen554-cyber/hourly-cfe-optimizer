@@ -80,16 +80,6 @@ on:
         required: false
         default: '5000'
         type: string
-      safety_factor:
-        description: 'LHS ceiling multiplier on marginal-yield bounds (1.5 = default). Higher = wider search. Lower = tighter, faster, may miss.'
-        required: false
-        default: '1.5'
-        type: string
-      stranding_weight:
-        description: 'Gas stranding shadow cost weight (0.5 = default). 0.0 = disabled, 1.0 = full expected stranding cost.'
-        required: false
-        default: '0.5'
-        type: string
       runner_size:
         description: 'Runner size (standard = 2-core/7GB, large = 16-core/64GB)'
         required: true
@@ -182,8 +172,6 @@ jobs:
           SCENARIO: ${{ inputs.scenario }}
           N_BEAMS: ${{ inputs.n_beams }}
           STAGE2: ${{ inputs.stage2_samples }}
-          SAFETY: ${{ inputs.safety_factor }}
-          STRAND: ${{ inputs.stranding_weight }}
         run: |
           # Demand flags
           if [ "$DEMAND" = "all" ]; then
@@ -201,8 +189,6 @@ jobs:
 
           COMMON="--iso $ISO --n-beams $N_BEAMS"
           COMMON="$COMMON --stage2-samples $STAGE2"
-          COMMON="$COMMON --safety-factor $SAFETY"
-          COMMON="$COMMON --stranding-weight $STRAND"
           COMMON="$COMMON $DEMAND_FLAG $SCENARIO_FLAG"
           echo "common=$COMMON" >> "$GITHUB_OUTPUT"
 
@@ -306,8 +292,6 @@ jobs:
             echo "- Demand growth: \`${{ inputs.demand_growth }}\`"
             echo "- Beams: ${{ inputs.n_beams }}"
             echo "- Stage 2 samples: ${{ inputs.stage2_samples }}"
-            echo "- Safety factor: ${{ inputs.safety_factor }}"
-            echo "- Stranding weight: ${{ inputs.stranding_weight }}"
             echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
             echo "- Outputs: \`data/step2.3-adaptive/${ISO}__pathway*.json\`"
             echo ""
