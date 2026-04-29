@@ -75,39 +75,21 @@ on:
         required: false
         default: '5'
         type: string
-      screen_samples:
-        description: 'Round 1 coarse screen LHS sample count (default: 5000)'
+      stage2_samples:
+        description: 'LHS sample count per year-step (auto-scaled by dimensionality). Default: 5000'
         required: false
         default: '5000'
         type: string
-      widen_samples:
-        description: 'Round 1b widened resample count if <min_hits (default: 10000)'
+      safety_factor:
+        description: 'LHS ceiling multiplier on marginal-yield bounds (1.5 = default). Higher = wider search. Lower = tighter, faster, may miss.'
         required: false
-        default: '10000'
+        default: '1.5'
         type: string
-      refine_samples:
-        description: 'Round 2 bounding box refinement sample count (default: 10000)'
+      stranding_weight:
+        description: 'Gas stranding shadow cost weight (0.5 = default). 0.0 = disabled, 1.0 = full expected stranding cost.'
         required: false
-        default: '10000'
+        default: '0.5'
         type: string
-      min_hits:
-        description: 'Minimum R1 feasible hits before bounding box (else widen). Default: 50'
-        required: false
-        default: '50'
-        type: string
-      bbox_margin:
-        description: 'Bounding box margin fraction (0.15 = 15%). Default: 0.15'
-        required: false
-        default: '0.15'
-        type: string
-      gas_shadow:
-        description: 'Enable gas stranding shadow cost for Pathway A (always on for B)'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
       runner_size:
         description: 'Runner size (standard = 2-core/7GB, large = 16-core/64GB)'
         required: true
@@ -199,12 +181,9 @@ jobs:
           DEMAND: ${{ inputs.demand_growth }}
           SCENARIO: ${{ inputs.scenario }}
           N_BEAMS: ${{ inputs.n_beams }}
-          SCREEN: ${{ inputs.screen_samples }}
-          WIDEN: ${{ inputs.widen_samples }}
-          REFINE: ${{ inputs.refine_samples }}
-          MIN_HITS: ${{ inputs.min_hits }}
-          BBOX_MARGIN: ${{ inputs.bbox_margin }}
-          GAS_SHADOW: ${{ inputs.gas_shadow }}
+          STAGE2: ${{ inputs.stage2_samples }}
+          SAFETY: ${{ inputs.safety_factor }}
+          STRAND: ${{ inputs.stranding_weight }}
         run: |
           # Demand flags
           if [ "$DEMAND" = "all" ]; then
@@ -220,16 +199,11 @@ jobs:
             SCENARIO_FLAG="--scenario $SCENARIO"
           fi
 
-          # Gas shadow flag
-          GAS_FLAG=""
-          if [ "$GAS_SHADOW" = "true" ]; then
-            GAS_FLAG="--gas-shadow"
-          fi
-
           COMMON="--iso $ISO --n-beams $N_BEAMS"
-          COMMON="$COMMON --screen-samples $SCREEN --widen-samples $WIDEN --refine-samples $REFINE"
-          COMMON="$COMMON --min-hits $MIN_HITS --bbox-margin $BBOX_MARGIN"
-          COMMON="$COMMON $DEMAND_FLAG $SCENARIO_FLAG $GAS_FLAG"
+          COMMON="$COMMON --stage2-samples $STAGE2"
+          COMMON="$COMMON --safety-factor $SAFETY"
+          COMMON="$COMMON --stranding-weight $STRAND"
+          COMMON="$COMMON $DEMAND_FLAG $SCENARIO_FLAG"
           echo "common=$COMMON" >> "$GITHUB_OUTPUT"
 
           # Determine which pathways to run
@@ -331,8 +305,9 @@ jobs:
             echo "- Scenario: \`${{ inputs.scenario }}\`"
             echo "- Demand growth: \`${{ inputs.demand_growth }}\`"
             echo "- Beams: ${{ inputs.n_beams }}"
-            echo "- LHS: screen=${{ inputs.screen_samples }} widen=${{ inputs.widen_samples }} refine=${{ inputs.refine_samples }} min_hits=${{ inputs.min_hits }} bbox=${{ inputs.bbox_margin }}"
-            echo "- Gas shadow: \`${{ inputs.gas_shadow }}\`"
+            echo "- Stage 2 samples: ${{ inputs.stage2_samples }}"
+            echo "- Safety factor: ${{ inputs.safety_factor }}"
+            echo "- Stranding weight: ${{ inputs.stranding_weight }}"
             echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
             echo "- Outputs: \`data/step2.3-adaptive/${ISO}__pathway*.json\`"
             echo ""
