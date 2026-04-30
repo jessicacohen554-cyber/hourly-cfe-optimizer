@@ -1734,8 +1734,7 @@ def write_result(result: dict):
     fname = (f"{result['iso']}__pathway{result['pathway']}__"
              f"{result.get('scenario_name', 'custom')}__"
              f"mode{result['cost_mode']}__{result['beam_archetype']}__"
-             f"dg_{result['config']['demand_growth']}__"
-             f"{result['timestamp']}.json")
+             f"dg_{result['config']['demand_growth']}.json")
     path = OUTPUT_DIR / fname
     with open(path, "w") as f:
         json.dump(result, f, indent=2)
