@@ -1424,7 +1424,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                 floor_pcts[RES_IDX["clean_firm"]], min_cf_pct)
 
         if yi < N_YEARS - 1:
-            cfe_ceiling = min(target + 15.0, 100.0)
+            cfe_ceiling = cfe_targets[yi + 1]
         else:
             cfe_ceiling = 100.0
 
