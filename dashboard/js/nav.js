@@ -233,6 +233,7 @@
             children: [
                 { label: 'CO₂ Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
+                { label: 'Reliability Tax', href: 'reliability-tax.html' },
                 { label: 'Wholesale Market Dynamics', href: 'lmp_trends.html' },
                 { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' },
                 { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' },
