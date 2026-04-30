@@ -9,15 +9,26 @@ Architecture:
   Stage 2: For each seed, build year-by-year pathway to 99.9% CFE via on-the-fly
            LHS generation. Write results at every threshold crossed.
 
-Two pathways:
+Four pathways:
   A — VRE + hybrids + storage only. No offshore, geo, CCS, or clean_firm expansion.
-  B — Full P3: all resources incl nuclear, CCS, offshore, geothermal (CAISO only).
+  B — Full P3: all resources incl nuclear, CCS, offshore, geothermal. NOAK 2035.
+  C — Same resources as B. Delayed deployment: NOAK 2040 for advanced clean tech.
+  D — Same resources as B. Further-delayed deployment: NOAK 2045 for advanced clean tech.
 
 Two cost modes:
   Mode 1 — Incremental clean cost only.
   Mode 2 — Incremental clean cost minus gas savings.
 
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
+
+v4.2 changes:
+  - ADD: Pathways C and D — identical resource availability to B, but with
+    delayed NOAK years (2040, 2045) for nuclear, CCS, geothermal, offshore wind.
+    Wright's Law k unchanged; per-year learning rate slows via longer window
+    normalization — delayed deployment = higher costs at any given calendar year.
+  - ADD: noak_pathway_key and offshore_noak_cap properties on RunConfig
+  - CHANGE: All pathway-B-only checks now accept B/C/D ("firm pathways")
+  - CHANGE: _base_lcoe uses cfg.noak_pathway_key instead of hardcoded "3"
 
 v4.1 changes:
   - CHANGE: Wright's Law k from 5 to 3 (APR-1400 calibrated; Finding 8)
@@ -45,7 +56,8 @@ v3.8 changes (carried forward):
 Usage:
     python scripts/step2_3_reliability_tax_adaptive.py --iso NYISO --pathway A
     python scripts/step2_3_reliability_tax_adaptive.py --iso ERCOT --pathway B --demand-growth High
-    python scripts/step2_3_reliability_tax_adaptive.py --iso CAISO --pathway B --batch
+    python scripts/step2_3_reliability_tax_adaptive.py --iso CAISO --pathway C --batch
+    python scripts/step2_3_reliability_tax_adaptive.py --iso PJM --pathway D --scenario base
 """
 from __future__ import annotations
 
@@ -84,6 +96,16 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import pipeline_config as pc
+
+# Inject Pathway C/D NOAK overrides into pipeline_config's lookup table.
+# C = delayed deployment (NOAK 2040), D = further-delayed (NOAK 2045).
+# Uses the same Wright's Law k; per-year cost decline is slower because the
+# normalized progress advances more slowly over the wider window.
+pc.NOAK_YEAR_BY_PATHWAY["C"] = 2040
+pc.NOAK_YEAR_BY_PATHWAY["D"] = 2045
+
+# Convenience: set of pathways that include firm clean resources (nuclear, CCS, etc.)
+FIRM_PATHWAYS = frozenset({"B", "C", "D"})
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -162,7 +184,7 @@ PATHWAY_A_FREE = ["solar", "wind", "solar_batt4", "solar_batt8",
 @dataclass
 class RunConfig:
     iso: str
-    pathway: str  # "A" or "B"
+    pathway: str  # "A", "B", "C", or "D"
     scenario_name: str = "base"
     demand_growth: str = "Medium"  # Low / Medium / High
     # Cost toggles (L / M / H unless noted)
@@ -193,7 +215,7 @@ class RunConfig:
     def free_resources(self) -> list[str]:
         """Resources the optimizer can adjust (not frozen)."""
         free = list(PATHWAY_A_FREE)
-        if self.pathway == "B":
+        if self.pathway in FIRM_PATHWAYS:
             if self.iso in pc.OFFSHORE_ISOS:
                 free.append("offshore_wind")
             free.append("clean_firm")
@@ -219,9 +241,25 @@ class RunConfig:
 
     @property
     def scaled_beams(self) -> int:
-        """N beams scaled for pathway — Pathway B gets +2 for nuclear/offshore archetypes."""
-        extra = 2 if self.pathway == "B" else 0
+        """N beams scaled for pathway — firm pathways get +2 for nuclear/offshore archetypes."""
+        extra = 2 if self.pathway in FIRM_PATHWAYS else 0
         return self.n_beams + extra
+
+    @property
+    def noak_pathway_key(self) -> str | None:
+        """Lookup key into NOAK_YEAR_BY_PATHWAY for learning-curve resources.
+
+        B → "3" (proactive, NOAK 2035)
+        C → "C" (delayed, NOAK 2040)
+        D → "D" (further-delayed, NOAK 2045)
+        A → None (no firm resources, learning curve irrelevant)
+        """
+        return {"B": "3", "C": "C", "D": "D"}.get(self.pathway)
+
+    @property
+    def offshore_noak_cap(self) -> int:
+        """Offshore wind NOAK year cap — aligned with firm deployment timing."""
+        return {"B": 2035, "C": 2040, "D": 2045}.get(self.pathway, 2035)
 
 
 # Three named scenarios covering the spread of cost assumptions.
@@ -662,7 +700,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
     if resource == "clean_firm":
         foak = pc.FOAK_NUCLEAR_NEWBUILD[iso] * NUCLEAR_FOAK_DISCOUNT
         noak = pc.NUCLEAR_NEWBUILD_LCOE[fl][iso]
-        fs, ny = pc.get_pathway_noak_window("nuclear", fl, "3")
+        fs, ny = pc.get_pathway_noak_window("nuclear", fl, cfg.noak_pathway_key)
         return wrights_law_cost(foak, noak, year, fs, ny)
 
     if resource == "ccs_ccgt":
@@ -673,7 +711,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
         else:
             noak = pc.CCS_LCOE_45Q_OFF[cl][iso]
             foak = pc.FOAK_CCS_45Q_OFF[iso]
-        fs, ny = pc.get_pathway_noak_window("ccs", cl, "3")
+        fs, ny = pc.get_pathway_noak_window("ccs", cl, cfg.noak_pathway_key)
         cost = wrights_law_cost(foak, noak, year, fs, ny)
         if iso == "NEISO":
             cost += pc.NEISO_CCS_GAS_ADDER
@@ -684,7 +722,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
             return 0.0
         tech = "offshore_wind_float" if iso == "CAISO" else "offshore_wind_fixed"
         fs, ny = pc.LEARNING_PARAMS[tech][cfg.ren_cost]  # v3.8 FIX: was "M"
-        ny = min(ny, 2035)  # P3 pathway: offshore hits NOAK by 2035, same as nuclear
+        ny = min(ny, cfg.offshore_noak_cap)  # Offshore NOAK aligned with pathway deployment timing
         return wrights_law_cost(
             pc.FOAK_OFFSHORE_WIND.get(iso, 100),
             pc.NOAK_OFFSHORE_WIND[ren_name].get(iso, 65), year, fs, ny)
@@ -692,7 +730,7 @@ def _base_lcoe(iso: str, resource: str, year: int, cfg: RunConfig) -> float:
     if resource == "geothermal":
         if iso != "CAISO":
             return 0.0
-        fs, ny = pc.get_pathway_noak_window("geo", gl, "3")
+        fs, ny = pc.get_pathway_noak_window("geo", gl, cfg.noak_pathway_key)
         return wrights_law_cost(pc.FOAK_GEOTHERMAL, pc.GEOTHERMAL_LCOE[gl],
                                 year, fs, ny)
     return 0.0
@@ -1060,8 +1098,8 @@ def generate_candidates(
     for j in range(N_STORAGE):
         stor_ceilings[j] = min(stor_ceilings[j], _STORAGE_CAP_PCT)
 
-    # Apply hard caps (CCS, geo, uprate for Pathway B)
-    if cfg.pathway == "B":
+    # Apply hard caps (CCS, geo, uprate for firm pathways B/C/D)
+    if cfg.pathway in FIRM_PATHWAYS:
         demand_twh = float(pc.REGIONAL_DEMAND_TWH[cfg.iso])
         for k, ri in enumerate(free_res_idx):
             res = RESOURCE_ORDER[ri]
@@ -1168,7 +1206,7 @@ def classify_archetype(mix_pcts: dict[str, float], pathway: str) -> str:
     sf = solar_family / total_clean
     wf = wind_family / total_clean
 
-    if pathway == "B":
+    if pathway in FIRM_PATHWAYS:
         nuke = mix_pcts.get("clean_firm", 0) / total_clean
         off = mix_pcts.get("offshore_wind", 0) / total_clean
         if nuke > 0.4:
@@ -1374,7 +1412,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
         if cfg.pathway == "A":
             for res in ["offshore_wind", "geothermal", "ccs_ccgt"]:
                 floor_pcts[RES_IDX[res]] = 0.0
-        elif cfg.pathway == "B":
+        elif cfg.pathway in FIRM_PATHWAYS:
             if iso not in pc.OFFSHORE_ISOS:
                 floor_pcts[RES_IDX["offshore_wind"]] = 0.0
             if iso != "CAISO":
@@ -1429,7 +1467,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             if delta_pct > RATCHET_TOL_PCT:
                 delta_twh = delta_pct / 100.0 * dem_twh
 
-                if res == "clean_firm" and cfg.pathway == "B":
+                if res == "clean_firm" and cfg.pathway in FIRM_PATHWAYS:
                     prev_cf_twh = floor_pcts[ri] / 100.0 * dem_twh
                     new_cf_twh = winner_pcts[ri] / 100.0 * dem_twh
                     prev_tranches = decompose_clean_firm(prev_cf_twh, iso, year, cfg)
@@ -1535,7 +1573,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   f"cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "4.1",
+        "schema_version": "4.2",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1552,6 +1590,8 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "stage2_samples_scaled": cfg.scaled_samples,
             "safety_factor": SAFETY_FACTOR,
             "wrights_law_k": WRIGHTS_LAW_K,
+            "noak_pathway_key": cfg.noak_pathway_key,
+            "offshore_noak_cap": cfg.offshore_noak_cap,
             "stranding_shadow_weight": STRANDING_SHADOW_WEIGHT,
         },
         "beam_archetype": seed["archetype"],
@@ -1775,7 +1815,7 @@ def main():
         description="Step 2.3 Adaptive — on-the-fly reliability tax optimizer")
     ap.add_argument("--iso", type=str, required=True,
                     help="ISO/RTO region (e.g. NYISO, ERCOT)")
-    ap.add_argument("--pathway", type=str, required=True, choices=["A", "B"])
+    ap.add_argument("--pathway", type=str, required=True, choices=["A", "B", "C", "D"])
     ap.add_argument("--demand-growth", type=str, default="Medium",
                     choices=["Low", "Medium", "High"],
                     help="Single demand level (ignored if --batch-demand)")
@@ -1800,7 +1840,7 @@ def main():
                      else [args.demand_growth])
 
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.1 (H2 peaker, k=3)")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.2 (H2 peaker, k=3, pathways A/B/C/D)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
