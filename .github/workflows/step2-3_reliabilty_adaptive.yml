@@ -264,6 +264,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config http.postBuffer 524288000
+          git config pack.depth 1
+          git config pack.window 0
           git checkout -b "${branch}"
 
           git add -f "data/step2.3-adaptive/" 2>/dev/null || true
