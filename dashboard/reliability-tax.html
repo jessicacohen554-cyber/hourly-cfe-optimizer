@@ -211,7 +211,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 <div class="pw-legend">
     <div class="pw-legend-item"><span class="pw-swatch" style="background:#3B82F6;"></span> Pathway A &mdash; VRE + Storage</div>
     <div class="pw-legend-item"><span class="pw-swatch" style="background:var(--nuclear);"></span> Pathway B &mdash; All Resources</div>
-    <div class="pw-legend-item"><span class="pw-swatch-dash" style="border-color:#8B5CF6;"></span> Pathway C &mdash; Delayed NOAK (2040)</div>
+    <div class="pw-legend-item"><span class="pw-swatch-dash" style="border-color:#8B5CF6;"></span> Pathway C &mdash; Delayed Nth-of-a-kind (NOAK) costs (2040)</div>
     <div class="pw-legend-item"><span class="pw-swatch-dot" style="border-color:#A855F7;"></span> Pathway D &mdash; Hard Correction (2045)</div>
 </div>
 
@@ -292,7 +292,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <div class="section-header fade-in">
     <div class="section-number">3</div>
-    <h2>How the Clean Portfolio Transforms</h2>
+    <h2>How the Clean Portfolio Shifts</h2>
     <p>The resource mix that achieves each CFE threshold changes dramatically&mdash;and diverges sharply between pathways.</p>
 </div>
 <section class="content-section fade-in">
@@ -351,7 +351,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     var ISO_LIST = RT_DATA.meta.isos;
     var RES_LABELS = {
         nuclear:'Nuclear / Firm Clean',
-        cleanFirm:'Nuclear / Firm Clean', geothermal:'Geothermal', ccs:'CCS-CCGT',
+        cleanFirm:'Nuclear / Firm Clean', geothermal:'Geothermal', ccs:'Carbon Capture and Storage (CCS) — Combined-Cycle Gas Turbine (CCGT)',
         hydro:'Hydro', offshoreWind:'Offshore Wind', wind:'Wind', solar:'Solar',
         windBatt4:'Wind + 4hr Battery', windBatt8:'Wind + 8hr Battery',
         solarBatt4:'Solar + 4hr Battery', solarBatt8:'Solar + 8hr Battery'
@@ -647,7 +647,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             document.getElementById('modeCompTable').innerHTML =
                 '<table style="width:100%;font-size:0.85rem;border-collapse:collapse;margin-top:12px;">'+
                 '<thead><tr style="border-bottom:2px solid var(--border-light);">'+
-                '<th style="text-align:left;padding:6px;">Pathway</th><th>Incremental Cost</th><th>Net-of-Gas Cost</th><th>Delta</th><th>Peak Gas (M1)</th><th>Peak Gas (M2)</th></tr></thead>'+
+                '<th style="text-align:left;padding:6px;">Pathway</th><th>Incremental Cost</th><th>Net-of-Gas Cost</th><th>Delta</th><th>Peak Gas (Incremental Cost)</th><th>Peak Gas (Net-of-Gas-Savings)</th></tr></thead>'+
                 '<tbody>'+rows+'</tbody></table>';
         }
     }
