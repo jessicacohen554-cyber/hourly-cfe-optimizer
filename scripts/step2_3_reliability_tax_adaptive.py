@@ -21,6 +21,16 @@ Two cost modes:
 
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
 
+v4.3 changes:
+  - FIX: Seeds no longer inflate 2025 CFE above grid baseline.
+    Solver starts from actual GRID_MIX_SHARES at 2025; seed mix becomes
+    floor at MODEL_START_YEAR (2030).
+  - CHANGE: Per-ISO seed bands — ISOs with baseline >= 45% (CAISO, ERCOT, SPP)
+    seed from EF band 60; others (MISO, NEISO, NYISO, PJM) from band 50.
+  - CHANGE: Per-group CFE waypoints — seed=60 group uses (2030,60)→(2035,75)→(2040,90);
+    seed=50 group keeps (2030,50)→(2035,70)→(2040,90).  Both converge at 90% by 2040.
+  - ADD: SEED_BAND_BY_ISO, CFE_WAYPOINTS_50/60, MODEL_START_YEAR constants.
+
 v4.2 changes:
   - ADD: Pathways C and D — identical resource availability to B, but with
     delayed NOAK years (2040, 2045) for nuclear, CCS, geothermal, offshore wind.
@@ -170,8 +180,23 @@ EF_BAND_THRESHOLDS = (
     80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9,
 )
 
-# CFE waypoints for trajectory
-CFE_WAYPOINTS = ((2030, 50), (2035, 70), (2040, 90), (2045, 95), (2050, 99.9))
+# Per-ISO seed band: ISOs with baseline >= 45% seed from band 60,
+# others from band 50.  Represents the 2030 starting point.
+SEED_BAND_HIGH = frozenset({"CAISO", "ERCOT", "SPP"})  # baseline >= 45%
+SEED_BAND_BY_ISO = {iso: 60 if iso in SEED_BAND_HIGH else 50
+                    for iso in pc.ISOS}
+
+# Per-group CFE waypoints — both converge to 90% by 2040.
+# 2030s slope differs: seed=50 needs 4pp/yr, seed=60 needs 3pp/yr.
+CFE_WAYPOINTS_50 = ((2030, 50), (2035, 70), (2040, 90), (2045, 95), (2050, 99.9))
+CFE_WAYPOINTS_60 = ((2030, 60), (2035, 75), (2040, 90), (2045, 95), (2050, 99.9))
+
+def _waypoints_for_iso(iso: str) -> tuple:
+    return CFE_WAYPOINTS_60 if iso in SEED_BAND_HIGH else CFE_WAYPOINTS_50
+
+# Model starts at 2030; 2025-2029 use actual grid baseline (no optimization).
+MODEL_START_YEAR = 2030
+MODEL_START_YI = MODEL_START_YEAR - BASE_YEAR  # = 5
 
 # Pathway A free dimensions (indices into RESOURCE_ORDER)
 PATHWAY_A_FREE = ["solar", "wind", "solar_batt4", "solar_batt8",
@@ -815,9 +840,9 @@ def peak_demand_vec(iso: str, level: str = "Medium") -> np.ndarray:
     return np.array([base * (1 + rate) ** (y - BASE_YEAR) for y in YEARS])
 
 
-def cfe_target(year: int, base_pct: float) -> float:
+def cfe_target(year: int, base_pct: float, waypoints: tuple) -> float:
     """CFE target for a given year via linear interpolation of waypoints."""
-    pts = [(BASE_YEAR, base_pct)] + list(CFE_WAYPOINTS)
+    pts = [(BASE_YEAR, base_pct)] + list(waypoints)
     if year <= pts[0][0]:
         return pts[0][1]
     if year >= pts[-1][0]:
@@ -829,9 +854,10 @@ def cfe_target(year: int, base_pct: float) -> float:
 
 
 def cfe_target_vec(iso: str) -> np.ndarray:
-    """(N_YEARS,) CFE target percentages."""
+    """(N_YEARS,) CFE target percentages, using per-ISO waypoints."""
     base = sum(pc.GRID_MIX_SHARES[iso].values())
-    return np.array([cfe_target(y, base) for y in YEARS])
+    waypoints = _waypoints_for_iso(iso)
+    return np.array([cfe_target(y, base, waypoints) for y in YEARS])
 
 
 # ---------------------------------------------------------------------------
@@ -1224,21 +1250,18 @@ def classify_archetype(mix_pcts: dict[str, float], pathway: str) -> str:
 def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                   dm32: np.ndarray, dn32: np.ndarray
                   ) -> list[dict]:
-    """Load EF parquets for first threshold above baseline, select N seed mixes."""
-    base_pct = sum(pc.GRID_MIX_SHARES[iso].values())
-    first_threshold = None
-    for t in EF_BAND_THRESHOLDS:
-        if t > base_pct:
-            first_threshold = t
-            break
-    if first_threshold is None:
-        print(f"[stage1] {iso}: baseline {base_pct:.1f}% exceeds all thresholds")
-        return []
+    """Load EF parquets at the ISO's seed band (50 or 60), select diverse seeds.
 
-    print(f"[stage1] {iso}: baseline={base_pct:.1f}%, first threshold={first_threshold}%")
-    ef = load_ef_band(iso, first_threshold)
+    The seed band represents the 2030 starting point — the first year modeled.
+    ISOs with baseline >= 45% seed from band 60; others from band 50.
+    """
+    seed_band = SEED_BAND_BY_ISO[iso]
+    base_pct = sum(pc.GRID_MIX_SHARES[iso].values())
+
+    print(f"[stage1] {iso}: baseline={base_pct:.1f}%, seed band={seed_band}%")
+    ef = load_ef_band(iso, seed_band)
     if ef is None:
-        print(f"[stage1] {iso}: no EF parquet for threshold {first_threshold}")
+        print(f"[stage1] {iso}: no EF parquet for seed band {seed_band}")
         return []
 
     n = ef.num_rows
@@ -1263,10 +1286,10 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
 
     next_threshold = 100.0
     for t in EF_BAND_THRESHOLDS:
-        if t > first_threshold:
+        if t > seed_band:
             next_threshold = t
             break
-    mask = (scores >= first_threshold - 0.5) & (scores < next_threshold)
+    mask = (scores >= seed_band - 0.5) & (scores < next_threshold)
     valid_idx = np.where(mask)[0]
     if len(valid_idx) == 0:
         mask = scores >= base_pct
@@ -1356,6 +1379,10 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   ) -> dict:
     """Build a full 2025-2050 pathway from a seed mix.
 
+    Years 2025-2029 use actual grid baseline (no optimization).
+    Active solving starts at MODEL_START_YEAR (2030) using the seed
+    as the initial floor.
+
     Returns a result dict with threshold snapshots.
     """
     iso = cfg.iso
@@ -1376,20 +1403,12 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     baseline_cf_twh = (pc.GRID_MIX_SHARES[iso].get("clean_firm", 0) / 100.0
                        * base_demand)
 
+    # Start from actual grid baseline; seed becomes floor at 2030.
     floor_pcts = np.zeros(N_RESOURCES, dtype=np.float64)
     for ri, res in enumerate(RESOURCE_ORDER):
-        floor_pcts[ri] = seed["resource_pcts"].get(res, 0.0)
+        floor_pcts[ri] = pc.GRID_MIX_SHARES[iso].get(res, 0.0)
 
-    cf_baseline_pct = pc.GRID_MIX_SHARES[iso].get("clean_firm", 0)
-    hydro_baseline_pct = pc.GRID_MIX_SHARES[iso].get("hydro", 0)
-    floor_pcts[RES_IDX["clean_firm"]] = max(floor_pcts[RES_IDX["clean_firm"]],
-                                             cf_baseline_pct)
-    floor_pcts[RES_IDX["hydro"]] = max(floor_pcts[RES_IDX["hydro"]],
-                                        hydro_baseline_pct)
-
-    floor_storage = np.array([
-        seed["storage_pcts"].get(sc, 0.0) for sc in STORAGE_COLS
-    ], dtype=np.float64)
+    floor_storage = np.zeros(N_STORAGE, dtype=np.float64)
 
     vintage_ledger = []
     prev_gas_cost = 0.0
@@ -1404,6 +1423,15 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     for yi, year in enumerate(YEARS):
         dem_twh = demand_vec[yi]
         target = cfe_targets[yi]
+
+        # At MODEL_START_YEAR, transition floor to seed mix.
+        if yi == MODEL_START_YI:
+            for ri, res in enumerate(RESOURCE_ORDER):
+                floor_pcts[ri] = max(floor_pcts[ri],
+                                     seed["resource_pcts"].get(res, 0.0))
+            for j, sc in enumerate(STORAGE_COLS):
+                floor_storage[j] = max(floor_storage[j],
+                                       seed["storage_pcts"].get(sc, 0.0))
 
         for res, twh in frozen_twh.items():
             ri = RES_IDX[res]
@@ -1573,7 +1601,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   f"cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "4.2",
+        "schema_version": "4.3",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1593,6 +1621,8 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "noak_pathway_key": cfg.noak_pathway_key,
             "offshore_noak_cap": cfg.offshore_noak_cap,
             "stranding_shadow_weight": STRANDING_SHADOW_WEIGHT,
+            "seed_band": SEED_BAND_BY_ISO[iso],
+            "model_start_year": MODEL_START_YEAR,
         },
         "beam_archetype": seed["archetype"],
         "beam_index": beam_idx,
@@ -1840,8 +1870,8 @@ def main():
                      else [args.demand_growth])
 
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.2 (H2 peaker, k=3, pathways A/B/C/D)")
-    print(f"[adaptive] ISO={iso}  Pathway={args.pathway}")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.3 (per-ISO seed bands, 2030 start)")
+    print(f"[adaptive] ISO={iso}  Pathway={args.pathway}  Seed band={SEED_BAND_BY_ISO[iso]}%")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
     print(f"[adaptive] Stranding shadow weight: {STRANDING_SHADOW_WEIGHT}")
