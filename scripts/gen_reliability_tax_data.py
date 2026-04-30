@@ -293,11 +293,13 @@ def main():
     pw_counts = defaultdict(int)
     for key in best: pw_counts[key[1]] += 1
     for pw in PATHWAYS: print(f"[gen] Pathway {pw}: {pw_counts.get(pw, 0)} configs")
+    pathways_present = [pw for pw in PATHWAYS if pw_counts.get(pw, 0) > 0]
+    print(f"pathways_present: {pathways_present}")
     payload = {
         'meta': {
             'total_files': len(glob.glob(os.path.join(data_dir, '*.json'))),
             'unique_configs': len(best),
-            'pathways_present': [pw for pw in PATHWAYS if pw_counts.get(pw, 0) > 0],
+            'pathways_present': pathways_present,
             'isos': ISOS, 'stack_order': STACK_ORDER,
         },
         'hero_stats': build_hero_stats(best),
