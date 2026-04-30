@@ -1,14 +1,22 @@
 name: "Step 2.3 Adaptive: On-the-Fly Pathway Optimizer"
 
 # Runs step2_3_reliability_tax_adaptive.py — marginal-yield-bounded LHS
-# generation with two pathways (A = VRE-only, B = full P3 incl nuclear/CCS/
-# offshore) and two cost modes (incremental clean / clean minus gas savings).
+# generation with four pathways:
+#   A = VRE-only
+#   B = full P3 incl nuclear/CCS/offshore, NOAK 2035
+#   C = same resources as B, delayed deployment NOAK 2040
+#   D = same resources as B, further-delayed deployment NOAK 2045
+# and two cost modes (incremental clean / clean minus gas savings).
 #
 # iso=ALL fans out to 7 parallel matrix jobs, each pushing its own branch.
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-adaptive"
 # afterwards to consolidate into master.
 #
-# pathway=BOTH runs A then B sequentially within each matrix job.
+# pathway options:
+#   A, B, C, D       — run a single pathway
+#   BOTH              — run A then B (legacy compat)
+#   ALL_FIRM          — run B then C then D sequentially
+#   ALL               — run A then B then C then D sequentially
 #
 # scenario=all runs all 3 named cost scenarios (base, firm_high_vre_low,
 # firm_low_vre_high). Otherwise runs only the selected scenario.
@@ -22,7 +30,7 @@ name: "Step 2.3 Adaptive: On-the-Fly Pathway Optimizer"
 #
 # Prerequisite: Step 2.1 EF parquets (incl 2.1e augment), EIA-930 profiles,
 #               hybrid profiles.
-# Output: data/step2.3-adaptive/<ISO>__pathway<A|B>__<scenario>__*.json
+# Output: data/step2.3-adaptive/<ISO>__pathway<A|B|C|D>__<scenario>__*.json
 
 on:
   workflow_dispatch:
@@ -42,14 +50,18 @@ on:
           - SPP
           - ALL
       pathway:
-        description: 'Pathway (A = VRE+storage only, B = all resources incl nuclear/CCS/offshore, BOTH = A then B)'
+        description: 'Pathway (A=VRE-only, B=NOAK 2035, C=NOAK 2040, D=NOAK 2045, BOTH=A+B, ALL_FIRM=B+C+D, ALL=A+B+C+D)'
         required: true
         default: 'B'
         type: choice
         options:
           - A
           - B
+          - C
+          - D
           - BOTH
+          - ALL_FIRM
+          - ALL
       demand_growth:
         description: 'Demand growth level (all = Low × Medium × High)'
         required: true
@@ -71,7 +83,7 @@ on:
           - firm_low_vre_high
           - all
       n_beams:
-        description: 'Number of seed beams per config (Pathway B auto-scales +2)'
+        description: 'Number of seed beams per config (firm pathways auto-scale +2)'
         required: false
         default: '5'
         type: string
@@ -193,11 +205,12 @@ jobs:
           echo "common=$COMMON" >> "$GITHUB_OUTPUT"
 
           # Determine which pathways to run
-          if [ "$PATHWAY" = "BOTH" ]; then
-            echo "pathways=A B" >> "$GITHUB_OUTPUT"
-          else
-            echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT"
-          fi
+          case "$PATHWAY" in
+            BOTH)      echo "pathways=A B" >> "$GITHUB_OUTPUT" ;;
+            ALL_FIRM)  echo "pathways=B C D" >> "$GITHUB_OUTPUT" ;;
+            ALL)       echo "pathways=A B C D" >> "$GITHUB_OUTPUT" ;;
+            *)         echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: "Run adaptive optimizer — ${{ matrix.iso }}"
         env:
@@ -229,11 +242,15 @@ jobs:
             exit 1
           fi
 
-          for pw in A B; do
-            if [ "$PATHWAY" = "BOTH" ] || [ "$PATHWAY" = "$pw" ]; then
-              pw_count=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json 2>/dev/null | wc -l)
-              echo "[verify] ${ISO} Pathway ${pw}: ${pw_count} JSONs"
-            fi
+          for pw in A B C D; do
+            case "$PATHWAY" in
+              BOTH)      [[ "$pw" == "A" || "$pw" == "B" ]] || continue ;;
+              ALL_FIRM)  [[ "$pw" == "B" || "$pw" == "C" || "$pw" == "D" ]] || continue ;;
+              ALL)       ;; # check all
+              *)         [[ "$pw" == "$PATHWAY" ]] || continue ;;
+            esac
+            pw_count=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json 2>/dev/null | wc -l)
+            echo "[verify] ${ISO} Pathway ${pw}: ${pw_count} JSONs"
           done
 
       - name: "Commit + push to per-ISO branch — ${{ matrix.iso }}"
