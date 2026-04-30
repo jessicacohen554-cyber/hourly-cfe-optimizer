@@ -1,10 +1,10 @@
 {
-  "schema_version": "4.1",
+  "schema_version": "4.2",
   "iso": "PJM",
   "pathway": "A",
   "dim_key": "ren_L__firm_H__batt_L__ldes_L__fuel_M__tx_L__ccs_H__geo_H__q45_1__dg_Medium",
   "cost_mode": 1,
-  "timestamp": "20260430_021222",
+  "timestamp": "20260430_071342",
   "config": {
     "demand_growth": "Medium",
     "firm_cost": "H",
@@ -16,6 +16,8 @@
     "stage2_samples_scaled": 8000,
     "safety_factor": 1.5,
     "wrights_law_k": 3.0,
+    "noak_pathway_key": null,
+    "offshore_noak_cap": 2035,
     "stranding_shadow_weight": 0.5
   },
   "beam_archetype": "balanced",
