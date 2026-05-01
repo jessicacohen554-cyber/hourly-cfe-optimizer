@@ -120,6 +120,37 @@ padding: 0 var(–pad-page);
 font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bottom: var(–space-md);
 }
 .narrative-intro .lead { font-size: 1.15rem; font-weight: 500; color: var(–text-primary); }
+
+/* ─── Page-specific: ISO selector bar override ─── */
+#globalIsoSelector {
+display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+}
+#globalIsoSelector .iso-btn {
+border-bottom: 3px solid transparent;
+transition: all 0.2s ease;
+}
+#globalIsoSelector .iso-btn:hover {
+border-bottom-color: var(–iso-accent, var(–accent-blue));
+background: rgba(0,0,0,0.02);
+}
+#globalIsoSelector .iso-btn.active {
+border-bottom-color: var(–iso-accent, var(–accent-blue));
+font-weight: 700;
+}
+
+/* ─── Page-specific: hero card enhancements ─── */
+.iso-card { min-height: 140px; }
+.iso-card-name {
+font-family: var(–font-heading); font-size: 1.1rem; font-weight: 800;
+color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
+}
+
+/* ─── Page-specific: pathway legend compact on mobile ─── */
+@media (max-width: 768px) {
+.pw-legend { flex-direction: column; gap: 8px; align-items: flex-start; padding: 10px 16px; }
+.pw-controls { flex-direction: column; gap: 10px; }
+.pw-control-divider { width: 100%; height: 1px; }
+}
 </style>
 
 </head>
@@ -425,6 +456,7 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
         if (charts[k]) { charts[k].destroy(); charts[k] = null; }
         var rA = RT_DATA.cost_ribbons[iso+'_A'], rB = RT_DATA.cost_ribbons[iso+'_B'];
         if (!rA || !rB) return;
+        var isoColor = ISO_COLORS[iso] || '#3B82F6';
         var labels=[],minA=[],maxA=[],minB=[],maxB=[];
         rA.points.forEach(function(p) {
             if (p.t >= 90) {
@@ -437,10 +469,10 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
         charts[k] = new Chart(canvas, {
             type:'line',
             data:{ labels:labels, datasets:[
-                {data:maxA,fill:'+1',backgroundColor:withAlpha('#3B82F6',0.15),borderColor:'#3B82F6',borderWidth:2,pointRadius:0,tension:0.3},
-                {data:minA,fill:false,borderColor:'#3B82F6',borderWidth:1,pointRadius:0,tension:0.3},
-                {data:maxB,fill:'+1',backgroundColor:withAlpha(RESOURCE_COLORS.cleanFirm,0.15),borderColor:RESOURCE_COLORS.cleanFirm,borderWidth:2,pointRadius:0,tension:0.3},
-                {data:minB,fill:false,borderColor:RESOURCE_COLORS.cleanFirm,borderWidth:1,pointRadius:0,tension:0.3},
+                {data:maxA,fill:'+1',backgroundColor:withAlpha(isoColor,0.18),borderColor:isoColor,borderWidth:2.5,pointRadius:0,tension:0.3},
+                {data:minA,fill:false,borderColor:isoColor,borderWidth:1,pointRadius:0,tension:0.3},
+                {data:maxB,fill:'+1',backgroundColor:withAlpha(isoColor,0.08),borderColor:withAlpha(isoColor,0.45),borderWidth:1.5,pointRadius:0,tension:0.3,borderDash:[4,3]},
+                {data:minB,fill:false,borderColor:withAlpha(isoColor,0.45),borderWidth:1,pointRadius:0,tension:0.3,borderDash:[4,3]},
             ]},
             options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:false}
         });
@@ -454,6 +486,7 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
             btn.className = 'iso-btn' + (iso === currentISO ? ' active' : '');
             btn.textContent = iso;
             btn.setAttribute('data-iso', iso);
+            btn.style.setProperty('--iso-accent', ISO_COLORS[iso]);
             btn.onclick = function() { switchISO(iso); };
             bar.appendChild(btn);
         });
@@ -461,7 +494,9 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
 
     function switchISO(iso) {
         currentISO = iso;
-        document.querySelectorAll('.iso-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-iso')===iso);});
+        document.querySelectorAll('.iso-btn').forEach(function(b){
+            b.classList.toggle('active',b.getAttribute('data-iso')===iso);
+        });
         document.querySelectorAll('.iso-card').forEach(function(c){c.classList.toggle('active',c.getAttribute('data-iso')===iso);});
         document.querySelectorAll('.summary-card').forEach(function(c){c.classList.toggle('highlighted',c.getAttribute('data-iso')===iso);});
         renderGasHump(); renderCostRibbon(); renderMixCharts(); updateModeComp();
@@ -473,40 +508,54 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
         var canvas = document.getElementById('gasHumpChart');
         var dg = document.getElementById('selGasDemand').value;
         var scen = document.getElementById('selGasScenario').value;
+        var isoColor = ISO_COLORS[currentISO] || '#3B82F6';
         var pws = [
-            {id:'A',chk:'chkPwA',color:'#3B82F6',dash:[],w:2,fill:true},
-            {id:'B',chk:'chkPwB',color:RESOURCE_COLORS.cleanFirm,dash:[],w:2,fill:true},
-            {id:'C',chk:'chkPwC',color:'#8B5CF6',dash:[6,4],w:2,fill:false},
-            {id:'D',chk:'chkPwD',color:'#A855F7',dash:[3,4],w:2,fill:false}
+            {id:'A',chk:'chkPwA',color:isoColor,dash:[],w:2.5,fill:true,fillAlpha:0.12},
+            {id:'B',chk:'chkPwB',color:isoColor,dash:[6,4],w:2,fill:false,fillAlpha:0},
+            {id:'C',chk:'chkPwC',color:'#8B5CF6',dash:[6,4],w:2,fill:false,fillAlpha:0},
+            {id:'D',chk:'chkPwD',color:'#A855F7',dash:[3,4],w:2,fill:false,fillAlpha:0}
         ];
-        var allYears = new Set(), dataByPw = {};
+        var thresholdLabels = ['50%','70%','90%','95%','99%','99.9%'];
+        var thresholdVals = [50,70,90,95,99,99.9];
+        var dataByPw = {};
         pws.forEach(function(pw) {
             var chk = document.getElementById(pw.chk);
             if (!chk || !chk.checked) return;
             var hump = RT_DATA.gas_hump[currentISO+'_'+pw.id+'_'+scen+'_'+dg];
             if (!hump) return;
             dataByPw[pw.id] = hump;
-            hump.points.forEach(function(p){allYears.add(p.year);});
         });
-        var years = Array.from(allYears).sort(function(a,b){return a-b;});
-        if (!years.length) { document.getElementById('gasHumpCallout').innerHTML='No data for this combination.'; return; }
+        if (!Object.keys(dataByPw).length) { document.getElementById('gasHumpCallout').innerHTML='No data for this combination.'; return; }
         var datasets = [];
         pws.forEach(function(pw) {
             if (!dataByPw[pw.id]) return;
-            var pts = {}; dataByPw[pw.id].points.forEach(function(p){pts[p.year]=p.gas_gw;});
+            var ptsByT = {}; dataByPw[pw.id].points.forEach(function(p){ptsByT[p.t]=p;});
             datasets.push({
-                label:'Pathway '+pw.id, data:years.map(function(y){return pts[y]!=null?pts[y]:null;}),
-                borderColor:pw.color, backgroundColor:pw.fill?withAlpha(pw.color,0.12):'transparent',
+                label:'Pathway '+pw.id,
+                data:thresholdVals.map(function(t){var p=ptsByT[t]; return p?p.gas_gw:null;}),
+                yearData:thresholdVals.map(function(t){var p=ptsByT[t]; return p?p.year:null;}),
+                borderColor:pw.color,
+                backgroundColor:pw.fill?withAlpha(pw.color,pw.fillAlpha):'transparent',
                 fill:pw.fill?'origin':false, borderWidth:pw.w, borderDash:pw.dash,
-                tension:0.35, pointRadius:3, pointBackgroundColor:pw.color
+                tension:0.35, pointRadius:4, pointBackgroundColor:pw.color,
+                pointBorderColor:'#fff', pointBorderWidth:1.5
             });
         });
         charts.gasHump = new Chart(canvas, {
-            type:'line', data:{labels:years,datasets:datasets},
+            type:'line', data:{labels:thresholdLabels,datasets:datasets},
             options:{responsive:true,maintainAspectRatio:false,
                 plugins:{legend:{display:false},datalabels:{display:false},
-                    tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y!=null?c.parsed.y.toFixed(1)+' GW':'N/A');}}}},
-                scales:{x:{title:{display:true,text:'Year',font:{size:13}}},y:{title:{display:true,text:'Gas Capacity (GW)',font:{size:13}},beginAtZero:true}}}
+                    tooltip:{callbacks:{
+                        label:function(c){
+                            var yr = c.dataset.yearData ? c.dataset.yearData[c.dataIndex] : null;
+                            var yrStr = yr ? ' ('+yr+')' : '';
+                            return c.dataset.label+': '+(c.parsed.y!=null?c.parsed.y.toFixed(1)+' GW'+yrStr:'N/A');
+                        }
+                    }}},
+                scales:{
+                    x:{title:{display:true,text:'CFE Threshold',font:{size:13}}},
+                    y:{title:{display:true,text:'Gas Capacity (GW)',font:{size:13}},beginAtZero:true}
+                }}
         });
         var gasLegendEl = document.getElementById('gasHumpLegend');
         if (!gasLegendEl) {
@@ -538,14 +587,17 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
     function renderCostRibbon() {
         destroyChart('costRibbon');
         var canvas = document.getElementById('costRibbonChart');
+        var isoColor = ISO_COLORS[currentISO] || '#3B82F6';
         var datasets=[], labels=[];
-        [{id:'A',color:'#3B82F6',label:'Pathway A (VRE + Storage)'},{id:'B',color:RESOURCE_COLORS.cleanFirm,label:'Pathway B (All Resources)'}].forEach(function(pw) {
+        [{id:'A',color:isoColor,label:'Pathway A (renewables + storage)',dash:[],w:2.5,fillAlpha:0.15},
+         {id:'B',color:isoColor,label:'Pathway B (full resource set)',dash:[6,4],w:2,fillAlpha:0.06}].forEach(function(pw) {
             var r = RT_DATA.cost_ribbons[currentISO+'_'+pw.id];
             if (!r || !r.points.length) return;
             if (!labels.length) labels = r.points.map(function(p){return p.t+'%';});
-            datasets.push({label:pw.label+' max',data:r.points.map(function(p){return p.max;}),fill:'+1',backgroundColor:withAlpha(pw.color,0.15),borderColor:pw.color,borderWidth:2,pointRadius:0,tension:0.3});
-            datasets.push({label:pw.label+' min',data:r.points.map(function(p){return p.min;}),fill:false,borderColor:pw.color,borderWidth:1.5,pointRadius:0,tension:0.3});
-            datasets.push({label:pw.label,data:r.points.map(function(p){return p.median;}),borderColor:pw.color,borderWidth:2,fill:false,pointRadius:4,pointBackgroundColor:pw.color,tension:0.3});
+            var lineColor = pw.dash.length ? withAlpha(pw.color,0.55) : pw.color;
+            datasets.push({label:pw.label+' max',data:r.points.map(function(p){return p.max;}),fill:'+1',backgroundColor:withAlpha(pw.color,pw.fillAlpha),borderColor:lineColor,borderWidth:pw.w,borderDash:pw.dash,pointRadius:0,tension:0.3});
+            datasets.push({label:pw.label+' min',data:r.points.map(function(p){return p.min;}),fill:false,borderColor:lineColor,borderWidth:pw.dash.length?1:1.5,borderDash:pw.dash,pointRadius:0,tension:0.3});
+            datasets.push({label:pw.label,data:r.points.map(function(p){return p.median;}),borderColor:pw.dash.length?withAlpha(pw.color,0.7):pw.color,borderWidth:pw.w,borderDash:pw.dash,fill:false,pointRadius:4,pointBackgroundColor:pw.dash.length?withAlpha(pw.color,0.7):pw.color,pointBorderColor:'#fff',pointBorderWidth:1.5,tension:0.3});
         });
         var annotations = {};
         var rA = RT_DATA.cost_ribbons[currentISO+'_A'];
@@ -567,8 +619,8 @@ font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bot
                 scales:{x:{title:{display:true,text:'CFE Threshold',font:{size:13}}},y:{title:{display:true,text:'Cumulative Cost ($B)',font:{size:13}},beginAtZero:true}}}
         });
         buildLegend(document.getElementById('costRibbonLegend'), [
-            {label:'Pathway A (renewables + storage)', color:'#3B82F6', type:'line'},
-            {label:'Pathway B (full resource set)', color:RESOURCE_COLORS.cleanFirm, type:'line'}
+            {label:'Pathway A (renewables + storage)', color:isoColor, type:'line'},
+            {label:'Pathway B (full resource set)', color:isoColor, type:'dashed'}
         ]);
         var tA = RT_DATA.reliability_tax[currentISO+'_A'] || {};
         var tB = RT_DATA.reliability_tax[currentISO+'_B'] || {};
