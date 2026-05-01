@@ -1803,19 +1803,18 @@ def warmup_jit():
 # ---------------------------------------------------------------------------
 # Output writing
 # ---------------------------------------------------------------------------
-def consolidate_to_parquet(iso: str, pathway: str):
-    """Read all JSONs for this ISO+pathway, write a single parquet.
+def consolidate_to_parquet(iso: str, pathway: str, scenario: str):
+    """Read all JSONs for this ISO+pathway+scenario, write a single parquet.
 
-    One row per threshold snapshot.  Beam-level metadata (archetype, scenario,
+    One row per threshold snapshot.  Beam-level metadata (archetype,
     cost_mode, demand_growth, peak values) are repeated on every row so the
     parquet is self-describing without joins.
 
-    Output: data/step2.3-adaptive/{ISO}__pathway{X}.parquet
+    Output: data/step2.3-adaptive/{ISO}__pathway{X}__{scenario}.parquet
     """
-    pattern = OUTPUT_DIR / f"{iso}__pathway{pathway}__*.json"
-    files = sorted(OUTPUT_DIR.glob(f"{iso}__pathway{pathway}__*.json"))
+    files = sorted(OUTPUT_DIR.glob(f"{iso}__pathway{pathway}__{scenario}__*.json"))
     if not files:
-        print(f"[consolidate] No JSONs found for {iso} pathway {pathway}")
+        print(f"[consolidate] No JSONs found for {iso} pathway {pathway} scenario {scenario}")
         return
 
     rows = []
@@ -1866,7 +1865,7 @@ def consolidate_to_parquet(iso: str, pathway: str):
         return
 
     table = pa.Table.from_pylist(rows)
-    out_path = OUTPUT_DIR / f"{iso}__pathway{pathway}.parquet"
+    out_path = OUTPUT_DIR / f"{iso}__pathway{pathway}__{scenario}.parquet"
     pq.write_table(table, out_path, compression="zstd")
     print(f"[consolidate] Wrote {out_path.name}: {len(rows)} rows from {len(files)} JSONs "
           f"({out_path.stat().st_size / 1024:.1f} KB)")
@@ -2007,8 +2006,9 @@ def main():
     print(f"[adaptive] All done in {time.time()-t_total:.0f}s")
     print(f"{'='*70}")
 
-    # Consolidate all JSONs for this ISO+pathway into a single parquet.
-    consolidate_to_parquet(iso, args.pathway)
+    # Consolidate JSONs into per-scenario parquets.
+    for scen in scenarios:
+        consolidate_to_parquet(iso, args.pathway, scen)
 
     return 0
 
