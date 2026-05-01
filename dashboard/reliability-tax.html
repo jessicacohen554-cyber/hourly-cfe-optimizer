@@ -387,6 +387,47 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
         windBatt4:'Wind + 4hr Battery', windBatt8:'Wind + 8hr Battery',
         solarBatt4:'Solar + 4hr Battery', solarBatt8:'Solar + 8hr Battery'
     };
+
+    /* ── Hybrid resource → parent base color mapping ── */
+    var HYBRID_BASE = {
+        solarBatt4: 'solar', solarBatt8: 'solar',
+        windBatt4: 'wind', windBatt8: 'wind'
+    };
+    var HYBRID_STRIPE = {
+        solarBatt4: {gap:8, width:2.5},
+        solarBatt8: {gap:5, width:2},
+        windBatt4:  {gap:8, width:2.5},
+        windBatt8:  {gap:5, width:2}
+    };
+
+    function createStripePattern(hexColor, gap, stripeWidth) {
+        var size = gap + stripeWidth;
+        var c = document.createElement('canvas');
+        c.width = size; c.height = size;
+        var ctx = c.getContext('2d');
+        // Fill base color
+        ctx.fillStyle = withAlpha(hexColor, 0.72);
+        ctx.fillRect(0, 0, size, size);
+        // Draw white diagonal stripes
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        ctx.lineWidth = stripeWidth;
+        ctx.beginPath();
+        ctx.moveTo(-size, size); ctx.lineTo(size, -size);
+        ctx.moveTo(0, size*2); ctx.lineTo(size*2, 0);
+        ctx.stroke();
+        return ctx.createPattern(c, 'repeat');
+    }
+
+    function getFillStyle(rk) {
+        var base = HYBRID_BASE[rk];
+        if (base) {
+            var baseColor = RESOURCE_COLORS[base] || '#999';
+            var s = HYBRID_STRIPE[rk];
+            return createStripePattern(baseColor, s.gap, s.width);
+        }
+        var col = RESOURCE_COLORS[rk] || '#999';
+        return withAlpha(col, 0.75);
+    }
     function resColor(k) { return RESOURCE_COLORS[k] || '#999'; }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -647,10 +688,11 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
                 var dk = (rk === 'nuclear') ? 'cleanFirm' : rk;
                 var hasData = mixData.some(function(c){return c.mix[dk] && c.mix[dk]>0.5;});
                 if (!hasData) return;
-                var col = RESOURCE_COLORS[rk] || RESOURCE_COLORS[dk] || '#999';
+                var baseKey = HYBRID_BASE[dk] || rk;
+                var borderCol = RESOURCE_COLORS[baseKey] || RESOURCE_COLORS[dk] || '#999';
                 datasets.push({
                     label:RES_LABELS[dk]||RES_LABELS[rk]||rk, data:mixData.map(function(c){return c.mix[dk]||0;}),
-                    backgroundColor:withAlpha(col,0.75), borderColor:col,
+                    backgroundColor:getFillStyle(dk), borderColor:borderCol,
                     borderWidth:1.5, fill:true, tension:0.4, pointRadius:0
                 });
             });
@@ -664,14 +706,27 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
             });
         });
         var legendEl = document.getElementById('mixLegend');
-        var items = [];
+        var html = '';
         RESOURCE_STACK_ORDER.forEach(function(rk) {
             var dk = (rk === 'nuclear') ? 'cleanFirm' : rk;
             var inA = RT_DATA.resource_mix[currentISO+'_A'], inB = RT_DATA.resource_mix[currentISO+'_B'];
             var has = (inA && inA.some(function(c){return c.mix[dk]>0.5;})) || (inB && inB.some(function(c){return c.mix[dk]>0.5;}));
-            if (has) items.push({label:RES_LABELS[dk]||RES_LABELS[rk]||rk, color:RESOURCE_COLORS[rk]||resColor(dk), type:'band'});
+            if (!has) return;
+            var baseKey = HYBRID_BASE[dk] || rk;
+            var col = RESOURCE_COLORS[baseKey] || RESOURCE_COLORS[dk] || '#999';
+            var label = RES_LABELS[dk]||RES_LABELS[rk]||rk;
+            var swatchStyle;
+            if (HYBRID_STRIPE[dk]) {
+                var s = HYBRID_STRIPE[dk];
+                var sz = s.gap + s.width;
+                swatchStyle = 'background:repeating-linear-gradient(45deg,'+withAlpha(col,0.72)+','+withAlpha(col,0.72)+' '+s.gap+'px,rgba(255,255,255,0.55) '+s.gap+'px,rgba(255,255,255,0.55) '+sz+'px)';
+            } else {
+                swatchStyle = 'background:'+withAlpha(col,0.75);
+            }
+            html += '<span class="chart-legend-item"><span class="swatch-band" style="'+swatchStyle+'"></span>'+label+'</span>';
         });
-        if (typeof buildLegend==='function') buildLegend(legendEl, items);
+        legendEl.className = 'chart-legend';
+        legendEl.innerHTML = html;
         var mA = RT_DATA.resource_mix[currentISO+'_A'], mB = RT_DATA.resource_mix[currentISO+'_B'];
         if (mA && mB) {
             var lastA = mA[mA.length-1]||{}, lastB = mB[mB.length-1]||{};
