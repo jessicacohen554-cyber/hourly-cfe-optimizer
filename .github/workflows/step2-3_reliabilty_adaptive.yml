@@ -30,7 +30,8 @@ name: "Step 2.3 Adaptive: On-the-Fly Pathway Optimizer"
 #
 # Prerequisite: Step 2.1 EF parquets (incl 2.1e augment), EIA-930 profiles,
 #               hybrid profiles.
-# Output: data/step2.3-adaptive/<ISO>__pathway<A|B|C|D>__<scenario>__*.json
+# Output: data/step2.3-adaptive/<ISO>__pathway<A|B|C|D>.parquet
+#         (JSONs written as intermediate debug files, not committed)
 
 on:
   workflow_dispatch:
@@ -218,10 +219,11 @@ jobs:
           PATHWAYS: ${{ steps.cli.outputs.pathways }}
         run: |
           for pw in $PATHWAYS; do
-            stale=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json 2>/dev/null | wc -l)
+            stale=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json data/step2.3-adaptive/${ISO}__pathway${pw}.parquet 2>/dev/null | wc -l)
             if [ "$stale" -gt 0 ]; then
-              echo "[clean] Removing ${stale} stale JSONs for ${ISO} pathway ${pw}"
+              echo "[clean] Removing ${stale} stale files for ${ISO} pathway ${pw}"
               rm -f data/step2.3-adaptive/${ISO}__pathway${pw}__*.json
+              rm -f data/step2.3-adaptive/${ISO}__pathway${pw}.parquet
             fi
           done
 
@@ -243,18 +245,12 @@ jobs:
             echo "[workflow] Pathway $pw done in $(( SECONDS - t0 ))s"
           done
 
-      - name: "Verify output JSONs — ${{ matrix.iso }}"
+      - name: "Verify output — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
           PATHWAY: ${{ inputs.pathway }}
         run: |
-          total=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
-          echo "[verify] ${ISO}: ${total} result JSONs"
-          if [ "$total" -eq 0 ]; then
-            echo "::error::No output JSONs produced for ${ISO}"
-            exit 1
-          fi
-
+          # Check consolidated parquets
           for pw in A B C D; do
             case "$PATHWAY" in
               BOTH)      [[ "$pw" == "A" || "$pw" == "B" ]] || continue ;;
@@ -262,9 +258,18 @@ jobs:
               ALL)       ;; # check all
               *)         [[ "$pw" == "$PATHWAY" ]] || continue ;;
             esac
-            pw_count=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json 2>/dev/null | wc -l)
-            echo "[verify] ${ISO} Pathway ${pw}: ${pw_count} JSONs"
+            pq="data/step2.3-adaptive/${ISO}__pathway${pw}.parquet"
+            if [ ! -f "$pq" ]; then
+              echo "::error::Missing parquet: ${pq}"
+              exit 1
+            fi
+            size=$(stat -c%s "$pq" 2>/dev/null || stat -f%z "$pq")
+            echo "[verify] ${pq}: ${size} bytes"
           done
+
+          # Also count JSONs for logging (not committed)
+          json_count=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
+          echo "[verify] ${ISO}: ${json_count} intermediate JSONs (not committed)"
 
       - name: "Commit + push to per-ISO branch — ${{ matrix.iso }}"
         env:
@@ -281,7 +286,7 @@ jobs:
           git config pack.window 0
           git checkout -b "${branch}"
 
-          git add -f "data/step2.3-adaptive/" 2>/dev/null || true
+          git add -f data/step2.3-adaptive/${ISO}__pathway*.parquet 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "::error::No changes staged — nothing to commit for ${ISO}"
@@ -325,10 +330,11 @@ jobs:
             echo "- Beams: ${{ inputs.n_beams }}"
             echo "- Stage 2 samples: ${{ inputs.stage2_samples }}"
             echo "- Runner: \`${{ inputs.runner_size == 'large' && 'ubuntu-24.04-16core' || 'ubuntu-latest' }}\`"
-            echo "- Outputs: \`data/step2.3-adaptive/${ISO}__pathway*.json\`"
+            echo "- Outputs: \`data/step2.3-adaptive/${ISO}__pathway*.parquet\`"
             echo ""
-            total=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
-            echo "**${total} result JSONs produced.**"
+            pq_count=$(ls data/step2.3-adaptive/${ISO}__pathway*.parquet 2>/dev/null | wc -l)
+            json_count=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
+            echo "**${pq_count} parquets committed, ${json_count} intermediate JSONs (not committed).**"
             echo ""
             echo "Run the **Squash Pipeline Branches** workflow with pattern \`auto/.*step2-3-adaptive\` to consolidate."
           } >> "${GITHUB_STEP_SUMMARY}"
