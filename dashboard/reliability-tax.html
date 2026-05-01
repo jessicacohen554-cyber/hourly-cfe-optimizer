@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -24,32 +25,32 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 /* ─── Page-specific: ISO card grid (matches gen_regional_pathways.html) ─── */
 .iso-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 12px; }
 .iso-card {
-    background: #fff; border: 2px solid rgba(0,0,0,0.06); border-radius: var(--radius-lg);
-    padding: 20px 22px; cursor: pointer; position: relative; overflow: hidden;
-    transition: all 0.25s cubic-bezier(0.23,1,0.32,1);
+background: #fff; border: 2px solid rgba(0,0,0,0.06); border-radius: var(–radius-lg);
+padding: 20px 22px; cursor: pointer; position: relative; overflow: hidden;
+transition: all 0.25s cubic-bezier(0.23,1,0.32,1);
 }
 .iso-card::before {
-    content: ‘’; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: var(--card-accent, var(--accent-blue)); opacity: 0.6;
+content: ‘’; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+background: var(–card-accent, var(–accent-blue)); opacity: 0.6;
 }
-.iso-card:hover { border-color: var(--card-accent); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.iso-card.active { border-color: var(--card-accent); box-shadow: 0 0 0 2px var(--card-accent), var(--shadow-md); }
+.iso-card:hover { border-color: var(–card-accent); transform: translateY(-2px); box-shadow: var(–shadow-md); }
+.iso-card.active { border-color: var(–card-accent); box-shadow: 0 0 0 2px var(–card-accent), var(–shadow-md); }
 .iso-card.active::before { opacity: 1; height: 5px; }
 .iso-card-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
-.iso-card-name { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--navy); }
-.iso-card-region { font-size: 0.75rem; color: var(--text-dim); font-weight: 500; }
+.iso-card-name { font-family: var(–font-heading); font-size: 1rem; font-weight: 700; color: var(–navy); }
+.iso-card-region { font-size: 0.75rem; color: var(–text-dim); font-weight: 500; }
 .iso-card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-.iso-mini-stat { text-align: center; padding: 6px 2px; background: var(--bg-alt-warm); border-radius: var(--radius-sm); }
-.iso-mini-val { font-family: var(--font-data); font-size: 1.05rem; font-weight: 800; line-height: 1.2; color: var(--navy); }
-.iso-mini-lbl { font-size: 0.58rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-heading); font-weight: 600; margin-top: 2px; }
+.iso-mini-stat { text-align: center; padding: 6px 2px; background: var(–bg-alt-warm); border-radius: var(–radius-sm); }
+.iso-mini-val { font-family: var(–font-data); font-size: 1.05rem; font-weight: 800; line-height: 1.2; color: var(–navy); }
+.iso-mini-lbl { font-size: 0.58rem; color: var(–text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-family: var(–font-heading); font-weight: 600; margin-top: 2px; }
 .iso-gap-bar { margin-top: 10px; }
-.iso-gap-bar-label { font-size: 0.68rem; color: var(--text-dim); font-family: var(--font-heading); font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.iso-gap-bar-label { font-size: 0.68rem; color: var(–text-dim); font-family: var(–font-heading); font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
 .iso-gap-track { height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; position: relative; }
 .iso-gap-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-.iso-gap-market { background: var(--card-accent); opacity: 0.7; position: absolute; top: 0; left: 0; height: 100%; }
+.iso-gap-market { background: var(–card-accent); opacity: 0.7; position: absolute; top: 0; left: 0; height: 100%; }
 .iso-card-chart { height: 60px; margin-bottom: 8px; }
-.iso-card-stat { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
-.iso-card-stat strong { color: var(--navy); font-weight: 700; }
+.iso-card-stat { font-size: 0.82rem; color: var(–text-muted); line-height: 1.4; }
+.iso-card-stat strong { color: var(–navy); font-weight: 700; }
 
 /* ─── Page-specific: dual chart side-by-side ─── */
 .dual-chart-row { display: flex; gap: 16px; }
@@ -58,23 +59,23 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 /* ─── Page-specific: pathway controls bar ─── */
 .pw-controls {
-    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
-    margin-bottom: var(--space-md); padding: 12px 16px;
-    background: var(--bg-card); border: 1px solid var(--border-light);
-    border-radius: var(--radius-md);
+display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+margin-bottom: var(–space-md); padding: 12px 16px;
+background: var(–bg-card); border: 1px solid var(–border-light);
+border-radius: var(–radius-md);
 }
 .pw-controls label {
-    font-family: var(--font-heading); font-size: 0.82rem; font-weight: 500;
-    color: var(--text-muted); display: flex; align-items: center; gap: 5px; cursor: pointer;
+font-family: var(–font-heading); font-size: 0.82rem; font-weight: 500;
+color: var(–text-muted); display: flex; align-items: center; gap: 5px; cursor: pointer;
 }
 .pw-controls select {
-    font-family: var(--font-body); font-size: 0.82rem; padding: 4px 8px;
-    border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: #fff;
+font-family: var(–font-body); font-size: 0.82rem; padding: 4px 8px;
+border: 1px solid var(–border-light); border-radius: var(–radius-sm); background: #fff;
 }
-.pw-control-divider { width: 1px; height: 24px; background: var(--border-light); }
+.pw-control-divider { width: 1px; height: 24px; background: var(–border-light); }
 
 /* ─── Page-specific: pathway legend ─── */
-.pw-legend { display: flex; gap: 20px; justify-content: center; padding: 10px 0; font-size: 0.82rem; color: var(--text-muted); }
+.pw-legend { display: flex; gap: 20px; justify-content: center; padding: 10px 0; font-size: 0.82rem; color: var(–text-muted); }
 .pw-legend-item { display: flex; align-items: center; gap: 6px; }
 .pw-swatch { width: 24px; height: 3px; border-radius: 2px; }
 .pw-swatch-dash { width: 24px; height: 0; border-top: 2px dashed; }
@@ -83,42 +84,42 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 /* ─── Page-specific: summary comparison cards ─── */
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .summary-card {
-    background: var(--bg-card); border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg); padding: var(--pad-card); position: relative; overflow: hidden;
+background: var(–bg-card); border: 1px solid var(–border-light);
+border-radius: var(–radius-lg); padding: var(–pad-card); position: relative; overflow: hidden;
 }
 .summary-card::before {
-    content: ‘’; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--card-accent, var(--accent-blue));
+content: ‘’; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+background: var(–card-accent, var(–accent-blue));
 }
-.summary-card.highlighted { box-shadow: 0 0 0 2px var(--card-accent), var(--shadow-md); }
-.summary-iso { font-family: var(--font-heading); font-weight: 700; font-size: 1rem; color: var(--navy); margin-bottom: 12px; }
+.summary-card.highlighted { box-shadow: 0 0 0 2px var(–card-accent), var(–shadow-md); }
+.summary-iso { font-family: var(–font-heading); font-weight: 700; font-size: 1rem; color: var(–navy); margin-bottom: 12px; }
 .summary-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; font-size: 0.85rem; }
-.summary-row .lbl { color: var(--text-muted); }
-.summary-row .val { font-weight: 600; color: var(--navy); }
+.summary-row .lbl { color: var(–text-muted); }
+.summary-row .val { font-weight: 600; color: var(–navy); }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.78rem; font-weight: 700; }
-.badge-green { background: rgba(22,163,74,0.1); color: var(--green-text); }
-.badge-neutral { background: rgba(107,114,128,0.1); color: var(--text-muted); }
-.badge-red { background: rgba(220,38,38,0.1); color: var(--red-text); }
+.badge-green { background: rgba(22,163,74,0.1); color: var(–green-text); }
+.badge-neutral { background: rgba(107,114,128,0.1); color: var(–text-muted); }
+.badge-red { background: rgba(220,38,38,0.1); color: var(–red-text); }
 
 /* ─── Page-specific: methodology accordion ─── */
-.method-accordion { margin-top: var(--space-lg); border: 1px solid var(--border-light); border-radius: var(--radius-md); }
+.method-accordion { margin-top: var(–space-lg); border: 1px solid var(–border-light); border-radius: var(–radius-md); }
 .method-accordion summary {
-    padding: 14px 18px; font-family: var(--font-heading); font-weight: 600;
-    font-size: 0.9rem; color: var(--navy); cursor: pointer; list-style: none;
+padding: 14px 18px; font-family: var(–font-heading); font-weight: 600;
+font-size: 0.9rem; color: var(–navy); cursor: pointer; list-style: none;
 }
 .method-accordion summary::before { content: ‘▸ ‘; transition: transform 0.2s; }
 .method-accordion[open] summary::before { content: ‘▾ ‘; }
-.method-accordion-body { padding: 0 18px 18px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7; }
+.method-accordion-body { padding: 0 18px 18px; font-size: 0.88rem; color: var(–text-secondary); line-height: 1.7; }
 
 /* ─── Opening narrative block ─── */
 .narrative-intro {
-    max-width: var(--max-narrow); margin: 0 auto var(--space-xl);
-    padding: 0 var(--pad-page);
+max-width: var(–max-narrow); margin: 0 auto var(–space-xl);
+padding: 0 var(–pad-page);
 }
 .narrative-intro p {
-    font-size: 1.05rem; line-height: 1.75; color: var(--text-secondary); margin-bottom: var(--space-md);
+font-size: 1.05rem; line-height: 1.75; color: var(–text-secondary); margin-bottom: var(–space-md);
 }
-.narrative-intro .lead { font-size: 1.15rem; font-weight: 500; color: var(--text-primary); }
+.narrative-intro .lead { font-size: 1.15rem; font-weight: 500; color: var(–text-primary); }
 </style>
 
 </head>
@@ -144,7 +145,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <header class="header">
     <h1>The Reliability Tax</h1>
-    <p class="subtitle">The electric grid balanced two dimensions for a century: reliability and affordability. Deep decarbonization demands a third&mdash;clean. Ignoring reliability while chasing the other two comes with a bill.</p>
+    <p class="subtitle">Excluding firm clean energy from the portfolio doesn&rsquo;t avoid gas&mdash;it guarantees more gas, higher cost, and worse stranding risk.</p>
     <div class="header-accent"></div>
 </header>
 
@@ -157,9 +158,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <div class="narrative-intro fade-in">
-    <p class="lead">The electric grid became what it is today by balancing two dimensions: reliability and affordability. It delivered energy precisely when and where people needed it. Deep decarbonization introduces a third dimension&mdash;clean&mdash;and the temptation is to optimize for affordability and clean while treating reliability as an afterthought.</p>
-    <p>Variable renewable energy (VRE) scores perfectly on two axes. Solar and wind are cheap and zero-carbon. But a grid that chases 99.9% carbon-free energy (CFE) matching with VRE and storage alone must overbuild massively and lean on gas peakers to fill the gaps. That gas gets built, then stranded. That&rsquo;s the reliability tax.</p>
-    <p>This analysis compares four technology pathways across seven US Independent System Operators (ISOs) to quantify what reliability costs when it&rsquo;s deferred versus when it&rsquo;s designed in from the start.</p>
+    <p class="lead">Solar and wind are cheap and zero-carbon, but they can&rsquo;t dispatch on demand. A portfolio that excludes firm clean resources&mdash;advanced nuclear, enhanced geothermal, carbon capture&mdash;can still chase 99.9% hourly carbon-free energy (CFE) matching. It just needs a massive overbuild of variable renewables and batteries to cover the gaps, plus gas peakers standing by for the hours storage can&rsquo;t reach.</p>
+    <p>That gas gets built to maintain reliability, drives up system cost, and then gets stranded as clean generation scales. We modeled four technology pathways across seven US Independent System Operators (ISOs) to measure the size of that bill.</p>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -170,24 +170,24 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <div class="stat-row fade-in">
     <div class="stat-tile">
-        <div class="stat-value text-blue counter" data-target="7">0</div>
-        <div class="stat-label">ISOs Modeled</div>
-        <div class="stat-sublabel">Independent grid regions</div>
-    </div>
-    <div class="stat-tile">
-        <div class="stat-value highlight counter" data-target="736">0</div>
-        <div class="stat-label">Scenario Runs</div>
-        <div class="stat-sublabel">4 pathways &times; demand &times; cost</div>
-    </div>
-    <div class="stat-tile">
         <div class="stat-value text-amber" id="statSavings">&mdash;</div>
-        <div class="stat-label">Median Cost Savings</div>
-        <div class="stat-sublabel">Pathway B vs A at 99.9%</div>
+        <div class="stat-label">Lower Cost at 99.9%</div>
+        <div class="stat-sublabel">With firm clean resources</div>
     </div>
     <div class="stat-tile">
         <div class="stat-value text-red" id="statGasDelta">&mdash;</div>
-        <div class="stat-label">Peak Gas Avoided</div>
-        <div class="stat-sublabel">Median across ISOs</div>
+        <div class="stat-label">Gas Capacity Avoided</div>
+        <div class="stat-sublabel">Median peak reduction</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-value highlight counter" data-target="7">0</div>
+        <div class="stat-label">ISO Regions</div>
+        <div class="stat-sublabel">Modeled independently</div>
+    </div>
+    <div class="stat-tile">
+        <div class="stat-value text-blue counter" data-target="4">0</div>
+        <div class="stat-label">Pathways Compared</div>
+        <div class="stat-sublabel">VRE-only through full resource set</div>
     </div>
 </div>
 
@@ -202,17 +202,17 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 <div class="section-header fade-in">
     <div class="section-number">&bull;</div>
     <h2>Seven Regions, One Question</h2>
-    <p>How much more does decarbonization cost when firm clean resources are excluded? Select a region to explore.</p>
+    <p>What happens to gas buildout and system cost when firm clean resources are on the table&mdash;versus off it? Select a region to explore.</p>
 </div>
 
 <section class="content-section">
     <div class="iso-grid" id="heroTilesGrid"></div>
 
 <div class="pw-legend">
-    <div class="pw-legend-item"><span class="pw-swatch" style="background:#3B82F6;"></span> Pathway A &mdash; VRE + Storage</div>
-    <div class="pw-legend-item"><span class="pw-swatch" style="background:var(--nuclear);"></span> Pathway B &mdash; All Resources</div>
-    <div class="pw-legend-item"><span class="pw-swatch-dash" style="border-color:#8B5CF6;"></span> Pathway C &mdash; Delayed Nth-of-a-kind (NOAK) costs (2040)</div>
-    <div class="pw-legend-item"><span class="pw-swatch-dot" style="border-color:#A855F7;"></span> Pathway D &mdash; Hard Correction (2045)</div>
+    <div class="pw-legend-item"><span class="pw-swatch" style="background:#3B82F6;"></span> Pathway A &mdash; Renewables + storage only</div>
+    <div class="pw-legend-item"><span class="pw-swatch" style="background:var(--nuclear);"></span> Pathway B &mdash; Full resource set (firm clean available 2035)</div>
+    <div class="pw-legend-item"><span class="pw-swatch-dash" style="border-color:#8B5CF6;"></span> Pathway C &mdash; Delayed firm clean (available 2040)</div>
+    <div class="pw-legend-item"><span class="pw-swatch-dot" style="border-color:#A855F7;"></span> Pathway D &mdash; Late start (available 2045)</div>
 </div>
 
 </section>
@@ -225,14 +225,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
-<!-- SECTION 1: The Gas Capacity Hump                                   -->
+<!-- SECTION 1: The Gas You Can't Avoid                                 -->
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <div class="section-header fade-in">
     <div class="section-number">1</div>
-    <h2>The Gas Capacity Hump</h2>
-    <p>Every pathway builds gas to maintain reliability&mdash;but some build far more than others.</p>
+    <h2>The Gas You Can&rsquo;t Avoid</h2>
+    <p>Every pathway builds gas to keep the lights on. The question is how much&mdash;and how much of it you&rsquo;ll eventually strand.</p>
 </div>
 <section class="content-section fade-in">
     <div class="pw-controls" id="gasHumpControls">
@@ -256,14 +256,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
-<!-- SECTION 2: Cost Trajectories + Reliability Tax                     -->
+<!-- SECTION 2: The Last Five Percent                                   -->
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <div class="section-header fade-in">
     <div class="section-number">2</div>
-    <h2>The Compounding Cost of Delay</h2>
-    <p>System cost accelerates above 95%&mdash;and the pathway you choose determines how steep the curve gets.</p>
+    <h2>The Last Five Percent</h2>
+    <p>Getting from 50% to 95% clean is expensive. Getting from 95% to 99.9% can cost more than everything that came before it&mdash;unless the portfolio includes firm clean generation.</p>
 </div>
 <section class="content-section fade-in">
     <div class="glass-chart-panel flush">
@@ -274,9 +274,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         Select a region to see its cost trajectory and reliability tax.
     </div>
     <details class="method-accordion">
-        <summary>Cost mode sensitivity: incremental clean cost vs net-of-gas-savings</summary>
+        <summary>How cost accounting affects the comparison</summary>
         <div class="method-accordion-body" id="modeCompBody">
-            <p>All charts on this page default to incremental clean cost (the full cost of building clean resources plus gas firming). An alternative accounting method credits gas fuel savings when clean energy displaces fossil generation. This reduces costs in gas-heavy grids but increases them in small, import-dependent grids where gas displacement is limited.</p>
+            <p>Charts default to incremental clean cost&mdash;the full cost of building clean resources plus gas firming. A second method credits fuel savings when clean energy displaces gas generation. This shrinks costs in gas-heavy grids but inflates them in small, import-dependent grids where there&rsquo;s less gas to displace.</p>
             <div id="modeCompTable"></div>
         </div>
     </details>
@@ -286,25 +286,25 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
-<!-- SECTION 3: Resource Mix Evolution                                  -->
+<!-- SECTION 3: Two Portfolios, One Target                              -->
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <div class="section-header fade-in">
     <div class="section-number">3</div>
-    <h2>How the Clean Portfolio Shifts</h2>
-    <p>The resource mix that achieves each CFE threshold changes dramatically&mdash;and diverges sharply between pathways.</p>
+    <h2>Two Portfolios, One Target</h2>
+    <p>Both pathways reach 99.9% CFE. One does it with massive renewable overbuild and co-located battery storage. The other splits the load with firm clean generation&mdash;and spends less doing it.</p>
 </div>
 <section class="content-section fade-in">
     <div class="dual-chart-row">
         <div>
-            <div class="chart-title">Pathway A &mdash; VRE + Storage</div>
+            <div class="chart-title">Pathway A &mdash; Renewables + storage only</div>
             <div class="glass-chart-panel flush">
                 <div class="chart-container"><canvas id="mixChartA"></canvas></div>
             </div>
         </div>
         <div>
-            <div class="chart-title">Pathway B &mdash; All Resources</div>
+            <div class="chart-title">Pathway B &mdash; Full resource set</div>
             <div class="glass-chart-panel flush">
                 <div class="chart-container"><canvas id="mixChartB"></canvas></div>
             </div>
@@ -320,14 +320,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
-<!-- SECTION 4: The Case for Firm Clean Energy                          -->
+<!-- SECTION 4: The Bottom Line                                        -->
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <div class="section-header fade-in">
     <div class="section-number">4</div>
-    <h2>The Case for Firm Clean Energy</h2>
-    <p>Including dispatchable clean resources reduces cost, cuts gas dependency, and compresses uncertainty across most regions.</p>
+    <h2>The Bottom Line</h2>
+    <p>Across most regions, including firm clean resources lowers total system cost, reduces peak gas buildout, and compresses the range of outcomes. The reliability tax is real&mdash;and it&rsquo;s avoidable.</p>
 </div>
 <section class="content-section fade-in">
     <div class="summary-grid" id="summaryCardsGrid"></div>
@@ -567,8 +567,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 scales:{x:{title:{display:true,text:'CFE Threshold',font:{size:13}}},y:{title:{display:true,text:'Cumulative Cost ($B)',font:{size:13}},beginAtZero:true}}}
         });
         buildLegend(document.getElementById('costRibbonLegend'), [
-            {label:'Pathway A (VRE + Storage)', color:'#3B82F6', type:'line'},
-            {label:'Pathway B (All Resources)', color:RESOURCE_COLORS.cleanFirm, type:'line'}
+            {label:'Pathway A (renewables + storage)', color:'#3B82F6', type:'line'},
+            {label:'Pathway B (full resource set)', color:RESOURCE_COLORS.cleanFirm, type:'line'}
         ]);
         var tA = RT_DATA.reliability_tax[currentISO+'_A'] || {};
         var tB = RT_DATA.reliability_tax[currentISO+'_B'] || {};
