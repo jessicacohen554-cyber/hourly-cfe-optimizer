@@ -21,6 +21,21 @@ Two cost modes:
 
 See step2_3_rebuild_decisions.md for full methodology specification (25 decisions).
 
+v4.4 changes:
+  - FIX: Storage cap bug — _STORAGE_CAP_PCT (≈230% of demand) was conflating
+    power-based cap (115% of peak demand) with energy-based storage dispatch_pct
+    units (% of annual demand).  This allowed storage dispatch_pct values up to
+    ~230% when physical maximums are 0.10%/0.15%/1.0% (STORAGE_MAX_V2).
+    Beams that leaned on storage saw trillion-dollar costs.
+    Replaced with per-type physical caps from pipeline_config.STORAGE_MAX_V2.
+    Combined cap = sum of per-type caps (1.25% of annual demand).
+  - REMOVE: Runtime _STORAGE_CAP_PCT computation in main().  Per-type caps are
+    constants derived from STORAGE_MAX_V2 — no runtime calculation needed.
+  - ADD: _STORAGE_TYPE_CAPS tuple and _STORAGE_COMBINED_CAP constant.
+  - ADD: Storage dispatch columns (stor_battery, stor_battery8, stor_ldes) in
+    consolidate_to_parquet().  Previously only resource_mix_pct was flattened
+    into the parquet; storage_dispatch_pct was silently dropped.
+
 v4.3 changes:
   - FIX: Seeds no longer inflate 2025 CFE above grid baseline.
     Solver loop starts at MODEL_START_YEAR (2030); years 2025-2029 are
@@ -164,13 +179,27 @@ STORAGE_PARAMS = {
     "ldes_dispatch_pct":     (100, 0.50, 168, "ldes"),
 }
 
+# ---------------------------------------------------------------------------
+# Storage dispatch caps — per-type physical maximums (% of annual demand).
+# v4.4 FIX: Replaces the broken _STORAGE_CAP_PCT (≈230%) which conflated
+# power-based cap (115% of peak demand MW) with energy-based dispatch_pct
+# units (% of annual demand MWh).  Physical caps from STORAGE_MAX_V2 are
+# the research-informed 2050 upper bounds on installed storage energy capacity.
+#
+# battery:  0.10% of annual demand — CAISO: 224 GWh / 56 GW (4hr)
+# battery8: 0.15% of annual demand — CAISO: 336 GWh / 42 GW (8hr)
+# ldes:     1.00% of annual demand — CAISO: 2,240 GWh / 22.4 GW (100hr)
+# ---------------------------------------------------------------------------
+_STORAGE_TYPE_CAPS = (
+    pc.STORAGE_MAX_V2['battery'],     # 0.10 (% of annual demand)
+    pc.STORAGE_MAX_V2['battery8'],    # 0.15
+    pc.STORAGE_MAX_V2['ldes'],        # 1.0
+)
+_STORAGE_COMBINED_CAP = sum(_STORAGE_TYPE_CAPS)  # 1.25
+
 # H2 peaker: max CFE gap (pp) that H2 is allowed to close per year.
 # Prevents accepting candidates far below target that lean on massive H2.
 H2_MAX_FILL_PP = 5.0
-
-# Combined storage power cap: 115% of peak demand.
-# Set per-ISO at profile load; used in generate_candidates.
-_STORAGE_CAP_PCT = 999.0  # default (no cap); overwritten at runtime
 
 # Fraction of LHS candidates per dimension pinned to floor (zero new build).
 # With ~8 free dims and 5% per dim, ~40% of tail candidates have one dim
@@ -1119,12 +1148,14 @@ def generate_candidates(
         else:
             stor_ceilings[j] = floor_storage[j] + 1.0
 
-    # Hard caps
+    # Hard caps — resources
     MAX_RESOURCE_PCT = 200.0
     for k in range(n_free):
         res_ceilings[k] = min(res_ceilings[k], MAX_RESOURCE_PCT)
+
+    # Hard caps — storage: per-type physical maximums (v4.4 FIX)
     for j in range(N_STORAGE):
-        stor_ceilings[j] = min(stor_ceilings[j], _STORAGE_CAP_PCT)
+        stor_ceilings[j] = min(stor_ceilings[j], _STORAGE_TYPE_CAPS[j])
 
     # Apply hard caps (CCS, geo, uprate for firm pathways B/C/D)
     if cfg.pathway in FIRM_PATHWAYS:
@@ -1187,8 +1218,8 @@ def generate_candidates(
     batt8 = raw[:, n_free + 1].astype(np.float32)
     ldes_arr = raw[:, n_free + 2].astype(np.float32)
 
-    # Storage cap: 115% of peak demand (3 tiers)
-    cap = np.float32(_STORAGE_CAP_PCT)
+    # Combined storage cap: sum of per-type physical caps (v4.4 FIX)
+    cap = np.float32(_STORAGE_COMBINED_CAP)
     stor_total = batt4 + batt8 + ldes_arr
     over = stor_total > cap
     if over.any():
@@ -1616,7 +1647,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   f"cost=${total_annual/1e9:.2f}B")
 
     return {
-        "schema_version": "4.3",
+        "schema_version": "4.4",
         "iso": iso,
         "pathway": cfg.pathway,
         "dim_key": cfg.dim_key,
@@ -1638,6 +1669,7 @@ def solve_pathway(seed: dict, cfg: RunConfig,
             "stranding_shadow_weight": STRANDING_SHADOW_WEIGHT,
             "seed_band": SEED_BAND_BY_ISO[iso],
             "model_start_year": MODEL_START_YEAR,
+            "storage_type_caps": list(_STORAGE_TYPE_CAPS),
         },
         "beam_archetype": seed["archetype"],
         "beam_index": beam_idx,
@@ -1870,6 +1902,10 @@ def consolidate_to_parquet(iso: str, pathway: str):
             rmix = snap.get("resource_mix_pct", {})
             for res in RESOURCE_ORDER:
                 row[f"res_{res}"] = rmix.get(res, 0.0)
+            # Flatten storage dispatch (v4.4)
+            smix = snap.get("storage_dispatch_pct", {})
+            for sc in STORAGE_COLS:
+                row[f"stor_{sc.replace('_dispatch_pct', '')}"] = smix.get(sc, 0.0)
             rows.append(row)
 
     if not rows:
@@ -1954,10 +1990,13 @@ def main():
                      else [args.demand_growth])
 
     print(f"\n{'='*70}")
-    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.3 (per-ISO seed bands, 2030 start)")
+    print(f"[adaptive] Step 2.3 Reliability Tax Adaptive v4.4 (per-type storage caps)")
     print(f"[adaptive] ISO={iso}  Pathway={args.pathway}  Seed band={SEED_BAND_BY_ISO[iso]}%")
     print(f"[adaptive] Scenarios: {scenarios}")
     print(f"[adaptive] Demand levels: {demand_levels}")
+    print(f"[adaptive] Storage caps: bat4={_STORAGE_TYPE_CAPS[0]}% "
+          f"bat8={_STORAGE_TYPE_CAPS[1]}% ldes={_STORAGE_TYPE_CAPS[2]}% "
+          f"combined={_STORAGE_COMBINED_CAP}%")
     print(f"[adaptive] Stranding shadow weight: {STRANDING_SHADOW_WEIGHT}")
     print(f"{'='*70}\n")
 
@@ -1970,11 +2009,8 @@ def main():
     P32 = P.astype(np.float32)
     dm32 = dm.astype(np.float32)
     dn32 = dn.astype(np.float32)
-    global _STORAGE_CAP_PCT
-    _STORAGE_CAP_PCT = float(dn.max() * H * 100.0 * 1.15)
     print(f"[adaptive] Profiles loaded. Demand TWh={float(pc.REGIONAL_DEMAND_TWH[iso]):.1f}"
-          f"  storage_cap={_STORAGE_CAP_PCT:.1f}% of avg demand"
-          f" (peak/avg={dn.max()*H:.2f})")
+          f"  peak/avg={dn.max()*H:.2f}")
 
     configs = build_configs(iso, args.pathway, scenarios, demand_levels,
                             args.n_beams, args.stage1_samples, args.stage2_samples)
@@ -2026,5 +2062,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
