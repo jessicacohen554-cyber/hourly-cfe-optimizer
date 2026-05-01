@@ -212,6 +212,19 @@ jobs:
             *)         echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
           esac
 
+      - name: "Clean stale results — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ steps.cli.outputs.pathways }}
+        run: |
+          for pw in $PATHWAYS; do
+            stale=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json 2>/dev/null | wc -l)
+            if [ "$stale" -gt 0 ]; then
+              echo "[clean] Removing ${stale} stale JSONs for ${ISO} pathway ${pw}"
+              rm -f data/step2.3-adaptive/${ISO}__pathway${pw}__*.json
+            fi
+          done
+
       - name: "Run adaptive optimizer — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
@@ -328,3 +341,4 @@ jobs:
           path: data/step2.3-adaptive/
           retention-days: 30
           if-no-files-found: warn
+
