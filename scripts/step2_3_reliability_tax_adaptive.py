@@ -1221,25 +1221,36 @@ def load_ef_band(iso: str, threshold: float) -> Optional[pa.Table]:
     return tbls[0]
 
 
-def classify_archetype(mix_pcts: dict[str, float], pathway: str) -> str:
-    """Classify a mix into an archetype by dominant resource family."""
-    solar_family = sum(mix_pcts.get(r, 0) for r in
-                       ["solar", "solar_batt4", "solar_batt8"])
-    wind_family = sum(mix_pcts.get(r, 0) for r in
-                      ["wind", "wind_batt4", "wind_batt8"])
-    total_clean = sum(mix_pcts.get(r, 0) for r in RESOURCE_ORDER)
-    if total_clean < 1e-6:
+def classify_archetype(mix_pcts: dict[str, float], pathway: str,
+                       iso: str = "") -> str:
+    """Classify a mix into an archetype by dominant *incremental* resource.
+
+    Subtracts the ISO's grid baseline so the archetype reflects what was ADDED,
+    not the total mix.  PJM with 32% nuclear + 2% solar + 16% wind added
+    → wind-led, not balanced.
+    """
+    baseline = pc.GRID_MIX_SHARES.get(iso, {}) if iso else {}
+
+    solar_family = sum(max(mix_pcts.get(r, 0) - baseline.get(r, 0), 0)
+                       for r in ["solar", "solar_batt4", "solar_batt8"])
+    wind_family = sum(max(mix_pcts.get(r, 0) - baseline.get(r, 0), 0)
+                      for r in ["wind", "wind_batt4", "wind_batt8"])
+    total_delta = sum(max(mix_pcts.get(r, 0) - baseline.get(r, 0), 0)
+                      for r in RESOURCE_ORDER)
+    if total_delta < 1e-6:
         return "balanced"
 
-    sf = solar_family / total_clean
-    wf = wind_family / total_clean
+    sf = solar_family / total_delta
+    wf = wind_family / total_delta
 
     if pathway in FIRM_PATHWAYS:
-        nuke = mix_pcts.get("clean_firm", 0) / total_clean
-        off = mix_pcts.get("offshore_wind", 0) / total_clean
-        if nuke > 0.4:
+        nuke_delta = max(mix_pcts.get("clean_firm", 0)
+                         - baseline.get("clean_firm", 0), 0)
+        off_delta = max(mix_pcts.get("offshore_wind", 0)
+                        - baseline.get("offshore_wind", 0), 0)
+        if nuke_delta / total_delta > 0.4:
             return "nuclear-heavy"
-        if off > 0.3:
+        if off_delta / total_delta > 0.3:
             return "offshore-heavy"
 
     if sf > 0.5:
@@ -1321,7 +1332,7 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
     archetypes = {}
     for ki, vi in enumerate(valid_idx):
         mix = {res: float(W[vi, ri]) * 100.0 for ri, res in enumerate(RESOURCE_ORDER)}
-        arch = classify_archetype(mix, cfg.pathway)
+        arch = classify_archetype(mix, cfg.pathway, iso=iso)
         if arch not in archetypes or costs[ki] < archetypes[arch][1]:
             archetypes[arch] = (vi, costs[ki], ki)
 
@@ -1352,7 +1363,7 @@ def stage1_select(iso: str, cfg: RunConfig, P32: np.ndarray,
                 break
             vi = valid_idx[ki]
             mix = {res: float(W[vi, ri]) * 100.0 for ri, res in enumerate(RESOURCE_ORDER)}
-            arch = classify_archetype(mix, cfg.pathway)
+            arch = classify_archetype(mix, cfg.pathway, iso=iso)
             seed = {
                 "archetype": arch,
                 "resource_pcts": mix,
@@ -1803,18 +1814,19 @@ def warmup_jit():
 # ---------------------------------------------------------------------------
 # Output writing
 # ---------------------------------------------------------------------------
-def consolidate_to_parquet(iso: str, pathway: str, scenario: str):
-    """Read all JSONs for this ISO+pathway+scenario, write a single parquet.
+def consolidate_to_parquet(iso: str, pathway: str):
+    """Read all JSONs for this ISO+pathway, write a single parquet.
 
-    One row per threshold snapshot.  Beam-level metadata (archetype,
+    One row per threshold snapshot.  Beam-level metadata (archetype, scenario,
     cost_mode, demand_growth, peak values) are repeated on every row so the
     parquet is self-describing without joins.
 
-    Output: data/step2.3-adaptive/{ISO}__pathway{X}__{scenario}.parquet
+    Output: data/step2.3-adaptive/{ISO}__pathway{X}.parquet
     """
-    files = sorted(OUTPUT_DIR.glob(f"{iso}__pathway{pathway}__{scenario}__*.json"))
+    pattern = OUTPUT_DIR / f"{iso}__pathway{pathway}__*.json"
+    files = sorted(OUTPUT_DIR.glob(f"{iso}__pathway{pathway}__*.json"))
     if not files:
-        print(f"[consolidate] No JSONs found for {iso} pathway {pathway} scenario {scenario}")
+        print(f"[consolidate] No JSONs found for {iso} pathway {pathway}")
         return
 
     rows = []
@@ -1865,7 +1877,7 @@ def consolidate_to_parquet(iso: str, pathway: str, scenario: str):
         return
 
     table = pa.Table.from_pylist(rows)
-    out_path = OUTPUT_DIR / f"{iso}__pathway{pathway}__{scenario}.parquet"
+    out_path = OUTPUT_DIR / f"{iso}__pathway{pathway}.parquet"
     pq.write_table(table, out_path, compression="zstd")
     print(f"[consolidate] Wrote {out_path.name}: {len(rows)} rows from {len(files)} JSONs "
           f"({out_path.stat().st_size / 1024:.1f} KB)")
@@ -2006,13 +2018,13 @@ def main():
     print(f"[adaptive] All done in {time.time()-t_total:.0f}s")
     print(f"{'='*70}")
 
-    # Consolidate JSONs into per-scenario parquets.
-    for scen in scenarios:
-        consolidate_to_parquet(iso, args.pathway, scen)
+    # Consolidate all JSONs for this ISO+pathway into a single parquet.
+    consolidate_to_parquet(iso, args.pathway)
 
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
