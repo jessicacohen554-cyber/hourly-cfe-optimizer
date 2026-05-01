@@ -23,8 +23,8 @@ See step2_3_rebuild_decisions.md for full methodology specification (25 decision
 
 v4.3 changes:
   - FIX: Seeds no longer inflate 2025 CFE above grid baseline.
-    Solver starts from actual GRID_MIX_SHARES at 2025; seed mix becomes
-    floor at MODEL_START_YEAR (2030).
+    Solver loop starts at MODEL_START_YEAR (2030); years 2025-2029 are
+    not modeled.  Floor initialized directly from seed.
   - CHANGE: Per-ISO seed bands — ISOs with baseline >= 45% (CAISO, ERCOT, SPP)
     seed from EF band 60; others (MISO, NEISO, NYISO, PJM) from band 50.
   - CHANGE: Per-group CFE waypoints — seed=60 group uses (2030,60)→(2035,75)→(2040,90);
@@ -1377,11 +1377,10 @@ def solve_pathway(seed: dict, cfg: RunConfig,
                   P32: np.ndarray, dm32: np.ndarray, dn32: np.ndarray,
                   beam_idx: int = 0,
                   ) -> dict:
-    """Build a full 2025-2050 pathway from a seed mix.
+    """Build a 2030-2050 pathway from a seed mix.
 
-    Years 2025-2029 use actual grid baseline (no optimization).
-    Active solving starts at MODEL_START_YEAR (2030) using the seed
-    as the initial floor.
+    Solver starts at MODEL_START_YEAR (2030). Years 2025-2029 are not modeled.
+    Floor is initialized directly from the seed's resource mix.
 
     Returns a result dict with threshold snapshots.
     """
@@ -1403,12 +1402,23 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     baseline_cf_twh = (pc.GRID_MIX_SHARES[iso].get("clean_firm", 0) / 100.0
                        * base_demand)
 
-    # Start from actual grid baseline; seed becomes floor at 2030.
+    # Initialize floor from seed — the 2030 starting mix.
+    # Years 2025-2029 are not modeled.
     floor_pcts = np.zeros(N_RESOURCES, dtype=np.float64)
     for ri, res in enumerate(RESOURCE_ORDER):
-        floor_pcts[ri] = pc.GRID_MIX_SHARES[iso].get(res, 0.0)
+        floor_pcts[ri] = seed["resource_pcts"].get(res, 0.0)
 
-    floor_storage = np.zeros(N_STORAGE, dtype=np.float64)
+    # Ensure baseline clean_firm and hydro are not below grid actuals
+    cf_baseline_pct = pc.GRID_MIX_SHARES[iso].get("clean_firm", 0)
+    hydro_baseline_pct = pc.GRID_MIX_SHARES[iso].get("hydro", 0)
+    floor_pcts[RES_IDX["clean_firm"]] = max(floor_pcts[RES_IDX["clean_firm"]],
+                                             cf_baseline_pct)
+    floor_pcts[RES_IDX["hydro"]] = max(floor_pcts[RES_IDX["hydro"]],
+                                        hydro_baseline_pct)
+
+    floor_storage = np.array([
+        seed["storage_pcts"].get(sc, 0.0) for sc in STORAGE_COLS
+    ], dtype=np.float64)
 
     vintage_ledger = []
     prev_gas_cost = 0.0
@@ -1418,20 +1428,12 @@ def solve_pathway(seed: dict, cfg: RunConfig,
     threshold_snapshots = []
     thresholds_crossed = set()
     peak_gas_mw = 0.0
-    peak_gas_year = BASE_YEAR
+    peak_gas_year = MODEL_START_YEAR
 
-    for yi, year in enumerate(YEARS):
+    for yi in range(MODEL_START_YI, N_YEARS):
+        year = YEARS[yi]
         dem_twh = demand_vec[yi]
         target = cfe_targets[yi]
-
-        # At MODEL_START_YEAR, transition floor to seed mix.
-        if yi == MODEL_START_YI:
-            for ri, res in enumerate(RESOURCE_ORDER):
-                floor_pcts[ri] = max(floor_pcts[ri],
-                                     seed["resource_pcts"].get(res, 0.0))
-            for j, sc in enumerate(STORAGE_COLS):
-                floor_storage[j] = max(floor_storage[j],
-                                       seed["storage_pcts"].get(sc, 0.0))
 
         for res, twh in frozen_twh.items():
             ri = RES_IDX[res]
