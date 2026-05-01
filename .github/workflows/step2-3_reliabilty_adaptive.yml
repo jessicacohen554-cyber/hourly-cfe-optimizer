@@ -217,13 +217,25 @@ jobs:
         env:
           ISO: ${{ matrix.iso }}
           PATHWAYS: ${{ steps.cli.outputs.pathways }}
+          SCENARIO: ${{ inputs.scenario }}
         run: |
           for pw in $PATHWAYS; do
-            stale=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json data/step2.3-adaptive/${ISO}__pathway${pw}.parquet 2>/dev/null | wc -l)
-            if [ "$stale" -gt 0 ]; then
-              echo "[clean] Removing ${stale} stale files for ${ISO} pathway ${pw}"
-              rm -f data/step2.3-adaptive/${ISO}__pathway${pw}__*.json
-              rm -f data/step2.3-adaptive/${ISO}__pathway${pw}.parquet
+            if [ "$SCENARIO" = "all" ]; then
+              # Batch mode: clean everything for this pathway
+              stale=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__*.json data/step2.3-adaptive/${ISO}__pathway${pw}*.parquet 2>/dev/null | wc -l)
+              if [ "$stale" -gt 0 ]; then
+                echo "[clean] Removing ${stale} stale files for ${ISO} pathway ${pw} (all scenarios)"
+                rm -f data/step2.3-adaptive/${ISO}__pathway${pw}__*.json
+                rm -f data/step2.3-adaptive/${ISO}__pathway${pw}*.parquet
+              fi
+            else
+              # Single scenario: only clean that scenario's files
+              stale=$(ls data/step2.3-adaptive/${ISO}__pathway${pw}__${SCENARIO}__*.json data/step2.3-adaptive/${ISO}__pathway${pw}__${SCENARIO}.parquet 2>/dev/null | wc -l)
+              if [ "$stale" -gt 0 ]; then
+                echo "[clean] Removing ${stale} stale files for ${ISO} pathway ${pw} scenario ${SCENARIO}"
+                rm -f data/step2.3-adaptive/${ISO}__pathway${pw}__${SCENARIO}__*.json
+                rm -f data/step2.3-adaptive/${ISO}__pathway${pw}__${SCENARIO}.parquet
+              fi
             fi
           done
 
