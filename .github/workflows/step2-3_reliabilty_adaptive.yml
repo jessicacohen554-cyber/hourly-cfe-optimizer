@@ -283,41 +283,85 @@ jobs:
           json_count=$(ls data/step2.3-adaptive/${ISO}__pathway*.json 2>/dev/null | wc -l)
           echo "[verify] ${ISO}: ${json_count} intermediate JSONs (not committed)"
 
-      - name: "Commit + push to per-ISO branch — ${{ matrix.iso }}"
+      # ── Push via GitHub REST API ──────────────────────────────────
+      # Bypasses git-push pack negotiation, which fails on shallow/sparse
+      # clones with HTTP 500.  Creates blob→tree→commit→ref directly.
+      - name: "Push results via API — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          REPO="${GITHUB_REPOSITORY}"
+          SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config http.postBuffer 524288000
-          git config pack.depth 1
-          git config pack.window 0
-          git checkout -b "${branch}"
+          # ── 1. Resolve base commit + tree from source branch ──
+          BASE_SHA=$(gh api "repos/${REPO}/git/ref/heads/${SOURCE_BRANCH}" --jq '.object.sha')
+          BASE_TREE=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq '.tree.sha')
+          echo "[api] Base commit: ${BASE_SHA}"
+          echo "[api] Base tree:   ${BASE_TREE}"
 
-          git add -f data/step2.3-adaptive/${ISO}__pathway*.parquet 2>/dev/null || true
+          # ── 2. Upload each parquet as a blob ──
+          TREE_ENTRIES="[]"
+          file_count=0
 
-          if git diff --cached --quiet; then
-            echo "::error::No changes staged — nothing to commit for ${ISO}"
+          for pq in data/step2.3-adaptive/${ISO}__pathway*.parquet; do
+            [ -f "$pq" ] || continue
+            file_count=$((file_count + 1))
+            echo "[api] Uploading blob: ${pq} ($(du -h "$pq" | cut -f1))"
+
+            BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
+              -f encoding=base64 \
+              -f content="$(base64 -w0 "$pq")" \
+              --jq '.sha')
+
+            echo "[api]   → blob SHA: ${BLOB_SHA}"
+
+            TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
+              --arg path "$pq" \
+              --arg sha "$BLOB_SHA" \
+              '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+          done
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No parquet files found to commit for ${ISO}"
             exit 1
           fi
+          echo "[api] ${file_count} blobs uploaded"
 
-          total=$(git diff --cached --name-only | wc -l)
-          git commit -m "Step 2.3 adaptive: ${ISO} (${total} result JSONs)"
+          # ── 3. Create tree with new/updated files ──
+          TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
+            '{"base_tree": $base, "tree": .}' | \
+            gh api "repos/${REPO}/git/trees" --input - --jq '.sha')
+          echo "[api] New tree: ${TREE_SHA}"
 
+          # ── 4. Create commit ──
+          COMMIT_SHA=$(jq -n \
+            --arg msg "Step 2.3 adaptive: ${ISO} (${file_count} parquets)" \
+            --arg tree "$TREE_SHA" \
+            --arg parent "$BASE_SHA" \
+            '{"message": $msg, "tree": $tree, "parents": [$parent]}' | \
+            gh api "repos/${REPO}/git/commits" --input - --jq '.sha')
+          echo "[api] New commit: ${COMMIT_SHA}"
+
+          # ── 5. Create branch ref ──
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "${branch}" 2>&1 && break
+            echo "[api] Creating ref attempt $i/$MAX_RETRIES..."
+            if gh api "repos/${REPO}/git/refs" \
+              -f "ref=refs/heads/${branch}" \
+              -f "sha=${COMMIT_SHA}" > /dev/null 2>&1; then
+              echo "[api] Branch created: ${branch}"
+              break
+            fi
             if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "::error::Push failed after $MAX_RETRIES attempts"
+              echo "::error::Failed to create branch ref after $MAX_RETRIES attempts"
               exit 1
             fi
             BACKOFF=$((2 ** i))
-            echo "Retrying in ${BACKOFF}s..."
+            echo "[api] Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
 
@@ -359,5 +403,3 @@ jobs:
           path: data/step2.3-adaptive/
           retention-days: 30
           if-no-files-found: warn
-
-
