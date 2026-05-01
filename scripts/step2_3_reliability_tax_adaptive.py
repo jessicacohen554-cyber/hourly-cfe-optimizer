@@ -30,6 +30,8 @@ v4.3 changes:
   - CHANGE: Per-group CFE waypoints — seed=60 group uses (2030,60)→(2035,75)→(2040,90);
     seed=50 group keeps (2030,50)→(2035,70)→(2040,90).  Both converge at 90% by 2040.
   - ADD: SEED_BAND_BY_ISO, CFE_WAYPOINTS_50/60, MODEL_START_YEAR constants.
+  - ADD: consolidate_to_parquet() — writes one parquet per ISO+pathway after
+    all beams finish.  JSONs remain as intermediate debug output.
 
 v4.2 changes:
   - ADD: Pathways C and D — identical resource availability to B, but with
@@ -1801,6 +1803,75 @@ def warmup_jit():
 # ---------------------------------------------------------------------------
 # Output writing
 # ---------------------------------------------------------------------------
+def consolidate_to_parquet(iso: str, pathway: str):
+    """Read all JSONs for this ISO+pathway, write a single parquet.
+
+    One row per threshold snapshot.  Beam-level metadata (archetype, scenario,
+    cost_mode, demand_growth, peak values) are repeated on every row so the
+    parquet is self-describing without joins.
+
+    Output: data/step2.3-adaptive/{ISO}__pathway{X}.parquet
+    """
+    pattern = OUTPUT_DIR / f"{iso}__pathway{pathway}__*.json"
+    files = sorted(OUTPUT_DIR.glob(f"{iso}__pathway{pathway}__*.json"))
+    if not files:
+        print(f"[consolidate] No JSONs found for {iso} pathway {pathway}")
+        return
+
+    rows = []
+    for fp in files:
+        with open(fp) as f:
+            try:
+                d = json.load(f)
+            except json.JSONDecodeError:
+                print(f"[consolidate] WARNING: skipping malformed {fp.name}")
+                continue
+
+        # Beam-level fields
+        beam_meta = {
+            "iso": d["iso"],
+            "pathway": d["pathway"],
+            "scenario": d.get("scenario_name", "custom"),
+            "cost_mode": d["cost_mode"],
+            "archetype": d["beam_archetype"],
+            "demand_growth": d["config"]["demand_growth"],
+            "dim_key": d.get("dim_key", ""),
+            "schema_version": d.get("schema_version", ""),
+            "seed_band": d["config"].get("seed_band", 0),
+            "peak_gas_mw": d["peak_gas_mw"],
+            "peak_gas_year": d["peak_gas_year"],
+            "peak_h2_mw": d.get("peak_h2_mw", 0),
+            "n_thresholds_achieved": d["n_thresholds_achieved"],
+        }
+
+        for snap in d["threshold_snapshots"]:
+            row = dict(beam_meta)
+            # Snapshot scalars
+            for k in ("threshold_pct", "year_achieved", "achieved_cfe_pct",
+                       "h2_capacity_mw", "h2_dispatched_mwh", "h2_cf_pct",
+                       "h2_dispatch_hours", "h2_annual_cost_usd",
+                       "gas_need_mw", "stranded_vs_peak_mw",
+                       "total_annual_cost_usd", "incremental_cost_usd",
+                       "cumulative_cost_usd", "curtailment_total",
+                       "demand_twh"):
+                row[k] = snap.get(k, 0.0)
+            # Flatten resource mix
+            rmix = snap.get("resource_mix_pct", {})
+            for res in RESOURCE_ORDER:
+                row[f"res_{res}"] = rmix.get(res, 0.0)
+            rows.append(row)
+
+    if not rows:
+        print(f"[consolidate] No snapshots extracted for {iso} pathway {pathway}")
+        return
+
+    table = pa.Table.from_pylist(rows)
+    out_path = OUTPUT_DIR / f"{iso}__pathway{pathway}.parquet"
+    pq.write_table(table, out_path, compression="zstd")
+    print(f"[consolidate] Wrote {out_path.name}: {len(rows)} rows from {len(files)} JSONs "
+          f"({out_path.stat().st_size / 1024:.1f} KB)")
+
+
 def write_result(result: dict):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     fname = (f"{result['iso']}__pathway{result['pathway']}__"
@@ -1935,8 +2006,13 @@ def main():
     print(f"\n{'='*70}")
     print(f"[adaptive] All done in {time.time()-t_total:.0f}s")
     print(f"{'='*70}")
+
+    # Consolidate all JSONs for this ISO+pathway into a single parquet.
+    consolidate_to_parquet(iso, args.pathway)
+
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
