@@ -195,7 +195,12 @@ jobs:
             exit 1
           fi
           for f in data/sampling-tests/*.json; do
-            python3 -c "import json; d=json.load(open('$f')); print(f'[verify] {f}: {len(d.get(\"beams\",[]))} beams, wall={d.get(\"wall_s\",\"?\")}s')"
+            python3 -c "
+          import json, sys
+          f = sys.argv[1]
+          d = json.load(open(f))
+          print(f'[verify] {f}: {len(d.get(\"beams\", []))} beams, wall={d.get(\"wall_s\", \"?\")}s')
+          " "$f"
           done
 
       # ── Push via GitHub REST API ──────────────────────────────────
