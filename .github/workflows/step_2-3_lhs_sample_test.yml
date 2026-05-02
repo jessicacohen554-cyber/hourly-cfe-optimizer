@@ -7,7 +7,9 @@ name: "Step 2.3 Sampling Test: LHS × Beam Sweep"
 #   solar-led, wind-led, balanced, nuclear-heavy, offshore-heavy
 #   "all" = cross-archetype seeding (one cheapest per archetype)
 #
-# Output: RESULT_JSON line in logs with per-beam costs, spreads, and timings.
+# Output: JSON result files committed to auto/ branch, plus artifact backup.
+#         Run squash-pipeline-branches.yml with pattern "auto/.*sampling-test"
+#         to consolidate into master.
 
 on:
   workflow_dispatch:
@@ -75,16 +77,29 @@ on:
           - nuclear-heavy
           - offshore-heavy
 
+env:
+  BRANCH_PREFIX: sampling-test
+  PYTHONUNBUFFERED: "1"
+
 jobs:
   sampling-test:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          lfs: true
+          fetch-depth: 0
+
+      - name: Configure git for large parquets
+        run: |
+          git config http.postBuffer 524288000
+          git config core.packedGitLimit 2g
+          git config core.packedGitWindowSize 256m
+          git config pack.windowMemory 256m
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -105,30 +120,149 @@ jobs:
             echo "flag=--archetype ${{ inputs.archetype }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run LHS multibeam test
-        run: |
-          echo "═══════════════════════════════════════════════════"
-          echo "  ISO:       ${{ inputs.iso }}"
-          echo "  Pathway:   ${{ inputs.pathway }}"
-          echo "  LHS size:  ${{ inputs.lhs_size }}"
-          echo "  Beams:     ${{ inputs.beams }}"
-          echo "  Archetype: ${{ inputs.archetype }}"
-          echo "═══════════════════════════════════════════════════"
-          python3 -u scripts/lhs_multibeam_test.py \
-            ${{ inputs.iso }} \
-            ${{ inputs.pathway }} \
-            ${{ inputs.lhs_size }} \
-            ${{ inputs.beams }} \
-            ${{ steps.arch.outputs.flag }}
+      - name: Ensure output directory
+        run: mkdir -p data/sampling-tests
 
-      - name: Extract and summarize results
-        if: always()
+      - name: Run LHS multibeam test
+        env:
+          ISO: ${{ inputs.iso }}
+          PATHWAY: ${{ inputs.pathway }}
+          LHS: ${{ inputs.lhs_size }}
+          BEAMS: ${{ inputs.beams }}
+          ARCHETYPE: ${{ inputs.archetype }}
+          ARCH_FLAG: ${{ steps.arch.outputs.flag }}
         run: |
-          echo ""
-          echo "── Result Summary ──────────────────────────────────"
-          # Grab the RESULT_JSON line from the run log if it exists
-          LOG_FILE=$(find . -name "*.log" 2>/dev/null | head -1)
-          if grep -q "RESULT_JSON:" /dev/stdin 2>/dev/null; then
-            echo "(check Run step output for RESULT_JSON)"
+          echo "═══════════════════════════════════════════════════"
+          echo "  ISO:       ${ISO}"
+          echo "  Pathway:   ${PATHWAY}"
+          echo "  LHS size:  ${LHS}"
+          echo "  Beams:     ${BEAMS}"
+          echo "  Archetype: ${ARCHETYPE}"
+          echo "═══════════════════════════════════════════════════"
+
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          OUTFILE="data/sampling-tests/${ISO}__pw${PATHWAY}__lhs${LHS}__beams${BEAMS}__${ARCHETYPE}__${TIMESTAMP}.json"
+
+          python3 -u scripts/lhs_multibeam_test.py \
+            "${ISO}" "${PATHWAY}" "${LHS}" "${BEAMS}" ${ARCH_FLAG} \
+            2>&1 | tee /tmp/run.log
+
+          # Extract RESULT_JSON from log → file
+          if grep -q "RESULT_JSON:" /tmp/run.log; then
+            grep "RESULT_JSON:" /tmp/run.log | sed 's/^RESULT_JSON://' > "${OUTFILE}"
+            echo "[capture] Wrote $(du -h "${OUTFILE}" | cut -f1) → ${OUTFILE}"
+          else
+            echo "::error::No RESULT_JSON found in output"
+            exit 1
           fi
-          echo "Done."
+
+      - name: Verify output
+        run: |
+          file_count=$(ls data/sampling-tests/*.json 2>/dev/null | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No result JSON files found"
+            exit 1
+          fi
+          for f in data/sampling-tests/*.json; do
+            python3 -c "import json; d=json.load(open('$f')); print(f'[verify] {f}: {len(d.get(\"beams\",[]))} beams, wall={d.get(\"wall_s\",\"?\")}s')"
+          done
+
+      # ── Push via GitHub REST API ──────────────────────────────────
+      # Bypasses git-push pack negotiation issues on large repos.
+      - name: Push results via API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISO: ${{ inputs.iso }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          REPO="${GITHUB_REPOSITORY}"
+
+          # 1. Resolve base commit + tree from master
+          BASE_SHA=$(gh api "repos/${REPO}/git/ref/heads/master" --jq '.object.sha')
+          BASE_TREE=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq '.tree.sha')
+          echo "[api] Base commit: ${BASE_SHA}"
+
+          # 2. Upload each result JSON as a blob
+          TREE_ENTRIES="[]"
+          file_count=0
+
+          for f in data/sampling-tests/*.json; do
+            [ -f "$f" ] || continue
+            file_count=$((file_count + 1))
+            echo "[api] Uploading blob: ${f}"
+
+            BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
+              -f encoding=base64 \
+              -f content="$(base64 -w0 "$f")" \
+              --jq '.sha')
+
+            TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
+              --arg path "$f" \
+              --arg sha "$BLOB_SHA" \
+              '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+          done
+
+          echo "[api] ${file_count} blobs uploaded"
+
+          # 3. Create tree
+          TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
+            '{"base_tree": $base, "tree": .}' | \
+            gh api "repos/${REPO}/git/trees" --input - --jq '.sha')
+
+          # 4. Create commit
+          COMMIT_SHA=$(jq -n \
+            --arg msg "Sampling test: ${ISO} pw${{ inputs.pathway }} lhs${{ inputs.lhs_size }} beams${{ inputs.beams }} ${{ inputs.archetype }}" \
+            --arg tree "$TREE_SHA" \
+            --arg parent "$BASE_SHA" \
+            '{"message": $msg, "tree": $tree, "parents": [$parent]}' | \
+            gh api "repos/${REPO}/git/commits" --input - --jq '.sha')
+
+          # 5. Create branch ref (with retry)
+          for i in $(seq 1 4); do
+            echo "[api] Creating ref attempt $i/4..."
+            if gh api "repos/${REPO}/git/refs" \
+              -f "ref=refs/heads/${branch}" \
+              -f "sha=${COMMIT_SHA}" > /dev/null 2>&1; then
+              echo "[api] Branch created: ${branch}"
+              break
+            fi
+            if [ "$i" -eq 4 ]; then
+              echo "::error::Failed to create branch ref after 4 attempts"
+              exit 1
+            fi
+            sleep $((2 ** i))
+          done
+
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          {
+            echo "## Sampling Test — ${ISO}"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "- Branch: \`${BRANCH}\`"
+            else
+              echo "- Branch: (not pushed — job failed before commit step)"
+            fi
+            echo "- Pathway: \`${{ inputs.pathway }}\`"
+            echo "- LHS: ${{ inputs.lhs_size }}"
+            echo "- Beams: ${{ inputs.beams }}"
+            echo "- Archetype: \`${{ inputs.archetype }}\`"
+            echo ""
+            echo "Run **Squash Pipeline Branches** with pattern \`auto/.*sampling-test\` to consolidate."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sampling-test-${{ inputs.iso }}-${{ github.run_id }}
+          path: data/sampling-tests/
+          retention-days: 30
+          if-no-files-found: warn
