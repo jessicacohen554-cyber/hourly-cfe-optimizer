@@ -16,11 +16,16 @@ seeds is selected; --beams N takes the first N, so pools are nested across
 beam counts sharing the same archetype and LHS.
 """
 from __future__ import annotations
+import multiprocessing
+multiprocessing.set_start_method("spawn", force=True)
+
 import json, sys, time, argparse
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np
+from scipy.spatial.distance import cdist
 import step2_3_reliability_tax_adaptive as solver
 import pipeline_config as pc
 
@@ -28,10 +33,10 @@ KEY_THRESHOLDS = [90.0, 95.0, 99.0, 99.9]
 KEY_MAP = {t: f"t{int(t) if t == int(t) else t}" for t in KEY_THRESHOLDS}
 
 
-# ── Seed selection: single archetype (greedy maximin) ───────────────────────
+# ── Shared pool loading (vectorized costing) ───────────────────────────────
 
 def _load_valid_pool(iso, cfg, P32, dm32, dn32):
-    """Load EF band, score, cost, return shared arrays for seed selectors."""
+    """Load EF band, score, cost.  Returns shared arrays for seed selectors."""
     seed_band = solver.SEED_BAND_BY_ISO[iso]
     ef = solver.load_ef_band(iso, seed_band)
     if ef is None:
@@ -67,40 +72,37 @@ def _load_valid_pool(iso, cfg, P32, dm32, dn32):
     if len(valid_idx) == 0:
         return None
 
+    # Vectorized costing — single matmul instead of 21k × 11 Python loop
     base_dem = float(pc.REGIONAL_DEMAND_TWH[iso])
-    costs = np.zeros(len(valid_idx), dtype=np.float64)
-    for ki, vi in enumerate(valid_idx):
-        c = 0.0
-        for ri, res in enumerate(solver.RESOURCE_ORDER):
-            pct = float(W[vi, ri]) * 100.0
-            if pct > 0.001:
-                c += (pct / 100.0 * base_dem
-                      * solver.get_resource_lcoe(iso, res, solver.BASE_YEAR, cfg)
-                      * 1e6)
-        for j, sc in enumerate(solver.STORAGE_COLS):
-            sv = [batt4, batt8, ldes][j][vi]
-            if sv > 0:
-                c += (float(sv) / 100.0
-                      * solver.storage_net_cost(iso, sc, cfg, year=solver.BASE_YEAR)
-                      * base_dem * 1e6)
-        costs[ki] = c
+    lcoe_vec = np.array([solver.get_resource_lcoe(iso, res, solver.BASE_YEAR, cfg)
+                         for res in solver.RESOURCE_ORDER], dtype=np.float64)
+    stor_vec = np.array([solver.storage_net_cost(iso, sc, cfg, year=solver.BASE_YEAR)
+                         for sc in solver.STORAGE_COLS], dtype=np.float64)
+
+    W_valid = W[valid_idx].astype(np.float64)           # already 0–1 scale
+    S_valid = np.column_stack([batt4[valid_idx],
+                               batt8[valid_idx],
+                               ldes[valid_idx]]).astype(np.float64) / 100.0
+    costs = (W_valid @ lcoe_vec + S_valid @ stor_vec) * base_dem * 1e6
 
     print(f"[seeds] {len(valid_idx):,} mixes in valid band")
     return dict(W=W, batt4=batt4, batt8=batt8, ldes=ldes,
                 scores=scores, resid=resid, valid_idx=valid_idx, costs=costs)
 
 
+# ── Seed selection: single archetype (greedy maximin + cdist) ──────────────
+
 def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
     """Greedy maximin within one archetype.  Selects max(n_beams, 8) seeds,
     returns first n_beams so pools nest across beam counts."""
-    W       = pool["W"]
-    batt4   = pool["batt4"]
-    batt8   = pool["batt8"]
-    ldes    = pool["ldes"]
-    scores  = pool["scores"]
-    resid   = pool["resid"]
+    W         = pool["W"]
+    batt4     = pool["batt4"]
+    batt8     = pool["batt8"]
+    ldes      = pool["ldes"]
+    scores    = pool["scores"]
+    resid     = pool["resid"]
     valid_idx = pool["valid_idx"]
-    costs   = pool["costs"]
+    costs     = pool["costs"]
 
     arch_ki = []
     for ki, vi in enumerate(valid_idx):
@@ -132,39 +134,15 @@ def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
     pool_size = max(n_beams, 8)
     k = min(pool_size, len(arch_ki))
 
+    # Greedy maximin with cdist
     arch_costs = costs[arch_ki]
     selected = [int(np.argmin(arch_costs))]
     for _ in range(k - 1):
-        best_cand, best_dist = -1, -1.0
-        for ci in range(len(arch_ki)):
-            if ci in selected:
-                continue
-            d = min(np.linalg.norm(feats_norm[ci] - feats_norm[si])
-                    for si in selected)
-            if d > best_dist:
-                best_dist = d
-                best_cand = ci
-        if best_cand >= 0:
-            selected.append(best_cand)
+        dists = cdist(feats_norm, feats_norm[selected]).min(axis=1)
+        dists[selected] = -1.0
+        selected.append(int(np.argmax(dists)))
 
-    seeds = []
-    for si in selected[:n_beams]:
-        ki = arch_ki[si]
-        vi = valid_idx[ki]
-        seeds.append({
-            "archetype": target_arch,
-            "resource_pcts": {res: float(W[vi, ri]) * 100.0
-                              for ri, res in enumerate(solver.RESOURCE_ORDER)},
-            "storage_pcts": {
-                solver.STORAGE_COLS[0]: float(batt4[vi]),
-                solver.STORAGE_COLS[1]: float(batt8[vi]),
-                solver.STORAGE_COLS[2]: float(ldes[vi]),
-            },
-            "cfe": float(scores[vi]),
-            "resid": float(resid[vi]),
-            "cost": costs[ki],
-        })
-
+    seeds = _build_seed_dicts(pool, cfg, arch_ki, selected[:n_beams], target_arch)
     print(f"[seeds] selected {len(seeds)} '{target_arch}' seeds "
           f"(CFE {min(s['cfe'] for s in seeds):.1f}–"
           f"{max(s['cfe'] for s in seeds):.1f}%)")
@@ -175,14 +153,9 @@ def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
 
 def select_seeds_all_archetypes(pool, cfg, n_beams):
     """One cheapest seed per archetype, sorted by cost — original behavior."""
-    W       = pool["W"]
-    batt4   = pool["batt4"]
-    batt8   = pool["batt8"]
-    ldes    = pool["ldes"]
-    scores  = pool["scores"]
-    resid   = pool["resid"]
+    W         = pool["W"]
     valid_idx = pool["valid_idx"]
-    costs   = pool["costs"]
+    costs     = pool["costs"]
 
     archetypes = {}
     for ki, vi in enumerate(valid_idx):
@@ -190,13 +163,41 @@ def select_seeds_all_archetypes(pool, cfg, n_beams):
                for ri, res in enumerate(solver.RESOURCE_ORDER)}
         arch = solver.classify_archetype(mix, cfg.pathway, iso=cfg.iso)
         if arch not in archetypes or costs[ki] < archetypes[arch][1]:
-            archetypes[arch] = (vi, costs[ki], ki)
+            archetypes[arch] = (ki, costs[ki])
+
+    ranked = sorted(archetypes, key=lambda a: archetypes[a][1])
+    ki_list = [archetypes[a][0] for a in ranked[:n_beams]]
+    arch_list = ranked[:n_beams]
+
+    seeds = _build_seed_dicts(pool, cfg,
+                               list(range(len(valid_idx))),  # identity map
+                               ki_list, None)
+    # Patch archetype names back (identity map means ki == index into arch_ki)
+    for s, a in zip(seeds, arch_list):
+        s["archetype"] = a
+
+    print(f"[seeds] selected {len(seeds)} seeds across "
+          f"{len(set(s['archetype'] for s in seeds))} archetypes")
+    return seeds
+
+
+def _build_seed_dicts(pool, cfg, arch_ki, selected_indices, archetype):
+    """Build seed dicts from selected indices into arch_ki."""
+    W         = pool["W"]
+    batt4     = pool["batt4"]
+    batt8     = pool["batt8"]
+    ldes      = pool["ldes"]
+    scores    = pool["scores"]
+    resid     = pool["resid"]
+    valid_idx = pool["valid_idx"]
+    costs     = pool["costs"]
 
     seeds = []
-    for arch in sorted(archetypes, key=lambda a: archetypes[a][1]):
-        vi, cost, ki = archetypes[arch]
+    for si in selected_indices:
+        ki = arch_ki[si]
+        vi = valid_idx[ki]
         seeds.append({
-            "archetype": arch,
+            "archetype": archetype or "unknown",
             "resource_pcts": {res: float(W[vi, ri]) * 100.0
                               for ri, res in enumerate(solver.RESOURCE_ORDER)},
             "storage_pcts": {
@@ -206,17 +207,35 @@ def select_seeds_all_archetypes(pool, cfg, n_beams):
             },
             "cfe": float(scores[vi]),
             "resid": float(resid[vi]),
-            "cost": cost,
+            "cost": float(costs[ki]),
         })
-        if len(seeds) >= n_beams:
-            break
-
-    print(f"[seeds] selected {len(seeds)} seeds across "
-          f"{len(set(s['archetype'] for s in seeds))} archetypes")
     return seeds
 
 
-# ── Solver + output ────────────────────────────────────────────────────────
+# ── Parallel beam solver ──────────────────────────────────────────────────
+
+def _solve_one_beam(seed, cfg, P32, dm32, dn32, bi):
+    """Worker: solve a single beam.  Each spawned process gets clean JIT."""
+    solver.warmup_jit()
+    t0 = time.time()
+    result = solver.solve_pathway(seed, cfg, P32, dm32, dn32, beam_idx=bi)
+    dt = time.time() - t0
+
+    snaps = {s["threshold_pct"]: s
+             for s in result.get("threshold_snapshots", [])}
+    row = {"beam_idx": bi, "archetype": seed["archetype"],
+           "wall_s": round(dt, 1),
+           "peak_gas_mw": result["peak_gas_mw"],
+           "peak_h2_mw": result["peak_h2_mw"]}
+    for t, k in KEY_MAP.items():
+        if t in snaps:
+            row[f"{k}_cost_B"] = round(
+                snaps[t]["cumulative_cost_usd"] / 1e9, 4)
+            row[f"{k}_year"] = snaps[t]["year_achieved"]
+        else:
+            row[f"{k}_cost_B"] = None
+    return row
+
 
 def run(iso, pathway, lhs_size, n_beams, archetype=None):
     solver.warmup_jit()
@@ -252,30 +271,17 @@ def run(iso, pathway, lhs_size, n_beams, archetype=None):
               flush=True)
 
     t_total = time.time()
-    beam_results = []
-    for bi, seed in enumerate(seeds):
-        t0 = time.time()
-        result = solver.solve_pathway(seed, cfg, P32, dm32, dn32, beam_idx=bi)
-        dt = time.time() - t0
-
-        snaps = {s["threshold_pct"]: s
-                 for s in result.get("threshold_snapshots", [])}
-        row = {"beam_idx": bi, "archetype": seed["archetype"],
-               "wall_s": round(dt, 1),
-               "peak_gas_mw": result["peak_gas_mw"],
-               "peak_h2_mw": result["peak_h2_mw"]}
-        for t, k in KEY_MAP.items():
-            if t in snaps:
-                row[f"{k}_cost_B"] = round(
-                    snaps[t]["cumulative_cost_usd"] / 1e9, 4)
-                row[f"{k}_year"] = snaps[t]["year_achieved"]
-            else:
-                row[f"{k}_cost_B"] = None
-        beam_results.append(row)
-        print(f"  beam {bi}: {dt:.1f}s | "
-              f"99.9%={row.get('t99.9_cost_B', 'N/A')}", flush=True)
+    workers = min(len(seeds), max(1, multiprocessing.cpu_count() - 1))
+    with ProcessPoolExecutor(max_workers=workers) as exe:
+        futures = [exe.submit(_solve_one_beam, seed, cfg, P32, dm32, dn32, bi)
+                   for bi, seed in enumerate(seeds)]
+        beam_results = [f.result() for f in futures]
 
     wall = round(time.time() - t_total, 1)
+
+    for row in beam_results:
+        print(f"  beam {row['beam_idx']}: {row['wall_s']:.1f}s | "
+              f"99.9%={row.get('t99.9_cost_B', 'N/A')}", flush=True)
 
     best = {}
     for t, k in KEY_MAP.items():
