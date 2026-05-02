@@ -5,15 +5,19 @@ LHS × beam cross-reference test for Step 2.3 pathway optimizer.
 Usage:
   python3 -u scripts/lhs_multibeam_test.py ERCOT A 5000 4
   python3 -u scripts/lhs_multibeam_test.py ERCOT B 10000 8 --archetype nuclear-heavy
-  python3 -u scripts/lhs_multibeam_test.py ERCOT A 2500 2 --archetype balanced
+  python3 -u scripts/lhs_multibeam_test.py ERCOT A 2500 32 --archetype balanced
+  python3 -u scripts/lhs_multibeam_test.py ERCOT B 20000 16 --strategy legacy
 
-Without --archetype: seeds are selected across all archetypes (one per arch,
-cheapest first — original behavior).
+Without --archetype: beams are distributed across all archetypes proportional
+to pool size, with at least 1 per archetype (if beams >= num_archetypes).
+Within each archetype, seeds are selected via greedy maximin on the normalized
+resource+storage feature vector.
 
-With --archetype: seeds are selected within that single archetype via greedy
-maximin on normalized resource+storage feature vector.  A pool of max(N, 8)
-seeds is selected; --beams N takes the first N, so pools are nested across
-beam counts sharing the same archetype and LHS.
+With --archetype: all beams are allocated to that single archetype.
+Maximin diversification selects from a nested pool of max(N, 8) seeds.
+
+With --strategy legacy: reverts to v1 behavior (one cheapest seed per archetype,
+no within-archetype diversification). For A/B comparison only.
 """
 from __future__ import annotations
 import multiprocessing
@@ -90,36 +94,21 @@ def _load_valid_pool(iso, cfg, P32, dm32, dn32):
                 scores=scores, resid=resid, valid_idx=valid_idx, costs=costs)
 
 
-# ── Seed selection: single archetype (greedy maximin + cdist) ──────────────
+# ── Feature matrix construction ────────────────────────────────────────────
 
-def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
-    """Greedy maximin within one archetype.  Selects max(n_beams, 8) seeds,
-    returns first n_beams so pools nest across beam counts."""
+def _build_feature_matrix(pool, ki_list):
+    """Build normalized feature matrix for a subset of valid-pool indices.
+    Returns (feats_norm, stds) with shape (len(ki_list), N_RESOURCES + N_STORAGE).
+    """
     W         = pool["W"]
     batt4     = pool["batt4"]
     batt8     = pool["batt8"]
     ldes      = pool["ldes"]
-    scores    = pool["scores"]
-    resid     = pool["resid"]
     valid_idx = pool["valid_idx"]
-    costs     = pool["costs"]
 
-    arch_ki = []
-    for ki, vi in enumerate(valid_idx):
-        mix = {res: float(W[vi, ri]) * 100.0
-               for ri, res in enumerate(solver.RESOURCE_ORDER)}
-        if solver.classify_archetype(mix, cfg.pathway, iso=cfg.iso) == target_arch:
-            arch_ki.append(ki)
-
-    if not arch_ki:
-        print(f"[seeds] 0 mixes in archetype '{target_arch}'")
-        return []
-
-    print(f"[seeds] {len(arch_ki):,} mixes in archetype '{target_arch}'")
-
-    feats = np.zeros((len(arch_ki), solver.N_RESOURCES + solver.N_STORAGE),
-                     dtype=np.float64)
-    for fi, ki in enumerate(arch_ki):
+    n_feat = solver.N_RESOURCES + solver.N_STORAGE
+    feats = np.zeros((len(ki_list), n_feat), dtype=np.float64)
+    for fi, ki in enumerate(ki_list):
         vi = valid_idx[ki]
         for ri in range(solver.N_RESOURCES):
             feats[fi, ri] = float(W[vi, ri]) * 100.0
@@ -130,17 +119,78 @@ def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
     stds = feats.std(axis=0)
     stds[stds < 1e-6] = 1.0
     feats_norm = feats / stds
+    return feats_norm
+
+
+# ── Greedy maximin seed selection ──────────────────────────────────────────
+
+def _maximin_select(feats_norm, costs, k):
+    """Greedy maximin: start with cheapest, then iteratively pick the point
+    farthest from all already-selected points.  Returns list of indices into
+    feats_norm/costs arrays (length = min(k, len(feats_norm))).
+    """
+    n = len(feats_norm)
+    k = min(k, n)
+    if k == 0:
+        return []
+
+    selected = [int(np.argmin(costs))]
+    if k == 1:
+        return selected
+
+    # Precompute: track min distance to selected set for each point
+    min_dists = cdist(feats_norm, feats_norm[selected]).ravel()  # (n,)
+
+    for _ in range(k - 1):
+        min_dists[selected[-1]] = -1.0  # exclude last selected
+        best = int(np.argmax(min_dists))
+        selected.append(best)
+        # Update min_dists: for each point, take min of current and dist to new selection
+        new_dists = np.linalg.norm(feats_norm - feats_norm[best], axis=1)
+        min_dists = np.minimum(min_dists, new_dists)
+        min_dists[selected[-1]] = -1.0
+
+    return selected
+
+
+# ── Classify all valid mixes by archetype ──────────────────────────────────
+
+def _classify_pool(pool, cfg):
+    """Returns dict: archetype_name -> list of ki (indices into valid_idx)."""
+    W         = pool["W"]
+    valid_idx = pool["valid_idx"]
+
+    arch_groups = {}
+    for ki, vi in enumerate(valid_idx):
+        mix = {res: float(W[vi, ri]) * 100.0
+               for ri, res in enumerate(solver.RESOURCE_ORDER)}
+        arch = solver.classify_archetype(mix, cfg.pathway, iso=cfg.iso)
+        if arch not in arch_groups:
+            arch_groups[arch] = []
+        arch_groups[arch].append(ki)
+
+    return arch_groups
+
+
+# ── Seed selection: single archetype ───────────────────────────────────────
+
+def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
+    """Maximin diversification within one archetype.  Selects from a pool of
+    max(n_beams, 8) so that pools are nested across beam counts."""
+    arch_groups = _classify_pool(pool, cfg)
+
+    arch_ki = arch_groups.get(target_arch, [])
+    if not arch_ki:
+        print(f"[seeds] 0 mixes in archetype '{target_arch}'")
+        return []
+
+    print(f"[seeds] {len(arch_ki):,} mixes in archetype '{target_arch}'")
+
+    feats_norm = _build_feature_matrix(pool, arch_ki)
+    arch_costs = pool["costs"][arch_ki]
 
     pool_size = max(n_beams, 8)
-    k = min(pool_size, len(arch_ki))
-
-    # Greedy maximin with cdist
-    arch_costs = costs[arch_ki]
-    selected = [int(np.argmin(arch_costs))]
-    for _ in range(k - 1):
-        dists = cdist(feats_norm, feats_norm[selected]).min(axis=1)
-        dists[selected] = -1.0
-        selected.append(int(np.argmax(dists)))
+    selected = _maximin_select(feats_norm, arch_costs, pool_size)
 
     seeds = _build_seed_dicts(pool, cfg, arch_ki, selected[:n_beams], target_arch)
     print(f"[seeds] selected {len(seeds)} '{target_arch}' seeds "
@@ -149,10 +199,85 @@ def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
     return seeds
 
 
-# ── Seed selection: all archetypes (original behavior) ─────────────────────
+# ── Seed selection: all archetypes with diversification ────────────────────
 
 def select_seeds_all_archetypes(pool, cfg, n_beams):
-    """One cheapest seed per archetype, sorted by cost — original behavior."""
+    """Distribute beams across archetypes, then maximin within each.
+
+    Allocation:
+    1. If n_beams < num_archetypes: pick the n_beams archetypes with the
+       largest pools (most diverse exploration space), 1 beam each.
+    2. If n_beams >= num_archetypes: every archetype gets at least 1 beam.
+       Remaining beams are allocated proportional to archetype pool size,
+       with round-robin distribution of the remainder.
+    """
+    arch_groups = _classify_pool(pool, cfg)
+    costs = pool["costs"]
+
+    # Sort archetypes by pool size descending (largest pool = most to explore)
+    ranked_archs = sorted(arch_groups.keys(),
+                          key=lambda a: len(arch_groups[a]), reverse=True)
+
+    n_archs = len(ranked_archs)
+    print(f"[seeds] {n_archs} archetypes: "
+          + ", ".join(f"{a} ({len(arch_groups[a]):,})" for a in ranked_archs))
+
+    # Allocate beams to archetypes
+    if n_beams < n_archs:
+        # Not enough beams for every archetype — pick the largest pools
+        active_archs = ranked_archs[:n_beams]
+        allocation = {a: 1 for a in active_archs}
+    else:
+        # Every archetype gets at least 1; distribute remainder by pool size
+        allocation = {a: 1 for a in ranked_archs}
+        remaining = n_beams - n_archs
+        if remaining > 0:
+            pool_sizes = np.array([len(arch_groups[a]) for a in ranked_archs],
+                                  dtype=np.float64)
+            pool_frac = pool_sizes / pool_sizes.sum()
+            # Floor allocation
+            float_alloc = pool_frac * remaining
+            floor_alloc = np.floor(float_alloc).astype(int)
+            leftover = remaining - floor_alloc.sum()
+            # Distribute leftover by largest fractional part
+            fracs = float_alloc - floor_alloc
+            top_idx = np.argsort(-fracs)[:leftover]
+            for idx in top_idx:
+                floor_alloc[idx] += 1
+            for i, a in enumerate(ranked_archs):
+                allocation[a] += int(floor_alloc[i])
+
+    alloc_str = ", ".join(f"{a}: {allocation[a]}" for a in ranked_archs
+                          if a in allocation)
+    print(f"[seeds] beam allocation: {alloc_str} (total {sum(allocation.values())})")
+
+    # Select seeds within each archetype using maximin
+    all_seeds = []
+    for arch in ranked_archs:
+        if arch not in allocation:
+            continue
+        n_arch_beams = allocation[arch]
+        arch_ki = arch_groups[arch]
+
+        feats_norm = _build_feature_matrix(pool, arch_ki)
+        arch_costs = costs[arch_ki]
+
+        selected = _maximin_select(feats_norm, arch_costs, n_arch_beams)
+
+        seeds = _build_seed_dicts(pool, cfg, arch_ki, selected, arch)
+        print(f"[seeds]   {arch}: {len(seeds)} seeds "
+              f"(CFE {min(s['cfe'] for s in seeds):.1f}–"
+              f"{max(s['cfe'] for s in seeds):.1f}%)")
+        all_seeds.extend(seeds)
+
+    return all_seeds
+
+
+# ── Legacy seed selection (v1 behavior, for A/B comparison) ────────────────
+
+def select_seeds_legacy(pool, cfg, n_beams):
+    """v1 behavior: one cheapest seed per archetype, sorted by cost.
+    Caps at number of archetypes regardless of n_beams."""
     W         = pool["W"]
     valid_idx = pool["valid_idx"]
     costs     = pool["costs"]
@@ -170,16 +295,18 @@ def select_seeds_all_archetypes(pool, cfg, n_beams):
     arch_list = ranked[:n_beams]
 
     seeds = _build_seed_dicts(pool, cfg,
-                               list(range(len(valid_idx))),  # identity map
+                               list(range(len(valid_idx))),
                                ki_list, None)
-    # Patch archetype names back (identity map means ki == index into arch_ki)
     for s, a in zip(seeds, arch_list):
         s["archetype"] = a
 
-    print(f"[seeds] selected {len(seeds)} seeds across "
-          f"{len(set(s['archetype'] for s in seeds))} archetypes")
+    print(f"[seeds] LEGACY: selected {len(seeds)} seeds across "
+          f"{len(set(s['archetype'] for s in seeds))} archetypes "
+          f"(capped at archetype count)")
     return seeds
 
+
+# ── Build seed dicts ───────────────────────────────────────────────────────
 
 def _build_seed_dicts(pool, cfg, arch_ki, selected_indices, archetype):
     """Build seed dicts from selected indices into arch_ki."""
@@ -237,7 +364,7 @@ def _solve_one_beam(seed, cfg, P32, dm32, dn32, bi):
     return row
 
 
-def run(iso, pathway, lhs_size, n_beams, archetype=None):
+def run(iso, pathway, lhs_size, n_beams, archetype=None, strategy="diversified"):
     solver.warmup_jit()
     P  = solver.build_profile_matrix(iso)
     dn = solver._load_demand_norm(iso)
@@ -257,7 +384,9 @@ def run(iso, pathway, lhs_size, n_beams, archetype=None):
         print(json.dumps({"error": "no valid mixes"}))
         return
 
-    if archetype:
+    if strategy == "legacy":
+        seeds = select_seeds_legacy(pool, cfg, n_beams)
+    elif archetype:
         seeds = select_seeds_single_archetype(pool, cfg, archetype, n_beams)
     else:
         seeds = select_seeds_all_archetypes(pool, cfg, n_beams)
@@ -294,11 +423,28 @@ def run(iso, pathway, lhs_size, n_beams, archetype=None):
                             (vals[-1][0] - vals[0][0]) / vals[0][0] * 100, 1)
                         if vals[0][0] else 0}
 
+    # Per-archetype summary: best at each threshold, grouped by archetype
+    arch_best = {}
+    for row in beam_results:
+        a = row["archetype"]
+        if a not in arch_best:
+            arch_best[a] = {"count": 0}
+        arch_best[a]["count"] += 1
+        for t, k in KEY_MAP.items():
+            cost = row.get(f"{k}_cost_B")
+            if cost is not None:
+                prev = arch_best[a].get(f"{k}_best_B")
+                if prev is None or cost < prev:
+                    arch_best[a][f"{k}_best_B"] = cost
+
     print("RESULT_JSON:" + json.dumps({
         "iso": iso, "pathway": pathway,
         "archetype": archetype or "all",
+        "strategy": strategy,
         "lhs": lhs_size, "n_beams": len(seeds), "wall_s": wall,
         "archetypes": [s["archetype"] for s in seeds],
+        "archetype_beam_counts": {a: v["count"] for a, v in arch_best.items()},
+        "archetype_best": arch_best,
         "best": best, "beams": beam_results,
     }))
 
@@ -312,7 +458,12 @@ if __name__ == "__main__":
     ap.add_argument("beams", type=int, help="Number of beams")
     ap.add_argument("--archetype", default=None,
                     help="Single archetype for within-arch maximin seeding. "
-                         "Omit for cross-archetype (one seed per arch).")
+                         "Omit for cross-archetype diversified seeding.")
+    ap.add_argument("--strategy", default="diversified",
+                    choices=["diversified", "legacy"],
+                    help="Seed selection strategy. 'diversified' (default) = "
+                         "maximin within each archetype. 'legacy' = v1 behavior "
+                         "(one cheapest per archetype, beam count ignored).")
     args = ap.parse_args()
     run(args.iso.upper(), args.pathway.upper(), args.lhs, args.beams,
-        args.archetype)
+        args.archetype, args.strategy)
