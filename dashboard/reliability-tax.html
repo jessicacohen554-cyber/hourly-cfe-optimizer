@@ -400,16 +400,23 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
         windBatt8:  {gap:5, width:2}
     };
 
+    /* ── Override solar color for this page — brighter, cleaner yellow ── */
+    var MIX_COLORS = Object.assign({}, RESOURCE_COLORS, {
+        solar: '#FBBF24',
+        solarBatt4: '#FBBF24',
+        solarBatt8: '#FBBF24'
+    });
+
     function createStripePattern(hexColor, gap, stripeWidth) {
         var size = gap + stripeWidth;
         var c = document.createElement('canvas');
         c.width = size; c.height = size;
         var ctx = c.getContext('2d');
-        // Fill base color
+        // Semi-transparent base
         ctx.fillStyle = withAlpha(hexColor, 0.72);
         ctx.fillRect(0, 0, size, size);
-        // Draw white diagonal stripes
-        ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+        // White diagonal stripes
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
         ctx.lineWidth = stripeWidth;
         ctx.beginPath();
         ctx.moveTo(-size, size); ctx.lineTo(size, -size);
@@ -421,11 +428,11 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
     function getFillStyle(rk) {
         var base = HYBRID_BASE[rk];
         if (base) {
-            var baseColor = RESOURCE_COLORS[base] || '#999';
+            var baseColor = MIX_COLORS[base] || RESOURCE_COLORS[base] || '#999';
             var s = HYBRID_STRIPE[rk];
             return createStripePattern(baseColor, s.gap, s.width);
         }
-        var col = RESOURCE_COLORS[rk] || '#999';
+        var col = MIX_COLORS[rk] || RESOURCE_COLORS[rk] || '#999';
         return withAlpha(col, 0.75);
     }
     function resColor(k) { return RESOURCE_COLORS[k] || '#999'; }
@@ -689,11 +696,11 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
                 var hasData = mixData.some(function(c){return c.mix[dk] && c.mix[dk]>0.5;});
                 if (!hasData) return;
                 var baseKey = HYBRID_BASE[dk] || rk;
-                var borderCol = RESOURCE_COLORS[baseKey] || RESOURCE_COLORS[dk] || '#999';
+                var borderCol = MIX_COLORS[baseKey] || MIX_COLORS[dk] || RESOURCE_COLORS[baseKey] || '#999';
                 datasets.push({
                     label:RES_LABELS[dk]||RES_LABELS[rk]||rk, data:mixData.map(function(c){return c.mix[dk]||0;}),
                     backgroundColor:getFillStyle(dk), borderColor:borderCol,
-                    borderWidth:1.5, fill:true, tension:0.4, pointRadius:0
+                    borderWidth:1, fill: datasets.length === 0 ? 'origin' : '-1', tension:0.4, pointRadius:0
                 });
             });
             charts['mix'+pw] = new Chart(canvas, {
@@ -713,13 +720,13 @@ color: var(–navy); margin-bottom: 8px; letter-spacing: -0.01em;
             var has = (inA && inA.some(function(c){return c.mix[dk]>0.5;})) || (inB && inB.some(function(c){return c.mix[dk]>0.5;}));
             if (!has) return;
             var baseKey = HYBRID_BASE[dk] || rk;
-            var col = RESOURCE_COLORS[baseKey] || RESOURCE_COLORS[dk] || '#999';
+            var col = MIX_COLORS[baseKey] || MIX_COLORS[dk] || RESOURCE_COLORS[baseKey] || '#999';
             var label = RES_LABELS[dk]||RES_LABELS[rk]||rk;
             var swatchStyle;
             if (HYBRID_STRIPE[dk]) {
                 var s = HYBRID_STRIPE[dk];
                 var sz = s.gap + s.width;
-                swatchStyle = 'background:repeating-linear-gradient(45deg,'+withAlpha(col,0.72)+','+withAlpha(col,0.72)+' '+s.gap+'px,rgba(255,255,255,0.55) '+s.gap+'px,rgba(255,255,255,0.55) '+sz+'px)';
+                swatchStyle = 'background:repeating-linear-gradient(45deg,'+withAlpha(col,0.72)+','+withAlpha(col,0.72)+' '+s.gap+'px,rgba(255,255,255,0.5) '+s.gap+'px,rgba(255,255,255,0.5) '+sz+'px)';
             } else {
                 swatchStyle = 'background:'+withAlpha(col,0.75);
             }
