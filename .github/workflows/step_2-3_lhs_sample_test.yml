@@ -1,0 +1,134 @@
+name: "Step 2.3 Sampling Test: LHS × Beam Sweep"
+
+# Runs lhs_multibeam_test.py with user-selected ISO, pathway, LHS size,
+# beam count, and optional archetype filter.
+#
+# Archetype options (pathway B/C/D only for nuclear/offshore):
+#   solar-led, wind-led, balanced, nuclear-heavy, offshore-heavy
+#   "all" = cross-archetype seeding (one cheapest per archetype)
+#
+# Output: RESULT_JSON line in logs with per-beam costs, spreads, and timings.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: "ISO region"
+        required: true
+        default: "ERCOT"
+        type: choice
+        options:
+          - ERCOT
+          - PJM
+          - CAISO
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      pathway:
+        description: "Pathway (A=VRE-only, B=NOAK 2035, C=NOAK 2040, D=NOAK 2045)"
+        required: true
+        default: "B"
+        type: choice
+        options:
+          - A
+          - B
+          - C
+          - D
+      lhs_size:
+        description: "LHS sample count per solver step"
+        required: true
+        default: "5000"
+        type: choice
+        options:
+          - "1000"
+          - "2500"
+          - "5000"
+          - "7500"
+          - "10000"
+          - "15000"
+          - "20000"
+      beams:
+        description: "Number of parallel beams"
+        required: true
+        default: "4"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "6"
+          - "8"
+          - "10"
+          - "12"
+      archetype:
+        description: "Archetype filter (all = cross-archetype, one seed per arch)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - solar-led
+          - wind-led
+          - balanced
+          - nuclear-heavy
+          - offshore-heavy
+
+jobs:
+  sampling-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy numba pyarrow
+
+      - name: Build archetype flag
+        id: arch
+        run: |
+          if [ "${{ inputs.archetype }}" = "all" ]; then
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=--archetype ${{ inputs.archetype }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run LHS multibeam test
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "  ISO:       ${{ inputs.iso }}"
+          echo "  Pathway:   ${{ inputs.pathway }}"
+          echo "  LHS size:  ${{ inputs.lhs_size }}"
+          echo "  Beams:     ${{ inputs.beams }}"
+          echo "  Archetype: ${{ inputs.archetype }}"
+          echo "═══════════════════════════════════════════════════"
+          python3 -u scripts/lhs_multibeam_test.py \
+            ${{ inputs.iso }} \
+            ${{ inputs.pathway }} \
+            ${{ inputs.lhs_size }} \
+            ${{ inputs.beams }} \
+            ${{ steps.arch.outputs.flag }}
+
+      - name: Extract and summarize results
+        if: always()
+        run: |
+          echo ""
+          echo "── Result Summary ──────────────────────────────────"
+          # Grab the RESULT_JSON line from the run log if it exists
+          LOG_FILE=$(find . -name "*.log" 2>/dev/null | head -1)
+          if grep -q "RESULT_JSON:" /dev/stdin 2>/dev/null; then
+            echo "(check Run step output for RESULT_JSON)"
+          fi
+          echo "Done."
