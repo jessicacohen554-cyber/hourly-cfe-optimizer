@@ -1,8 +1,12 @@
 # Step 2.3 Optimizer Sensitivity Testing — Combined Results
 
-**Version:** 1.1 | **Updated:** 2026-05-01 | **Status:** draft (Tests 1–2 complete, Tests 3–4 pending)
+**Version:** 1.2 | **Updated:** 2026-05-02 | **Status:** draft (ERCOT Tests 1–2 complete, Tests 3–4 pending; PJM Test 1 in progress)
 
-Four tests characterize how LHS sample size and beam diversity affect the Step 2.3 adaptive pathway optimizer’s cost outcomes. All tests use ERCOT, cost mode 2 (incremental clean cost − gas savings + stranding shadow), base scenario, Medium demand growth.
+Four tests characterize how LHS sample size and beam diversity affect the Step 2.3 adaptive pathway optimizer’s cost outcomes. The ERCOT tests below established baseline methodology; PJM cross-validation follows.
+
+# ERCOT
+
+All ERCOT tests use cost mode 2 (incremental clean cost − gas savings + stranding shadow), base scenario, Medium demand growth.
 
 -----
 
@@ -340,3 +344,56 @@ These winners are carried forward as the single-archetype subjects for Tests 3 a
 **Test 3 will answer:** Does pairing 8 beams with LHS=10,000 stack the gains, or do the two axes substitute? If they substitute, the production config can save wall time by favoring whichever axis is cheaper per dollar of cost improvement.
 
 **Test 4 will answer:** Does the single-archetype interaction pattern from Test 3 hold under multi-archetype beam competition? Cross-archetype effects (e.g., balanced stealing beams from solar-led in Pathway A) may shift the optimal LHS × beam tradeoff.
+
+# PJM
+
+Cross-ISO validation tests. PJM provides the strongest contrast to ERCOT — largest US ISO, capacity market, heavier thermal fleet, lower VRE share. These tests determine whether ERCOT-derived optimizer settings generalize.
+
+All PJM tests use cost mode 2 (incremental clean cost − gas savings + stranding shadow), base scenario, Medium demand growth. PJM seeds from the 50% CFE band (vs ERCOT’s 60%).
+
+-----
+
+## Test 1: LHS Sample-Size Sensitivity (Single Beam)
+
+**Question:** Does increasing LHS sample count per solver step improve cost optimality on a fixed beam? Do ERCOT-derived sensitivity patterns hold on a structurally different grid?
+
+**Setup:** Beam 0 only (cheapest seed per pathway). LHS: 500–40,000. Seeds are LHS-independent; `scaled_samples` multiplies nominal by `(n_dims/9)^1.5`. PJM Pathway A = 9 dims (same as ERCOT); Pathway B = 11 dims (adds offshore wind vs ERCOT’s 10).
+
+### Pathway A (VRE + storage, 9 dims)
+
+|LHS   |Scaled|Time|90% ($B)|95% ($B)|99% ($B)|99.9% ($B)|Pk Gas (MW)|Pk H2 (MW)|
+|-----:|-----:|---:|-------:|-------:|-------:|---------:|----------:|---------:|
+|500   |—     |—   |—       |—       |—       |—         |—          |—         |
+|1,000 |—     |—   |—       |—       |—       |—         |—          |—         |
+|2,500 |—     |—   |—       |—       |—       |—         |—          |—         |
+|5,000 |—     |—   |—       |—       |—       |—         |—          |—         |
+|10,000|—     |—   |—       |—       |—       |—         |—          |—         |
+|20,000|—     |—   |—       |—       |—       |—         |—          |—         |
+|40,000|—     |—   |—       |—       |—       |—         |—          |—         |
+
+### Pathway B (all resources, 11 dims)
+
+|LHS   |Scaled|Time|90% ($B)|95% ($B)|99% ($B)|99.9% ($B)|Pk Gas (MW)|Pk H2 (MW)|
+|-----:|-----:|---:|-------:|-------:|-------:|---------:|----------:|---------:|
+|500   |—     |—   |—       |—       |—       |—         |—          |—         |
+|1,000 |—     |—   |—       |—       |—       |—         |—          |—         |
+|2,500 |—     |—   |—       |—       |—       |—         |—          |—         |
+|5,000 |—     |—   |—       |—       |—       |—         |—          |—         |
+|10,000|—     |—   |—       |—       |—       |—         |—          |—         |
+|20,000|—     |—   |—       |—       |—       |—         |—          |—         |
+|40,000|—     |—   |—       |—       |—       |—         |—          |—         |
+
+### Cost Delta vs LHS=40,000
+
+|LHS   |Pathway A Δ99.9%|Α %|Pathway B Δ99.9%|B %|
+|-----:|---------------:|--:|---------------:|--:|
+|500   |—               |—  |—               |—  |
+|1,000 |—               |—  |—               |—  |
+|2,500 |—               |—  |—               |—  |
+|5,000 |—               |—  |—               |—  |
+|10,000|—               |—  |—               |—  |
+|20,000|—               |—  |—               |—  |
+
+### PJM Test 1 Key Takeaways
+
+*(Pending results)*
