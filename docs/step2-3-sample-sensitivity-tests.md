@@ -1,8 +1,8 @@
 # Step 2.3 Optimizer Sensitivity Testing — Combined Results
 
-**Version:** 1.0 | **Updated:** 2026-05-01 | **Status:** draft (Tests 1–2 complete, Test 3 pending)
+**Version:** 1.1 | **Updated:** 2026-05-01 | **Status:** draft (Tests 1–2 complete, Tests 3–4 pending)
 
-Three tests characterize how LHS sample size and beam diversity affect the Step 2.3 adaptive pathway optimizer’s cost outcomes. All tests use ERCOT, cost mode 2 (incremental clean cost − gas savings + stranding shadow), base scenario, Medium demand growth.
+Four tests characterize how LHS sample size and beam diversity affect the Step 2.3 adaptive pathway optimizer’s cost outcomes. All tests use ERCOT, cost mode 2 (incremental clean cost − gas savings + stranding shadow), base scenario, Medium demand growth.
 
 -----
 
@@ -96,6 +96,13 @@ Three tests characterize how LHS sample size and beam diversity affect the Step 
 |95%      |$1,461B|$1,026B   |−30%       |
 |99.9%    |$2,292B|$1,807B   |−21%       |
 
+### Test 2 Winners
+
+- **Pathway A:** The **balanced** archetype produced the lowest best-beam cost across all CFE thresholds.
+- **Pathway B:** The **nuclear-heavy** archetype produced the lowest best-beam cost across all CFE thresholds.
+
+These winners are carried forward as the single-archetype subjects for Tests 3 and 4.
+
 ### Test 2 Key Takeaways
 
 1. **20–41% best-cost improvement** moving from 1 to 8+ beams/archetype. The cheapest seed ≠ cheapest 25-year pathway.
@@ -106,18 +113,20 @@ Three tests characterize how LHS sample size and beam diversity affect the Step 
 
 -----
 
-## Test 3: LHS × Beam Cross-Reference (Single Archetype)
+## Test 3: LHS × Beam Cross-Reference (Single Archetype) — Continuation of Test 1
 
 **Question:** How do beam diversity and LHS density interact? Do they substitute (more of one reduces the value of the other) or complement (gains stack)?
 
+**Motivation:** Test 1 established that LHS density improves cost optimality on a single beam. This test extends that finding by adding beam diversity as a second axis, using the Test 2 winning archetypes (balanced for Pathway A, nuclear-heavy for Pathway B) to isolate the LHS × beam interaction within the best-performing archetype.
+
 **Setup:**
 
-- **Pathway A:** balanced archetype only
-- **Pathway B:** nuclear-heavy archetype only
-- **LHS sizes:** 2,500, 5,000, 10,000
+- **Pathway A:** balanced archetype only *(Test 2 winner)*
+- **Pathway B:** nuclear-heavy archetype only *(Test 2 winner)*
+- **LHS sizes:** 2,500, 5,000, 10,000, 20,000
 - **Beam counts:** 2, 4, 8 (within the single archetype)
-- **Grid:** 3 × 3 = 9 cells per pathway, 18 total
-- **Run order:** All beams at LHS=2,500 → all beams at LHS=5,000 → all beams at LHS=10,000
+- **Grid:** 4 × 3 = 12 cells per pathway, 24 total
+- **Run order:** All beams at LHS=2,500 → all beams at LHS=5,000 → all beams at LHS=10,000 → all beams at LHS=20,000
 
 **Script:** `scripts/lhs_multibeam_test.py` — seeds selected once via greedy maximin on normalized resource+storage vector (8 seeds per archetype, subsetted to 2/4/8). Same seed pool across all LHS sizes within a pathway.
 
@@ -125,64 +134,64 @@ Three tests characterize how LHS sample size and beam diversity affect the Step 
 
 **Best-beam cumulative cost ($B) at 99.9% CFE:**
 
-|       |LHS=2,500|LHS=5,000|LHS=10,000|
-|------:|:-------:|:-------:|:--------:|
-|2 beams|3,031.1  |—        |—         |
-|4 beams|1,917.7  |—        |—         |
-|8 beams|1,800.5  |—        |—         |
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
 
 **Best-beam cumulative cost ($B) at 95% CFE:**
 
-|       |LHS=2,500|LHS=5,000|LHS=10,000|
-|------:|:-------:|:-------:|:--------:|
-|2 beams|1,393.8  |—        |—         |
-|4 beams|1,144.4  |—        |—         |
-|8 beams|1,080.1  |—        |—         |
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
 
 **Best-beam cumulative cost ($B) at 90% CFE:**
 
-|       |LHS=2,500|LHS=5,000|LHS=10,000|
-|------:|:-------:|:-------:|:--------:|
-|2 beams|427.0    |—        |—         |
-|4 beams|427.0    |—        |—         |
-|8 beams|427.0    |—        |—         |
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
 
 ### Pathway B — nuclear-heavy archetype (10 dims)
 
 **Best-beam cumulative cost ($B) at 99.9% CFE:**
 
-|       |LHS=2,500|LHS=5,000|LHS=10,000|
-|------:|:-------:|:-------:|:--------:|
-|2 beams|1,886.7  |—        |—         |
-|4 beams|1,886.7  |—        |—         |
-|8 beams|1,789.9  |—        |—         |
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
 
 **Best-beam cumulative cost ($B) at 95% CFE:**
 
-|       |LHS=2,500|LHS=5,000|LHS=10,000|
-|------:|:-------:|:-------:|:--------:|
-|2 beams|1,142.5  |—        |—         |
-|4 beams|1,142.5  |—        |—         |
-|8 beams|1,043.9  |—        |—         |
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
 
 **Best-beam cumulative cost ($B) at 90% CFE:**
 
-|       |LHS=2,500|LHS=5,000|LHS=10,000|
-|------:|:-------:|:-------:|:--------:|
-|2 beams|605.1    |—        |—         |
-|4 beams|577.7    |—        |—         |
-|8 beams|491.4    |—        |—         |
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
 
 ### Runtime Log
 
 |Cell     |Pathway|Beams|LHS   |Wall (s)|Status |
 |:-------:|:-----:|:---:|-----:|:------:|:-----:|
-|B2_L2500 |A      |2    |2,500 |17      |done   |
-|B4_L2500 |A      |4    |2,500 |34      |done   |
-|B8_L2500 |A      |8    |2,500 |72      |done   |
-|B2_L2500 |B      |2    |2,500 |22      |done   |
-|B4_L2500 |B      |4    |2,500 |40      |done   |
-|B8_L2500 |B      |8    |2,500 |77      |done   |
+|B2_L2500 |A      |2    |2,500 |—       |pending|
+|B4_L2500 |A      |4    |2,500 |—       |pending|
+|B8_L2500 |A      |8    |2,500 |—       |pending|
+|B2_L2500 |B      |2    |2,500 |—       |pending|
+|B4_L2500 |B      |4    |2,500 |—       |pending|
+|B8_L2500 |B      |8    |2,500 |—       |pending|
 |B2_L5000 |A      |2    |5,000 |—       |pending|
 |B4_L5000 |A      |4    |5,000 |—       |pending|
 |B8_L5000 |A      |8    |5,000 |—       |pending|
@@ -195,6 +204,12 @@ Three tests characterize how LHS sample size and beam diversity affect the Step 
 |B2_L10000|B      |2    |10,000|—       |pending|
 |B4_L10000|B      |4    |10,000|—       |pending|
 |B8_L10000|B      |8    |10,000|—       |pending|
+|B2_L20000|A      |2    |20,000|—       |pending|
+|B4_L20000|A      |4    |20,000|—       |pending|
+|B8_L20000|A      |8    |20,000|—       |pending|
+|B2_L20000|B      |2    |20,000|—       |pending|
+|B4_L20000|B      |4    |20,000|—       |pending|
+|B8_L20000|B      |8    |20,000|—       |pending|
 
 ### Test 3 Findings
 
@@ -202,9 +217,120 @@ Three tests characterize how LHS sample size and beam diversity affect the Step 
 
 -----
 
+## Test 4: LHS × Beam Cross-Reference (Multi-Archetype) — Continuation of Test 2
+
+**Question:** Do the Test 3 single-archetype LHS × beam interaction patterns hold when running a full multi-archetype pathway with beam diversity? Does the production pipeline gain more from LHS density or beam count?
+
+**Motivation:** Test 2 established beam-count impact at a fixed LHS of 1,000, and identified the winning archetypes (balanced for Pathway A, nuclear-heavy for Pathway B). Test 3 isolates the LHS × beam interaction within a single archetype. This test completes the picture by running the same 3 × 3 grid with the full pathway (all archetypes active), using the `--pathways A` and `--pathways B` flags to run each pathway independently. This captures cross-archetype beam competition effects that Test 3 cannot.
+
+**Setup:**
+
+- **ISO:** ERCOT
+- **Cost mode:** 2 (incremental clean cost − gas savings + stranding shadow)
+- **Scenario:** base, Medium demand growth
+- **Pathway A:** all 3 archetypes (balanced, solar-led, wind-led) — run with `--pathways A`
+- **Pathway B:** all 4 archetypes (balanced, nuclear-heavy, solar-led, wind-led) — run with `--pathways B`
+- **LHS sizes:** 2,500, 5,000, 10,000, 20,000
+- **Beam counts:** 2, 4, 8 (per archetype)
+- **Grid:** 4 × 3 = 12 cells per pathway, 24 total
+- **Run order:** Pathway A first (all 12 cells), then Pathway B (all 12 cells)
+
+**Script:** `scripts/lhs_multibeam_test.py` — same seed selection method as Test 3 (greedy maximin on normalized resource+storage vector, 8 seeds per archetype subsetted to 2/4/8). Same seed pool across all LHS sizes within a pathway.
+
+### Pathway A — all archetypes (balanced★, solar-led, wind-led)
+
+★ = Test 2 winner
+
+**Best-beam cumulative cost ($B) at 99.9% CFE:**
+
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
+
+**Best-beam cumulative cost ($B) at 95% CFE:**
+
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
+
+**Best-beam cumulative cost ($B) at 90% CFE:**
+
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
+
+### Pathway B — all archetypes (balanced, nuclear-heavy★, solar-led, wind-led)
+
+★ = Test 2 winner
+
+**Best-beam cumulative cost ($B) at 99.9% CFE:**
+
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
+
+**Best-beam cumulative cost ($B) at 95% CFE:**
+
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
+
+**Best-beam cumulative cost ($B) at 90% CFE:**
+
+|       |LHS=2,500|LHS=5,000|LHS=10,000|LHS=20,000|
+|------:|:-------:|:-------:|:--------:|:--------:|
+|2 beams|—        |—        |—         |—         |
+|4 beams|—        |—        |—         |—         |
+|8 beams|—        |—        |—         |—         |
+
+### Runtime Log
+
+|Cell     |Pathway|Beams|LHS   |Total Beams|Wall (s)|Status |
+|:-------:|:-----:|:---:|-----:|:---------:|:------:|:-----:|
+|B2_L2500 |A      |2    |2,500 |6          |—       |pending|
+|B4_L2500 |A      |4    |2,500 |12         |—       |pending|
+|B8_L2500 |A      |8    |2,500 |24         |—       |pending|
+|B2_L5000 |A      |2    |5,000 |6          |—       |pending|
+|B4_L5000 |A      |4    |5,000 |12         |—       |pending|
+|B8_L5000 |A      |8    |5,000 |24         |—       |pending|
+|B2_L10000|A      |2    |10,000|6          |—       |pending|
+|B4_L10000|A      |4    |10,000|12         |—       |pending|
+|B8_L10000|A      |8    |10,000|24         |—       |pending|
+|B2_L20000|A      |2    |20,000|6          |—       |pending|
+|B4_L20000|A      |4    |20,000|12         |—       |pending|
+|B8_L20000|A      |8    |20,000|24         |—       |pending|
+|B2_L2500 |B      |2    |2,500 |8          |—       |pending|
+|B4_L2500 |B      |4    |2,500 |16         |—       |pending|
+|B8_L2500 |B      |8    |2,500 |32         |—       |pending|
+|B2_L5000 |B      |2    |5,000 |8          |—       |pending|
+|B4_L5000 |B      |4    |5,000 |16         |—       |pending|
+|B8_L5000 |B      |8    |5,000 |32         |—       |pending|
+|B2_L10000|B      |2    |10,000|8          |—       |pending|
+|B4_L10000|B      |4    |10,000|16         |—       |pending|
+|B8_L10000|B      |8    |10,000|32         |—       |pending|
+|B2_L20000|B      |2    |20,000|8          |—       |pending|
+|B4_L20000|B      |4    |20,000|16         |—       |pending|
+|B8_L20000|B      |8    |20,000|32         |—       |pending|
+
+### Test 4 Findings
+
+*(Pending results)*
+
+-----
+
 ## Production Recommendation
 
-*(To be updated after Test 3 completes)*
+*(To be updated after Tests 3–4 complete)*
 
 **Current best candidates from Tests 1–2:**
 
@@ -212,3 +338,5 @@ Three tests characterize how LHS sample size and beam diversity affect the Step 
 - **Beams:** 8 per archetype captures most available improvement
 
 **Test 3 will answer:** Does pairing 8 beams with LHS=10,000 stack the gains, or do the two axes substitute? If they substitute, the production config can save wall time by favoring whichever axis is cheaper per dollar of cost improvement.
+
+**Test 4 will answer:** Does the single-archetype interaction pattern from Test 3 hold under multi-archetype beam competition? Cross-archetype effects (e.g., balanced stealing beams from solar-led in Pathway A) may shift the optimal LHS × beam tradeoff.
