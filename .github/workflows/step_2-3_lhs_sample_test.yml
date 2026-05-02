@@ -38,7 +38,7 @@ on:
           - C
           - D
       lhs_size:
-        description: "LHS sample count per solver step"
+        description: "LHS sample count per solver step (all = sweep 1k→40k)"
         required: true
         default: "5000"
         type: choice
@@ -46,24 +46,23 @@ on:
           - "1000"
           - "2500"
           - "5000"
-          - "7500"
           - "10000"
-          - "15000"
           - "20000"
+          - "40000"
+          - "all"
       beams:
-        description: "Number of parallel beams"
+        description: "Number of parallel beams (all = sweep 1→32)"
         required: true
         default: "4"
         type: choice
         options:
           - "1"
           - "2"
-          - "3"
           - "4"
-          - "6"
           - "8"
-          - "10"
-          - "12"
+          - "16"
+          - "32"
+          - "all"
       archetype:
         description: "Archetype filter (all = cross-archetype, one seed per arch)"
         required: true
@@ -127,32 +126,64 @@ jobs:
         env:
           ISO: ${{ inputs.iso }}
           PATHWAY: ${{ inputs.pathway }}
-          LHS: ${{ inputs.lhs_size }}
-          BEAMS: ${{ inputs.beams }}
+          LHS_INPUT: ${{ inputs.lhs_size }}
+          BEAMS_INPUT: ${{ inputs.beams }}
           ARCHETYPE: ${{ inputs.archetype }}
           ARCH_FLAG: ${{ steps.arch.outputs.flag }}
         run: |
+          # Expand "all" to full sweep lists
+          if [ "${LHS_INPUT}" = "all" ]; then
+            LHS_LIST="1000 2500 5000 10000 20000 40000"
+          else
+            LHS_LIST="${LHS_INPUT}"
+          fi
+
+          if [ "${BEAMS_INPUT}" = "all" ]; then
+            BEAMS_LIST="1 2 4 8 16 32"
+          else
+            BEAMS_LIST="${BEAMS_INPUT}"
+          fi
+
+          COMBO_COUNT=0
+          for lhs in $LHS_LIST; do for beams in $BEAMS_LIST; do COMBO_COUNT=$((COMBO_COUNT + 1)); done; done
           echo "═══════════════════════════════════════════════════"
           echo "  ISO:       ${ISO}"
           echo "  Pathway:   ${PATHWAY}"
-          echo "  LHS size:  ${LHS}"
-          echo "  Beams:     ${BEAMS}"
+          echo "  LHS:       ${LHS_INPUT} → [${LHS_LIST}]"
+          echo "  Beams:     ${BEAMS_INPUT} → [${BEAMS_LIST}]"
           echo "  Archetype: ${ARCHETYPE}"
+          echo "  Combos:    ${COMBO_COUNT}"
           echo "═══════════════════════════════════════════════════"
 
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          OUTFILE="data/sampling-tests/${ISO}__pw${PATHWAY}__lhs${LHS}__beams${BEAMS}__${ARCHETYPE}__${TIMESTAMP}.json"
+          FAIL=0
+          RUN=0
+          for lhs in $LHS_LIST; do
+            for beams in $BEAMS_LIST; do
+              RUN=$((RUN + 1))
+              TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+              OUTFILE="data/sampling-tests/${ISO}__pw${PATHWAY}__lhs${lhs}__beams${beams}__${ARCHETYPE}__${TIMESTAMP}.json"
 
-          python3 -u scripts/lhs_multibeam_test.py \
-            "${ISO}" "${PATHWAY}" "${LHS}" "${BEAMS}" ${ARCH_FLAG} \
-            2>&1 | tee /tmp/run.log
+              echo ""
+              echo "── Run ${RUN}/${COMBO_COUNT}: LHS=${lhs} beams=${beams} ──"
 
-          # Extract RESULT_JSON from log → file
-          if grep -q "RESULT_JSON:" /tmp/run.log; then
-            grep "RESULT_JSON:" /tmp/run.log | sed 's/^RESULT_JSON://' > "${OUTFILE}"
-            echo "[capture] Wrote $(du -h "${OUTFILE}" | cut -f1) → ${OUTFILE}"
-          else
-            echo "::error::No RESULT_JSON found in output"
+              python3 -u scripts/lhs_multibeam_test.py \
+                "${ISO}" "${PATHWAY}" "${lhs}" "${beams}" ${ARCH_FLAG} \
+                2>&1 | tee /tmp/run.log
+
+              if grep -q "RESULT_JSON:" /tmp/run.log; then
+                grep "RESULT_JSON:" /tmp/run.log | sed 's/^RESULT_JSON://' > "${OUTFILE}"
+                echo "[capture] Wrote $(du -h "${OUTFILE}" | cut -f1) → ${OUTFILE}"
+              else
+                echo "::warning::No RESULT_JSON for LHS=${lhs} beams=${beams}"
+                FAIL=$((FAIL + 1))
+              fi
+            done
+          done
+
+          echo ""
+          echo "[done] ${RUN} runs, ${FAIL} failures"
+          if [ "$FAIL" -eq "$RUN" ]; then
+            echo "::error::All ${RUN} runs failed — no RESULT_JSON captured"
             exit 1
           fi
 
@@ -251,8 +282,8 @@ jobs:
               echo "- Branch: (not pushed — job failed before commit step)"
             fi
             echo "- Pathway: \`${{ inputs.pathway }}\`"
-            echo "- LHS: ${{ inputs.lhs_size }}"
-            echo "- Beams: ${{ inputs.beams }}"
+            echo "- LHS: \`${{ inputs.lhs_size }}\`"
+            echo "- Beams: \`${{ inputs.beams }}\`"
             echo "- Archetype: \`${{ inputs.archetype }}\`"
             echo ""
             echo "Run **Squash Pipeline Branches** with pattern \`auto/.*sampling-test\` to consolidate."
