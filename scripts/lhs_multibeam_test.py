@@ -8,10 +8,9 @@ Usage:
   python3 -u scripts/lhs_multibeam_test.py ERCOT A 2500 32 --archetype balanced
   python3 -u scripts/lhs_multibeam_test.py ERCOT B 20000 16 --strategy legacy
 
-Without --archetype: beams are distributed across all archetypes proportional
-to pool size, with at least 1 per archetype (if beams >= num_archetypes).
-Within each archetype, seeds are selected via greedy maximin on the normalized
-resource+storage feature vector.
+Without --archetype: every archetype gets n_beams seeds selected via greedy
+maximin on the normalized resource+storage feature vector.  Total beams =
+n_beams × num_archetypes.
 
 With --archetype: all beams are allocated to that single archetype.
 Maximin diversification selects from a nested pool of max(N, 8) seeds.
@@ -202,14 +201,10 @@ def select_seeds_single_archetype(pool, cfg, target_arch, n_beams):
 # ── Seed selection: all archetypes with diversification ────────────────────
 
 def select_seeds_all_archetypes(pool, cfg, n_beams):
-    """Distribute beams across archetypes, then maximin within each.
+    """n_beams diverse seeds PER archetype, via maximin within each.
 
-    Allocation:
-    1. If n_beams < num_archetypes: pick the n_beams archetypes with the
-       largest pools (most diverse exploration space), 1 beam each.
-    2. If n_beams >= num_archetypes: every archetype gets at least 1 beam.
-       Remaining beams are allocated proportional to archetype pool size,
-       with round-robin distribution of the remainder.
+    Every archetype gets exactly n_beams seeds (capped at archetype pool
+    size).  Total beams = n_beams × num_archetypes.
     """
     arch_groups = _classify_pool(pool, cfg)
     costs = pool["costs"]
@@ -222,34 +217,12 @@ def select_seeds_all_archetypes(pool, cfg, n_beams):
     print(f"[seeds] {n_archs} archetypes: "
           + ", ".join(f"{a} ({len(arch_groups[a]):,})" for a in ranked_archs))
 
-    # Allocate beams to archetypes
-    if n_beams < n_archs:
-        # Not enough beams for every archetype — pick the largest pools
-        active_archs = ranked_archs[:n_beams]
-        allocation = {a: 1 for a in active_archs}
-    else:
-        # Every archetype gets at least 1; distribute remainder by pool size
-        allocation = {a: 1 for a in ranked_archs}
-        remaining = n_beams - n_archs
-        if remaining > 0:
-            pool_sizes = np.array([len(arch_groups[a]) for a in ranked_archs],
-                                  dtype=np.float64)
-            pool_frac = pool_sizes / pool_sizes.sum()
-            # Floor allocation
-            float_alloc = pool_frac * remaining
-            floor_alloc = np.floor(float_alloc).astype(int)
-            leftover = remaining - floor_alloc.sum()
-            # Distribute leftover by largest fractional part
-            fracs = float_alloc - floor_alloc
-            top_idx = np.argsort(-fracs)[:leftover]
-            for idx in top_idx:
-                floor_alloc[idx] += 1
-            for i, a in enumerate(ranked_archs):
-                allocation[a] += int(floor_alloc[i])
+    # Every archetype gets n_beams (capped at pool size)
+    allocation = {a: min(n_beams, len(arch_groups[a])) for a in ranked_archs}
 
-    alloc_str = ", ".join(f"{a}: {allocation[a]}" for a in ranked_archs
-                          if a in allocation)
-    print(f"[seeds] beam allocation: {alloc_str} (total {sum(allocation.values())})")
+    alloc_str = ", ".join(f"{a}: {allocation[a]}" for a in ranked_archs)
+    print(f"[seeds] beam allocation: {alloc_str} "
+          f"({n_beams}/arch × {n_archs} archs = {sum(allocation.values())} total)")
 
     # Select seeds within each archetype using maximin
     all_seeds = []
@@ -441,7 +414,8 @@ def run(iso, pathway, lhs_size, n_beams, archetype=None, strategy="diversified")
         "iso": iso, "pathway": pathway,
         "archetype": archetype or "all",
         "strategy": strategy,
-        "lhs": lhs_size, "n_beams": len(seeds), "wall_s": wall,
+        "lhs": lhs_size, "beams_per_arch": n_beams,
+        "n_beams_total": len(seeds), "wall_s": wall,
         "archetypes": [s["archetype"] for s in seeds],
         "archetype_beam_counts": {a: v["count"] for a, v in arch_best.items()},
         "archetype_best": arch_best,
@@ -455,7 +429,7 @@ if __name__ == "__main__":
     ap.add_argument("iso", help="ISO region (e.g. ERCOT)")
     ap.add_argument("pathway", help="Pathway letter (A, B, ...)")
     ap.add_argument("lhs", type=int, help="LHS sample count per solver step")
-    ap.add_argument("beams", type=int, help="Number of beams")
+    ap.add_argument("beams", type=int, help="Number of beams PER archetype")
     ap.add_argument("--archetype", default=None,
                     help="Single archetype for within-arch maximin seeding. "
                          "Omit for cross-archetype diversified seeding.")
