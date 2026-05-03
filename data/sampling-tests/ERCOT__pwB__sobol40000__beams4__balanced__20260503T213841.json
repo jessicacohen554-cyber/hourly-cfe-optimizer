@@ -1,0 +1,113 @@
+{
+  "iso": "ERCOT",
+  "pathway": "B",
+  "archetype": "balanced",
+  "strategy": "sobol",
+  "sampler": "sobol",
+  "sample_size": 40000,
+  "beams_per_arch": 4,
+  "n_beams_total": 4,
+  "wall_s": 206.3,
+  "archetypes": [
+    "balanced",
+    "balanced",
+    "balanced",
+    "balanced"
+  ],
+  "archetype_beam_counts": {
+    "balanced": 4
+  },
+  "archetype_best": {
+    "balanced": {
+      "count": 4,
+      "t90_best_B": 385.3461,
+      "t95_best_B": 800.1233,
+      "t99_best_B": 1265.0515,
+      "t99.9_best_B": 1402.0793
+    }
+  },
+  "best": {
+    "t90": {
+      "best_B": 385.3461,
+      "worst_B": 572.8861,
+      "spread_pct": 48.7
+    },
+    "t95": {
+      "best_B": 800.1233,
+      "worst_B": 1111.9246,
+      "spread_pct": 39.0
+    },
+    "t99": {
+      "best_B": 1265.0515,
+      "worst_B": 1860.5963,
+      "spread_pct": 47.1
+    },
+    "t99.9": {
+      "best_B": 1402.0793,
+      "worst_B": 1860.5963,
+      "spread_pct": 32.7
+    }
+  },
+  "beams": [
+    {
+      "beam_idx": 0,
+      "archetype": "balanced",
+      "wall_s": 159.0,
+      "peak_gas_mw": 82781.8,
+      "peak_h2_mw": 21128.0,
+      "t90_cost_B": 536.4406,
+      "t90_year": 2040,
+      "t95_cost_B": 1005.7765,
+      "t95_year": 2045,
+      "t99_cost_B": 1505.0955,
+      "t99_year": 2049,
+      "t99.9_cost_B": 1651.6302,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 1,
+      "archetype": "balanced",
+      "wall_s": 147.0,
+      "peak_gas_mw": 86860.9,
+      "peak_h2_mw": 45371.3,
+      "t90_cost_B": 400.9129,
+      "t90_year": 2040,
+      "t95_cost_B": 800.1233,
+      "t95_year": 2045,
+      "t99_cost_B": 1413.4544,
+      "t99_year": 2050,
+      "t99.9_cost_B": 1413.4544,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 2,
+      "archetype": "balanced",
+      "wall_s": 154.0,
+      "peak_gas_mw": 92000.0,
+      "peak_h2_mw": 39293.6,
+      "t90_cost_B": 572.8861,
+      "t90_year": 2040,
+      "t95_cost_B": 1111.9246,
+      "t95_year": 2045,
+      "t99_cost_B": 1860.5963,
+      "t99_year": 2050,
+      "t99.9_cost_B": 1860.5963,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 3,
+      "archetype": "balanced",
+      "wall_s": 57.7,
+      "peak_gas_mw": 96990.7,
+      "peak_h2_mw": 28681.3,
+      "t90_cost_B": 385.3461,
+      "t90_year": 2040,
+      "t95_cost_B": 803.5805,
+      "t95_year": 2045,
+      "t99_cost_B": 1265.0515,
+      "t99_year": 2049,
+      "t99.9_cost_B": 1402.0793,
+      "t99.9_year": 2050
+    }
+  ]
+}
