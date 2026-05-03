@@ -40,7 +40,7 @@ on:
           - C
           - D
       sample_size:
-        description: "Sobol sample count per solver step (all = sweep 1k→40k)"
+        description: "Sobol sample count per solver step (all = sweep 1k→160k)"
         required: true
         default: "5000"
         type: choice
@@ -51,9 +51,11 @@ on:
           - "10000"
           - "20000"
           - "40000"
+          - "80000"
+          - "160000"
           - "all"
       beams:
-        description: "Number of parallel beams (all = sweep 1→32)"
+        description: "Number of parallel beams (all = sweep 1→256)"
         required: true
         default: "4"
         type: choice
@@ -64,6 +66,9 @@ on:
           - "8"
           - "16"
           - "32"
+          - "64"
+          - "128"
+          - "256"
           - "all"
       archetype:
         description: "Archetype filter (all = cross-archetype, one seed per arch)"
@@ -147,13 +152,13 @@ jobs:
         run: |
           # Expand "all" to full sweep lists
           if [ "${SAMPLES_INPUT}" = "all" ]; then
-            SAMPLES_LIST="1000 2500 5000 10000 20000 40000"
+            SAMPLES_LIST="1000 2500 5000 10000 20000 40000 80000 160000"
           else
             SAMPLES_LIST="${SAMPLES_INPUT}"
           fi
 
           if [ "${BEAMS_INPUT}" = "all" ]; then
-            BEAMS_LIST="1 2 4 8 16 32"
+            BEAMS_LIST="1 2 4 8 16 32 64 128 256"
           else
             BEAMS_LIST="${BEAMS_INPUT}"
           fi
@@ -205,18 +210,27 @@ jobs:
         env:
           ISO: ${{ inputs.iso }}
         run: |
-          file_count=$(ls data/sampling-tests/${ISO}__*sobol*.json 2>/dev/null | wc -l)
+          file_count=0
+          for f in data/sampling-tests/${ISO}__*sobol*.json; do
+            # Skip merged files (they are JSON arrays, not individual results)
+            case "$f" in *merged*) continue;; esac
+            file_count=$((file_count + 1))
+          done
           if [ "$file_count" -eq 0 ]; then
             echo "::error::No result JSON files found for ${ISO}"
             exit 1
           fi
           echo "[verify] ${file_count} result files for ${ISO}:"
           for f in data/sampling-tests/${ISO}__*sobol*.json; do
+            case "$f" in *merged*) continue;; esac
             python3 -c "
           import json, sys
           f = sys.argv[1]
           d = json.load(open(f))
-          print(f'  {f}: {len(d.get(\"beams\", []))} beams, wall={d.get(\"wall_s\", \"?\")}s')
+          if isinstance(d, list):
+            print(f'  {f}: [array with {len(d)} entries — skipping]')
+          else:
+            print(f'  {f}: {len(d.get(\"beams\", []))} beams, wall={d.get(\"wall_s\", \"?\")}s')
           " "$f"
           done
 
