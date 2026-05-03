@@ -1,0 +1,65 @@
+{
+  "iso": "PJM",
+  "pathway": "A",
+  "archetype": "balanced",
+  "strategy": "sobol",
+  "sampler": "sobol",
+  "sample_size": 5000,
+  "beams_per_arch": 1,
+  "n_beams_total": 1,
+  "wall_s": 9.0,
+  "archetypes": [
+    "balanced"
+  ],
+  "archetype_beam_counts": {
+    "balanced": 1
+  },
+  "archetype_best": {
+    "balanced": {
+      "count": 1,
+      "t90_best_B": 746.3404,
+      "t95_best_B": 1503.1033,
+      "t99_best_B": 2543.8613,
+      "t99.9_best_B": 2543.8613
+    }
+  },
+  "best": {
+    "t90": {
+      "best_B": 746.3404,
+      "worst_B": 746.3404,
+      "spread_pct": 0.0
+    },
+    "t95": {
+      "best_B": 1503.1033,
+      "worst_B": 1503.1033,
+      "spread_pct": 0.0
+    },
+    "t99": {
+      "best_B": 2543.8613,
+      "worst_B": 2543.8613,
+      "spread_pct": 0.0
+    },
+    "t99.9": {
+      "best_B": 2543.8613,
+      "worst_B": 2543.8613,
+      "spread_pct": 0.0
+    }
+  },
+  "beams": [
+    {
+      "beam_idx": 0,
+      "archetype": "balanced",
+      "wall_s": 7.5,
+      "peak_gas_mw": 185481.9,
+      "peak_h2_mw": 81532.9,
+      "t90_cost_B": 746.3404,
+      "t90_year": 2040,
+      "t95_cost_B": 1503.1033,
+      "t95_year": 2045,
+      "t99_cost_B": 2543.8613,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2543.8613,
+      "t99.9_year": 2050
+    }
+  ]
+}
