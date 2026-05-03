@@ -1,0 +1,361 @@
+name: "Step 2.3 Sampling Test: Sobol × Beam Sweep"
+
+# Runs sobol_multibeam_test.py with user-selected ISO, pathway, Sobol sample
+# size, beam count, and optional archetype filter.
+#
+# Archetype options (pathway B/C/D only for nuclear/offshore):
+#   solar-led, wind-led, balanced, nuclear-heavy, offshore-heavy
+#   "all" = cross-archetype seeding (one cheapest per archetype)
+#
+# Output: Single merged JSON per dispatch committed to auto/ branch via
+#         GitHub REST API (bypasses git-push HTTP 500 on shallow clones),
+#         plus artifact backup of individual run files.
+#         Run squash-pipeline-branches.yml with pattern "auto/.*sobol-beam-test"
+#         to consolidate into master.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: "ISO region"
+        required: true
+        default: "ERCOT"
+        type: choice
+        options:
+          - ERCOT
+          - PJM
+          - CAISO
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      pathway:
+        description: "Pathway (A=VRE-only, B=NOAK 2035, C=NOAK 2040, D=NOAK 2045)"
+        required: true
+        default: "B"
+        type: choice
+        options:
+          - A
+          - B
+          - C
+          - D
+      sample_size:
+        description: "Sobol sample count per solver step (all = sweep 1k→40k)"
+        required: true
+        default: "5000"
+        type: choice
+        options:
+          - "1000"
+          - "2500"
+          - "5000"
+          - "10000"
+          - "20000"
+          - "40000"
+          - "all"
+      beams:
+        description: "Number of parallel beams (all = sweep 1→32)"
+        required: true
+        default: "4"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "4"
+          - "8"
+          - "16"
+          - "32"
+          - "all"
+      archetype:
+        description: "Archetype filter (all = cross-archetype, one seed per arch)"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - solar-led
+          - wind-led
+          - balanced
+          - nuclear-heavy
+          - offshore-heavy
+      branch:
+        description: "Branch to checkout"
+        required: false
+        default: "master"
+        type: string
+
+env:
+  BRANCH_PREFIX: sobol-beam-test
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  sobol-beam-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+
+    # Per-ISO + per-dispatch concurrency — different dispatches run in parallel;
+    # re-dispatch of the SAME run queues behind it.
+    concurrency:
+      group: sobol-beam-test-${{ inputs.iso }}-${{ github.run_id }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Configure git for large parquets
+        run: |
+          git config http.postBuffer 524288000
+          git config core.packedGitLimit 2g
+          git config core.packedGitWindowSize 256m
+          git config pack.windowMemory 256m
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy numba pyarrow
+
+      - name: Build archetype flag
+        id: arch
+        run: |
+          if [ "${{ inputs.archetype }}" = "all" ]; then
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=--archetype ${{ inputs.archetype }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ensure output directory
+        run: mkdir -p data/sampling-tests
+
+      - name: Run Sobol multibeam test
+        env:
+          ISO: ${{ inputs.iso }}
+          PATHWAY: ${{ inputs.pathway }}
+          SAMPLES_INPUT: ${{ inputs.sample_size }}
+          BEAMS_INPUT: ${{ inputs.beams }}
+          ARCHETYPE: ${{ inputs.archetype }}
+          ARCH_FLAG: ${{ steps.arch.outputs.flag }}
+        run: |
+          # Expand "all" to full sweep lists
+          if [ "${SAMPLES_INPUT}" = "all" ]; then
+            SAMPLES_LIST="1000 2500 5000 10000 20000 40000"
+          else
+            SAMPLES_LIST="${SAMPLES_INPUT}"
+          fi
+
+          if [ "${BEAMS_INPUT}" = "all" ]; then
+            BEAMS_LIST="1 2 4 8 16 32"
+          else
+            BEAMS_LIST="${BEAMS_INPUT}"
+          fi
+
+          COMBO_COUNT=0
+          for s in $SAMPLES_LIST; do for b in $BEAMS_LIST; do COMBO_COUNT=$((COMBO_COUNT + 1)); done; done
+          echo "═══════════════════════════════════════════════════"
+          echo "  ISO:       ${ISO}"
+          echo "  Pathway:   ${PATHWAY}"
+          echo "  Samples:   ${SAMPLES_INPUT} → [${SAMPLES_LIST}]"
+          echo "  Beams:     ${BEAMS_INPUT} → [${BEAMS_LIST}]"
+          echo "  Archetype: ${ARCHETYPE}"
+          echo "  Combos:    ${COMBO_COUNT}"
+          echo "═══════════════════════════════════════════════════"
+
+          FAIL=0
+          RUN=0
+          for samples in $SAMPLES_LIST; do
+            for beams in $BEAMS_LIST; do
+              RUN=$((RUN + 1))
+              TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+              OUTFILE="data/sampling-tests/${ISO}__pw${PATHWAY}__sobol__s${samples}__b${beams}__${ARCHETYPE}__${TIMESTAMP}.json"
+
+              echo ""
+              echo "── Run ${RUN}/${COMBO_COUNT}: samples=${samples} beams=${beams} ──"
+
+              python3 -u scripts/sobol_multibeam_test.py \
+                "${ISO}" "${PATHWAY}" "${samples}" "${beams}" ${ARCH_FLAG} \
+                2>&1 | tee /tmp/run.log
+
+              if grep -q "RESULT_JSON:" /tmp/run.log; then
+                grep "RESULT_JSON:" /tmp/run.log | sed 's/^RESULT_JSON://' > "${OUTFILE}"
+                echo "[capture] Wrote $(du -h "${OUTFILE}" | cut -f1) → ${OUTFILE}"
+              else
+                echo "::warning::No RESULT_JSON for samples=${samples} beams=${beams}"
+                FAIL=$((FAIL + 1))
+              fi
+            done
+          done
+
+          echo ""
+          echo "[done] ${RUN} runs, ${FAIL} failures"
+          if [ "$FAIL" -eq "$RUN" ]; then
+            echo "::error::All ${RUN} runs failed — no RESULT_JSON captured"
+            exit 1
+          fi
+
+      - name: Verify individual outputs
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          file_count=$(ls data/sampling-tests/${ISO}__*sobol*.json 2>/dev/null | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No result JSON files found for ${ISO}"
+            exit 1
+          fi
+          echo "[verify] ${file_count} result files for ${ISO}:"
+          for f in data/sampling-tests/${ISO}__*sobol*.json; do
+            python3 -c "
+          import json, sys
+          f = sys.argv[1]
+          d = json.load(open(f))
+          print(f'  {f}: {len(d.get(\"beams\", []))} beams, wall={d.get(\"wall_s\", \"?\")}s')
+          " "$f"
+          done
+
+      # ── Push via GitHub REST API ──────────────────────────────
+      # Bypasses git-push pack negotiation, which fails on shallow/sparse
+      # clones with HTTP 500.  Creates blob→tree→commit→ref directly.
+      - name: Push results via API
+        env:
+          ISO: ${{ inputs.iso }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARCHETYPE: ${{ inputs.archetype }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          # Include archetype in branch name when not 'all' for dispatch tracking
+          if [ "$ARCHETYPE" = "all" ]; then
+            branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          else
+            branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ARCHETYPE}-${ISO}"
+          fi
+          REPO="${GITHUB_REPOSITORY}"
+          SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+
+          # ── 1. Resolve base commit + tree from source branch ──
+          BASE_SHA=$(gh api "repos/${REPO}/git/ref/heads/${SOURCE_BRANCH}" --jq '.object.sha')
+          BASE_TREE=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq '.tree.sha')
+          echo "[api] Base commit: ${BASE_SHA}"
+          echo "[api] Base tree:   ${BASE_TREE}"
+
+          # ── 2. Upload each result JSON as a blob ──
+          TREE_ENTRIES="[]"
+          file_count=0
+
+          for jf in data/sampling-tests/${ISO}__*sobol*.json; do
+            [ -f "$jf" ] || continue
+            file_count=$((file_count + 1))
+            echo "[api] Uploading blob: ${jf} ($(du -h "$jf" | cut -f1))"
+
+            BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
+              -f encoding=base64 \
+              -f content="$(base64 -w0 "$jf")" \
+              --jq '.sha')
+
+            echo "[api]   → blob SHA: ${BLOB_SHA}"
+
+            TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
+              --arg path "$jf" \
+              --arg sha "$BLOB_SHA" \
+              '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+          done
+
+          # Also upload the merged file if we create one
+          MERGED="data/sampling-tests/${ISO}__pw${{ inputs.pathway }}__sobol__s${{ inputs.sample_size }}__b${{ inputs.beams }}__${{ inputs.archetype }}__${TIMESTAMP}__merged.json"
+          jq -s '.' data/sampling-tests/${ISO}__*sobol*.json > "${MERGED}"
+          echo "[merge] $(wc -c < "${MERGED}") bytes → ${MERGED}"
+
+          BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
+            -f encoding=base64 \
+            -f content="$(base64 -w0 "$MERGED")" \
+            --jq '.sha')
+
+          TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
+            --arg path "$MERGED" \
+            --arg sha "$BLOB_SHA" \
+            '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+          file_count=$((file_count + 1))
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No JSON files found to commit for ${ISO}"
+            exit 1
+          fi
+          echo "[api] ${file_count} blobs uploaded (${file_count-1} individual + 1 merged)"
+
+          # ── 3. Create tree with new/updated files ──
+          TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
+            '{"base_tree": $base, "tree": .}' | \
+            gh api "repos/${REPO}/git/trees" --input - --jq '.sha')
+          echo "[api] New tree: ${TREE_SHA}"
+
+          # ── 4. Create commit ──
+          COMMIT_MSG="Sobol beam test: ${ISO} pw=${{ inputs.pathway }} samples=${{ inputs.sample_size }} beams=${{ inputs.beams }} arch=${{ inputs.archetype }}"
+          COMMIT_SHA=$(jq -n \
+            --arg msg "${COMMIT_MSG}" \
+            --arg tree "$TREE_SHA" \
+            --arg parent "$BASE_SHA" \
+            '{"message": $msg, "tree": $tree, "parents": [$parent]}' | \
+            gh api "repos/${REPO}/git/commits" --input - --jq '.sha')
+          echo "[api] New commit: ${COMMIT_SHA}"
+
+          # ── 5. Create branch ref ──
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "[api] Creating ref attempt $i/$MAX_RETRIES..."
+            if gh api "repos/${REPO}/git/refs" \
+              -f "ref=refs/heads/${branch}" \
+              -f "sha=${COMMIT_SHA}" > /dev/null 2>&1; then
+              echo "[api] Branch created: ${branch}"
+              break
+            fi
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to create branch ref after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "[api] Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          {
+            echo "## Sobol Beam Test — ${ISO}"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "- Branch: \`${BRANCH}\`"
+            else
+              echo "- Branch: (not pushed — job failed before commit step)"
+            fi
+            echo "- Pathway: \`${{ inputs.pathway }}\`"
+            echo "- Samples: \`${{ inputs.sample_size }}\`"
+            echo "- Beams: \`${{ inputs.beams }}\`"
+            echo "- Archetype: \`${{ inputs.archetype }}\`"
+            echo ""
+            file_count=$(ls data/sampling-tests/${ISO}__*sobol*.json 2>/dev/null | wc -l)
+            echo "**${file_count} result JSONs committed (individual + merged).**"
+            echo ""
+            echo "Run **Squash Pipeline Branches** with pattern \`auto/.*sobol-beam-test\` to consolidate."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sobol-beam-test-${{ inputs.iso }}-${{ github.run_id }}
+          path: data/sampling-tests/
+          retention-days: 30
+          if-no-files-found: warn
