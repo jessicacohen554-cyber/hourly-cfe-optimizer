@@ -7,9 +7,9 @@ name: "Step 2.3 Sampling Test: Sobol × Beam Sweep"
 #   solar-led, wind-led, balanced, nuclear-heavy, offshore-heavy
 #   "all" = cross-archetype seeding (one cheapest per archetype)
 #
-# Output: Single merged JSON per dispatch committed to auto/ branch via
+# Output: Single consolidated parquet per dispatch committed to auto/ branch via
 #         GitHub REST API (bypasses git-push HTTP 500 on shallow clones),
-#         plus artifact backup of individual run files.
+#         plus artifact backup of individual JSON run files.
 #         Run squash-pipeline-branches.yml with pattern "auto/.*sobol-beam-test"
 #         to consolidate into master.
 
@@ -234,6 +234,72 @@ jobs:
           " "$f"
           done
 
+      - name: Consolidate JSONs to parquet
+        env:
+          ISO: ${{ inputs.iso }}
+          PATHWAY: ${{ inputs.pathway }}
+          SAMPLE_SIZE: ${{ inputs.sample_size }}
+          BEAMS: ${{ inputs.beams }}
+          ARCHETYPE: ${{ inputs.archetype }}
+        run: |
+          python3 -u - <<'PYEOF'
+          import json, glob, os, pyarrow as pa, pyarrow.parquet as pq
+
+          iso      = os.environ["ISO"]
+          pathway  = os.environ["PATHWAY"]
+          ssize    = os.environ["SAMPLE_SIZE"]
+          beams    = os.environ["BEAMS"]
+          arch     = os.environ["ARCHETYPE"]
+
+          pattern = f"data/sampling-tests/{iso}__*sobol*.json"
+          jfiles  = sorted(f for f in glob.glob(pattern)
+                           if "merged" not in f)
+          if not jfiles:
+              raise SystemExit(f"No JSON files matching {pattern}")
+
+          rows = []
+          for jf in jfiles:
+              with open(jf) as fh:
+                  d = json.load(fh)
+              if isinstance(d, list):
+                  continue  # skip any stale merged arrays
+              meta = {
+                  "iso":              d["iso"],
+                  "pathway":          d["pathway"],
+                  "archetype_filter": d.get("archetype", "all"),
+                  "sample_size":      d["sample_size"],
+                  "beams_per_arch":   d["beams_per_arch"],
+                  "n_beams_total":    d["n_beams_total"],
+                  "run_wall_s":       d["wall_s"],
+                  "source_file":      os.path.basename(jf),
+              }
+              for beam in d.get("beams", []):
+                  row = dict(meta)
+                  row["beam_idx"]       = beam["beam_idx"]
+                  row["beam_archetype"] = beam.get("archetype", "unknown")
+                  row["beam_wall_s"]    = beam.get("wall_s")
+                  row["peak_gas_mw"]    = beam.get("peak_gas_mw")
+                  row["peak_h2_mw"]     = beam.get("peak_h2_mw")
+                  for t in ("t90", "t95", "t99"):
+                      row[f"{t}_cost_B"] = beam.get(f"{t}_cost_B")
+                      row[f"{t}_year"]   = beam.get(f"{t}_year")
+                  row["t99p9_cost_B"] = beam.get("t99.9_cost_B")
+                  row["t99p9_year"]   = beam.get("t99.9_year")
+                  rows.append(row)
+
+          table = pa.Table.from_pylist(rows)
+          ts = jfiles[-1].rsplit("__", 1)[-1].replace(".json", "")
+          out = (f"data/sampling-tests/{iso}__pw{pathway}"
+                 f"__sobol__s{ssize}__b{beams}__{arch}__{ts}.parquet")
+          pq.write_table(table, out, compression="snappy")
+
+          n_runs  = len(jfiles)
+          n_beams = len(rows)
+          sz      = os.path.getsize(out)
+          print(f"[consolidate] {n_runs} JSONs → {n_beams} beam rows → "
+                f"{out} ({sz:,} bytes)")
+          PYEOF
+
       # ── Push via GitHub REST API ──────────────────────────────
       # Bypasses git-push pack negotiation, which fails on shallow/sparse
       # clones with HTTP 500.  Creates blob→tree→commit→ref directly.
@@ -260,49 +326,32 @@ jobs:
           echo "[api] Base commit: ${BASE_SHA}"
           echo "[api] Base tree:   ${BASE_TREE}"
 
-          # ── 2. Upload each result JSON as a blob ──
+          # ── 2. Upload consolidated parquet as a single blob ──
           TREE_ENTRIES="[]"
           file_count=0
 
-          for jf in data/sampling-tests/${ISO}__*sobol*.json; do
-            [ -f "$jf" ] || continue
+          for pq in data/sampling-tests/${ISO}__*sobol*.parquet; do
+            [ -f "$pq" ] || continue
             file_count=$((file_count + 1))
-            echo "[api] Uploading blob: ${jf} ($(du -h "$jf" | cut -f1))"
+            echo "[api] Uploading blob: ${pq} ($(du -h "$pq" | cut -f1))"
 
-            BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
-              -f encoding=base64 \
-              -f content="$(base64 -w0 "$jf")" \
-              --jq '.sha')
+            BLOB_SHA=$(base64 -w0 "$pq" \
+              | jq -Rs '{"encoding":"base64","content":.}' \
+              | gh api "repos/${REPO}/git/blobs" --input - --jq '.sha')
 
             echo "[api]   → blob SHA: ${BLOB_SHA}"
 
             TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
-              --arg path "$jf" \
+              --arg path "$pq" \
               --arg sha "$BLOB_SHA" \
               '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
           done
 
-          # Also upload the merged file if we create one
-          MERGED="data/sampling-tests/${ISO}__pw${{ inputs.pathway }}__sobol__s${{ inputs.sample_size }}__b${{ inputs.beams }}__${{ inputs.archetype }}__${TIMESTAMP}__merged.json"
-          jq -s '.' data/sampling-tests/${ISO}__*sobol*.json > "${MERGED}"
-          echo "[merge] $(wc -c < "${MERGED}") bytes → ${MERGED}"
-
-          BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
-            -f encoding=base64 \
-            -f content="$(base64 -w0 "$MERGED")" \
-            --jq '.sha')
-
-          TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
-            --arg path "$MERGED" \
-            --arg sha "$BLOB_SHA" \
-            '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
-          file_count=$((file_count + 1))
-
           if [ "$file_count" -eq 0 ]; then
-            echo "::error::No JSON files found to commit for ${ISO}"
+            echo "::error::No parquet files found to commit for ${ISO}"
             exit 1
           fi
-          echo "[api] ${file_count} blobs uploaded (${file_count-1} individual + 1 merged)"
+          echo "[api] ${file_count} parquet blob(s) uploaded"
 
           # ── 3. Create tree with new/updated files ──
           TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
@@ -359,8 +408,8 @@ jobs:
             echo "- Beams: \`${{ inputs.beams }}\`"
             echo "- Archetype: \`${{ inputs.archetype }}\`"
             echo ""
-            file_count=$(ls data/sampling-tests/${ISO}__*sobol*.json 2>/dev/null | wc -l)
-            echo "**${file_count} result JSONs committed (individual + merged).**"
+            file_count=$(ls data/sampling-tests/${ISO}__*sobol*.parquet 2>/dev/null | wc -l)
+            echo "**${file_count} consolidated parquet(s) committed.**"
             echo ""
             echo "Run **Squash Pipeline Branches** with pattern \`auto/.*sobol-beam-test\` to consolidate."
           } >> "${GITHUB_STEP_SUMMARY}"
