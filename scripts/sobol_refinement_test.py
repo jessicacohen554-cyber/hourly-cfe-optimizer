@@ -30,6 +30,7 @@ import copy
 import json
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -454,19 +455,31 @@ def _run_arms(arms, all_results, iso, pathway, n_beams, archetype,
             print(f"  [SKIP] no seeds for {arm_name}")
             continue
 
-        t_arm = time.time()
-        beam_results = []
         for bi, seed in enumerate(seeds):
-            print(f"\n  beam {bi}: {seed['archetype']} CFE={seed['cfe']:.1f}%")
-            row = _solve_beam(seed, cfg, P32, dm32, dn32, bi,
-                              arm_cfg["refine"], radius)
-            beam_results.append(row)
+            print(f"  beam {bi}: {seed['archetype']} CFE={seed['cfe']:.1f}%",
+                  flush=True)
+
+        t_arm = time.time()
+        workers = min(len(seeds), max(1, multiprocessing.cpu_count() - 1))
+        print(f"  launching {len(seeds)} beams on {workers} workers", flush=True)
+
+        with ProcessPoolExecutor(max_workers=workers) as exe:
+            futures = [
+                exe.submit(_solve_beam, seed, cfg, P32, dm32, dn32, bi,
+                           arm_cfg["refine"], radius)
+                for bi, seed in enumerate(seeds)
+            ]
+            beam_results = [f.result() for f in futures]
+
+        arm_wall = round(time.time() - t_arm, 1)
+
+        for row in beam_results:
             c99 = row.get("t99.9_cost_B", "N/A")
             n_accepted = sum(1 for e in row["refinement_log"] if e["accepted"])
             n_total = len(row["refinement_log"])
-            print(f"    99.9%=${c99} | wall={row['wall_s']:.1f}s"
-                  f" | refine={n_accepted}/{n_total} accepted")
-        arm_wall = round(time.time() - t_arm, 1)
+            print(f"  beam {row['beam_idx']}: 99.9%=${c99} | "
+                  f"wall={row['wall_s']:.1f}s | "
+                  f"refine={n_accepted}/{n_total} accepted")
 
         # Summarize arm
         best = {}
