@@ -1,0 +1,302 @@
+name: "Step 2.3 Sampling Test: Sobol + Local Refinement A/B"
+
+# Runs sobol_refinement_test.py — three-arm comparison:
+#   baseline:    Sobol N samples, no refinement
+#   refined:     Sobol N samples + Nelder-Mead polish
+#   low_refined: Sobol N/4 samples + Nelder-Mead polish
+#
+# Key question: does N/4 + refinement match N raw?
+#
+# Output: JSON results + detailed per-step refinement logs committed to
+#         auto/ branch via GitHub REST API.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: "ISO region"
+        required: true
+        default: "ERCOT"
+        type: choice
+        options:
+          - ERCOT
+          - PJM
+          - CAISO
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      pathway:
+        description: "Pathway (A=VRE-only, B=NOAK 2035, C=NOAK 2040, D=NOAK 2045)"
+        required: true
+        default: "A"
+        type: choice
+        options:
+          - A
+          - B
+          - C
+          - D
+      sample_size:
+        description: "Sobol sample count for baseline arm (low_refined uses N/4)"
+        required: true
+        default: "40000"
+        type: choice
+        options:
+          - "10000"
+          - "20000"
+          - "40000"
+          - "80000"
+      beams:
+        description: "Number of beams per archetype"
+        required: true
+        default: "8"
+        type: choice
+        options:
+          - "2"
+          - "4"
+          - "8"
+          - "16"
+      archetype:
+        description: "Archetype filter"
+        required: true
+        default: "balanced"
+        type: choice
+        options:
+          - balanced
+          - solar-led
+          - wind-led
+          - nuclear-heavy
+          - offshore-heavy
+          - all
+      radius:
+        description: "Refinement radius (pct per dimension)"
+        required: true
+        default: "2.0"
+        type: choice
+        options:
+          - "1.0"
+          - "2.0"
+          - "3.0"
+          - "5.0"
+      branch:
+        description: "Branch to checkout"
+        required: false
+        default: "master"
+        type: string
+
+env:
+  BRANCH_PREFIX: refinement-test
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  refinement-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+    permissions:
+      contents: write
+
+    concurrency:
+      group: refinement-test-${{ inputs.iso }}-${{ github.run_id }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Configure git for large parquets
+        run: |
+          git config http.postBuffer 524288000
+          git config core.packedGitLimit 2g
+          git config core.packedGitWindowSize 256m
+          git config pack.windowMemory 256m
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install numpy scipy numba pyarrow
+
+      - name: Ensure output directory
+        run: mkdir -p data/sampling-tests
+
+      - name: Build archetype flag
+        id: arch
+        run: |
+          if [ "${{ inputs.archetype }}" = "all" ]; then
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=--archetype ${{ inputs.archetype }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run refinement A/B test
+        env:
+          ISO: ${{ inputs.iso }}
+          PATHWAY: ${{ inputs.pathway }}
+          SAMPLES: ${{ inputs.sample_size }}
+          BEAMS: ${{ inputs.beams }}
+          RADIUS: ${{ inputs.radius }}
+          ARCH_FLAG: ${{ steps.arch.outputs.flag }}
+        run: |
+          echo "═══════════════════════════════════════════════════"
+          echo "  ISO:       ${ISO}"
+          echo "  Pathway:   ${PATHWAY}"
+          echo "  Samples:   ${SAMPLES} (baseline), $((SAMPLES / 4)) (low_refined)"
+          echo "  Beams:     ${BEAMS}"
+          echo "  Radius:    ${RADIUS}"
+          echo "  Archetype: ${{ inputs.archetype }}"
+          echo "═══════════════════════════════════════════════════"
+
+          python3 -u scripts/sobol_refinement_test.py \
+            "${ISO}" "${PATHWAY}" "${SAMPLES}" "${BEAMS}" \
+            --radius "${RADIUS}" ${ARCH_FLAG} \
+            2>&1 | tee /tmp/run.log
+
+          if ! grep -q "RESULT_JSON:" /tmp/run.log; then
+            echo "::error::No RESULT_JSON in output"
+            exit 1
+          fi
+
+      - name: Verify outputs
+        run: |
+          file_count=$(ls data/sampling-tests/*refinement_test*.json 2>/dev/null | wc -l)
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No result files found"
+            exit 1
+          fi
+          echo "[verify] ${file_count} result files:"
+          for f in data/sampling-tests/*refinement_test*.json; do
+            sz=$(du -h "$f" | cut -f1)
+            echo "  ${f} (${sz})"
+          done
+
+      # ── Push via GitHub REST API ──────────────────────────────
+      - name: Push results via API
+        env:
+          ISO: ${{ inputs.iso }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          REPO="${GITHUB_REPOSITORY}"
+          SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+
+          BASE_SHA=$(gh api "repos/${REPO}/git/ref/heads/${SOURCE_BRANCH}" --jq '.object.sha')
+          BASE_TREE=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq '.tree.sha')
+          echo "[api] Base commit: ${BASE_SHA}"
+
+          TREE_ENTRIES="[]"
+          file_count=0
+
+          for f in data/sampling-tests/*refinement_test*.json; do
+            [ -f "$f" ] || continue
+            file_count=$((file_count + 1))
+            echo "[api] Uploading: ${f} ($(du -h "$f" | cut -f1))"
+
+            BLOB_SHA=$(base64 -w0 "$f" \
+              | jq -Rs '{"encoding":"base64","content":.}' \
+              | gh api "repos/${REPO}/git/blobs" --input - --jq '.sha')
+
+            TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
+              --arg path "$f" \
+              --arg sha "$BLOB_SHA" \
+              '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+          done
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No files to commit"
+            exit 1
+          fi
+
+          TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
+            '{"base_tree": $base, "tree": .}' | \
+            gh api "repos/${REPO}/git/trees" --input - --jq '.sha')
+
+          COMMIT_MSG="Refinement A/B test: ${ISO} pw=${{ inputs.pathway }} s=${{ inputs.sample_size }} b=${{ inputs.beams }} r=${{ inputs.radius }} arch=${{ inputs.archetype }}"
+          COMMIT_SHA=$(jq -n \
+            --arg msg "${COMMIT_MSG}" \
+            --arg tree "$TREE_SHA" \
+            --arg parent "$BASE_SHA" \
+            '{"message": $msg, "tree": $tree, "parents": [$parent]}' | \
+            gh api "repos/${REPO}/git/commits" --input - --jq '.sha')
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            if gh api "repos/${REPO}/git/refs" \
+              -f "ref=refs/heads/${branch}" \
+              -f "sha=${COMMIT_SHA}" > /dev/null 2>&1; then
+              echo "[api] Branch created: ${branch}"
+              break
+            fi
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to create branch after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            sleep $((2 ** i))
+          done
+
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ inputs.iso }}
+        run: |
+          {
+            echo "## Refinement A/B Test — ${ISO}"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "- Branch: \`${BRANCH}\`"
+            else
+              echo "- Branch: (not pushed)"
+            fi
+            echo "- Pathway: \`${{ inputs.pathway }}\`"
+            echo "- Baseline samples: \`${{ inputs.sample_size }}\`"
+            echo "- Low-refined samples: \`$(( ${{ inputs.sample_size }} / 4 ))\`"
+            echo "- Beams: \`${{ inputs.beams }}\`"
+            echo "- Radius: \`${{ inputs.radius }}\`"
+            echo "- Archetype: \`${{ inputs.archetype }}\`"
+            echo ""
+
+            # Parse comparison from RESULT_JSON if available
+            if [ -f /tmp/run.log ] && grep -q "RESULT_JSON:" /tmp/run.log; then
+              echo "### Results"
+              echo ""
+              python3 -c "
+          import json, sys
+          line = [l for l in open('/tmp/run.log') if 'RESULT_JSON:' in l][-1]
+          d = json.loads(line.split('RESULT_JSON:',1)[1])
+          arms = d.get('arms', {})
+          print('| Arm | Samples | 99.9% Cost (\$B) | 95% Cost (\$B) | Wall (s) | Accepted |')
+          print('|-----|---------|-----------------|---------------|----------|----------|')
+          for name, arm in arms.items():
+              s = arm['samples']
+              c99 = arm.get('best',{}).get('t99.9',{}).get('best_B','N/A')
+              c95 = arm.get('best',{}).get('t95',{}).get('best_B','N/A')
+              c99_s = f'{c99:.1f}' if isinstance(c99, float) else c99
+              c95_s = f'{c95:.1f}' if isinstance(c95, float) else c95
+              wall = arm.get('wall_s', 0)
+              rs = arm.get('refinement_summary', {})
+              acc = f\"{rs.get('accepted',0)}/{rs.get('total_steps',0)}\" if rs.get('total_steps') else '-'
+              print(f'| {name} | {s} | {c99_s} | {c95_s} | {wall:.0f} | {acc} |')
+          "
+            fi
+            echo ""
+            echo "Run **Squash Pipeline Branches** with pattern \`auto/.*refinement-test\` to consolidate."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refinement-test-${{ inputs.iso }}-${{ github.run_id }}
+          path: data/sampling-tests/*refinement_test*
+          retention-days: 30
+          if-no-files-found: warn
