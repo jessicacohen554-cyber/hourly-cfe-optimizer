@@ -1,0 +1,41 @@
+{
+  "iso": "CAISO",
+  "pathway": "B",
+  "archetype": "balanced",
+  "base_sample_size": 5000,
+  "beams_per_arch": 1,
+  "refinement_radius": 2.0,
+  "baseline_source": "fresh_run",
+  "timestamp": "20260504T074229",
+  "arms": {
+    "refined": {
+      "samples": 5000,
+      "refine": true,
+      "radius": 2.0,
+      "n_beams": 1,
+      "wall_s": 11.7,
+      "best": {},
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 10.4,
+          "peak_gas_mw": 10425.3,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 4,
+        "accepted": 4,
+        "rejected": 0,
+        "avg_cost_delta_pct": 24.772,
+        "avg_nelder_mead_evals": 122.0,
+        "avg_refine_wall_s": 0.05
+      }
+    }
+  }
+}
