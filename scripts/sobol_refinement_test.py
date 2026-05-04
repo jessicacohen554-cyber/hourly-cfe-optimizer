@@ -45,47 +45,6 @@ import pipeline_config as pc
 REFINEMENT_LOG = []  # populated per-beam, reset between beams
 
 
-def _cost_single_candidate(
-    pcts: np.ndarray,           # (N_RESOURCES,)
-    storage: np.ndarray,        # (N_STORAGE,)
-    floor_pcts: np.ndarray,
-    floor_storage: np.ndarray,
-    free_idx: list[int],
-    cfg,
-    P32, dm32, dn32,
-    year: int,
-    dem_twh: float,
-    existing_gas_mw: float,
-    gaf: float,
-    prev_gas_cost: float,
-    current_peak_gas: float,
-) -> tuple[float, float, dict]:
-    """Evaluate total cost of a single candidate.
-
-    Returns (cost, post_h2_cfe, h2_info).
-    Returns (np.inf, 0, {}) if infeasible.
-    """
-    cfe, resid, _ = solver._score_single(pcts, storage, P32, dm32, dn32)
-    target = None  # set by caller context
-
-    # Resource incremental cost
-    c = 0.0
-    for k, ri in enumerate(free_idx):
-        delta = pcts[ri] - floor_pcts[ri]
-        if delta > 0:
-            c += (delta / 100.0 * dem_twh
-                  * solver.get_resource_lcoe(cfg.iso, solver.RESOURCE_ORDER[ri], year, cfg)
-                  * 1e6)
-    for j, sc in enumerate(solver.STORAGE_COLS):
-        delta = storage[j] - floor_storage[j]
-        if delta > 0:
-            c += (delta / 100.0
-                  * solver.storage_net_cost(cfg.iso, sc, cfg, year=year)
-                  * dem_twh * 1e6)
-
-    return c, cfe, resid
-
-
 def _make_refined_find_winner(radius_pct: float, max_iter: int = 80):
     """Build a patched _find_winner that applies Nelder-Mead after Sobol."""
 
@@ -213,6 +172,7 @@ def _make_refined_find_winner(radius_pct: float, max_iter: int = 80):
         cost_before = objective(x0)
         t0 = time.time()
         opt = minimize(objective, x0, method="Nelder-Mead",
+                       bounds=bounds,
                        options={"maxiter": max_iter, "xatol": 0.01,
                                 "fatol": 1e4, "adaptive": True})
         refine_wall = time.time() - t0
@@ -314,7 +274,7 @@ def load_seeds(iso, cfg, P32, dm32, dn32, n_beams, archetype=None):
     pool = smt._load_valid_pool(iso, cfg, P32, dm32, dn32)
     if pool is None:
         return []
-    if archetype:
+    if archetype and archetype != "all":
         return smt.select_seeds_single_archetype(pool, cfg, archetype, n_beams)
     else:
         return smt.select_seeds_all_archetypes(pool, cfg, n_beams)
