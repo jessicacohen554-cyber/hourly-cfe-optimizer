@@ -78,6 +78,14 @@ on:
           - "2.0"
           - "3.0"
           - "5.0"
+      reuse_baseline:
+        description: "Reuse existing Sobol baseline (skip ~500s baseline arm)"
+        required: true
+        default: "yes"
+        type: choice
+        options:
+          - "yes"
+          - "no"
       branch:
         description: "Branch to checkout"
         required: false
@@ -134,6 +142,7 @@ jobs:
           BEAMS: ${{ inputs.beams }}
           RADIUS: ${{ inputs.radius }}
           ARCHETYPE: ${{ inputs.archetype }}
+          REUSE_BASELINE: ${{ inputs.reuse_baseline }}
         run: |
           echo "═══════════════════════════════════════════════════"
           echo "  ISO:       ${ISO}"
@@ -142,11 +151,26 @@ jobs:
           echo "  Beams:     ${BEAMS}"
           echo "  Radius:    ${RADIUS}"
           echo "  Archetype: ${ARCHETYPE}"
+          echo "  Reuse:     ${REUSE_BASELINE}"
           echo "═══════════════════════════════════════════════════"
+
+          BASELINE_FLAG=""
+          if [ "${REUSE_BASELINE}" = "yes" ]; then
+            # Find most recent matching sobol baseline JSON
+            PATTERN="data/sampling-tests/${ISO}__pw${PATHWAY}__sobol${SAMPLES}__beams${BEAMS}__${ARCHETYPE}__*.json"
+            BASELINE=$(ls -t ${PATTERN} 2>/dev/null | head -1)
+            if [ -n "${BASELINE}" ]; then
+              echo "[baseline] Reusing: ${BASELINE}"
+              BASELINE_FLAG="--baseline-file ${BASELINE}"
+            else
+              echo "[baseline] No existing file matching ${PATTERN} — running fresh"
+            fi
+          fi
 
           python3 -u scripts/sobol_refinement_test.py \
             "${ISO}" "${PATHWAY}" "${SAMPLES}" "${BEAMS}" \
             --radius "${RADIUS}" --archetype "${ARCHETYPE}" \
+            ${BASELINE_FLAG} \
             2>&1 | tee /tmp/run.log
 
           if ! grep -q "RESULT_JSON:" /tmp/run.log; then
