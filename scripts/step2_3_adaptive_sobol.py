@@ -89,14 +89,21 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import multiprocessing
+import os
 import sys
 import hashlib
 import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+# Must precede numba import so spawned children inherit the method.
+multiprocessing.set_start_method("spawn", force=True)
 
 import numpy as np
 import pyarrow as pa
@@ -1939,6 +1946,38 @@ def write_result(result: dict):
 
 
 # ---------------------------------------------------------------------------
+# Parallel beam worker
+# ---------------------------------------------------------------------------
+def _solve_beam_worker(seed, cfg, P32, dm32, dn32, bi, n_workers):
+    """Worker for ProcessPoolExecutor.  Each spawned process gets:
+      - numba thread budget = total_cores / n_workers (avoids prange contention)
+      - stdout redirected to StringIO (replayed in order by parent)
+      - its own JIT warmup (spawn = fresh process)
+    Returns (result_dict, captured_log_str, wall_seconds).
+    """
+    import numba
+    threads = max(1, os.cpu_count() // n_workers)
+    numba.set_num_threads(threads)
+
+    buf = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buf
+    try:
+        warmup_jit()
+        t0 = time.time()
+        result = solve_pathway(seed, cfg, P32, dm32, dn32, beam_idx=bi)
+        result["scenario_name"] = cfg.scenario_name
+        dt = time.time() - t0
+        n_achieved = result["n_thresholds_achieved"]
+        print(f"[solve] Done in {dt:.1f}s — {n_achieved} thresholds achieved, "
+              f"peak gas={result['peak_gas_mw']:,.0f} MW")
+        write_result(result)
+    finally:
+        sys.stdout = old_stdout
+    return result, buf.getvalue(), dt
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 def build_configs(iso: str, pathway: str, scenarios: list[str],
@@ -1986,6 +2025,8 @@ def main():
     ap.add_argument("--n-beams", type=int, default=5)
     ap.add_argument("--stage1-samples", type=int, default=0)
     ap.add_argument("--stage2-samples", type=int, default=5000)
+    ap.add_argument("--serial", action="store_true",
+                    help="Disable beam parallelism (debug/profiling)")
     args = ap.parse_args()
 
     iso = args.iso.upper()
@@ -2037,6 +2078,17 @@ def main():
         return 1
 
     t_total = time.time()
+    n_workers = min(len(seeds), max(1, os.cpu_count() - 1))
+    use_parallel = (not args.serial) and len(seeds) > 1
+
+    if use_parallel:
+        print(f"[adaptive] Parallel beams: {len(seeds)} beams across "
+              f"{n_workers} workers "
+              f"({os.cpu_count()} cores, ~{os.cpu_count()//n_workers} "
+              f"numba threads/worker)")
+    else:
+        print(f"[adaptive] Serial beams: {len(seeds)} beams")
+
     for ci, cfg in enumerate(configs):
         print(f"\n{'_'*60}")
         print(f"[adaptive] Config {ci+1}/{len(configs)}: "
@@ -2044,18 +2096,40 @@ def main():
         print(f"[adaptive] dim_key: {cfg.dim_key}")
         print(f"{'_'*60}")
 
-        for bi, seed in enumerate(seeds):
-            print(f"\n[solve] Beam {bi+1}/{len(seeds)}: {seed['archetype']} "
-                  f"(seed CFE={seed['cfe']:.1f}%)")
-            t1 = time.time()
-            result = solve_pathway(seed, cfg, P32, dm32, dn32, beam_idx=bi)
-            result["scenario_name"] = cfg.scenario_name
-            dt = time.time() - t1
+        if use_parallel:
+            # ── Parallel beam execution ───────────────────────────────
+            with ProcessPoolExecutor(max_workers=n_workers) as exe:
+                futures = {
+                    exe.submit(_solve_beam_worker,
+                               seed, cfg, P32, dm32, dn32, bi, n_workers): bi
+                    for bi, seed in enumerate(seeds)
+                }
+                # Collect in submission order
+                beam_outputs = [None] * len(seeds)
+                for fut in futures:
+                    bi = futures[fut]
+                    beam_outputs[bi] = fut.result()
 
-            n_achieved = result["n_thresholds_achieved"]
-            print(f"[solve] Done in {dt:.1f}s — {n_achieved} thresholds achieved, "
-                  f"peak gas={result['peak_gas_mw']:,.0f} MW")
-            write_result(result)
+            # Replay logs in beam order
+            for bi, (result, log, dt) in enumerate(beam_outputs):
+                print(f"\n[solve] Beam {bi+1}/{len(seeds)}: "
+                      f"{seeds[bi]['archetype']} "
+                      f"(seed CFE={seeds[bi]['cfe']:.1f}%)")
+                sys.stdout.write(log)
+        else:
+            # ── Serial fallback (--serial or single beam) ─────────────
+            for bi, seed in enumerate(seeds):
+                print(f"\n[solve] Beam {bi+1}/{len(seeds)}: {seed['archetype']} "
+                      f"(seed CFE={seed['cfe']:.1f}%)")
+                t1 = time.time()
+                result = solve_pathway(seed, cfg, P32, dm32, dn32, beam_idx=bi)
+                result["scenario_name"] = cfg.scenario_name
+                dt = time.time() - t1
+
+                n_achieved = result["n_thresholds_achieved"]
+                print(f"[solve] Done in {dt:.1f}s — {n_achieved} thresholds achieved, "
+                      f"peak gas={result['peak_gas_mw']:,.0f} MW")
+                write_result(result)
 
     print(f"\n{'='*70}")
     print(f"[adaptive] All done in {time.time()-t_total:.0f}s")
@@ -2069,3 +2143,4 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
