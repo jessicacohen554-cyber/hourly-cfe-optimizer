@@ -1,0 +1,390 @@
+{
+  "iso": "ERCOT",
+  "pathway": "A",
+  "archetype": "balanced",
+  "base_sample_size": 80000,
+  "beams_per_arch": 1,
+  "refinement_radius": 2.0,
+  "baseline_source": "fresh_run",
+  "timestamp": "20260504T064808",
+  "arms": {
+    "baseline": {
+      "samples": 80000,
+      "refine": false,
+      "radius": 2.0,
+      "n_beams": 1,
+      "wall_s": 116.5,
+      "best": {
+        "t90": {
+          "best_B": 360.2871,
+          "worst_B": 360.2871,
+          "best_beam": 0
+        },
+        "t95": {
+          "best_B": 963.1497,
+          "worst_B": 963.1497,
+          "best_beam": 0
+        },
+        "t99": {
+          "best_B": 1915.4959,
+          "worst_B": 1915.4959,
+          "best_beam": 0
+        },
+        "t99.9": {
+          "best_B": 2207.3141,
+          "worst_B": 2207.3141,
+          "best_beam": 0
+        }
+      },
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 116.5,
+          "peak_gas_mw": 95330.3,
+          "peak_h2_mw": 4746.5,
+          "t90_cost_B": 360.2871,
+          "t90_year": 2040,
+          "t90_mix": {
+            "clean_firm": 5.13,
+            "solar": 28.45,
+            "wind": 58.42,
+            "hydro": 0.06,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 17.62,
+            "solar_batt8": 17.75,
+            "wind_batt4": 8.18,
+            "wind_batt8": 7.48
+          },
+          "t90_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t95_cost_B": 963.1497,
+          "t95_year": 2045,
+          "t95_mix": {
+            "clean_firm": 4.32,
+            "solar": 98.14,
+            "wind": 71.67,
+            "hydro": 0.05,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 27.88,
+            "solar_batt8": 27.49,
+            "wind_batt4": 19.68,
+            "wind_batt8": 15.42
+          },
+          "t95_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t99_cost_B": 1915.4959,
+          "t99_year": 2049,
+          "t99_mix": {
+            "clean_firm": 3.77,
+            "solar": 126.78,
+            "wind": 99.78,
+            "hydro": 0.04,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 36.88,
+            "solar_batt8": 54.39,
+            "wind_batt4": 43.4,
+            "wind_batt8": 33.64
+          },
+          "t99_storage": {
+            "battery_dispatch_pct": 0.04,
+            "battery8_dispatch_pct": 0.02,
+            "ldes_dispatch_pct": 0.1
+          },
+          "t99.9_cost_B": 2207.3141,
+          "t99.9_year": 2050,
+          "t99.9_mix": {
+            "clean_firm": 3.64,
+            "solar": 122.81,
+            "wind": 98.52,
+            "hydro": 0.04,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 36.23,
+            "solar_batt8": 52.56,
+            "wind_batt4": 45.91,
+            "wind_batt8": 33.21
+          },
+          "t99.9_storage": {
+            "battery_dispatch_pct": 0.04,
+            "battery8_dispatch_pct": 0.02,
+            "ldes_dispatch_pct": 0.1
+          }
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 0,
+        "accepted": 0,
+        "rejected": 0,
+        "avg_cost_delta_pct": 0.0,
+        "avg_nelder_mead_evals": 0,
+        "avg_refine_wall_s": 0
+      }
+    },
+    "refined": {
+      "samples": 80000,
+      "refine": true,
+      "radius": 2.0,
+      "n_beams": 1,
+      "wall_s": 140.1,
+      "best": {
+        "t90": {
+          "best_B": 304.6431,
+          "worst_B": 304.6431,
+          "best_beam": 0
+        },
+        "t95": {
+          "best_B": 635.016,
+          "worst_B": 635.016,
+          "best_beam": 0
+        },
+        "t99": {
+          "best_B": 1161.9595,
+          "worst_B": 1161.9595,
+          "best_beam": 0
+        },
+        "t99.9": {
+          "best_B": 1161.9595,
+          "worst_B": 1161.9595,
+          "best_beam": 0
+        }
+      },
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 140.1,
+          "peak_gas_mw": 93122.2,
+          "peak_h2_mw": 47058.7,
+          "t90_cost_B": 304.6431,
+          "t90_year": 2040,
+          "t90_mix": {
+            "clean_firm": 5.13,
+            "solar": 17.79,
+            "wind": 70.73,
+            "hydro": 0.06,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 4.5,
+            "solar_batt8": 6.79,
+            "wind_batt4": 5.69,
+            "wind_batt8": 2.82
+          },
+          "t90_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t95_cost_B": 635.016,
+          "t95_year": 2045,
+          "t95_mix": {
+            "clean_firm": 4.32,
+            "solar": 17.8,
+            "wind": 69.65,
+            "hydro": 0.05,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 9.8,
+            "solar_batt8": 7.3,
+            "wind_batt4": 8.43,
+            "wind_batt8": 7.67
+          },
+          "t95_storage": {
+            "battery_dispatch_pct": 0.07,
+            "battery8_dispatch_pct": 0.01,
+            "ldes_dispatch_pct": 0.07
+          },
+          "t99_cost_B": 1161.9595,
+          "t99_year": 2050,
+          "t99_mix": {
+            "clean_firm": 3.64,
+            "solar": 35.46,
+            "wind": 96.54,
+            "hydro": 0.04,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 11.93,
+            "solar_batt8": 12.81,
+            "wind_batt4": 10.7,
+            "wind_batt8": 16.81
+          },
+          "t99_storage": {
+            "battery_dispatch_pct": 0.1,
+            "battery8_dispatch_pct": 0.04,
+            "ldes_dispatch_pct": 0.13
+          },
+          "t99.9_cost_B": 1161.9595,
+          "t99.9_year": 2050,
+          "t99.9_mix": {
+            "clean_firm": 3.64,
+            "solar": 35.46,
+            "wind": 96.54,
+            "hydro": 0.04,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 11.93,
+            "solar_batt8": 12.81,
+            "wind_batt4": 10.7,
+            "wind_batt8": 16.81
+          },
+          "t99.9_storage": {
+            "battery_dispatch_pct": 0.1,
+            "battery8_dispatch_pct": 0.04,
+            "ldes_dispatch_pct": 0.13
+          }
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 21,
+        "accepted": 21,
+        "rejected": 0,
+        "avg_cost_delta_pct": 28.0091,
+        "avg_nelder_mead_evals": 129.0,
+        "avg_refine_wall_s": 0.11
+      }
+    },
+    "low_refined": {
+      "samples": 20000,
+      "refine": true,
+      "radius": 2.0,
+      "n_beams": 1,
+      "wall_s": 31.3,
+      "best": {
+        "t90": {
+          "best_B": 325.3324,
+          "worst_B": 325.3324,
+          "best_beam": 0
+        },
+        "t95": {
+          "best_B": 1012.501,
+          "worst_B": 1012.501,
+          "best_beam": 0
+        },
+        "t99": {
+          "best_B": 2170.1786,
+          "worst_B": 2170.1786,
+          "best_beam": 0
+        },
+        "t99.9": {
+          "best_B": 2491.8591,
+          "worst_B": 2491.8591,
+          "best_beam": 0
+        }
+      },
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 31.3,
+          "peak_gas_mw": 90811.1,
+          "peak_h2_mw": 1306.1,
+          "t90_cost_B": 325.3324,
+          "t90_year": 2040,
+          "t90_mix": {
+            "clean_firm": 5.13,
+            "solar": 31.88,
+            "wind": 57.31,
+            "hydro": 0.06,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 9.35,
+            "solar_batt8": 6.36,
+            "wind_batt4": 9.81,
+            "wind_batt8": 6.31
+          },
+          "t90_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t95_cost_B": 1012.501,
+          "t95_year": 2045,
+          "t95_mix": {
+            "clean_firm": 4.32,
+            "solar": 62.01,
+            "wind": 70.23,
+            "hydro": 0.05,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 30.27,
+            "solar_batt8": 123.16,
+            "wind_batt4": 18.1,
+            "wind_batt8": 9.62
+          },
+          "t95_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t99_cost_B": 2170.1786,
+          "t99_year": 2049,
+          "t99_mix": {
+            "clean_firm": 3.77,
+            "solar": 115.86,
+            "wind": 88.58,
+            "hydro": 0.04,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 27.9,
+            "solar_batt8": 112.67,
+            "wind_batt4": 41.19,
+            "wind_batt8": 28.07
+          },
+          "t99_storage": {
+            "battery_dispatch_pct": 0.02,
+            "battery8_dispatch_pct": 0.01,
+            "ldes_dispatch_pct": 0.13
+          },
+          "t99.9_cost_B": 2491.8591,
+          "t99.9_year": 2050,
+          "t99.9_mix": {
+            "clean_firm": 3.64,
+            "solar": 117.27,
+            "wind": 86.03,
+            "hydro": 0.04,
+            "offshore_wind": 0.0,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 27.49,
+            "solar_batt8": 108.94,
+            "wind_batt4": 45.93,
+            "wind_batt8": 28.38
+          },
+          "t99.9_storage": {
+            "battery_dispatch_pct": 0.05,
+            "battery8_dispatch_pct": 0.05,
+            "ldes_dispatch_pct": 0.13
+          }
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 21,
+        "accepted": 21,
+        "rejected": 0,
+        "avg_cost_delta_pct": 24.6203,
+        "avg_nelder_mead_evals": 127.9,
+        "avg_refine_wall_s": 0.06
+      }
+    }
+  }
+}
