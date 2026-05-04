@@ -39,23 +39,32 @@ on:
       sample_size:
         description: "Sobol sample count for baseline arm (low_refined uses N/4)"
         required: true
-        default: "40000"
+        default: "5000"
         type: choice
         options:
+          - "1000"
+          - "2500"
+          - "5000"
           - "10000"
           - "20000"
           - "40000"
           - "80000"
+          - "160000"
       beams:
         description: "Number of beams per archetype"
         required: true
-        default: "8"
+        default: "4"
         type: choice
         options:
+          - "1"
           - "2"
           - "4"
           - "8"
           - "16"
+          - "32"
+          - "64"
+          - "128"
+          - "256"
       archetype:
         description: "Archetype filter"
         required: true
