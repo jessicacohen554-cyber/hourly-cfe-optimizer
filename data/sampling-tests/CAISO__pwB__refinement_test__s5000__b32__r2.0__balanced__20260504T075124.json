@@ -1,0 +1,479 @@
+{
+  "iso": "CAISO",
+  "pathway": "B",
+  "archetype": "balanced",
+  "base_sample_size": 5000,
+  "beams_per_arch": 32,
+  "refinement_radius": 2.0,
+  "baseline_source": "fresh_run",
+  "timestamp": "20260504T075124",
+  "arms": {
+    "refined": {
+      "samples": 5000,
+      "refine": true,
+      "radius": 2.0,
+      "n_beams": 32,
+      "wall_s": 205.2,
+      "best": {
+        "t90": {
+          "best_B": 470.1739,
+          "worst_B": 470.1739,
+          "best_beam": 27
+        },
+        "t95": {
+          "best_B": 1153.6987,
+          "worst_B": 1153.6987,
+          "best_beam": 27
+        },
+        "t99": {
+          "best_B": 1784.2489,
+          "worst_B": 1784.2489,
+          "best_beam": 27
+        },
+        "t99.9": {
+          "best_B": 1958.4332,
+          "worst_B": 1958.4332,
+          "best_beam": 27
+        }
+      },
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 35.5,
+          "peak_gas_mw": 10425.3,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 1,
+          "archetype": "balanced",
+          "wall_s": 13.6,
+          "peak_gas_mw": 9239.1,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 2,
+          "archetype": "balanced",
+          "wall_s": 34.0,
+          "peak_gas_mw": 10013.5,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 3,
+          "archetype": "balanced",
+          "wall_s": 16.7,
+          "peak_gas_mw": 9051.4,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 4,
+          "archetype": "balanced",
+          "wall_s": 10.3,
+          "peak_gas_mw": 8540.5,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 5,
+          "archetype": "balanced",
+          "wall_s": 19.4,
+          "peak_gas_mw": 9917.3,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 6,
+          "archetype": "balanced",
+          "wall_s": 25.6,
+          "peak_gas_mw": 10317.9,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 7,
+          "archetype": "balanced",
+          "wall_s": 10.1,
+          "peak_gas_mw": 8464.4,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 8,
+          "archetype": "balanced",
+          "wall_s": 19.8,
+          "peak_gas_mw": 9831.3,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 9,
+          "archetype": "balanced",
+          "wall_s": 10.8,
+          "peak_gas_mw": 9980.1,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 10,
+          "archetype": "balanced",
+          "wall_s": 10.7,
+          "peak_gas_mw": 8668.0,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 11,
+          "archetype": "balanced",
+          "wall_s": 17.0,
+          "peak_gas_mw": 9010.8,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 12,
+          "archetype": "balanced",
+          "wall_s": 19.8,
+          "peak_gas_mw": 10141.3,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 13,
+          "archetype": "balanced",
+          "wall_s": 42.0,
+          "peak_gas_mw": 10602.8,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 14,
+          "archetype": "balanced",
+          "wall_s": 42.4,
+          "peak_gas_mw": 9301.4,
+          "peak_h2_mw": 73.3,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 15,
+          "archetype": "balanced",
+          "wall_s": 13.4,
+          "peak_gas_mw": 9313.1,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 16,
+          "archetype": "balanced",
+          "wall_s": 13.3,
+          "peak_gas_mw": 8854.8,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 17,
+          "archetype": "balanced",
+          "wall_s": 14.2,
+          "peak_gas_mw": 8751.9,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 18,
+          "archetype": "balanced",
+          "wall_s": 10.5,
+          "peak_gas_mw": 9766.5,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 19,
+          "archetype": "balanced",
+          "wall_s": 11.8,
+          "peak_gas_mw": 9178.7,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 20,
+          "archetype": "balanced",
+          "wall_s": 13.5,
+          "peak_gas_mw": 9416.8,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 21,
+          "archetype": "balanced",
+          "wall_s": 10.8,
+          "peak_gas_mw": 8538.4,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 22,
+          "archetype": "balanced",
+          "wall_s": 18.5,
+          "peak_gas_mw": 8738.5,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 23,
+          "archetype": "balanced",
+          "wall_s": 14.1,
+          "peak_gas_mw": 9364.6,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 24,
+          "archetype": "balanced",
+          "wall_s": 13.2,
+          "peak_gas_mw": 9718.7,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 25,
+          "archetype": "balanced",
+          "wall_s": 9.6,
+          "peak_gas_mw": 8279.0,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 26,
+          "archetype": "balanced",
+          "wall_s": 16.1,
+          "peak_gas_mw": 9476.9,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 27,
+          "archetype": "balanced",
+          "wall_s": 48.6,
+          "peak_gas_mw": 9529.3,
+          "peak_h2_mw": 3396.5,
+          "t90_cost_B": 470.1739,
+          "t90_year": 2040,
+          "t90_mix": {
+            "clean_firm": 13.77,
+            "solar": 153.61,
+            "wind": 24.53,
+            "hydro": 7.16,
+            "offshore_wind": 8.88,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 193.04,
+            "solar_batt8": 129.94,
+            "wind_batt4": 7.13,
+            "wind_batt8": 8.46
+          },
+          "t90_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t95_cost_B": 1153.6987,
+          "t95_year": 2045,
+          "t95_mix": {
+            "clean_firm": 14.5,
+            "solar": 140.06,
+            "wind": 43.76,
+            "hydro": 6.52,
+            "offshore_wind": 10.59,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 175.99,
+            "solar_batt8": 142.05,
+            "wind_batt4": 12.81,
+            "wind_batt8": 17.68
+          },
+          "t95_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "t99_cost_B": 1784.2489,
+          "t99_year": 2049,
+          "t99_mix": {
+            "clean_firm": 13.94,
+            "solar": 130.29,
+            "wind": 87.83,
+            "hydro": 6.05,
+            "offshore_wind": 22.12,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 163.43,
+            "solar_batt8": 132.23,
+            "wind_batt4": 22.71,
+            "wind_batt8": 19.93
+          },
+          "t99_storage": {
+            "battery_dispatch_pct": 0.01,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.13
+          },
+          "t99.9_cost_B": 1958.4332,
+          "t99.9_year": 2050,
+          "t99.9_mix": {
+            "clean_firm": 14.03,
+            "solar": 127.91,
+            "wind": 91.26,
+            "hydro": 5.93,
+            "offshore_wind": 22.06,
+            "ccs_ccgt": 0.0,
+            "geothermal": 0.0,
+            "solar_batt4": 160.39,
+            "solar_batt8": 129.81,
+            "wind_batt4": 22.31,
+            "wind_batt8": 27.96
+          },
+          "t99.9_storage": {
+            "battery_dispatch_pct": 0.01,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.13
+          }
+        },
+        {
+          "beam_idx": 28,
+          "archetype": "balanced",
+          "wall_s": 13.4,
+          "peak_gas_mw": 9508.6,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 29,
+          "archetype": "balanced",
+          "wall_s": 13.5,
+          "peak_gas_mw": 8874.9,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 30,
+          "archetype": "balanced",
+          "wall_s": 16.8,
+          "peak_gas_mw": 9402.7,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 31,
+          "archetype": "balanced",
+          "wall_s": 17.2,
+          "peak_gas_mw": 9508.4,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 69,
+        "accepted": 69,
+        "rejected": 0,
+        "avg_cost_delta_pct": 26.5705,
+        "avg_nelder_mead_evals": 134.1,
+        "avg_refine_wall_s": 1.17
+      }
+    }
+  }
+}

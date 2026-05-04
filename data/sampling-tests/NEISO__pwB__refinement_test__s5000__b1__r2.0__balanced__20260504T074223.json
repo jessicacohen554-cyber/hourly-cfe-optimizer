@@ -1,0 +1,41 @@
+{
+  "iso": "NEISO",
+  "pathway": "B",
+  "archetype": "balanced",
+  "base_sample_size": 5000,
+  "beams_per_arch": 1,
+  "refinement_radius": 2.0,
+  "baseline_source": "fresh_run",
+  "timestamp": "20260504T074223",
+  "arms": {
+    "refined": {
+      "samples": 5000,
+      "refine": true,
+      "radius": 2.0,
+      "n_beams": 1,
+      "wall_s": 13.0,
+      "best": {},
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 11.8,
+          "peak_gas_mw": 14946.5,
+          "peak_h2_mw": 0.1,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 9,
+        "accepted": 9,
+        "rejected": 0,
+        "avg_cost_delta_pct": 38.6811,
+        "avg_nelder_mead_evals": 150.2,
+        "avg_refine_wall_s": 0.05
+      }
+    }
+  }
+}
