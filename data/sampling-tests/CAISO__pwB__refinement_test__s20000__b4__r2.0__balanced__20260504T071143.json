@@ -1,0 +1,74 @@
+{
+  "iso": "CAISO",
+  "pathway": "B",
+  "archetype": "balanced",
+  "base_sample_size": 20000,
+  "beams_per_arch": 4,
+  "refinement_radius": 2.0,
+  "baseline_source": "fresh_run",
+  "timestamp": "20260504T071143",
+  "arms": {
+    "refined": {
+      "samples": 20000,
+      "refine": true,
+      "radius": 2.0,
+      "n_beams": 4,
+      "wall_s": 76.8,
+      "best": {},
+      "beams": [
+        {
+          "beam_idx": 0,
+          "archetype": "balanced",
+          "wall_s": 19.6,
+          "peak_gas_mw": 9447.5,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 1,
+          "archetype": "balanced",
+          "wall_s": 15.9,
+          "peak_gas_mw": 9239.1,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 2,
+          "archetype": "balanced",
+          "wall_s": 23.3,
+          "peak_gas_mw": 10013.5,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        },
+        {
+          "beam_idx": 3,
+          "archetype": "balanced",
+          "wall_s": 18.0,
+          "peak_gas_mw": 9002.2,
+          "peak_h2_mw": 0.0,
+          "t90_cost_B": null,
+          "t95_cost_B": null,
+          "t99_cost_B": null,
+          "t99.9_cost_B": null
+        }
+      ],
+      "refinement_summary": {
+        "total_steps": 11,
+        "accepted": 11,
+        "rejected": 0,
+        "avg_cost_delta_pct": 28.3816,
+        "avg_nelder_mead_evals": 133.4,
+        "avg_refine_wall_s": 0.05
+      }
+    }
+  }
+}
