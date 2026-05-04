@@ -1,11 +1,8 @@
-name: "Step 2.3 Sampling Test: Sobol + Local Refinement A/B"
+name: "Step 2.3: Sobol + Refinement"
 
-# Runs sobol_refinement_test.py — three-arm comparison:
-#   baseline:    Sobol N samples, no refinement
-#   refined:     Sobol N samples + Nelder-Mead polish
-#   low_refined: Sobol N/4 samples + Nelder-Mead polish
-#
-# Key question: does N/4 + refinement match N raw?
+# Runs sobol_refinement_test.py in two modes:
+#   refine-only:  Sobol N samples + Nelder-Mead polish (default)
+#   comparison:   Full A/B test with baseline and low_refined arms
 #
 # Output: JSON results + detailed per-step refinement logs committed to
 #         auto/ branch via GitHub REST API.
@@ -87,14 +84,14 @@ on:
           - "2.0"
           - "3.0"
           - "5.0"
-      reuse_baseline:
-        description: "Reuse existing Sobol baseline (skip ~500s baseline arm)"
+      mode:
+        description: "refine-only = just run Sobol+refinement; comparison = full A/B test"
         required: true
-        default: "yes"
+        default: "refine-only"
         type: choice
         options:
-          - "yes"
-          - "no"
+          - "refine-only"
+          - "comparison"
       branch:
         description: "Branch to checkout"
         required: false
@@ -143,7 +140,7 @@ jobs:
       - name: Ensure output directory
         run: mkdir -p data/sampling-tests
 
-      - name: Run refinement A/B test
+      - name: Run Sobol + refinement
         env:
           ISO: ${{ inputs.iso }}
           PATHWAY: ${{ inputs.pathway }}
@@ -151,35 +148,38 @@ jobs:
           BEAMS: ${{ inputs.beams }}
           RADIUS: ${{ inputs.radius }}
           ARCHETYPE: ${{ inputs.archetype }}
-          REUSE_BASELINE: ${{ inputs.reuse_baseline }}
+          MODE: ${{ inputs.mode }}
         run: |
           echo "═══════════════════════════════════════════════════"
           echo "  ISO:       ${ISO}"
           echo "  Pathway:   ${PATHWAY}"
-          echo "  Samples:   ${SAMPLES} (baseline), $((SAMPLES / 4)) (low_refined)"
+          echo "  Samples:   ${SAMPLES}"
           echo "  Beams:     ${BEAMS}"
           echo "  Radius:    ${RADIUS}"
           echo "  Archetype: ${ARCHETYPE}"
-          echo "  Reuse:     ${REUSE_BASELINE}"
+          echo "  Mode:      ${MODE}"
           echo "═══════════════════════════════════════════════════"
 
+          MODE_FLAG=""
           BASELINE_FLAG=""
-          if [ "${REUSE_BASELINE}" = "yes" ]; then
-            # Find most recent matching sobol baseline JSON
+          if [ "${MODE}" = "refine-only" ]; then
+            MODE_FLAG="--refine-only"
+          else
+            # Comparison mode: try to reuse existing baseline
             PATTERN="data/sampling-tests/${ISO}__pw${PATHWAY}__sobol${SAMPLES}__beams${BEAMS}__${ARCHETYPE}__*.json"
             BASELINE=$(ls -t ${PATTERN} 2>/dev/null | head -1)
             if [ -n "${BASELINE}" ]; then
               echo "[baseline] Reusing: ${BASELINE}"
               BASELINE_FLAG="--baseline-file ${BASELINE}"
             else
-              echo "[baseline] No existing file matching ${PATTERN} — running fresh"
+              echo "[baseline] No existing file — running fresh"
             fi
           fi
 
           python3 -u scripts/sobol_refinement_test.py \
             "${ISO}" "${PATHWAY}" "${SAMPLES}" "${BEAMS}" \
             --radius "${RADIUS}" --archetype "${ARCHETYPE}" \
-            ${BASELINE_FLAG} \
+            ${MODE_FLAG} ${BASELINE_FLAG} \
             2>&1 | tee /tmp/run.log
 
           if ! grep -q "RESULT_JSON:" /tmp/run.log; then
