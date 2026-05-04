@@ -126,15 +126,6 @@ jobs:
       - name: Ensure output directory
         run: mkdir -p data/sampling-tests
 
-      - name: Build archetype flag
-        id: arch
-        run: |
-          if [ "${{ inputs.archetype }}" = "all" ]; then
-            echo "flag=" >> "$GITHUB_OUTPUT"
-          else
-            echo "flag=--archetype ${{ inputs.archetype }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Run refinement A/B test
         env:
           ISO: ${{ inputs.iso }}
@@ -142,7 +133,7 @@ jobs:
           SAMPLES: ${{ inputs.sample_size }}
           BEAMS: ${{ inputs.beams }}
           RADIUS: ${{ inputs.radius }}
-          ARCH_FLAG: ${{ steps.arch.outputs.flag }}
+          ARCHETYPE: ${{ inputs.archetype }}
         run: |
           echo "═══════════════════════════════════════════════════"
           echo "  ISO:       ${ISO}"
@@ -150,12 +141,12 @@ jobs:
           echo "  Samples:   ${SAMPLES} (baseline), $((SAMPLES / 4)) (low_refined)"
           echo "  Beams:     ${BEAMS}"
           echo "  Radius:    ${RADIUS}"
-          echo "  Archetype: ${{ inputs.archetype }}"
+          echo "  Archetype: ${ARCHETYPE}"
           echo "═══════════════════════════════════════════════════"
 
           python3 -u scripts/sobol_refinement_test.py \
             "${ISO}" "${PATHWAY}" "${SAMPLES}" "${BEAMS}" \
-            --radius "${RADIUS}" ${ARCH_FLAG} \
+            --radius "${RADIUS}" --archetype "${ARCHETYPE}" \
             2>&1 | tee /tmp/run.log
 
           if ! grep -q "RESULT_JSON:" /tmp/run.log; then
