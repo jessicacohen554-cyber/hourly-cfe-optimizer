@@ -1,0 +1,177 @@
+{
+  "iso": "PJM",
+  "pathway": "A",
+  "archetype": "balanced",
+  "strategy": "sobol",
+  "sampler": "sobol",
+  "sample_size": 160000,
+  "beams_per_arch": 8,
+  "n_beams_total": 8,
+  "wall_s": 1868.6,
+  "archetypes": [
+    "balanced",
+    "balanced",
+    "balanced",
+    "balanced",
+    "balanced",
+    "balanced",
+    "balanced",
+    "balanced"
+  ],
+  "archetype_beam_counts": {
+    "balanced": 8
+  },
+  "archetype_best": {
+    "balanced": {
+      "count": 8,
+      "t90_best_B": 658.3548,
+      "t95_best_B": 1339.309,
+      "t99_best_B": 2254.3397,
+      "t99.9_best_B": 2254.3397
+    }
+  },
+  "best": {
+    "t90": {
+      "best_B": 658.3548,
+      "worst_B": 850.2244,
+      "spread_pct": 29.1
+    },
+    "t95": {
+      "best_B": 1339.309,
+      "worst_B": 1628.5168,
+      "spread_pct": 21.6
+    },
+    "t99": {
+      "best_B": 2254.3397,
+      "worst_B": 2695.3147,
+      "spread_pct": 19.6
+    },
+    "t99.9": {
+      "best_B": 2254.3397,
+      "worst_B": 2695.3147,
+      "spread_pct": 19.6
+    }
+  },
+  "beams": [
+    {
+      "beam_idx": 0,
+      "archetype": "balanced",
+      "wall_s": 679.5,
+      "peak_gas_mw": 184534.8,
+      "peak_h2_mw": 68785.3,
+      "t90_cost_B": 688.5866,
+      "t90_year": 2040,
+      "t95_cost_B": 1391.7053,
+      "t95_year": 2045,
+      "t99_cost_B": 2429.8074,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2429.8074,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 1,
+      "archetype": "balanced",
+      "wall_s": 678.8,
+      "peak_gas_mw": 169005.6,
+      "peak_h2_mw": 97935.9,
+      "t90_cost_B": 667.7767,
+      "t90_year": 2040,
+      "t95_cost_B": 1345.4215,
+      "t95_year": 2045,
+      "t99_cost_B": 2308.7225,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2308.7225,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 2,
+      "archetype": "balanced",
+      "wall_s": 701.0,
+      "peak_gas_mw": 172533.0,
+      "peak_h2_mw": 96850.3,
+      "t90_cost_B": 658.3548,
+      "t90_year": 2040,
+      "t95_cost_B": 1355.2428,
+      "t95_year": 2045,
+      "t99_cost_B": 2302.9936,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2302.9936,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 3,
+      "archetype": "balanced",
+      "wall_s": 700.2,
+      "peak_gas_mw": 178988.1,
+      "peak_h2_mw": 109132.5,
+      "t90_cost_B": 751.657,
+      "t90_year": 2040,
+      "t95_cost_B": 1457.681,
+      "t95_year": 2045,
+      "t99_cost_B": 2386.1317,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2386.1317,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 4,
+      "archetype": "balanced",
+      "wall_s": 723.1,
+      "peak_gas_mw": 171212.9,
+      "peak_h2_mw": 116358.9,
+      "t90_cost_B": 850.2244,
+      "t90_year": 2040,
+      "t95_cost_B": 1628.5168,
+      "t95_year": 2045,
+      "t99_cost_B": 2695.3147,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2695.3147,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 5,
+      "archetype": "balanced",
+      "wall_s": 692.9,
+      "peak_gas_mw": 173883.1,
+      "peak_h2_mw": 97535.5,
+      "t90_cost_B": 659.2462,
+      "t90_year": 2040,
+      "t95_cost_B": 1353.2909,
+      "t95_year": 2045,
+      "t99_cost_B": 2325.149,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2325.149,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 6,
+      "archetype": "balanced",
+      "wall_s": 465.1,
+      "peak_gas_mw": 176306.2,
+      "peak_h2_mw": 103729.2,
+      "t90_cost_B": 720.0689,
+      "t90_year": 2040,
+      "t95_cost_B": 1435.8424,
+      "t95_year": 2045,
+      "t99_cost_B": 2448.9975,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2448.9975,
+      "t99.9_year": 2050
+    },
+    {
+      "beam_idx": 7,
+      "archetype": "balanced",
+      "wall_s": 472.5,
+      "peak_gas_mw": 179359.8,
+      "peak_h2_mw": 107525.5,
+      "t90_cost_B": 668.8949,
+      "t90_year": 2040,
+      "t95_cost_B": 1339.309,
+      "t95_year": 2045,
+      "t99_cost_B": 2254.3397,
+      "t99_year": 2050,
+      "t99.9_cost_B": 2254.3397,
+      "t99.9_year": 2050
+    }
+  ]
+}
