@@ -91,12 +91,18 @@ def _make_refined_find_winner(radius_pct: float, max_iter: int = 80):
         for k, ri in enumerate(free_idx):
             lo = max(floor_pcts[ri], x0[k] - radius_pct)
             hi = min(200.0, x0[k] + radius_pct)
+            hi = max(lo, hi)  # guarantee hi >= lo
             bounds.append((lo, hi))
         for j in range(solver.N_STORAGE):
             lo = max(floor_storage[j], x0[n_free + j] - radius_pct)
             hi = min(solver._STORAGE_TYPE_CAPS[j],
                      x0[n_free + j] + radius_pct)
+            hi = max(lo, hi)  # guarantee hi >= lo
             bounds.append((lo, hi))
+
+        # Clamp x0 into bounds (float32 scorer can place winner outside)
+        for i, (lo, hi) in enumerate(bounds):
+            x0[i] = np.clip(x0[i], lo, hi)
 
         eval_count = [0]
 
@@ -380,7 +386,7 @@ def _load_baseline_from_file(path: str) -> dict:
 
 
 def run(iso, pathway, sample_size, n_beams, archetype, radius,
-        baseline_file=None):
+        baseline_file=None, refine_only=False):
     solver.warmup_jit()
     P = solver.build_profile_matrix(iso)
     dn = solver._load_demand_norm(iso)
@@ -390,27 +396,34 @@ def run(iso, pathway, sample_size, n_beams, archetype, radius,
 
     all_results = {}
 
-    # ── Baseline: load from file or run fresh ─────────────────────────
-    if baseline_file:
-        print(f"\n{'='*60}")
-        print(f"  ARM: baseline  (loaded from {baseline_file})")
-        print(f"{'='*60}")
-        all_results["baseline"] = _load_baseline_from_file(baseline_file)
-        c99 = all_results["baseline"]["best"].get("t99.9", {}).get("best_B", "N/A")
-        print(f"  {all_results['baseline']['n_beams']} beams, "
-              f"99.9%=${c99}")
-    else:
-        arms_to_run = {"baseline": {"samples": sample_size, "refine": False}}
-        _run_arms(arms_to_run, all_results, iso, pathway, n_beams,
+    if refine_only:
+        # ── Refinement only: single arm ───────────────────────────────
+        refine_arms = {
+            "refined": {"samples": sample_size, "refine": True},
+        }
+        _run_arms(refine_arms, all_results, iso, pathway, n_beams,
                   archetype, radius, P32, dm32, dn32)
+    else:
+        # ── Full A/B comparison ───────────────────────────────────────
+        if baseline_file:
+            print(f"\n{'='*60}")
+            print(f"  ARM: baseline  (loaded from {baseline_file})")
+            print(f"{'='*60}")
+            all_results["baseline"] = _load_baseline_from_file(baseline_file)
+            c99 = all_results["baseline"]["best"].get("t99.9", {}).get("best_B", "N/A")
+            print(f"  {all_results['baseline']['n_beams']} beams, "
+                  f"99.9%=${c99}")
+        else:
+            arms_to_run = {"baseline": {"samples": sample_size, "refine": False}}
+            _run_arms(arms_to_run, all_results, iso, pathway, n_beams,
+                      archetype, radius, P32, dm32, dn32)
 
-    # ── Refinement arms: always run fresh ─────────────────────────────
-    refine_arms = {
-        "refined": {"samples": sample_size, "refine": True},
-        "low_refined": {"samples": sample_size // 4, "refine": True},
-    }
-    _run_arms(refine_arms, all_results, iso, pathway, n_beams,
-              archetype, radius, P32, dm32, dn32)
+        refine_arms = {
+            "refined": {"samples": sample_size, "refine": True},
+            "low_refined": {"samples": sample_size // 4, "refine": True},
+        }
+        _run_arms(refine_arms, all_results, iso, pathway, n_beams,
+                  archetype, radius, P32, dm32, dn32)
 
     # ── Summary comparison ────────────────────────────────────────────
     _print_summary(all_results)
@@ -578,6 +591,8 @@ if __name__ == "__main__":
     ap.add_argument("--baseline-file", default=None,
                     help="Path to existing sobol multibeam test JSON to use as "
                          "baseline instead of rerunning (saves ~500s)")
+    ap.add_argument("--refine-only", action="store_true",
+                    help="Run only the refined arm (no baseline or low_refined)")
     args = ap.parse_args()
     run(args.iso.upper(), args.pathway.upper(), args.sample_size, args.beams,
-        args.archetype, args.radius, args.baseline_file)
+        args.archetype, args.radius, args.baseline_file, args.refine_only)
