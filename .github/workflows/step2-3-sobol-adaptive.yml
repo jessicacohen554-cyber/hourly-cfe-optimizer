@@ -351,10 +351,9 @@ jobs:
             file_count=$((file_count + 1))
             echo "[api] Uploading blob: ${pq} ($(du -h "$pq" | cut -f1))"
 
-            BLOB_SHA=$(gh api "repos/${REPO}/git/blobs" \
-              -f encoding=base64 \
-              -f content="$(base64 -w0 "$pq")" \
-              --jq '.sha')
+            BLOB_SHA=$(base64 -w0 "$pq" \
+              | jq -Rs '{"encoding":"base64","content":.}' \
+              | gh api "repos/${REPO}/git/blobs" --input - --jq '.sha')
 
             echo "[api]   → blob SHA: ${BLOB_SHA}"
 
