@@ -1,0 +1,1094 @@
+{
+  "refined": [
+    {
+      "beam_idx": 0,
+      "refinement_log": [
+        {
+          "year": 2030,
+          "target": 60.0,
+          "cost_before": 1.983438,
+          "cost_after": 1.890807,
+          "cost_delta_pct": 4.67,
+          "cfe_before": 60.48,
+          "cfe_after": 60.15,
+          "escape_radius": {
+            "solar": 0.023,
+            "wind": 0.213,
+            "solar_batt4": 0.02,
+            "solar_batt8": 0.151,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.006,
+            "clean_firm": 0.022
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0001,
+            "battery8_dispatch_pct": 0.0001,
+            "ldes_dispatch_pct": 0.0002
+          },
+          "mix_changed": false,
+          "nelder_mead_evals": 127,
+          "refine_wall_s": 1.02,
+          "accepted": true
+        },
+        {
+          "year": 2031,
+          "target": 63.0,
+          "cost_before": 22.338884,
+          "cost_after": 11.809628,
+          "cost_delta_pct": 47.134,
+          "cfe_before": 65.04,
+          "cfe_after": 65.71,
+          "escape_radius": {
+            "solar": 0.03,
+            "wind": 0.545,
+            "solar_batt4": 0.465,
+            "solar_batt8": 0.762,
+            "wind_batt4": 0.018,
+            "wind_batt8": 0.57,
+            "clean_firm": 1.665
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0467,
+            "battery8_dispatch_pct": 0.0456,
+            "ldes_dispatch_pct": 0.0347
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 142,
+          "refine_wall_s": 0.52,
+          "accepted": true
+        },
+        {
+          "year": 2032,
+          "target": 66.0,
+          "cost_before": 18.927792,
+          "cost_after": 9.122246,
+          "cost_delta_pct": 51.805,
+          "cfe_before": 68.87,
+          "cfe_after": 69.0,
+          "escape_radius": {
+            "solar": 0.141,
+            "wind": 0.591,
+            "solar_batt4": 0.408,
+            "solar_batt8": 0.672,
+            "wind_batt4": 0.513,
+            "wind_batt8": 0.638,
+            "clean_firm": 1.311
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0041,
+            "battery8_dispatch_pct": 0.0547,
+            "ldes_dispatch_pct": 0.1001
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 145,
+          "refine_wall_s": 0.74,
+          "accepted": true
+        },
+        {
+          "year": 2033,
+          "target": 69.0,
+          "cost_before": 2.62001,
+          "cost_after": 1.979748,
+          "cost_delta_pct": 24.437,
+          "cfe_before": 70.12,
+          "cfe_after": 69.19,
+          "escape_radius": {
+            "solar": 0.165,
+            "wind": 0.457,
+            "solar_batt4": 0.539,
+            "solar_batt8": 0.425,
+            "wind_batt4": 0.251,
+            "wind_batt8": 0.032,
+            "clean_firm": 0.053
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 127,
+          "refine_wall_s": 0.2,
+          "accepted": true
+        },
+        {
+          "year": 2034,
+          "target": 72.0,
+          "cost_before": 17.656405,
+          "cost_after": 8.82648,
+          "cost_delta_pct": 50.01,
+          "cfe_before": 73.97,
+          "cfe_after": 74.77,
+          "escape_radius": {
+            "solar": 0.521,
+            "wind": 0.315,
+            "solar_batt4": 1.032,
+            "solar_batt8": 0.293,
+            "wind_batt4": 0.99,
+            "wind_batt8": 0.437,
+            "clean_firm": 1.516
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0174,
+            "battery8_dispatch_pct": 0.0435,
+            "ldes_dispatch_pct": 0.0841
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 144,
+          "refine_wall_s": 0.67,
+          "accepted": true
+        },
+        {
+          "year": 2035,
+          "target": 75.0,
+          "cost_before": 8.860659,
+          "cost_after": 3.379295,
+          "cost_delta_pct": 61.862,
+          "cfe_before": 77.75,
+          "cfe_after": 75.81,
+          "escape_radius": {
+            "solar": 0.615,
+            "wind": 2.0,
+            "solar_batt4": 1.374,
+            "solar_batt8": 1.071,
+            "wind_batt4": 0.662,
+            "wind_batt8": 2.0,
+            "clean_firm": 0.108
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0182,
+            "battery8_dispatch_pct": 0.0064,
+            "ldes_dispatch_pct": 0.0414
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 144,
+          "refine_wall_s": 1.06,
+          "accepted": true
+        },
+        {
+          "year": 2036,
+          "target": 78.0,
+          "cost_before": 5.03531,
+          "cost_after": 3.541918,
+          "cost_delta_pct": 29.658,
+          "cfe_before": 80.17,
+          "cfe_after": 78.03,
+          "escape_radius": {
+            "solar": 0.593,
+            "wind": 1.255,
+            "solar_batt4": 0.088,
+            "solar_batt8": 1.699,
+            "wind_batt4": 1.144,
+            "wind_batt8": 0.347,
+            "clean_firm": 0.132
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0007,
+            "battery8_dispatch_pct": 0.0005,
+            "ldes_dispatch_pct": 0.0027
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 123,
+          "refine_wall_s": 0.96,
+          "accepted": true
+        },
+        {
+          "year": 2037,
+          "target": 81.0,
+          "cost_before": 10.784749,
+          "cost_after": 7.487335,
+          "cost_delta_pct": 30.575,
+          "cfe_before": 83.46,
+          "cfe_after": 83.99,
+          "escape_radius": {
+            "solar": 1.998,
+            "wind": 0.76,
+            "solar_batt4": 0.586,
+            "solar_batt8": 0.46,
+            "wind_batt4": 0.263,
+            "wind_batt8": 0.941,
+            "clean_firm": 1.353
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0053,
+            "battery8_dispatch_pct": 0.0209,
+            "ldes_dispatch_pct": 0.039
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 144,
+          "refine_wall_s": 0.84,
+          "accepted": true
+        },
+        {
+          "year": 2038,
+          "target": 84.0,
+          "cost_before": 4.787183,
+          "cost_after": 2.786357,
+          "cost_delta_pct": 41.795,
+          "cfe_before": 86.19,
+          "cfe_after": 84.0,
+          "escape_radius": {
+            "solar": 0.485,
+            "wind": 0.042,
+            "solar_batt4": 1.375,
+            "solar_batt8": 0.77,
+            "wind_batt4": 0.42,
+            "wind_batt8": 1.274,
+            "clean_firm": 0.537
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0001,
+            "battery8_dispatch_pct": 0.0015,
+            "ldes_dispatch_pct": 0.0
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 131,
+          "refine_wall_s": 0.94,
+          "accepted": true
+        },
+        {
+          "year": 2039,
+          "target": 87.0,
+          "cost_before": 11.604715,
+          "cost_after": 7.137915,
+          "cost_delta_pct": 38.491,
+          "cfe_before": 89.63,
+          "cfe_after": 88.79,
+          "escape_radius": {
+            "solar": 0.247,
+            "wind": 0.31,
+            "solar_batt4": 0.56,
+            "solar_batt8": 0.619,
+            "wind_batt4": 0.251,
+            "wind_batt8": 0.278,
+            "clean_firm": 0.988
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0012,
+            "battery8_dispatch_pct": 0.0341,
+            "ldes_dispatch_pct": 0.009
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 134,
+          "refine_wall_s": 0.91,
+          "accepted": true
+        },
+        {
+          "year": 2040,
+          "target": 90.0,
+          "cost_before": 29.675673,
+          "cost_after": 14.175802,
+          "cost_delta_pct": 52.231,
+          "cfe_before": 90.69,
+          "cfe_after": 90.72,
+          "escape_radius": {
+            "solar": 1.914,
+            "wind": 0.105,
+            "solar_batt4": 0.193,
+            "solar_batt8": 1.795,
+            "wind_batt4": 1.242,
+            "wind_batt8": 1.023,
+            "clean_firm": 1.164
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0033,
+            "battery8_dispatch_pct": 0.0044,
+            "ldes_dispatch_pct": 0.4335
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 133,
+          "refine_wall_s": 0.99,
+          "accepted": true
+        },
+        {
+          "year": 2041,
+          "target": 91.0,
+          "cost_before": 8.576219,
+          "cost_after": 3.397142,
+          "cost_delta_pct": 60.389,
+          "cfe_before": 91.89,
+          "cfe_after": 91.0,
+          "escape_radius": {
+            "solar": 1.074,
+            "wind": 1.447,
+            "solar_batt4": 0.39,
+            "solar_batt8": 0.903,
+            "wind_batt4": 0.804,
+            "wind_batt8": 0.375,
+            "clean_firm": 1.003
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0105,
+            "battery8_dispatch_pct": 0.0059,
+            "ldes_dispatch_pct": 0.0528
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 158,
+          "refine_wall_s": 1.05,
+          "accepted": true
+        },
+        {
+          "year": 2042,
+          "target": 92.0,
+          "cost_before": 8.116593,
+          "cost_after": 6.818071,
+          "cost_delta_pct": 15.998,
+          "cfe_before": 92.98,
+          "cfe_after": 92.0,
+          "escape_radius": {
+            "solar": 1.824,
+            "wind": 1.985,
+            "solar_batt4": 0.223,
+            "solar_batt8": 0.15,
+            "wind_batt4": 0.106,
+            "wind_batt8": 0.314,
+            "clean_firm": 0.739
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0029,
+            "battery8_dispatch_pct": 0.0009,
+            "ldes_dispatch_pct": 0.0026
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 307,
+          "refine_wall_s": 2.05,
+          "accepted": true
+        },
+        {
+          "year": 2043,
+          "target": 93.0,
+          "cost_before": 13.00304,
+          "cost_after": 5.381336,
+          "cost_delta_pct": 58.615,
+          "cfe_before": 93.24,
+          "cfe_after": 93.0,
+          "escape_radius": {
+            "solar": 1.957,
+            "wind": 1.108,
+            "solar_batt4": 0.436,
+            "solar_batt8": 1.703,
+            "wind_batt4": 1.466,
+            "wind_batt8": 1.432,
+            "clean_firm": 0.254
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0041,
+            "ldes_dispatch_pct": 0.1398
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 135,
+          "refine_wall_s": 0.91,
+          "accepted": true
+        },
+        {
+          "year": 2044,
+          "target": 94.0,
+          "cost_before": 14.774819,
+          "cost_after": 5.404294,
+          "cost_delta_pct": 63.422,
+          "cfe_before": 94.0,
+          "cfe_after": 94.0,
+          "escape_radius": {
+            "solar": 0.073,
+            "wind": 1.942,
+            "solar_batt4": 1.643,
+            "solar_batt8": 2.0,
+            "wind_batt4": 0.797,
+            "wind_batt8": 0.216,
+            "clean_firm": 1.239
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0006,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.1446
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 136,
+          "refine_wall_s": 0.89,
+          "accepted": true
+        },
+        {
+          "year": 2045,
+          "target": 95.0,
+          "cost_before": 15.447776,
+          "cost_after": 11.526162,
+          "cost_delta_pct": 25.386,
+          "cfe_before": 95.54,
+          "cfe_after": 95.0,
+          "escape_radius": {
+            "solar": 0.408,
+            "wind": 1.168,
+            "solar_batt4": 0.903,
+            "solar_batt8": 0.396,
+            "wind_batt4": 1.594,
+            "wind_batt8": 0.736,
+            "clean_firm": 0.946
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0001,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0054
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 127,
+          "refine_wall_s": 0.74,
+          "accepted": true
+        },
+        {
+          "year": 2046,
+          "target": 95.98,
+          "cost_before": 33.615781,
+          "cost_after": 10.140827,
+          "cost_delta_pct": 69.833,
+          "cfe_before": 96.68,
+          "cfe_after": 95.99,
+          "escape_radius": {
+            "solar": 1.966,
+            "wind": 1.479,
+            "solar_batt4": 0.063,
+            "solar_batt8": 0.598,
+            "wind_batt4": 1.38,
+            "wind_batt8": 1.746,
+            "clean_firm": 0.488
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.4834
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 129,
+          "refine_wall_s": 0.87,
+          "accepted": true
+        },
+        {
+          "year": 2047,
+          "target": 96.96000000000001,
+          "cost_before": 13.699428,
+          "cost_after": 8.20075,
+          "cost_delta_pct": 40.138,
+          "cfe_before": 97.81,
+          "cfe_after": 96.96,
+          "escape_radius": {
+            "solar": 1.308,
+            "wind": 1.269,
+            "solar_batt4": 1.154,
+            "solar_batt8": 0.009,
+            "wind_batt4": 1.206,
+            "wind_batt8": 0.883,
+            "clean_firm": 1.927
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0134
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 128,
+          "refine_wall_s": 1.07,
+          "accepted": true
+        },
+        {
+          "year": 2048,
+          "target": 97.94,
+          "cost_before": 16.608845,
+          "cost_after": 11.721459,
+          "cost_delta_pct": 29.426,
+          "cfe_before": 98.76,
+          "cfe_after": 98.22,
+          "escape_radius": {
+            "solar": 0.671,
+            "wind": 1.643,
+            "solar_batt4": 1.539,
+            "solar_batt8": 1.925,
+            "wind_batt4": 0.623,
+            "wind_batt8": 1.33,
+            "clean_firm": 1.549
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0007
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 127,
+          "refine_wall_s": 0.52,
+          "accepted": true
+        },
+        {
+          "year": 2049,
+          "target": 98.92,
+          "cost_before": 12.681542,
+          "cost_after": 10.158648,
+          "cost_delta_pct": 19.894,
+          "cfe_before": 99.21,
+          "cfe_after": 99.08,
+          "escape_radius": {
+            "solar": 0.741,
+            "wind": 1.859,
+            "solar_batt4": 0.291,
+            "solar_batt8": 0.195,
+            "wind_batt4": 0.175,
+            "wind_batt8": 0.397,
+            "clean_firm": 1.509
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0163
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 184,
+          "refine_wall_s": 1.06,
+          "accepted": true
+        },
+        {
+          "year": 2050,
+          "target": 99.9,
+          "cost_before": 16.669083,
+          "cost_after": 12.083539,
+          "cost_delta_pct": 27.509,
+          "cfe_before": 99.9,
+          "cfe_after": 99.9,
+          "escape_radius": {
+            "solar": 0.324,
+            "wind": 1.069,
+            "solar_batt4": 0.116,
+            "solar_batt8": 0.803,
+            "wind_batt4": 1.742,
+            "wind_batt8": 1.915,
+            "clean_firm": 1.253
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0096
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 172,
+          "refine_wall_s": 0.22,
+          "accepted": true
+        }
+      ]
+    },
+    {
+      "beam_idx": 1,
+      "refinement_log": [
+        {
+          "year": 2032,
+          "target": 66.0,
+          "cost_before": 68.998323,
+          "cost_after": 38.77042,
+          "cost_delta_pct": 43.81,
+          "cfe_before": 68.74,
+          "cfe_after": 67.58,
+          "escape_radius": {
+            "solar": 1.591,
+            "wind": 0.487,
+            "solar_batt4": 1.646,
+            "solar_batt8": 0.05,
+            "wind_batt4": 1.102,
+            "wind_batt8": 0.018,
+            "clean_firm": 0.331
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0187,
+            "battery8_dispatch_pct": 0.0591,
+            "ldes_dispatch_pct": 0.462
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 161,
+          "refine_wall_s": 1.23,
+          "accepted": true
+        },
+        {
+          "year": 2033,
+          "target": 69.0,
+          "cost_before": 14.309384,
+          "cost_after": 9.007364,
+          "cost_delta_pct": 37.053,
+          "cfe_before": 70.44,
+          "cfe_after": 71.9,
+          "escape_radius": {
+            "solar": 1.601,
+            "wind": 0.024,
+            "solar_batt4": 0.454,
+            "solar_batt8": 0.796,
+            "wind_batt4": 0.578,
+            "wind_batt8": 0.183,
+            "clean_firm": 1.105
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0013,
+            "battery8_dispatch_pct": 0.0294,
+            "ldes_dispatch_pct": 0.0641
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 128,
+          "refine_wall_s": 1.03,
+          "accepted": true
+        },
+        {
+          "year": 2034,
+          "target": 72.0,
+          "cost_before": 2.91194,
+          "cost_after": 2.288911,
+          "cost_delta_pct": 21.396,
+          "cfe_before": 73.14,
+          "cfe_after": 72.33,
+          "escape_radius": {
+            "solar": 0.245,
+            "wind": 0.315,
+            "solar_batt4": 0.085,
+            "solar_batt8": 1.418,
+            "wind_batt4": 0.531,
+            "wind_batt8": 0.205,
+            "clean_firm": 0.053
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0001,
+            "battery8_dispatch_pct": 0.0002,
+            "ldes_dispatch_pct": 0.0
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 129,
+          "refine_wall_s": 0.65,
+          "accepted": true
+        },
+        {
+          "year": 2035,
+          "target": 75.0,
+          "cost_before": 8.316215,
+          "cost_after": 3.939229,
+          "cost_delta_pct": 52.632,
+          "cfe_before": 77.33,
+          "cfe_after": 75.21,
+          "escape_radius": {
+            "solar": 0.985,
+            "wind": 0.639,
+            "solar_batt4": 1.063,
+            "solar_batt8": 0.513,
+            "wind_batt4": 1.099,
+            "wind_batt8": 0.085,
+            "clean_firm": 1.417
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.004,
+            "battery8_dispatch_pct": 0.0156,
+            "ldes_dispatch_pct": 0.0389
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 123,
+          "refine_wall_s": 0.22,
+          "accepted": true
+        },
+        {
+          "year": 2036,
+          "target": 78.0,
+          "cost_before": 8.692112,
+          "cost_after": 4.840463,
+          "cost_delta_pct": 44.312,
+          "cfe_before": 79.51,
+          "cfe_after": 79.05,
+          "escape_radius": {
+            "solar": 0.26,
+            "wind": 1.07,
+            "solar_batt4": 0.087,
+            "solar_batt8": 0.118,
+            "wind_batt4": 0.148,
+            "wind_batt8": 0.209,
+            "clean_firm": 1.137
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0031,
+            "battery8_dispatch_pct": 0.0063,
+            "ldes_dispatch_pct": 0.0779
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 127,
+          "refine_wall_s": 0.68,
+          "accepted": true
+        },
+        {
+          "year": 2037,
+          "target": 81.0,
+          "cost_before": 9.153031,
+          "cost_after": 7.025341,
+          "cost_delta_pct": 23.246,
+          "cfe_before": 83.91,
+          "cfe_after": 82.88,
+          "escape_radius": {
+            "solar": 0.087,
+            "wind": 0.928,
+            "solar_batt4": 0.176,
+            "solar_batt8": 0.339,
+            "wind_batt4": 0.23,
+            "wind_batt8": 0.208,
+            "clean_firm": 1.063
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0121,
+            "ldes_dispatch_pct": 0.0113
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 234,
+          "refine_wall_s": 1.19,
+          "accepted": true
+        },
+        {
+          "year": 2038,
+          "target": 84.0,
+          "cost_before": 6.104668,
+          "cost_after": 3.831807,
+          "cost_delta_pct": 37.232,
+          "cfe_before": 86.61,
+          "cfe_after": 84.0,
+          "escape_radius": {
+            "solar": 0.146,
+            "wind": 0.618,
+            "solar_batt4": 1.983,
+            "solar_batt8": 1.663,
+            "wind_batt4": 0.247,
+            "wind_batt8": 0.216,
+            "clean_firm": 0.055
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0005,
+            "ldes_dispatch_pct": 0.0028
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 125,
+          "refine_wall_s": 0.39,
+          "accepted": true
+        },
+        {
+          "year": 2039,
+          "target": 87.0,
+          "cost_before": 13.942172,
+          "cost_after": 10.199524,
+          "cost_delta_pct": 26.844,
+          "cfe_before": 89.02,
+          "cfe_after": 87.05,
+          "escape_radius": {
+            "solar": 0.967,
+            "wind": 0.395,
+            "solar_batt4": 1.554,
+            "solar_batt8": 0.353,
+            "wind_batt4": 2.0,
+            "wind_batt8": 0.325,
+            "clean_firm": 0.397
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0204,
+            "ldes_dispatch_pct": 0.0133
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 126,
+          "refine_wall_s": 0.9,
+          "accepted": true
+        },
+        {
+          "year": 2040,
+          "target": 90.0,
+          "cost_before": 12.11651,
+          "cost_after": 5.335197,
+          "cost_delta_pct": 55.968,
+          "cfe_before": 90.0,
+          "cfe_after": 90.0,
+          "escape_radius": {
+            "solar": 1.049,
+            "wind": 1.196,
+            "solar_batt4": 0.075,
+            "solar_batt8": 0.177,
+            "wind_batt4": 0.664,
+            "wind_batt8": 1.106,
+            "clean_firm": 0.448
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.018,
+            "ldes_dispatch_pct": 0.1246
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 125,
+          "refine_wall_s": 0.8,
+          "accepted": true
+        },
+        {
+          "year": 2041,
+          "target": 91.0,
+          "cost_before": 10.337202,
+          "cost_after": 6.826489,
+          "cost_delta_pct": 33.962,
+          "cfe_before": 91.8,
+          "cfe_after": 91.0,
+          "escape_radius": {
+            "solar": 0.083,
+            "wind": 1.41,
+            "solar_batt4": 1.206,
+            "solar_batt8": 0.643,
+            "wind_batt4": 0.067,
+            "wind_batt8": 1.875,
+            "clean_firm": 0.435
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0005,
+            "ldes_dispatch_pct": 0.0321
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 125,
+          "refine_wall_s": 0.77,
+          "accepted": true
+        },
+        {
+          "year": 2042,
+          "target": 92.0,
+          "cost_before": 18.658354,
+          "cost_after": 6.699036,
+          "cost_delta_pct": 64.096,
+          "cfe_before": 92.15,
+          "cfe_after": 92.0,
+          "escape_radius": {
+            "solar": 0.175,
+            "wind": 1.797,
+            "solar_batt4": 1.856,
+            "solar_batt8": 0.046,
+            "wind_batt4": 0.141,
+            "wind_batt8": 0.729,
+            "clean_firm": 0.199
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0031,
+            "ldes_dispatch_pct": 0.2504
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 133,
+          "refine_wall_s": 0.92,
+          "accepted": true
+        },
+        {
+          "year": 2043,
+          "target": 93.0,
+          "cost_before": 14.49968,
+          "cost_after": 8.686085,
+          "cost_delta_pct": 40.095,
+          "cfe_before": 93.9,
+          "cfe_after": 93.0,
+          "escape_radius": {
+            "solar": 1.958,
+            "wind": 1.026,
+            "solar_batt4": 0.615,
+            "solar_batt8": 0.396,
+            "wind_batt4": 1.17,
+            "wind_batt8": 0.078,
+            "clean_firm": 1.718
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.001,
+            "ldes_dispatch_pct": 0.1082
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 162,
+          "refine_wall_s": 1.05,
+          "accepted": true
+        },
+        {
+          "year": 2044,
+          "target": 94.0,
+          "cost_before": 10.784045,
+          "cost_after": 7.688282,
+          "cost_delta_pct": 28.707,
+          "cfe_before": 94.64,
+          "cfe_after": 94.0,
+          "escape_radius": {
+            "solar": 0.76,
+            "wind": 1.429,
+            "solar_batt4": 0.021,
+            "solar_batt8": 1.028,
+            "wind_batt4": 0.637,
+            "wind_batt8": 1.269,
+            "clean_firm": 0.393
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0037,
+            "ldes_dispatch_pct": 0.0216
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 126,
+          "refine_wall_s": 0.87,
+          "accepted": true
+        },
+        {
+          "year": 2045,
+          "target": 95.0,
+          "cost_before": 11.367967,
+          "cost_after": 9.776946,
+          "cost_delta_pct": 13.996,
+          "cfe_before": 95.97,
+          "cfe_after": 95.84,
+          "escape_radius": {
+            "solar": 0.23,
+            "wind": 0.001,
+            "solar_batt4": 0.021,
+            "solar_batt8": 0.095,
+            "wind_batt4": 0.073,
+            "wind_batt8": 0.268,
+            "clean_firm": 0.148
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.003,
+            "ldes_dispatch_pct": 0.0192
+          },
+          "mix_changed": false,
+          "nelder_mead_evals": 352,
+          "refine_wall_s": 2.02,
+          "accepted": true
+        },
+        {
+          "year": 2046,
+          "target": 95.98,
+          "cost_before": 5.34386,
+          "cost_after": 3.358341,
+          "cost_delta_pct": 37.155,
+          "cfe_before": 96.31,
+          "cfe_after": 95.98,
+          "escape_radius": {
+            "solar": 0.371,
+            "wind": 1.637,
+            "solar_batt4": 0.066,
+            "solar_batt8": 0.137,
+            "wind_batt4": 0.12,
+            "wind_batt8": 1.882,
+            "clean_firm": 0.724
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0058,
+            "ldes_dispatch_pct": 0.0
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 121,
+          "refine_wall_s": 0.69,
+          "accepted": true
+        },
+        {
+          "year": 2047,
+          "target": 96.96000000000001,
+          "cost_before": 14.91275,
+          "cost_after": 12.452974,
+          "cost_delta_pct": 16.494,
+          "cfe_before": 97.81,
+          "cfe_after": 97.26,
+          "escape_radius": {
+            "solar": 1.9,
+            "wind": 0.12,
+            "solar_batt4": 0.015,
+            "solar_batt8": 0.017,
+            "wind_batt4": 1.746,
+            "wind_batt8": 0.889,
+            "clean_firm": 0.182
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0073
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 129,
+          "refine_wall_s": 0.84,
+          "accepted": true
+        },
+        {
+          "year": 2048,
+          "target": 97.94,
+          "cost_before": 14.112205,
+          "cost_after": 13.451656,
+          "cost_delta_pct": 4.681,
+          "cfe_before": 98.77,
+          "cfe_after": 98.9,
+          "escape_radius": {
+            "solar": 1.564,
+            "wind": 0.092,
+            "solar_batt4": 0.029,
+            "solar_batt8": 0.032,
+            "wind_batt4": 0.208,
+            "wind_batt8": 0.255,
+            "clean_firm": 0.022
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0009
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 315,
+          "refine_wall_s": 1.71,
+          "accepted": true
+        },
+        {
+          "year": 2049,
+          "target": 98.92,
+          "cost_before": 8.198983,
+          "cost_after": 4.271826,
+          "cost_delta_pct": 47.898,
+          "cfe_before": 99.17,
+          "cfe_after": 98.92,
+          "escape_radius": {
+            "solar": 0.666,
+            "wind": 0.551,
+            "solar_batt4": 0.028,
+            "solar_batt8": 1.482,
+            "wind_batt4": 1.092,
+            "wind_batt8": 0.401,
+            "clean_firm": 0.871
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0009
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 132,
+          "refine_wall_s": 0.57,
+          "accepted": true
+        },
+        {
+          "year": 2050,
+          "target": 99.9,
+          "cost_before": 17.286012,
+          "cost_after": 9.548481,
+          "cost_delta_pct": 44.762,
+          "cfe_before": 99.9,
+          "cfe_after": 99.9,
+          "escape_radius": {
+            "solar": 1.964,
+            "wind": 0.895,
+            "solar_batt4": 0.776,
+            "solar_batt8": 1.018,
+            "wind_batt4": 1.306,
+            "wind_batt8": 0.595,
+            "clean_firm": 0.302
+          },
+          "escape_storage": {
+            "battery_dispatch_pct": 0.0,
+            "battery8_dispatch_pct": 0.0,
+            "ldes_dispatch_pct": 0.0443
+          },
+          "mix_changed": true,
+          "nelder_mead_evals": 124,
+          "refine_wall_s": 0.82,
+          "accepted": true
+        }
+      ]
+    }
+  ]
+}
