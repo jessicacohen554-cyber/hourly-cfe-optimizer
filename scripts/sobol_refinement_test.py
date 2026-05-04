@@ -324,7 +324,63 @@ def _solve_beam(seed, cfg, P32, dm32, dn32, bi, refine, radius):
 
 # ── Main ──────────────────────────────────────────────────────────────────
 
-def run(iso, pathway, sample_size, n_beams, archetype, radius):
+def _load_baseline_from_file(path: str) -> dict:
+    """Load an existing sobol multibeam test JSON as the baseline arm."""
+    with open(path) as f:
+        d = json.load(f)
+
+    # Map existing beam format to our arm beam format
+    beams = []
+    for b in d.get("beams", []):
+        row = {
+            "beam_idx": b["beam_idx"],
+            "archetype": b.get("archetype", "unknown"),
+            "wall_s": b.get("wall_s", 0),
+            "peak_gas_mw": b.get("peak_gas_mw", 0),
+            "peak_h2_mw": b.get("peak_h2_mw", 0),
+            "refinement_log": [],
+        }
+        for t, k in KEY_MAP.items():
+            row[f"{k}_cost_B"] = b.get(f"{k}_cost_B")
+            row[f"{k}_year"] = b.get(f"{k}_year")
+        # t99.9 key in existing files uses dot notation
+        if row.get("t99.9_cost_B") is None and "t99.9_cost_B" in b:
+            row["t99.9_cost_B"] = b["t99.9_cost_B"]
+            row["t99.9_year"] = b.get("t99.9_year")
+        beams.append(row)
+
+    # Build best summary
+    best = {}
+    for t, k in KEY_MAP.items():
+        vals = [(r[f"{k}_cost_B"], r["beam_idx"])
+                for r in beams if r.get(f"{k}_cost_B") is not None]
+        if vals:
+            vals.sort()
+            best[k] = {
+                "best_B": vals[0][0],
+                "worst_B": vals[-1][0],
+                "best_beam": vals[0][1],
+            }
+
+    return {
+        "samples": d.get("sample_size", 0),
+        "refine": False,
+        "radius": 0.0,
+        "n_beams": len(beams),
+        "wall_s": d.get("wall_s", 0),
+        "best": best,
+        "beams": beams,
+        "source_file": path,
+        "refinement_summary": {
+            "total_steps": 0, "accepted": 0, "rejected": 0,
+            "avg_cost_delta_pct": 0.0, "avg_nelder_mead_evals": 0,
+            "avg_refine_wall_s": 0.0,
+        },
+    }
+
+
+def run(iso, pathway, sample_size, n_beams, archetype, radius,
+        baseline_file=None):
     solver.warmup_jit()
     P = solver.build_profile_matrix(iso)
     dn = solver._load_demand_norm(iso)
@@ -332,14 +388,41 @@ def run(iso, pathway, sample_size, n_beams, archetype, radius):
     P32, dm32, dn32 = (P.astype(np.float32), dm.astype(np.float32),
                         dn.astype(np.float32))
 
-    arms = {
-        "baseline": {"samples": sample_size, "refine": False},
+    all_results = {}
+
+    # ── Baseline: load from file or run fresh ─────────────────────────
+    if baseline_file:
+        print(f"\n{'='*60}")
+        print(f"  ARM: baseline  (loaded from {baseline_file})")
+        print(f"{'='*60}")
+        all_results["baseline"] = _load_baseline_from_file(baseline_file)
+        c99 = all_results["baseline"]["best"].get("t99.9", {}).get("best_B", "N/A")
+        print(f"  {all_results['baseline']['n_beams']} beams, "
+              f"99.9%=${c99}")
+    else:
+        arms_to_run = {"baseline": {"samples": sample_size, "refine": False}}
+        _run_arms(arms_to_run, all_results, iso, pathway, n_beams,
+                  archetype, radius, P32, dm32, dn32)
+
+    # ── Refinement arms: always run fresh ─────────────────────────────
+    refine_arms = {
         "refined": {"samples": sample_size, "refine": True},
         "low_refined": {"samples": sample_size // 4, "refine": True},
     }
+    _run_arms(refine_arms, all_results, iso, pathway, n_beams,
+              archetype, radius, P32, dm32, dn32)
 
-    all_results = {}
+    # ── Summary comparison ────────────────────────────────────────────
+    _print_summary(all_results)
 
+    # ── Write output ──────────────────────────────────────────────────
+    _write_output(all_results, iso, pathway, sample_size, n_beams,
+                  archetype, radius, baseline_file)
+
+
+def _run_arms(arms, all_results, iso, pathway, n_beams, archetype,
+              radius, P32, dm32, dn32):
+    """Run one or more arms and append to all_results."""
     for arm_name, arm_cfg in arms.items():
         print(f"\n{'='*60}")
         print(f"  ARM: {arm_name}  (samples={arm_cfg['samples']}, "
@@ -414,7 +497,8 @@ def run(iso, pathway, sample_size, n_beams, archetype, radius):
             },
         }
 
-    # ── Summary comparison ────────────────────────────────────────────────
+
+def _print_summary(all_results):
     print(f"\n{'='*60}")
     print("  COMPARISON SUMMARY")
     print(f"{'='*60}")
@@ -431,7 +515,9 @@ def run(iso, pathway, sample_size, n_beams, archetype, radius):
         print(f"{arm_name:<16} {arm['samples']:>8} {c99_s:>10} {c95_s:>9} "
               f"{arm['wall_s']:>7.0f} {acc:>7}")
 
-    # ── Write output ──────────────────────────────────────────────────────
+
+def _write_output(all_results, iso, pathway, sample_size, n_beams,
+                  archetype, radius, baseline_file):
     out_dir = Path(__file__).resolve().parent.parent / "data" / "sampling-tests"
     out_dir.mkdir(parents=True, exist_ok=True)
     ts = time.strftime("%Y%m%dT%H%M%S")
@@ -446,12 +532,12 @@ def run(iso, pathway, sample_size, n_beams, archetype, radius):
         "base_sample_size": sample_size,
         "beams_per_arch": n_beams,
         "refinement_radius": radius,
+        "baseline_source": baseline_file or "fresh_run",
         "timestamp": ts,
         "arms": all_results,
     }
 
     # Strip refinement_log from beams for compact output
-    # (full logs go in a separate file)
     compact = copy.deepcopy(output)
     for arm in compact["arms"].values():
         for beam in arm.get("beams", []):
@@ -466,7 +552,7 @@ def run(iso, pathway, sample_size, n_beams, archetype, radius):
     log_data = {}
     for arm_name, arm in all_results.items():
         log_data[arm_name] = [
-            {"beam_idx": b["beam_idx"], "refinement_log": b["refinement_log"]}
+            {"beam_idx": b["beam_idx"], "refinement_log": b.get("refinement_log", [])}
             for b in arm.get("beams", [])
         ]
     with open(out_dir / log_fname, "w") as f:
@@ -489,6 +575,9 @@ if __name__ == "__main__":
                     help="Archetype filter (default: balanced)")
     ap.add_argument("--radius", type=float, default=2.0,
                     help="Refinement radius in pct per dimension (default: 2.0)")
+    ap.add_argument("--baseline-file", default=None,
+                    help="Path to existing sobol multibeam test JSON to use as "
+                         "baseline instead of rerunning (saves ~500s)")
     args = ap.parse_args()
     run(args.iso.upper(), args.pathway.upper(), args.sample_size, args.beams,
-        args.archetype, args.radius)
+        args.archetype, args.radius, args.baseline_file)
