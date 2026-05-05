@@ -61,11 +61,17 @@ on:
           - '150'
           - '200'
           - '400'
+          - '800'
+          - '1600'
       seed:
         description: 'RNG seed for reproducibility'
         required: false
         default: '42'
-        type: string
+        type: choice
+        options:
+          - '42'
+          - '80'
+          - '160'
       demand_growth:
         description: 'Demand growth level'
         required: true
