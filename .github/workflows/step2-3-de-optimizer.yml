@@ -95,9 +95,9 @@ on:
         default: '99.9'
         type: string
       workers:
-        description: 'Parallel DE evaluations per year-step (2 = use both cores)'
+        description: 'Parallel DE evaluations per year-step (1=safe default, 2=faster but may fail on closure pickling)'
         required: false
-        default: '2'
+        default: '1'
         type: choice
         options:
           - '1'
@@ -225,7 +225,7 @@ jobs:
 
             # After pathway A, set ref-winners flag for subsequent pathways
             if [ "$pw" = "A" ]; then
-              WINNERS_FILE="data/step2.3-de/${ISO}_A_${SCENARIO}_${DEMAND}_winners.json"
+              WINNERS_FILE="data/step2.3-de/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_winners.json"
               if [ -f "$WINNERS_FILE" ]; then
                 REF_FLAG="--ref-winners $WINNERS_FILE"
                 echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
@@ -241,7 +241,7 @@ jobs:
           DEMAND: ${{ inputs.demand_growth }}
         run: |
           for pw in $PATHWAYS; do
-            results="data/step2.3-de/${ISO}_${pw}_${SCENARIO}_${DEMAND}_results.json"
+            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${{ inputs.seed }}.parquet"
             if [ ! -f "$results" ]; then
               echo "::error::Missing results: $results"
               exit 1
@@ -268,7 +268,7 @@ jobs:
           TREE_ENTRIES="[]"
           file_count=0
 
-          for f in data/step2.3-de/${ISO}_*.json; do
+          for f in data/step2.3-de/${ISO}_*.parquet data/step2.3-de/${ISO}_*_winners.json; do
             [ -f "$f" ] || continue
             file_count=$((file_count + 1))
             echo "[api] Uploading: ${f} ($(du -h "$f" | cut -f1))"
