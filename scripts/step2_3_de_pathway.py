@@ -15,7 +15,7 @@ Usage:
     # Single pathway
     python scripts/step2_3_de_pathway.py --iso CAISO --pathway A
 
-    # Pathway B seeded with A's results (guarantees B <= A)
+    # Pathway B seeded with A's results (guarantees B ≤ A)
     python scripts/step2_3_de_pathway.py --iso CAISO --pathway A
     python scripts/step2_3_de_pathway.py --iso CAISO --pathway B \
         --ref-winners data/step2.3-de/CAISO_A_base_Medium_winners.json
@@ -26,14 +26,24 @@ Usage:
         --target-2040 85 --target-2050 99
 """
 from __future__ import annotations
-import argparse, json, sys, time, types
+
+import argparse
+import json
+import sys
+import time
+import types
 from pathlib import Path
+
 import numpy as np
 
+# ---------------------------------------------------------------------------
+# Project paths
+# ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+# Stub missing import for dispatch_utils
 _stub = types.ModuleType("step_2_3_pathway_optimizer")
 def _call_with_timeout(fn, timeout, label=""):
     return fn()
@@ -46,10 +56,17 @@ import pipeline_config as pc
 from eia_data_io import load_demand_profiles, load_generation_profiles
 from scipy.optimize import differential_evolution
 
-PENALTY_WEIGHT = 1e12
-MAX_RESOURCE_PCT = 200.0
-STORAGE_MAX_PCT = 50.0
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+PENALTY_WEIGHT = 1e12        # $/pp² for CFE shortfall and overshoot
+MAX_RESOURCE_PCT = 200.0     # hard ceiling per resource dimension
+STORAGE_MAX_PCT = 50.0       # generous storage cap — cost function regulates
 
+
+# ---------------------------------------------------------------------------
+# Profile loading (once per ISO)
+# ---------------------------------------------------------------------------
 def load_iso_data(iso):
     """Load demand + supply profiles and precompute supply matrix."""
     demand_data = load_demand_profiles()
@@ -57,47 +74,61 @@ def load_iso_data(iso):
     demand_norm, total_mwh = du.get_demand_profile(iso, demand_data)
     hybrid_profiles = du._load_hybrid_profiles(iso)
     supply_profiles = du.get_supply_profiles(
-        iso, gen_profiles, include_hybrids=True, hybrid_profiles=hybrid_profiles)
+        iso, gen_profiles, include_hybrids=True,
+        hybrid_profiles=hybrid_profiles)
+    # Ensure arrays
     for k in supply_profiles:
         if isinstance(supply_profiles[k], list):
             supply_profiles[k] = np.array(supply_profiles[k], dtype=np.float64)
+    # Precompute matrix for ~3x dispatch speedup
     supply_matrix = du.build_supply_matrix(
         supply_profiles, resource_types=du.RESOURCE_TYPES_HYBRID)
     return demand_norm, supply_profiles, supply_matrix
 
-# [OPT-3] Pre-allocated dict buffer for score_cfe
-_score_pcts_buf = {}
 
+# ---------------------------------------------------------------------------
+# CFE scoring via dispatch_utils
+# ---------------------------------------------------------------------------
 def score_cfe(res_pcts, b4_pct, b8_pct, ldes_pct,
               demand_norm, supply_profiles, supply_matrix):
     """Score portfolio CFE using canonical dispatch. Returns (cfe%, residual array)."""
-    _score_pcts_buf.clear()
-    _score_pcts_buf.update(res_pcts)
     result = du.reconstruct_hourly_dispatch(
-        demand_norm, supply_profiles, _score_pcts_buf,
-        procurement_pct=100, battery_dispatch_pct=b4_pct,
-        battery8_dispatch_pct=b8_pct, ldes_dispatch_pct=ldes_pct,
-        h2_dispatch_pct=0, supply_matrix=supply_matrix,
+        demand_norm, supply_profiles, res_pcts,
+        procurement_pct=100,
+        battery_dispatch_pct=b4_pct,
+        battery8_dispatch_pct=b8_pct,
+        ldes_dispatch_pct=ldes_pct,
+        h2_dispatch_pct=0,
+        supply_matrix=supply_matrix,
         resource_types=du.RESOURCE_TYPES_HYBRID)
     total_clean = result["total_clean"]
     matched = np.minimum(total_clean, demand_norm)
-    return float(np.sum(matched) / np.sum(demand_norm) * 100), result["residual_demand"]
+    cfe = float(np.sum(matched) / np.sum(demand_norm) * 100)
+    return cfe, result["residual_demand"]
 
-# [OPT-1] O(n) 3rd-largest via np.partition
-def _p9997(arr):
-    """3rd-largest element of arr (p99.97 proxy for gas sizing)."""
-    if len(arr) < 3:
-        return float(arr.max()) if len(arr) > 0 else 0.0
-    return float(np.partition(arr, -3)[-3])
 
+# ---------------------------------------------------------------------------
+# H2 peaker sizing (binary search, mirrors solver's h2_size_for_target)
+# ---------------------------------------------------------------------------
 def size_h2(residual_demand, demand_norm, cfe_pre, target_cfe, dem_twh):
-    """Find minimum H2 capacity to close CFE gap via binary search."""
+    """Find minimum H2 capacity to close CFE gap via binary search.
+
+    H2 turbine with rated capacity X dispatches min(gap[h], X) in every
+    gap hour. Binary search finds minimum X that achieves target.
+    """
     if cfe_pre >= target_cfe:
-        return {"h2_mw": 0.0, "h2_mwh": 0.0, "resid_p9997": _p9997(residual_demand)}
+        sorted_r = np.sort(residual_demand)[::-1]
+        p9997 = float(sorted_r[2]) if len(sorted_r) > 2 else 0.0
+        return {"h2_mw": 0.0, "h2_mwh": 0.0, "resid_p9997": p9997}
+
     total_demand = np.sum(demand_norm)
     needed_norm = (target_cfe - cfe_pre) / 100.0 * total_demand
-    if float(residual_demand.sum()) < needed_norm * 0.999:
+    total_gap = float(residual_demand.sum())
+
+    if total_gap < needed_norm * 0.999:
         return {"h2_mw": np.inf, "h2_mwh": 0.0, "resid_p9997": np.inf}
+
+    # Binary search for minimum capacity
     lo_c, hi_c = 0.0, float(residual_demand.max()) * 1.001
     for _ in range(60):
         mid = (lo_c + hi_c) * 0.5
@@ -105,38 +136,184 @@ def size_h2(residual_demand, demand_norm, cfe_pre, target_cfe, dem_twh):
             hi_c = mid
         else:
             lo_c = mid
-    h2_disp = np.minimum(residual_demand, hi_c)
+
+    h2_cap_norm = hi_c
+    h2_disp = np.minimum(residual_demand, h2_cap_norm)
+    h2_mw = h2_cap_norm * dem_twh * 1e6
+    h2_mwh = float(h2_disp.sum()) * dem_twh * 1e6
+
+    # Post-H2 residual: 3rd-largest remaining gap (matches solver)
     post_resid = np.maximum(residual_demand - h2_disp, 0.0)
-    return {"h2_mw": hi_c * dem_twh * 1e6,
-            "h2_mwh": float(h2_disp.sum()) * dem_twh * 1e6,
-            "resid_p9997": _p9997(post_resid)}
+    sorted_r = np.sort(post_resid)[::-1]
+    p9997 = float(sorted_r[2]) if len(sorted_r) > 2 else 0.0
 
+    return {"h2_mw": h2_mw, "h2_mwh": h2_mwh, "resid_p9997": p9997}
+
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
 def pcts_to_dict(pcts_arr):
+    """Convert resource pcts array to dict for dispatch_utils."""
     return {res: float(pcts_arr[ri])
-            for ri, res in enumerate(solver.RESOURCE_ORDER) if pcts_arr[ri] > 0.001}
+            for ri, res in enumerate(solver.RESOURCE_ORDER)
+            if pcts_arr[ri] > 0.001}
 
+
+def resid_to_p9997(resid_arr):
+    """Extract 3rd-largest residual (p99.97 proxy) for gas sizing."""
+    sorted_r = np.sort(resid_arr)[::-1]
+    return float(sorted_r[2]) if len(sorted_r) > 2 else 0.0
+
+
+
+# ---------------------------------------------------------------------------
+# Picklable DE objective (enables workers > 1)
+# ---------------------------------------------------------------------------
+class _DEObjective:
+    """Callable wrapper that scipy.optimize.differential_evolution can pickle
+    when ``workers > 1`` triggers multiprocessing.  Replaces the nested
+    closures (objective + obj_active) that captured enclosing-scope locals."""
+
+    __slots__ = (
+        'lo', 'hi', 'floor_pcts', 'free_idx', 'n_free',
+        'demand_norm', 'supply_profiles', 'supply_matrix',
+        'dem_twh', 'cfg', 'iso', 'year', 'target', 'cfe_ceiling',
+        'capex_yr', 'fuel_mwh_rate', 'existing_gas', 'gaf', 'peak_gas_mw',
+        'floor_stor', 'full_x0', 'active',
+    )
+
+    def __init__(self, *, lo, hi, floor_pcts, free_idx, n_free,
+                 demand_norm, supply_profiles, supply_matrix,
+                 dem_twh, cfg, iso, year, target, cfe_ceiling,
+                 capex_yr, fuel_mwh_rate, existing_gas, gaf, peak_gas_mw,
+                 floor_stor, full_x0, active):
+        self.lo = lo
+        self.hi = hi
+        self.floor_pcts = floor_pcts
+        self.free_idx = free_idx
+        self.n_free = n_free
+        self.demand_norm = demand_norm
+        self.supply_profiles = supply_profiles
+        self.supply_matrix = supply_matrix
+        self.dem_twh = dem_twh
+        self.cfg = cfg
+        self.iso = iso
+        self.year = year
+        self.target = target
+        self.cfe_ceiling = cfe_ceiling
+        self.capex_yr = capex_yr
+        self.fuel_mwh_rate = fuel_mwh_rate
+        self.existing_gas = existing_gas
+        self.gaf = gaf
+        self.peak_gas_mw = peak_gas_mw
+        self.floor_stor = floor_stor
+        self.full_x0 = full_x0
+        self.active = active
+
+    def __call__(self, x_active):
+        """Map active-dim vector → full vector → cost."""
+        full = self.full_x0.copy()
+        for ai, idx in enumerate(self.active):
+            full[idx] = x_active[ai]
+        return self._objective(full)
+
+    def _objective(self, x):
+        lo, hi = self.lo, self.hi
+        floor_pcts, free_idx, n_free = self.floor_pcts, self.free_idx, self.n_free
+
+        xc = np.clip(x, lo, hi)
+        pcts = floor_pcts.copy()
+        for k, ri in enumerate(free_idx):
+            pcts[ri] = xc[k]
+
+        cfe, resid = score_cfe(
+            pcts_to_dict(pcts), xc[n_free], xc[n_free+1], xc[n_free+2],
+            self.demand_norm, self.supply_profiles, self.supply_matrix)
+
+        h2 = size_h2(resid, self.demand_norm, cfe, self.target, self.dem_twh)
+        if h2["h2_mw"] > 1e8:
+            return 1e18
+
+        post_cfe = cfe + (h2["h2_mwh"] / (self.dem_twh * 1e6) * 100
+                          if h2["h2_mwh"] > 0 else 0)
+
+        # Incremental cost above floor
+        cost = 0.0
+        for k, ri in enumerate(free_idx):
+            delta = pcts[ri] - floor_pcts[ri]
+            if delta > 0:
+                cost += (delta / 100 * self.dem_twh
+                         * solver.get_resource_lcoe(
+                             self.iso, solver.RESOURCE_ORDER[ri],
+                             self.year, self.cfg) * 1e6)
+        for j, sc in enumerate(solver.STORAGE_COLS):
+            ds = (xc[n_free + j] - self.floor_stor[j]) / 100
+            if ds > 0:
+                cost += (ds * solver.storage_net_cost(
+                             self.iso, sc, self.cfg, year=self.year)
+                         * self.dem_twh * 1e6)
+
+        cost += h2["h2_mw"] * self.capex_yr * 1000 + h2["h2_mwh"] * self.fuel_mwh_rate
+
+        g = solver.gas_need_mw(h2["resid_p9997"], self.dem_twh,
+                               self.existing_gas, self.gaf)
+        cost += solver.gas_annual_cost(g, self.iso, self.cfg)
+        cost += solver.gas_stranding_shadow(g, self.peak_gas_mw,
+                                            self.year, self.iso)
+
+        # Penalties
+        if post_cfe < self.target:
+            cost += PENALTY_WEIGHT * (self.target - post_cfe) ** 2
+        if cfe > self.cfe_ceiling:
+            cost += PENALTY_WEIGHT * (cfe - self.cfe_ceiling) ** 2
+
+        return cost
+
+
+# ---------------------------------------------------------------------------
+# Main solver
+# ---------------------------------------------------------------------------
 def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                    popsize=10, maxiter=100, workers=1, seed=42,
-                   target_2040=90.0, target_2050=99.9, reference_winners=None):
+                   target_2040=90.0, target_2050=99.9,
+                   reference_winners=None):
     """Run year-by-year DE pathway optimization.
-    WARNING [OPT-5]: workers > 1 pickles the objective closure including large
-    numpy arrays on every batch. Profile before using — may be slower than serial.
+
+    Args:
+        iso: ISO region name
+        pathway: A, B, C, or D
+        popsize: DE population size multiplier (pop = popsize × n_dims)
+        maxiter: DE generations per year-step
+        workers: parallel objective evaluations (1=serial, 2+=parallel)
+        seed: RNG seed for reproducibility
+        target_2040: CFE% target at 2040. Linear ramp from baseline.
+        target_2050: CFE% target at 2050. Linear ramp from target_2040.
+        reference_winners: dict {year: (pcts_array, stor_array)} from prior
+            pathway run. Seeds B's DE population with A's solution to
+            guarantee B ≤ A.
+
+    Returns:
+        (year_results_list, winners_by_year_dict)
     """
     sc = solver.COST_SCENARIOS[scenario]
-    cfg = solver.RunConfig(iso=iso, pathway=pathway, scenario_name=scenario,
-                           demand_growth=demand_growth, cost_mode=1, **sc)
+    cfg = solver.RunConfig(
+        iso=iso, pathway=pathway, scenario_name=scenario,
+        demand_growth=demand_growth, cost_mode=1, **sc)
+
     demand_vec = solver.demand_twh_vec(iso, demand_growth)
-    cfe_targets = solver.cfe_target_vec(iso).copy()
+    cfe_targets = solver.cfe_target_vec(iso).copy()  # copy — we'll override early years
     existing_gas = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
     gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
     free_idx = cfg.free_indices
-    free_idx_arr = np.array(free_idx)  # [OPT-4]
     n_free = len(free_idx)
     baseline = pc.GRID_MIX_SHARES[iso]
 
+    # Load profiles + precomputed supply matrix
     du.warm_dispatch_kernels()
     demand_norm, supply_profiles, supply_matrix = load_iso_data(iso)
 
+    # Initialize floor from grid baseline
     floor_pcts = np.zeros(solver.N_RESOURCES, dtype=np.float64)
     for ri, res in enumerate(solver.RESOURCE_ORDER):
         floor_pcts[ri] = baseline.get(res, 0.0)
@@ -144,21 +321,26 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
 
     rng = np.random.default_rng(seed)
     vintage_ledger = []
-    vintage_cost_running = 0.0  # [OPT-7]
     cumulative_cost = 0.0
-    peak_gas_mw = peak_h2_mw = 0.0
+    peak_gas_mw = 0.0
+    peak_h2_mw = 0.0
     year_results = []
     winners_by_year = {}
 
     base_demand_twh = float(pc.REGIONAL_DEMAND_TWH[iso])
     baseline_cf_twh = baseline.get("clean_firm", 0) / 100.0 * base_demand_twh
+
     frozen_twh = {"hydro": baseline.get("hydro", 0) / 100.0 * base_demand_twh}
     if pathway == "A":
         frozen_twh["clean_firm"] = baseline.get("clean_firm", 0) / 100.0 * base_demand_twh
 
+    # Score actual baseline CFE using dispatch_utils
     baseline_cfe, _ = score_cfe(
-        pcts_to_dict(floor_pcts), 0, 0, 0, demand_norm, supply_profiles, supply_matrix)
+        pcts_to_dict(floor_pcts), 0, 0, 0,
+        demand_norm, supply_profiles, supply_matrix)
 
+    # Build smooth linear ramp from actual baseline → target_2040 → target_2050.
+    # Replaces arbitrary waypoints that were calibrated to the simplified kernel.
     for yi_t, year_t in enumerate(solver.YEARS):
         if year_t <= 2040:
             frac = (year_t - solver.BASE_YEAR) / (2040 - solver.BASE_YEAR)
@@ -167,28 +349,31 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             frac = (year_t - 2040) / (2050 - 2040)
             cfe_targets[yi_t] = target_2040 + frac * (target_2050 - target_2040)
 
-    _storage_set = set(solver.STORAGE_COLS)  # [OPT-7]
-    _obj_pcts = np.zeros(solver.N_RESOURCES, dtype=np.float64)  # [OPT-4]
+    # Start at 2026 (yi=1). 2025 is baseline year with no builds.
     START_YI = 1
 
     print(f"\n{'='*70}")
     print(f"DE Pathway Optimizer (dispatch_utils scoring)")
     print(f"ISO={iso}  Pathway={pathway}  Scenario={scenario}  Demand={demand_growth}")
     print(f"popsize={popsize}  maxiter={maxiter}  workers={workers}  seed={seed}")
-    print(f"Baseline CFE: {baseline_cfe:.1f}%  -> {target_2040:.0f}% by 2040 -> {target_2050:.0f}% by 2050")
-    print(f"Annual ramp: {(target_2040 - baseline_cfe)/15:.1f}pp/yr (2025-2040)"
-          f"  {(target_2050 - target_2040)/10:.1f}pp/yr (2040-2050)")
+    print(f"Baseline CFE: {baseline_cfe:.1f}%  → {target_2040:.0f}% by 2040 → {target_2050:.0f}% by 2050")
+    print(f"Annual ramp: {(target_2040 - baseline_cfe) / 15:.1f}pp/yr (2025-2040)"
+          f"  {(target_2050 - target_2040) / 10:.1f}pp/yr (2040-2050)")
     print(f"{'='*70}\n")
 
     t0 = time.time()
+
     for yi in range(START_YI, solver.N_YEARS):
         _yt = time.time()
         year = solver.YEARS[yi]
         dem_twh = demand_vec[yi]
         target = cfe_targets[yi]
 
+        # Frozen resource pct adjustments (fixed TWh / changing demand)
         for res, twh in frozen_twh.items():
             floor_pcts[solver.RES_IDX[res]] = twh / dem_twh * 100.0
+
+        # Pathway constraints
         if pathway == "A":
             for res in ["offshore_wind", "geothermal", "ccs_ccgt"]:
                 floor_pcts[solver.RES_IDX[res]] = 0.0
@@ -203,6 +388,7 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                 floor_pcts[solver.RES_IDX["clean_firm"]],
                 baseline_cf_twh / dem_twh * 100.0)
 
+        # Score floor
         floor_cfe, floor_resid = score_cfe(
             pcts_to_dict(floor_pcts), floor_stor[0], floor_stor[1], floor_stor[2],
             demand_norm, supply_profiles, supply_matrix)
@@ -212,9 +398,11 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             winner_stor = floor_stor.copy()
             winner_cfe = floor_cfe
             h2_mw = h2_mwh = 0.0
-            resid_for_gas = _p9997(floor_resid)
+            resid_for_gas = resid_to_p9997(floor_resid)
         else:
+            # --- Build bounds ---
             cfe_ceiling = cfe_targets[yi + 1] if yi < solver.N_YEARS - 1 else 100.0
+
             lo = np.zeros(n_free + solver.N_STORAGE)
             hi = np.zeros(n_free + solver.N_STORAGE)
             for k, ri in enumerate(free_idx):
@@ -235,74 +423,42 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
             fuel_mwh_rate = solver.h2_peaker_fuel_mwh(year, cfg)
 
-            # [OPT-6] Pre-compute cost coefficient vectors
-            lcoe_coeffs = np.array([
-                solver.get_resource_lcoe(iso, solver.RESOURCE_ORDER[ri], year, cfg)
-                * dem_twh * 1e4 for ri in free_idx], dtype=np.float64)
-            stor_coeffs = np.array([
-                solver.storage_net_cost(iso, sc, cfg, year=year)
-                * dem_twh * 1e4 for sc in solver.STORAGE_COLS], dtype=np.float64)
-
-            floor_pcts_snap = floor_pcts.copy()
-            floor_stor_snap = floor_stor.copy()
-
-            def objective(x):
-                xc = np.clip(x, lo, hi)
-                np.copyto(_obj_pcts, floor_pcts_snap)  # [OPT-4]
-                _obj_pcts[free_idx_arr] = xc[:n_free]
-
-                cfe, resid = score_cfe(
-                    pcts_to_dict(_obj_pcts), xc[n_free], xc[n_free+1], xc[n_free+2],
-                    demand_norm, supply_profiles, supply_matrix)
-
-                h2 = size_h2(resid, demand_norm, cfe, target, dem_twh)
-                if h2["h2_mw"] > 1e8:
-                    return 1e18
-                post_cfe = cfe + (h2["h2_mwh"] / (dem_twh * 1e6) * 100 if h2["h2_mwh"] > 0 else 0)
-
-                # [OPT-6] Vectorized cost
-                res_deltas = _obj_pcts[free_idx_arr] - floor_pcts_snap[free_idx_arr]
-                np.maximum(res_deltas, 0, out=res_deltas)
-                cost = float(np.dot(res_deltas, lcoe_coeffs))
-                stor_deltas = xc[n_free:n_free + solver.N_STORAGE] - floor_stor_snap
-                np.maximum(stor_deltas, 0, out=stor_deltas)
-                cost += float(np.dot(stor_deltas, stor_coeffs))
-
-                cost += h2["h2_mw"] * capex_yr * 1000 + h2["h2_mwh"] * fuel_mwh_rate
-                g = solver.gas_need_mw(h2["resid_p9997"], dem_twh, existing_gas, gaf)
-                cost += solver.gas_annual_cost(g, iso, cfg)
-                cost += solver.gas_stranding_shadow(g, peak_gas_mw, year, iso)
-
-                if post_cfe < target:
-                    cost += PENALTY_WEIGHT * (target - post_cfe) ** 2
-                if cfe > cfe_ceiling:
-                    cost += PENALTY_WEIGHT * (cfe - cfe_ceiling) ** 2
-                return cost
-
+            # --- Filter zero-width dims ---
             active = [i for i in range(len(lo)) if hi[i] - lo[i] > 1e-6]
             if not active:
                 winner_pcts = floor_pcts.copy()
                 winner_stor = floor_stor.copy()
                 winner_cfe = floor_cfe
                 h2_mw = h2_mwh = 0.0
-                resid_for_gas = _p9997(floor_resid)
+                resid_for_gas = resid_to_p9997(floor_resid)
             else:
                 bounds = [(lo[i], hi[i]) for i in active]
                 full_x0 = np.concatenate([
-                    np.array([floor_pcts[ri] for ri in free_idx]), floor_stor.copy()])
+                    np.array([floor_pcts[ri] for ri in free_idx]),
+                    floor_stor.copy()])
 
-                def obj_active(x_active):
-                    full = full_x0.copy()
-                    for ai, idx in enumerate(active):
-                        full[idx] = x_active[ai]
-                    return objective(full)
+                obj_fn = _DEObjective(
+                    lo=lo, hi=hi, floor_pcts=floor_pcts,
+                    free_idx=free_idx, n_free=n_free,
+                    demand_norm=demand_norm,
+                    supply_profiles=supply_profiles,
+                    supply_matrix=supply_matrix,
+                    dem_twh=dem_twh, cfg=cfg, iso=iso, year=year,
+                    target=target, cfe_ceiling=cfe_ceiling,
+                    capex_yr=capex_yr, fuel_mwh_rate=fuel_mwh_rate,
+                    existing_gas=existing_gas, gaf=gaf,
+                    peak_gas_mw=peak_gas_mw, floor_stor=floor_stor,
+                    full_x0=full_x0, active=active)
 
                 de_seed = int(rng.integers(0, 2**31))
-                init_pop = "sobol"
+
+                # Seed population with reference pathway winner if available
+                init_pop = "latinhypercube"
                 if reference_winners and year in reference_winners:
                     ref_pcts, ref_stor = reference_winners[year]
                     ref_full = np.concatenate([
-                        np.array([ref_pcts[ri] for ri in free_idx]), ref_stor.copy()])
+                        np.array([ref_pcts[ri] for ri in free_idx]),
+                        ref_stor.copy()])
                     ref_active = np.array([
                         np.clip(ref_full[idx], bounds[ai][0], bounds[ai][1])
                         for ai, idx in enumerate(active)])
@@ -317,23 +473,29 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                     init_pop = pop
 
                 de_result = differential_evolution(
-                    obj_active, bounds, seed=de_seed, maxiter=maxiter,
-                    popsize=popsize, tol=0, mutation=(0.5, 1.0),
-                    recombination=0.7, polish=True, init=init_pop,
+                    obj_fn, bounds,
+                    seed=de_seed, maxiter=maxiter, popsize=popsize,
+                    tol=0, mutation=(0.5, 1.0), recombination=0.7,
+                    polish=True, init=init_pop,
                     workers=workers)
 
+                # Reconstruct winner
                 full_best = full_x0.copy()
                 for ai, idx in enumerate(active):
                     full_best[idx] = de_result.x[ai]
                 full_best = np.clip(full_best, lo, hi)
+
                 winner_pcts = floor_pcts.copy()
                 for k, ri in enumerate(free_idx):
                     winner_pcts[ri] = full_best[k]
                 winner_stor = full_best[n_free:].copy()
 
+                # Final scoring
                 winner_cfe, winner_resid = score_cfe(
-                    pcts_to_dict(winner_pcts), winner_stor[0], winner_stor[1],
-                    winner_stor[2], demand_norm, supply_profiles, supply_matrix)
+                    pcts_to_dict(winner_pcts),
+                    winner_stor[0], winner_stor[1], winner_stor[2],
+                    demand_norm, supply_profiles, supply_matrix)
+
                 h2 = size_h2(winner_resid, demand_norm, winner_cfe, target, dem_twh)
                 h2_mw = h2["h2_mw"]
                 h2_mwh = h2["h2_mwh"]
@@ -341,8 +503,11 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                     winner_cfe += h2_mwh / (dem_twh * 1e6) * 100
                 resid_for_gas = h2["resid_p9997"]
 
+        # --- Gas ---
         g_mw = solver.gas_need_mw(resid_for_gas, dem_twh, existing_gas, gaf)
         g_cost = solver.gas_annual_cost(g_mw, iso, cfg)
+
+        # --- Annual cost (all vintages + new) ---
         capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
         fuel_rate = solver.h2_peaker_fuel_mwh(year, cfg)
 
@@ -350,29 +515,40 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         for k, ri in enumerate(free_idx):
             delta = winner_pcts[ri] - floor_pcts[ri]
             if delta > solver.RATCHET_TOL_PCT:
-                lcoe = solver.get_resource_lcoe(iso, solver.RESOURCE_ORDER[ri], year, cfg)
-                year_inc += delta / 100 * dem_twh * lcoe * 1e6
-                vintage_ledger.append((year, solver.RESOURCE_ORDER[ri],
-                                       delta / 100 * dem_twh, lcoe))
-                vintage_cost_running += delta / 100 * dem_twh * lcoe * 1e6  # [OPT-7]
-
+                year_inc += delta / 100 * dem_twh * solver.get_resource_lcoe(
+                    iso, solver.RESOURCE_ORDER[ri], year, cfg) * 1e6
         for j, sc in enumerate(solver.STORAGE_COLS):
             ds = (winner_stor[j] - floor_stor[j]) / 100
             if ds > solver.RATCHET_TOL_PCT:
-                net = solver.storage_net_cost(iso, sc, cfg, year=year)
-                stor_cost_val = ds * net * dem_twh * 1e6
-                year_inc += stor_cost_val
-                vintage_ledger.append((year, sc, stor_cost_val, ds))
-                vintage_cost_running += stor_cost_val  # [OPT-7]
-
+                year_inc += ds * solver.storage_net_cost(iso, sc, cfg, year=year) * dem_twh * 1e6
         year_inc += h2_mw * capex_yr * 1000 + h2_mwh * fuel_rate
         year_inc += g_cost
         year_inc += solver.gas_stranding_shadow(g_mw, peak_gas_mw, year, iso)
 
-        total_annual = vintage_cost_running + year_inc  # [OPT-7]
+        _sn = set(solver.STORAGE_COLS)
+        vintage_cost = sum(q if r in _sn else q * u * 1e6
+                           for _, r, q, u in vintage_ledger)
+        total_annual = vintage_cost + year_inc
         cumulative_cost += total_annual
-        if g_mw > peak_gas_mw: peak_gas_mw = g_mw
-        if h2_mw > peak_h2_mw: peak_h2_mw = h2_mw
+
+        if g_mw > peak_gas_mw:
+            peak_gas_mw = g_mw
+        if h2_mw > peak_h2_mw:
+            peak_h2_mw = h2_mw
+
+        # Record vintages
+        for k, ri in enumerate(free_idx):
+            delta = winner_pcts[ri] - floor_pcts[ri]
+            if delta > solver.RATCHET_TOL_PCT:
+                res = solver.RESOURCE_ORDER[ri]
+                vintage_ledger.append((
+                    year, res, delta / 100 * dem_twh,
+                    solver.get_resource_lcoe(iso, res, year, cfg)))
+        for j, sc in enumerate(solver.STORAGE_COLS):
+            ds = (winner_stor[j] - floor_stor[j]) / 100
+            if ds > solver.RATCHET_TOL_PCT:
+                net = solver.storage_net_cost(iso, sc, cfg, year=year)
+                vintage_ledger.append((year, sc, ds * net * dem_twh * 1e6, ds))
 
         yt = time.time() - _yt
         print(f"  {year}: CFE={winner_cfe:.1f}% tgt={target:.1f}% "
@@ -388,6 +564,7 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         })
         winners_by_year[year] = (winner_pcts.copy(), winner_stor.copy())
 
+        # Ratchet: lock in builds, adjust for demand growth
         for ri in range(solver.N_RESOURCES):
             built_twh = max(floor_pcts[ri], winner_pcts[ri]) / 100 * dem_twh
             if yi < solver.N_YEARS - 1:
@@ -403,61 +580,93 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
     print(f"Cumulative cost: ${cumulative_cost/1e9:.2f}B")
     return year_results, winners_by_year
 
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 def main():
-    ap = argparse.ArgumentParser(description="DE pathway optimizer with dispatch_utils scoring")
+    ap = argparse.ArgumentParser(
+        description="DE pathway optimizer with dispatch_utils scoring")
     ap.add_argument("--iso", required=True)
     ap.add_argument("--pathway", required=True, choices=["A", "B", "C", "D"])
-    ap.add_argument("--popsize", type=int, default=15)
-    ap.add_argument("--maxiter", type=int, default=150)
-    ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--popsize", type=int, default=15,
+                    help="DE population multiplier (pop = popsize × n_dims). Default 15")
+    ap.add_argument("--maxiter", type=int, default=150,
+                    help="DE generations per year-step. Default 150")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="Parallel objective evaluations. Default 1 (serial)")
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--scenario", default="base", choices=list(solver.COST_SCENARIOS.keys()))
-    ap.add_argument("--demand-growth", default="Medium", choices=["Low", "Medium", "High"])
-    ap.add_argument("--target-2040", type=float, default=90.0)
-    ap.add_argument("--target-2050", type=float, default=99.9)
-    ap.add_argument("--ref-winners", default=None)
+    ap.add_argument("--scenario", default="base",
+                    choices=list(solver.COST_SCENARIOS.keys()))
+    ap.add_argument("--demand-growth", default="Medium",
+                    choices=["Low", "Medium", "High"])
+    ap.add_argument("--target-2040", type=float, default=90.0,
+                    help="CFE%% target at 2040. Linear ramp from baseline. Default 90")
+    ap.add_argument("--target-2050", type=float, default=99.9,
+                    help="CFE%% target at 2050. Linear ramp from 2040 target. Default 99.9")
+    ap.add_argument("--ref-winners", default=None,
+                    help="Path to JSON with reference pathway winners for seeding")
     args = ap.parse_args()
 
     iso = args.iso.upper()
     if iso not in pc.ISOS:
         raise SystemExit(f"Unknown ISO: {iso}. Known: {list(pc.ISOS)}")
 
+    # Load reference winners if provided
     ref = None
     if args.ref_winners:
         with open(args.ref_winners) as f:
             data = json.load(f)
-        ref = {int(y): (np.array(p), np.array(s)) for y, (p, s) in data["winners"].items()}
+        ref = {int(y): (np.array(p), np.array(s))
+               for y, (p, s) in data["winners"].items()}
         print(f"Loaded reference winners from {args.ref_winners}")
 
     results, winners = run_de_pathway(
-        iso, args.pathway, scenario=args.scenario, demand_growth=args.demand_growth,
-        popsize=args.popsize, maxiter=args.maxiter, workers=args.workers, seed=args.seed,
-        target_2040=args.target_2040, target_2050=args.target_2050, reference_winners=ref)
+        iso, args.pathway,
+        scenario=args.scenario, demand_growth=args.demand_growth,
+        popsize=args.popsize, maxiter=args.maxiter,
+        workers=args.workers, seed=args.seed,
+        target_2040=args.target_2040, target_2050=args.target_2050,
+        reference_winners=ref)
 
-    import pyarrow as pa, pyarrow.parquet as pq
+    # Save results as parquet + winners as JSON (for seeding)
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
     out_dir = PROJECT_ROOT / "data" / "step2.3-de"
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Sweep-safe naming: includes popsize/maxiter/seed so configs don't overwrite
     tag = (f"{iso}_pathway{args.pathway}_{args.scenario}_{args.demand_growth}"
            f"_p{args.popsize}_i{args.maxiter}_s{args.seed}")
     results_path = out_dir / f"{tag}.parquet"
     winners_path = out_dir / f"{tag}_winners.json"
 
+    # Build parquet with meta columns + year data
     rows = []
     for yr in results:
-        row = {**yr, "iso": iso, "pathway": args.pathway, "scenario": args.scenario,
-               "demand_growth": args.demand_growth, "popsize": args.popsize,
-               "maxiter": args.maxiter, "seed": args.seed,
-               "target_2040": args.target_2040, "target_2050": args.target_2050}
+        row = {**yr}
+        row["iso"] = iso
+        row["pathway"] = args.pathway
+        row["scenario"] = args.scenario
+        row["demand_growth"] = args.demand_growth
+        row["popsize"] = args.popsize
+        row["maxiter"] = args.maxiter
+        row["seed"] = args.seed
+        row["target_2040"] = args.target_2040
+        row["target_2050"] = args.target_2050
         rows.append(row)
-    pq.write_table(pa.Table.from_pylist(rows), results_path)
+    table = pa.Table.from_pylist(rows)
+    pq.write_table(table, results_path)
 
+    serializable = {str(y): (p.tolist(), s.tolist())
+                    for y, (p, s) in winners.items()}
     with open(winners_path, "w") as f:
-        json.dump({"winners": {str(y): (p.tolist(), s.tolist())
-                               for y, (p, s) in winners.items()}}, f)
+        json.dump({"winners": serializable}, f)
 
     print(f"\nResults: {results_path} ({results_path.stat().st_size / 1024:.0f} KB)")
     print(f"Winners: {winners_path}")
+
 
 if __name__ == "__main__":
     main()
