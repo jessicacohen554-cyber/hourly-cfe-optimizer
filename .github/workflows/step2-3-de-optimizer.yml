@@ -165,8 +165,33 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      # -------------------------------------------------------------------
+      # Full dependency set verified via AST scan of the import chain:
+      #   step2_3_de_pathway.py → eia_data_io.py (pandas)
+      #                         → dispatch_utils.py
+      #                         → step2_3_adaptive_sobol.py (pyarrow, numba)
+      #                         → pipeline_config.py (numpy)
+      #                         → scipy.optimize (differential_evolution)
+      # -------------------------------------------------------------------
       - name: Install dependencies
-        run: pip install numpy numba pyarrow scipy
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Verify imports
+        working-directory: scripts
+        run: |
+          python -c "
+          import numpy, numba, pyarrow, pandas, scipy
+          from scipy.optimize import differential_evolution
+          print(f'numpy={numpy.__version__}')
+          print(f'numba={numba.__version__}')
+          print(f'pyarrow={pyarrow.__version__}')
+          print(f'pandas={pandas.__version__}')
+          print(f'scipy={scipy.__version__}')
+
+          # Verify project modules resolve (import-time only, no data needed)
+          import pipeline_config as pc
+          print(f'pipeline_config OK — {len(pc.LCOE_TABLE)} LCOE entries')
+          "
 
       - name: Ensure output directory
         run: mkdir -p data/step2.3-de
@@ -250,34 +275,35 @@ jobs:
             echo "[verify] ${results}: ${size} bytes"
           done
 
-      - name: "Push results via API — ${{ matrix.iso }}"
+      # -------------------------------------------------------------------
+      # git push (not REST API).  This workflow uses fetch-depth: 0
+      # (full clone), so git push works natively.  The REST API blob→
+      # tree→commit→ref pattern was designed for shallow/sparse clones
+      # and introduces unnecessary failure modes here: rate-limiting
+      # across 7 parallel matrix jobs, swallowed errors in the retry
+      # loop, no retries on blob/tree/commit calls, and ~33% payload
+      # bloat from base64-encoding binaries through JSON.
+      # -------------------------------------------------------------------
+      - name: "Push results — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
-          REPO="${GITHUB_REPOSITORY}"
-          SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
 
-          BASE_SHA=$(gh api "repos/${REPO}/git/ref/heads/${SOURCE_BRANCH}" --jq '.object.sha')
-          BASE_TREE=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq '.tree.sha')
-          echo "[api] Base commit: ${BASE_SHA}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          TREE_ENTRIES="[]"
+          git checkout -b "$branch"
+
+          # Stage output files
           file_count=0
-
           for f in data/step2.3-de/${ISO}_*.parquet data/step2.3-de/${ISO}_*_winners.json; do
             [ -f "$f" ] || continue
+            git add "$f"
             file_count=$((file_count + 1))
-            echo "[api] Uploading: ${f} ($(du -h "$f" | cut -f1))"
-            BLOB_SHA=$(base64 -w0 "$f" \
-              | jq -Rs '{"encoding":"base64","content":.}' \
-              | gh api "repos/${REPO}/git/blobs" --input - --jq '.sha')
-            TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
-              --arg path "$f" --arg sha "$BLOB_SHA" \
-              '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+            echo "[push] Staged: ${f} ($(du -h "$f" | cut -f1))"
           done
 
           if [ "$file_count" -eq 0 ]; then
@@ -285,25 +311,10 @@ jobs:
             exit 1
           fi
 
-          TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
-            '{"base_tree": $base, "tree": .}' | \
-            gh api "repos/${REPO}/git/trees" --input - --jq '.sha')
-
           COMMIT_MSG="Step 2.3 DE: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }}"
-          COMMIT_SHA=$(jq -n \
-            --arg msg "${COMMIT_MSG}" --arg tree "$TREE_SHA" --arg parent "$BASE_SHA" \
-            '{"message": $msg, "tree": $tree, "parents": [$parent]}' | \
-            gh api "repos/${REPO}/git/commits" --input - --jq '.sha')
-
-          for i in $(seq 1 4); do
-            if gh api "repos/${REPO}/git/refs" \
-              -f "ref=refs/heads/${branch}" -f "sha=${COMMIT_SHA}" > /dev/null 2>&1; then
-              echo "[api] Branch created: ${branch}"
-              break
-            fi
-            [ "$i" -eq 4 ] && { echo "::error::Failed to create branch"; exit 1; }
-            sleep $((2 ** i))
-          done
+          git commit -m "$COMMIT_MSG"
+          git push origin "$branch"
+          echo "[push] Branch created: ${branch}"
           echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
 
       - name: Summary
