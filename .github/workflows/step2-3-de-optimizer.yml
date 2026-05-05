@@ -190,7 +190,7 @@ jobs:
 
           # Verify project modules resolve (import-time only, no data needed)
           import pipeline_config as pc
-          print(f'pipeline_config OK — {len(pc.LCOE_TABLE)} LCOE entries')
+          print(f'pipeline_config OK — {len(pc.LCOE_TABLES)} LCOE entries')
           "
 
       - name: Ensure output directory
