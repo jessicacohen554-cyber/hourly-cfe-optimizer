@@ -560,28 +560,42 @@ def main():
         target_2040=args.target_2040, target_2050=args.target_2050,
         reference_winners=ref)
 
-    # Save results + winners
+    # Save results as parquet + winners as JSON (for seeding)
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
     out_dir = PROJECT_ROOT / "data" / "step2.3-de"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    tag = f"{iso}_{args.pathway}_{args.scenario}_{args.demand_growth}"
-    results_path = out_dir / f"{tag}_results.json"
+    # Sweep-safe naming: includes popsize/maxiter/seed so configs don't overwrite
+    tag = (f"{iso}_pathway{args.pathway}_{args.scenario}_{args.demand_growth}"
+           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}")
+    results_path = out_dir / f"{tag}.parquet"
     winners_path = out_dir / f"{tag}_winners.json"
 
-    with open(results_path, "w") as f:
-        json.dump({"meta": {
-            "iso": iso, "pathway": args.pathway, "scenario": args.scenario,
-            "demand_growth": args.demand_growth, "popsize": args.popsize,
-            "maxiter": args.maxiter, "seed": args.seed,
-            "target_2040": args.target_2040, "target_2050": args.target_2050,
-        }, "years": results}, f, indent=2)
+    # Build parquet with meta columns + year data
+    rows = []
+    for yr in results:
+        row = {**yr}
+        row["iso"] = iso
+        row["pathway"] = args.pathway
+        row["scenario"] = args.scenario
+        row["demand_growth"] = args.demand_growth
+        row["popsize"] = args.popsize
+        row["maxiter"] = args.maxiter
+        row["seed"] = args.seed
+        row["target_2040"] = args.target_2040
+        row["target_2050"] = args.target_2050
+        rows.append(row)
+    table = pa.Table.from_pylist(rows)
+    pq.write_table(table, results_path)
 
     serializable = {str(y): (p.tolist(), s.tolist())
                     for y, (p, s) in winners.items()}
     with open(winners_path, "w") as f:
         json.dump({"winners": serializable}, f)
 
-    print(f"\nResults: {results_path}")
+    print(f"\nResults: {results_path} ({results_path.stat().st_size / 1024:.0f} KB)")
     print(f"Winners: {winners_path}")
 
 
