@@ -1,0 +1,343 @@
+name: "Step 2.3 DE: Differential Evolution Pathway Optimizer"
+
+# Runs step2_3_de_pathway.py — year-by-year differential evolution with
+# dispatch_utils canonical hourly scoring. Replaces Sobol sampling.
+#
+# pathway options:
+#   A, B, C, D       — run a single pathway
+#   BOTH              — run A then B (B seeded with A's winners)
+#   ALL               — run A then B then C then D (each seeded with A)
+#
+# iso=ALL fans out to 7 parallel matrix jobs.
+# Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de"
+# to consolidate into master.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = parallel across 7)'
+        required: true
+        default: 'CAISO'
+        type: choice
+        options:
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+          - ALL
+      pathway:
+        description: 'Pathway (A=VRE-only, B=firm incl, BOTH=A→B seeded, ALL=A→B→C→D)'
+        required: true
+        default: 'BOTH'
+        type: choice
+        options:
+          - A
+          - B
+          - C
+          - D
+          - BOTH
+          - ALL
+      popsize:
+        description: 'DE population multiplier (pop = popsize × n_dims). Larger = better search, slower.'
+        required: false
+        default: '15'
+        type: choice
+        options:
+          - '10'
+          - '15'
+          - '20'
+          - '40'
+      maxiter:
+        description: 'DE generations per year-step. Larger = more thorough, slower.'
+        required: false
+        default: '150'
+        type: choice
+        options:
+          - '100'
+          - '150'
+          - '200'
+          - '400'
+      seed:
+        description: 'RNG seed for reproducibility'
+        required: false
+        default: '42'
+        type: string
+      demand_growth:
+        description: 'Demand growth level'
+        required: true
+        default: 'Medium'
+        type: choice
+        options:
+          - Medium
+          - Low
+          - High
+      scenario:
+        description: 'Cost scenario'
+        required: true
+        default: 'base'
+        type: choice
+        options:
+          - base
+          - firm_high_vre_low
+          - firm_low_vre_high
+      target_2040:
+        description: 'CFE% target at 2040 (linear ramp from baseline)'
+        required: false
+        default: '90'
+        type: string
+      target_2050:
+        description: 'CFE% target at 2050 (linear ramp from 2040 target)'
+        required: false
+        default: '99.9'
+        type: string
+      workers:
+        description: 'Parallel DE evaluations per year-step (2 = use both cores)'
+        required: false
+        default: '2'
+        type: choice
+        options:
+          - '1'
+          - '2'
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-3-de
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  de-optimize:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    concurrency:
+      group: step2-3-de-${{ matrix.iso }}-${{ github.run_id }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Verify prerequisites
+        run: |
+          for f in data/eia-930/eia_generation_profiles.parquet data/eia-930/eia_demand_profiles.parquet; do
+            if [ ! -f "$f" ]; then
+              echo "::error::$f not found. Run Step 0 data fetch first."
+              exit 1
+            fi
+          done
+          if [ ! -f "data/hybrid_profiles/${{ matrix.iso }}_hybrid_profiles.npz" ]; then
+            echo "::warning::Hybrid profiles not found for ${{ matrix.iso }} — hybrids will be zero"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow scipy
+
+      - name: Ensure output directory
+        run: mkdir -p data/step2.3-de
+
+      - name: Build pathway list
+        id: pathways
+        env:
+          PATHWAY: ${{ inputs.pathway }}
+        run: |
+          case "$PATHWAY" in
+            BOTH)     echo "list=A B" >> "$GITHUB_OUTPUT" ;;
+            ALL)      echo "list=A B C D" >> "$GITHUB_OUTPUT" ;;
+            *)        echo "list=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: "Run DE optimizer — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ steps.pathways.outputs.list }}
+          POPSIZE: ${{ inputs.popsize }}
+          MAXITER: ${{ inputs.maxiter }}
+          WORKERS: ${{ inputs.workers }}
+          SEED: ${{ inputs.seed }}
+          SCENARIO: ${{ inputs.scenario }}
+          DEMAND: ${{ inputs.demand_growth }}
+          TARGET_2040: ${{ inputs.target_2040 }}
+          TARGET_2050: ${{ inputs.target_2050 }}
+        timeout-minutes: 330
+        run: |
+          set -euo pipefail
+          REF_FLAG=""
+
+          for pw in $PATHWAYS; do
+            echo ""
+            echo "============================================================"
+            echo "[workflow] Starting DE Pathway $pw for $ISO"
+            echo "  popsize=$POPSIZE maxiter=$MAXITER workers=$WORKERS seed=$SEED"
+            echo "  target_2040=$TARGET_2040 target_2050=$TARGET_2050"
+            echo "============================================================"
+            t0=$SECONDS
+
+            python scripts/step2_3_de_pathway.py \
+              --iso "$ISO" \
+              --pathway "$pw" \
+              --popsize "$POPSIZE" \
+              --maxiter "$MAXITER" \
+              --workers "$WORKERS" \
+              --seed "$SEED" \
+              --scenario "$SCENARIO" \
+              --demand-growth "$DEMAND" \
+              --target-2040 "$TARGET_2040" \
+              --target-2050 "$TARGET_2050" \
+              $REF_FLAG
+
+            echo "[workflow] Pathway $pw done in $(( SECONDS - t0 ))s"
+
+            # After pathway A, set ref-winners flag for subsequent pathways
+            if [ "$pw" = "A" ]; then
+              WINNERS_FILE="data/step2.3-de/${ISO}_A_${SCENARIO}_${DEMAND}_winners.json"
+              if [ -f "$WINNERS_FILE" ]; then
+                REF_FLAG="--ref-winners $WINNERS_FILE"
+                echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
+              fi
+            fi
+          done
+
+      - name: "Verify outputs — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ steps.pathways.outputs.list }}
+          SCENARIO: ${{ inputs.scenario }}
+          DEMAND: ${{ inputs.demand_growth }}
+        run: |
+          for pw in $PATHWAYS; do
+            results="data/step2.3-de/${ISO}_${pw}_${SCENARIO}_${DEMAND}_results.json"
+            if [ ! -f "$results" ]; then
+              echo "::error::Missing results: $results"
+              exit 1
+            fi
+            size=$(stat -c%s "$results" 2>/dev/null || stat -f%z "$results")
+            echo "[verify] ${results}: ${size} bytes"
+          done
+
+      - name: "Push results via API — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+          REPO="${GITHUB_REPOSITORY}"
+          SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+
+          BASE_SHA=$(gh api "repos/${REPO}/git/ref/heads/${SOURCE_BRANCH}" --jq '.object.sha')
+          BASE_TREE=$(gh api "repos/${REPO}/git/commits/${BASE_SHA}" --jq '.tree.sha')
+          echo "[api] Base commit: ${BASE_SHA}"
+
+          TREE_ENTRIES="[]"
+          file_count=0
+
+          for f in data/step2.3-de/${ISO}_*.json; do
+            [ -f "$f" ] || continue
+            file_count=$((file_count + 1))
+            echo "[api] Uploading: ${f} ($(du -h "$f" | cut -f1))"
+            BLOB_SHA=$(base64 -w0 "$f" \
+              | jq -Rs '{"encoding":"base64","content":.}' \
+              | gh api "repos/${REPO}/git/blobs" --input - --jq '.sha')
+            TREE_ENTRIES=$(echo "$TREE_ENTRIES" | jq \
+              --arg path "$f" --arg sha "$BLOB_SHA" \
+              '. + [{"path": $path, "mode": "100644", "type": "blob", "sha": $sha}]')
+          done
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No output files found for ${ISO}"
+            exit 1
+          fi
+
+          TREE_SHA=$(echo "$TREE_ENTRIES" | jq --arg base "$BASE_TREE" \
+            '{"base_tree": $base, "tree": .}' | \
+            gh api "repos/${REPO}/git/trees" --input - --jq '.sha')
+
+          COMMIT_MSG="Step 2.3 DE: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }}"
+          COMMIT_SHA=$(jq -n \
+            --arg msg "${COMMIT_MSG}" --arg tree "$TREE_SHA" --arg parent "$BASE_SHA" \
+            '{"message": $msg, "tree": $tree, "parents": [$parent]}' | \
+            gh api "repos/${REPO}/git/commits" --input - --jq '.sha')
+
+          for i in $(seq 1 4); do
+            if gh api "repos/${REPO}/git/refs" \
+              -f "ref=refs/heads/${branch}" -f "sha=${COMMIT_SHA}" > /dev/null 2>&1; then
+              echo "[api] Branch created: ${branch}"
+              break
+            fi
+            [ "$i" -eq 4 ] && { echo "::error::Failed to create branch"; exit 1; }
+            sleep $((2 ** i))
+          done
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          {
+            echo "## Step 2.3 DE Optimizer — ${ISO}"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---------|-------|"
+            echo "| Pathway | \`${{ inputs.pathway }}\` |"
+            echo "| Popsize | ${{ inputs.popsize }} |"
+            echo "| Maxiter | ${{ inputs.maxiter }} |"
+            echo "| Workers | ${{ inputs.workers }} |"
+            echo "| Seed | ${{ inputs.seed }} |"
+            echo "| Scenario | \`${{ inputs.scenario }}\` |"
+            echo "| Demand | \`${{ inputs.demand_growth }}\` |"
+            echo "| Target 2040 | ${{ inputs.target_2040 }}% |"
+            echo "| Target 2050 | ${{ inputs.target_2050 }}% |"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "Branch: \`${BRANCH}\`"
+            fi
+            echo ""
+            echo "Run **Squash Pipeline Branches** with pattern \`auto/.*step2-3-de\` to consolidate."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-3-de-${{ matrix.iso }}-${{ github.run_id }}
+          path: data/step2.3-de/
+          retention-days: 30
+          if-no-files-found: warn
