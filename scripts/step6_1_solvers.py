@@ -20,30 +20,37 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 # --- Step 2.3 imports (scoring kernel) ---
-# from step2_3_reliability_tax_adaptive import (
-#     score_candidates, _score_mixes, _compute_post_storage_gaps,
-#     h2_size_for_target, h2_peaker_capex_kw_yr, h2_peaker_fuel_mwh,
-#     N_RESOURCES, RESOURCE_ORDER, RES_IDX, N_STORAGE, STORAGE_COLS,
-#     FIRM_PATHWAYS,
-# )
+from step2_3_reliability_tax_adaptive import (
+    score_candidates,
+    N_RESOURCES, RESOURCE_ORDER, N_STORAGE, STORAGE_COLS,
+    FIRM_PATHWAYS,
+)
 
 # --- Step 6.1 imports (revenue/cost model) ---
-# from step6_1_smartargets import (
-#     get_resource_lcoe, compute_energy_revenue_by_resource,
-#     compute_capacity_revenue, compute_rec_revenue,
-#     compute_lmp_at_threshold, estimate_new_gw_from_delta,
-#     QUEUE_CAP_GW, SIM_YEARS, RESOURCE_TO_TECH,
-#     wright_cost, get_effective_cumulative_gw,
-#     NEW_GAS_CCGT_LCOE, NEW_GAS_CT_LCOE,
-#     EXISTING_GAS_FOM_KW_YR,
-# )
+from step6_1_smartargets import (
+    get_resource_lcoe, compute_energy_revenue_by_resource,
+    compute_capacity_revenue, compute_rec_revenue,
+    compute_lmp_at_threshold, estimate_new_gw_from_delta,
+    compute_zone_cost, compute_zone_revenue,
+    QUEUE_CAP_GW, SIM_YEARS, RESOURCE_TO_TECH,
+    NEW_GAS_CCGT_LCOE, NEW_GAS_CT_LCOE,
+    PEAK_CAPACITY_CREDITS, CAPACITY_MARKET_PRICES,
+    CAPACITY_DEGRADATION_ALPHA, HYBRID_TYPES,
+    RESOURCE_TYPES_HYBRID, ISOS,
+    _get_ppa_discount,
+)
 
 # --- Pipeline config ---
-# from pipeline_config import (
-#     RESOURCE_CAPACITY_FACTORS, GRID_MIX_SHARES,
-#     REGIONAL_DEMAND_TWH, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
-#     OFFSHORE_ISOS, LCOE_TABLES,
-# )
+from pipeline_config import (
+    RESOURCE_CAPACITY_FACTORS, GRID_MIX_SHARES,
+    REGIONAL_DEMAND_TWH, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH, GEO_CAP_TWH,
+    OFFSHORE_ISOS, LCOE_TABLES,
+    WRIGHT_CUMULATIVE_GW_2025,
+    get_tx, get_hybrid_tx,
+)
+
+# --- Data loading ---
+from dispatch_utils import load_common_data, get_demand_profile, get_supply_profiles
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -264,7 +271,7 @@ def compute_resource_profit(
         cap_credit = PEAK_CAPACITY_CREDITS.get('gas_ccgt', 0.95)
         cap_price = CAPACITY_MARKET_PRICES.get(iso, 0)
         # Degrade capacity price with clean penetration
-        alpha = CAPACITY_DEGRADATION_ALPHA
+        alpha = CAPACITY_DEGRADATION_ALPHA.get(iso, 0)
         cap_degraded = cap_price * max(0, 1 - alpha * current_clean_pct / 100)
         cf_gas = 0.85 if res == 'gas_ccgt' else 0.10
         cap_rev_mwh = cap_degraded * cap_credit / (cf_gas * 8760) * 1000
@@ -726,7 +733,6 @@ def run_constrained_year(
     # Advance ratchet
     built_twh = {res: pct / 100.0 * demand_twh for res, pct in winner_pcts.items()}
     ratchet.advance(built_twh, built_storage_pct=winner_storage, built_gw=new_gw)
-    ratchet.advance_storage(winner_storage)
 
     return {
         'year': year,
@@ -856,3 +862,4 @@ def build_2023_baseline(iso):
     """2023 eGRID actual data — identical for all scenarios."""
     # TODO: same as current step 6.1 2023 block
     raise NotImplementedError
+
