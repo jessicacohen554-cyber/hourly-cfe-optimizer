@@ -9,7 +9,7 @@ via max(announced schedule, economic sigmoid driven by CFE%). Oil declines
 ~3%/yr on age. Feedback loop: more clean → lower LMP proxy → faster coal
 retirement → more peak gap → optimizer must fill with clean or new gas.
 
-Output files tagged `_tf` to avoid collision with baseline results.
+Output files tagged `_tf2` to avoid collision with baseline and v1 _tf results.
 
 CFE trajectory: smooth linear ramp from actual baseline (dispatch_utils scored)
 to --target-2040 (default 90%) to --target-2050 (default 99.9%).
@@ -22,16 +22,28 @@ Gas modes (--gas-mode):
     All modes: real gas cost + shadow always included in reported results.
     The distinction is what the optimizer considers vs. what physically exists.
 
+Known limitations:
+    - Whole-ISO framing: assumes the entire grid follows the modeled
+      procurement strategy. prev_cfe drives coal retirement as a proxy
+      for grid-wide clean penetration, not a single buyer's portfolio.
+    - Load shape is frozen at the base year. Year-to-year demand growth
+      scales magnitude (dem_twh) but not the hourly profile. Electrification
+      or data-center load shifts are not captured.
+    - No resource degradation. The ratchet preserves nameplate TWh across
+      years; solar (~0.5%/yr) and battery (~0.5-1%/yr) degradation are not
+      modeled. This introduces a small optimistic bias on absolute cost
+      (~3-5% by 2050) that largely cancels in pathway comparisons.
+
 Usage:
     # Single pathway
     python scripts/step2_3_de_pathway_tf.py --iso ERCOT --pathway A
 
     # Pathway B seeded with A's results (guarantees B ≤ A)
-    python scripts/step2_3_de_pathway_tf.py --iso ERCOT --pathway B \
-        --ref-winners data/step2.3-de/ERCOT_pathwayA_base_Medium_p15_i150_s42_g1_tf_winners.json
+    python scripts/step2_3_de_pathway_tf.py --iso ERCOT --pathway B \\
+        --ref-winners data/step2.3-de/ERCOT_pathwayA_base_Medium_p15_i150_s42_g1_tf2_winners.json
 
     # Production settings
-    python scripts/step2_3_de_pathway_tf.py --iso PJM --pathway B \
+    python scripts/step2_3_de_pathway_tf.py --iso PJM --pathway B \\
         --popsize 20 --maxiter 200 --workers 2
 """
 from __future__ import annotations
@@ -41,6 +53,7 @@ import json
 import sys
 import time
 import types
+from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
@@ -71,13 +84,23 @@ from scipy.optimize import differential_evolution
 PENALTY_WEIGHT = 1e12        # $/pp² for CFE shortfall and overshoot
 MAX_RESOURCE_PCT = 200.0     # hard ceiling per resource dimension
 STORAGE_MAX_PCT = 50.0       # generous storage cap — cost function regulates
+EARLY_EXIT_GAP_PP = 10.0     # skip cost loop if CFE misses target by >10pp
+
+# Vintage ledger entry. Two schemas share one type:
+#   Generation: quantity = delta_TWh,       unit_cost = LCOE ($/MWh)
+#   Storage:    quantity = annual_cost ($),  unit_cost = delta_fraction (dimensionless)
+VintageEntry = namedtuple("VintageEntry", ["year", "resource", "quantity", "unit_cost"])
 
 
 # ---------------------------------------------------------------------------
 # Profile loading (once per ISO)
 # ---------------------------------------------------------------------------
 def load_iso_data(iso):
-    """Load demand + supply profiles and precompute supply matrix."""
+    """Load demand + supply profiles and precompute supply matrix.
+
+    Note: the hourly load *shape* is frozen at the base year. Year-to-year
+    demand growth scales the magnitude (dem_twh) but not the profile shape.
+    """
     demand_data = load_demand_profiles()
     gen_profiles = load_generation_profiles()
     demand_norm, total_mwh = du.get_demand_profile(iso, demand_data)
@@ -117,34 +140,28 @@ def score_cfe(res_pcts, b4_pct, b8_pct, ldes_pct,
 
 
 # ---------------------------------------------------------------------------
-# p9997: O(n) via np.partition instead of O(n log n) sort
+# Fast p9997: O(n) via np.partition instead of O(n log n) full sort
 # ---------------------------------------------------------------------------
 def _p9997(arr):
-    """3rd-largest element of arr (p99.97 proxy for gas sizing).
-    Uses np.partition for O(n) instead of full sort."""
+    """3rd-largest value (p99.97 proxy for 8760 hours). O(n) via partition."""
     n = len(arr)
     if n < 3:
         return 0.0
-    # partition places the (n-3)-th smallest element in position;
-    # elements at [-3], [-2], [-1] are the 3 largest (unordered among themselves)
-    top3 = np.partition(arr, n - 3)
-    return float(top3[n - 3])
+    return float(np.partition(arr, -3)[-3])
 
 
 # ---------------------------------------------------------------------------
-# H2 peaker sizing — analytical O(n) replaces 60-iteration binary search
+# H2 peaker sizing — analytical O(n log n) replaces 60-iteration binary search
 # ---------------------------------------------------------------------------
 def size_h2(residual_demand, demand_norm, cfe_pre, target_cfe, dem_twh):
     """Find minimum H2 capacity to close CFE gap.
 
-    Analytical solution: sort residual descending, compute prefix sums,
-    solve the piecewise-linear dispatch(C) = needed equation directly.
-    Produces identical results to binary search but in O(n log n) total
-    (dominated by sort) instead of O(60n).
+    Analytical solution: sort residual descending, walk prefix sums to find
+    the capacity threshold. One sort + one linear scan replaces 60 numpy
+    passes from the binary search.
     """
     if cfe_pre >= target_cfe:
-        return {"h2_mw": 0.0, "h2_mwh": 0.0,
-                "resid_p9997": _p9997(residual_demand)}
+        return {"h2_mw": 0.0, "h2_mwh": 0.0, "resid_p9997": _p9997(residual_demand)}
 
     total_demand = np.sum(demand_norm)
     needed_norm = (target_cfe - cfe_pre) / 100.0 * total_demand
@@ -153,45 +170,50 @@ def size_h2(residual_demand, demand_norm, cfe_pre, target_cfe, dem_twh):
     if total_gap < needed_norm * 0.999:
         return {"h2_mw": np.inf, "h2_mwh": 0.0, "resid_p9997": np.inf}
 
-    # Sort descending: sd[0] >= sd[1] >= ... >= sd[n-1]
-    sd = np.sort(residual_demand)[::-1]
-    n = len(sd)
-    cs = np.cumsum(sd)      # cs[i] = sd[0] + ... + sd[i]
-    total = cs[n - 1]
+    # Sort descending — one O(n log n) step replaces 60 × O(n) numpy passes
+    sorted_desc = np.sort(residual_demand)[::-1]
+    n = len(sorted_desc)
 
-    # With k hours capped at capacity C (the k largest exceed C):
-    #   dispatch(C) = k * C + (total - cs[k-1])
-    #   Solve for C: C = (needed - total + cs[k-1]) / k
-    #   Valid when sd[k] <= C <= sd[k-1]  (sd[n] := 0 for k=n bracket)
+    # Walk sorted array to find minimum capacity C such that
+    # sum(min(resid_h, C) for all h) >= needed_norm.
     #
-    # Vectorized over k = 1..n
-    ks = np.arange(1, n + 1, dtype=np.float64)
-    c_vals = (needed_norm - total + cs) / ks    # cs[k-1] for k=1..n
+    # If C >= sorted_desc[0], all hours contribute their full value.
+    # If C = sorted_desc[k], hours 0..k-1 are capped at C, rest contribute full.
+    # Total dispatched = k * C + sum(sorted_desc[k:])
+    #
+    # We find the breakpoint k where reducing C below sorted_desc[k-1]
+    # would drop total below needed.
+    h2_cap_norm = sorted_desc[0]  # start with max (trivially sufficient)
 
-    # Bracket bounds
-    lowers = np.empty(n)
-    lowers[:n - 1] = sd[1:]
-    lowers[n - 1] = 0.0    # k=n: C can go down to 0
+    running_prefix = 0.0
+    for k in range(n):
+        val = sorted_desc[k]
+        # If C = val: hours 0..k contribute val each, rest contribute actual
+        remaining_tail = total_gap - running_prefix - val
+        total_disp = (k + 1) * val + remaining_tail
 
-    uppers = sd              # sd[k-1] for k=1..n
+        if total_disp < needed_norm:
+            # C must be between sorted_desc[k-1] and sorted_desc[k]
+            if k == 0:
+                h2_cap_norm = needed_norm / n
+            else:
+                # k hours capped at C, rest contribute full value
+                hours_below = total_gap - running_prefix  # sum(sorted_desc[k:])
+                h2_cap_norm = (needed_norm - hours_below) / k
+            break
 
-    valid = (c_vals >= lowers - 1e-15) & (c_vals <= uppers + 1e-15)
-
-    # Largest valid k = smallest C (most hours capped)
-    valid_idx = np.flatnonzero(valid)
-    if len(valid_idx) > 0:
-        h2_cap_norm = max(float(c_vals[valid_idx[-1]]), 0.0)
+        running_prefix += val
     else:
-        # Fallback (should not happen if total_gap >= needed)
-        h2_cap_norm = float(sd[0])
+        # Walked entire array without breaking — all hours contribute full value
+        # at minimum capacity = sorted_desc[-1]. Edge case.
+        h2_cap_norm = sorted_desc[-1]
 
     h2_disp = np.minimum(residual_demand, h2_cap_norm)
     h2_mw = h2_cap_norm * dem_twh * 1e6
     h2_mwh = float(h2_disp.sum()) * dem_twh * 1e6
 
     post_resid = np.maximum(residual_demand - h2_disp, 0.0)
-    return {"h2_mw": h2_mw, "h2_mwh": h2_mwh,
-            "resid_p9997": _p9997(post_resid)}
+    return {"h2_mw": h2_mw, "h2_mwh": h2_mwh, "resid_p9997": _p9997(post_resid)}
 
 
 # ---------------------------------------------------------------------------
@@ -209,31 +231,31 @@ def pcts_to_dict(pcts_arr):
 # ---------------------------------------------------------------------------
 class _DEObjective:
     """Callable wrapper that scipy.optimize.differential_evolution can pickle
-    when ``workers > 1`` triggers multiprocessing.  Replaces the nested
-    closures (objective + obj_active) that captured enclosing-scope locals.
+    when ``workers > 1`` triggers multiprocessing.
 
-    v2.0: Precomputes per-year LCOE, storage cost, gas cost, and shadow cost
-    constants in __init__ so the hot path does arithmetic only — no function
-    calls, dict lookups, or Wright's Law evaluations per DE evaluation.
+    v2.0 optimizations vs. v1.x:
+    - Precomputed LCOE and storage cost arrays (eliminates per-eval function calls)
+    - Pre-allocated work buffers when workers=1 (skipped for multiprocessing safety)
+    - Early-exit penalty when CFE misses target by >EARLY_EXIT_GAP_PP
     """
 
     __slots__ = (
         'lo', 'hi', 'floor_pcts', 'free_idx', 'n_free',
         'demand_norm', 'supply_profiles', 'supply_matrix',
-        'dem_twh', 'dem_twh_1e6', 'cfg', 'iso', 'year',
-        'target', 'cfe_ceiling',
+        'dem_twh', 'cfg', 'iso', 'year', 'target', 'cfe_ceiling',
         'capex_yr', 'fuel_mwh_rate', 'thermal_peak_credit', 'gaf', 'peak_gas_mw',
         'floor_stor', 'full_x0', 'active', 'gas_mode',
-        # Precomputed per-year constants (v2.0)
-        'lcoe_by_k', 'stor_net_by_j',
-        'gas_cost_per_mw', 'shadow_per_mw_above_peak',
+        # Precomputed cost arrays (v2.0)
+        '_lcoe_by_free_k', '_stor_net',
+        # Pre-allocated buffers (workers=1 only)
+        '_buf_full', '_buf_pcts', '_use_buffers',
     )
 
     def __init__(self, *, lo, hi, floor_pcts, free_idx, n_free,
                  demand_norm, supply_profiles, supply_matrix,
                  dem_twh, cfg, iso, year, target, cfe_ceiling,
                  capex_yr, fuel_mwh_rate, thermal_peak_credit, gaf, peak_gas_mw,
-                 floor_stor, full_x0, active, gas_mode=1):
+                 floor_stor, full_x0, active, gas_mode=1, workers=1):
         self.lo = lo
         self.hi = hi
         self.floor_pcts = floor_pcts
@@ -243,7 +265,6 @@ class _DEObjective:
         self.supply_profiles = supply_profiles
         self.supply_matrix = supply_matrix
         self.dem_twh = dem_twh
-        self.dem_twh_1e6 = dem_twh * 1e6
         self.cfg = cfg
         self.iso = iso
         self.year = year
@@ -259,45 +280,35 @@ class _DEObjective:
         self.active = active
         self.gas_mode = gas_mode
 
-        # --- Precompute per-year constants (called once, not per evaluation) ---
-
-        # LCOE for each free resource dimension
-        self.lcoe_by_k = np.array([
+        # --- Precompute year-constant costs (v2.0) ---
+        # These depend only on (iso, resource, year, cfg) — invariant within
+        # a year's DE run. Eliminates function call overhead per evaluation.
+        self._lcoe_by_free_k = np.array([
             solver.get_resource_lcoe(iso, solver.RESOURCE_ORDER[ri], year, cfg)
-            for ri in free_idx
-        ], dtype=np.float64)
+            for ri in free_idx], dtype=np.float64)
 
-        # Net cost for each storage type
-        self.stor_net_by_j = np.array([
+        self._stor_net = np.array([
             solver.storage_net_cost(iso, sc, cfg, year=year)
-            for sc in solver.STORAGE_COLS
-        ], dtype=np.float64)
+            for sc in solver.STORAGE_COLS], dtype=np.float64)
 
-        # Gas annual cost = new_gas_mw × per_mw_rate
-        # Inline from solver.gas_annual_cost components
-        _level_name = solver.LEVEL_NAME[cfg.fuel_cost]
-        self.gas_cost_per_mw = (
-            float(pc.NEW_CCGT_COST_KW_YR[iso]) * 1000
-            + float(pc.NEW_CCGT_FOM_KW_YR[iso]) * 1000
-            + solver.GAS_CF * solver.H * (
-                float(pc.WHOLESALE_PRICES[iso])
-                + float(pc.FUEL_ADJUSTMENTS[iso][_level_name]))
-        )
-
-        # Gas stranding shadow = marginal_peak_mw × per_mw_rate
-        if solver.STRANDING_SHADOW_WEIGHT > 0:
-            _capex_kw_yr = float(pc.NEW_CCGT_COST_KW_YR[iso])
-            _years_rem = max(0.0, (solver.END_YEAR - year)) / (
-                solver.END_YEAR - solver.BASE_YEAR)
-            self.shadow_per_mw_above_peak = (
-                _capex_kw_yr * 1000 * _years_rem
-                * solver.STRANDING_SHADOW_WEIGHT)
+        # --- Pre-allocate work buffers if single-threaded (v2.0) ---
+        # With workers > 1, each process gets its own copy via pickle,
+        # so shared buffers would be unsafe.
+        self._use_buffers = (workers <= 1)
+        if self._use_buffers:
+            self._buf_full = full_x0.copy()
+            self._buf_pcts = floor_pcts.copy()
         else:
-            self.shadow_per_mw_above_peak = 0.0
+            self._buf_full = None
+            self._buf_pcts = None
 
     def __call__(self, x_active):
         """Map active-dim vector → full vector → cost."""
-        full = self.full_x0.copy()
+        if self._use_buffers:
+            full = self._buf_full
+            np.copyto(full, self.full_x0)
+        else:
+            full = self.full_x0.copy()
         for ai, idx in enumerate(self.active):
             full[idx] = x_active[ai]
         return self._objective(full)
@@ -307,7 +318,13 @@ class _DEObjective:
         floor_pcts, free_idx, n_free = self.floor_pcts, self.free_idx, self.n_free
 
         xc = np.clip(x, lo, hi)
-        pcts = floor_pcts.copy()
+
+        if self._use_buffers:
+            pcts = self._buf_pcts
+            np.copyto(pcts, floor_pcts)
+        else:
+            pcts = floor_pcts.copy()
+
         for k, ri in enumerate(free_idx):
             pcts[ri] = xc[k]
 
@@ -319,39 +336,38 @@ class _DEObjective:
         if h2["h2_mw"] > 1e8:
             return 1e18
 
-        post_cfe = cfe + (h2["h2_mwh"] / self.dem_twh_1e6 * 100
+        post_cfe = cfe + (h2["h2_mwh"] / (self.dem_twh * 1e6) * 100
                           if h2["h2_mwh"] > 0 else 0)
 
-        # Incremental cost above floor — precomputed LCOEs (no function calls)
+        # --- Early-exit penalty (v2.0) ---
+        # If CFE misses target by a wide margin, the penalty dominates
+        # regardless of cost details. Skip the cost loop entirely.
+        if post_cfe < self.target - EARLY_EXIT_GAP_PP:
+            return PENALTY_WEIGHT * (self.target - post_cfe) ** 2
+
+        # --- Incremental cost above floor (precomputed LCOEs, v2.0) ---
         cost = 0.0
-        dem_twh_1e6 = self.dem_twh_1e6
-        lcoe_by_k = self.lcoe_by_k
         dem_twh = self.dem_twh
         for k, ri in enumerate(free_idx):
             delta = pcts[ri] - floor_pcts[ri]
             if delta > 0:
-                cost += delta / 100 * dem_twh * lcoe_by_k[k] * 1e6
+                cost += delta / 100 * dem_twh * self._lcoe_by_free_k[k] * 1e6
 
-        stor_net_by_j = self.stor_net_by_j
-        floor_stor = self.floor_stor
         for j in range(solver.N_STORAGE):
-            ds = (xc[n_free + j] - floor_stor[j]) / 100
+            ds = (xc[n_free + j] - self.floor_stor[j]) / 100
             if ds > 0:
-                cost += ds * stor_net_by_j[j] * dem_twh_1e6
+                cost += ds * self._stor_net[j] * dem_twh * 1e6
 
         cost += h2["h2_mw"] * self.capex_yr * 1000 + h2["h2_mwh"] * self.fuel_mwh_rate
 
         g = solver.gas_need_mw(h2["resid_p9997"], dem_twh,
                                self.thermal_peak_credit, self.gaf)
-
         # Gas mode: 1=both on, 2=gas cost only, 3=both off
-        # Inlined gas cost and shadow using precomputed per-MW rates
-        if self.gas_mode <= 2 and g > 0:
-            cost += g * self.gas_cost_per_mw
-        if self.gas_mode == 1 and self.shadow_per_mw_above_peak > 0:
-            marginal = g - self.peak_gas_mw
-            if marginal > 0:
-                cost += marginal * self.shadow_per_mw_above_peak
+        if self.gas_mode <= 2:
+            cost += solver.gas_annual_cost(g, self.iso, self.cfg)
+        if self.gas_mode == 1:
+            cost += solver.gas_stranding_shadow(g, self.peak_gas_mw,
+                                                self.year, self.iso)
 
         # Penalties
         if post_cfe < self.target:
@@ -452,6 +468,11 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         3: "both OFF in optimizer (cost-blind)",
     }
 
+    # Whole-ISO framing: prev_cfe tracks grid-wide clean share (not a single
+    # buyer's portfolio), so it correctly drives coal retirement via the
+    # thermal_fleet_mw sigmoid. See module docstring "Known limitations".
+    prev_cfe = baseline_cfe
+
     print(f"\n{'='*70}")
     print(f"DE Pathway Optimizer — THERMAL FLEET variant (dispatch_utils scoring)")
     print(f"ISO={iso}  Pathway={pathway}  Scenario={scenario}  Demand={demand_growth}")
@@ -470,9 +491,6 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
     print(f"Annual ramp: {(target_2040 - baseline_cfe) / 15:.1f}pp/yr (2025-2040)"
           f"  {(target_2050 - target_2040) / 10:.1f}pp/yr (2040-2050)")
     print(f"{'='*70}\n")
-
-    # CFE feedback for thermal fleet: use prior year's achieved CFE
-    prev_cfe = baseline_cfe
 
     t0 = time.time()
 
@@ -504,6 +522,11 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             floor_pcts[solver.RES_IDX["clean_firm"]] = max(
                 floor_pcts[solver.RES_IDX["clean_firm"]],
                 baseline_cf_twh / dem_twh * 100.0)
+
+        # H2 cost parameters — year-constant, used by both DE objective and
+        # post-DE tally. Computed once here to avoid duplication.
+        capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
+        fuel_mwh_rate = solver.h2_peaker_fuel_mwh(year, cfg)
 
         # Score floor
         floor_cfe, floor_resid = score_cfe(
@@ -537,9 +560,6 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                 lo[n_free + j] = floor_stor[j]
                 hi[n_free + j] = STORAGE_MAX_PCT
 
-            capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
-            fuel_mwh_rate = solver.h2_peaker_fuel_mwh(year, cfg)
-
             # --- Filter zero-width dims ---
             active = [i for i in range(len(lo)) if hi[i] - lo[i] > 1e-6]
             if not active:
@@ -565,7 +585,8 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                     capex_yr=capex_yr, fuel_mwh_rate=fuel_mwh_rate,
                     thermal_peak_credit=yr_thermal_peak, gaf=gaf,
                     peak_gas_mw=peak_gas_mw, floor_stor=floor_stor,
-                    full_x0=full_x0, active=active, gas_mode=gas_mode)
+                    full_x0=full_x0, active=active, gas_mode=gas_mode,
+                    workers=workers)
 
                 de_seed = int(rng.integers(0, 2**31))
 
@@ -626,9 +647,6 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         g_shadow = solver.gas_stranding_shadow(g_mw, peak_gas_mw, year, iso)
 
         # --- Annual cost (all vintages + new) ---
-        capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
-        fuel_rate = solver.h2_peaker_fuel_mwh(year, cfg)
-
         year_inc = 0.0
         for k, ri in enumerate(free_idx):
             delta = winner_pcts[ri] - floor_pcts[ri]
@@ -639,13 +657,14 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             ds = (winner_stor[j] - floor_stor[j]) / 100
             if ds > solver.RATCHET_TOL_PCT:
                 year_inc += ds * solver.storage_net_cost(iso, sc, cfg, year=year) * dem_twh * 1e6
-        year_inc += h2_mw * capex_yr * 1000 + h2_mwh * fuel_rate
+        year_inc += h2_mw * capex_yr * 1000 + h2_mwh * fuel_mwh_rate
         # Real gas operating cost always counted; shadow is solver-only (never in tally)
         year_inc += g_cost
 
         _sn = set(solver.STORAGE_COLS)
-        vintage_cost = sum(q if r in _sn else q * u * 1e6
-                           for _, r, q, u in vintage_ledger)
+        vintage_cost = sum(
+            v.quantity if v.resource in _sn else v.quantity * v.unit_cost * 1e6
+            for v in vintage_ledger)
         total_annual = vintage_cost + year_inc
         cumulative_cost += total_annual
 
@@ -659,14 +678,15 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             delta = winner_pcts[ri] - floor_pcts[ri]
             if delta > solver.RATCHET_TOL_PCT:
                 res = solver.RESOURCE_ORDER[ri]
-                vintage_ledger.append((
+                vintage_ledger.append(VintageEntry(
                     year, res, delta / 100 * dem_twh,
                     solver.get_resource_lcoe(iso, res, year, cfg)))
         for j, sc in enumerate(solver.STORAGE_COLS):
             ds = (winner_stor[j] - floor_stor[j]) / 100
             if ds > solver.RATCHET_TOL_PCT:
                 net = solver.storage_net_cost(iso, sc, cfg, year=year)
-                vintage_ledger.append((year, sc, ds * net * dem_twh * 1e6, ds))
+                vintage_ledger.append(VintageEntry(
+                    year, sc, ds * net * dem_twh * 1e6, ds))
 
         yt = time.time() - _yt
         print(f"  {year}: CFE={winner_cfe:.1f}% tgt={target:.1f}% "
@@ -692,7 +712,8 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         # Update CFE feedback for next year's thermal fleet computation
         prev_cfe = float(winner_cfe)
 
-        # Ratchet: lock in builds, adjust for demand growth
+        # Ratchet: lock in builds, adjust for demand growth.
+        # Note: preserves nameplate TWh — does not model degradation.
         for ri in range(solver.N_RESOURCES):
             built_twh = max(floor_pcts[ri], winner_pcts[ri]) / 100 * dem_twh
             if yi < solver.N_YEARS - 1:
@@ -729,9 +750,9 @@ def main():
     ap.add_argument("--demand-growth", default="Medium",
                     choices=["Low", "Medium", "High"])
     ap.add_argument("--target-2040", type=float, default=90.0,
-                    help="CFE%% target at 2040. Linear ramp from baseline. Default 90")
+                    help="CFE%%%% target at 2040. Linear ramp from baseline. Default 90")
     ap.add_argument("--target-2050", type=float, default=99.9,
-                    help="CFE%% target at 2050. Linear ramp from 2040 target. Default 99.9")
+                    help="CFE%%%% target at 2050. Linear ramp from 2040 target. Default 99.9")
     ap.add_argument("--ref-winners", default=None,
                     help="Path to JSON with reference pathway winners for seeding")
     ap.add_argument("--gas-mode", type=int, default=1, choices=[1, 2, 3],
@@ -768,9 +789,11 @@ def main():
     out_dir = PROJECT_ROOT / "data" / "step2.3-de"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Sweep-safe naming: includes popsize/maxiter/seed/gas-mode + _tf tag
+    # Sweep-safe naming: includes popsize/maxiter/seed/gas-mode + _tf2 tag
+    # _tf2 distinguishes optimized solver (analytical H2, precomputed LCOE)
+    # from _tf v1 results for comparison.
     tag = (f"{iso}_pathway{args.pathway}_{args.scenario}_{args.demand_growth}"
-           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}_g{args.gas_mode}_tf")
+           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}_g{args.gas_mode}_tf2")
     results_path = out_dir / f"{tag}.parquet"
     winners_path = out_dir / f"{tag}_winners.json"
 
