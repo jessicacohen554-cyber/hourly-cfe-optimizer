@@ -1,0 +1,408 @@
+name: "Step 6.1 V3: SMARTargets — Market + Constrained"
+
+# Unified workflow for step6_1_v3_smartargets.py.
+#
+# Two solver modes:
+#   reference:   Merit-order market solver. Gas competes with clean.
+#                CFE is OUTPUT (emerges from profitability). Fast.
+#   power_nz:    DE constrained solver. Emission cap → CFE floor.
+#   economy_nz:  DE constrained solver. Tighter emission trajectory.
+#
+# iso=ALL fans out to 7 parallel matrix jobs.
+# pathway=ALL runs A→B→C→D sequentially (B/C/D seeded from A ratchet).
+#
+# Output: data/step6-v3/sweep_{type}_{ISO}_pw{pathway}.parquet
+#
+# Run squash-pipeline-branches.yml with pattern "auto/.*step6-v3"
+# to consolidate into master.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sweep:
+        description: 'Sweep type: reference (market), power_nz (DE), economy_nz (DE)'
+        required: true
+        default: 'reference'
+        type: choice
+        options:
+          - reference
+          - power_nz
+          - economy_nz
+      iso:
+        description: 'ISO region (ALL = parallel across 7)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+          - ALL
+      pathway:
+        description: 'Pathway (A=VRE-only, B=firm, C=+offshore, D=+LDES, ALL=A→B→C→D)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - A
+          - B
+          - C
+          - D
+          - ALL
+      popsize:
+        description: 'DE population multiplier (pop = popsize × n_dims). Only used for power_nz/economy_nz.'
+        required: false
+        default: '15'
+        type: choice
+        options:
+          - '10'
+          - '15'
+          - '20'
+          - '40'
+      maxiter:
+        description: 'DE generations per year-step. Only used for power_nz/economy_nz.'
+        required: false
+        default: '400'
+        type: choice
+        options:
+          - '100'
+          - '200'
+          - '400'
+          - '800'
+      seed:
+        description: 'RNG seed for DE reproducibility'
+        required: false
+        default: '42'
+        type: choice
+        options:
+          - '42'
+          - '80'
+          - '160'
+      demand_growth:
+        description: 'Demand growth level'
+        required: true
+        default: 'Medium'
+        type: choice
+        options:
+          - Medium
+          - Low
+          - High
+      scenario_set:
+        description: 'Scenario subset: full (all combos), corners (extremes+midpoints), smoke (3 scenarios)'
+        required: false
+        default: 'corners'
+        type: choice
+        options:
+          - full
+          - corners
+          - smoke
+      build_rate_pct:
+        description: 'Max new build per year as % of demand (market solver build rate cap)'
+        required: false
+        default: '8'
+        type: choice
+        options:
+          - '5'
+          - '8'
+          - '12'
+          - '15'
+      workers:
+        description: 'Parallel DE evaluations (1=safe, 2=faster). Ignored for reference sweep.'
+        required: false
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step6-v3
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  smartargets-v3:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    concurrency:
+      group: step6-v3-${{ matrix.iso }}-${{ github.run_id }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Verify prerequisites
+        run: |
+          # 8760 generation and demand profiles (Step 0 output)
+          for f in data/eia-930/eia_generation_profiles.parquet data/eia-930/eia_demand_profiles.parquet; do
+            if [ ! -f "$f" ]; then
+              echo "::error::$f not found. Run Step 0 data fetch first."
+              exit 1
+            fi
+          done
+
+          # Hybrid profiles (optional, warn if missing)
+          if [ ! -f "data/hybrid_profiles/${{ matrix.iso }}_hybrid_profiles.npz" ]; then
+            echo "::warning::Hybrid profiles not found for ${{ matrix.iso }} — hybrids will be zero"
+          fi
+
+          # eGRID baseline emissions (required for constrained sweeps)
+          if [ "${{ inputs.sweep }}" != "reference" ]; then
+            if [ ! -f "data/egrid_2023_baseline_emissions.json" ]; then
+              echo "::error::eGRID baseline emissions not found. Required for constrained sweeps."
+              exit 1
+            fi
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # -------------------------------------------------------------------
+      # Dependencies — verified via import chain:
+      #   step6_1_v3_smartargets.py
+      #     → pipeline_config.py (numpy)
+      #     → dispatch_utils.py  (pandas, pyarrow for parquet I/O)
+      #     → lmp_engine.py
+      #     → step2_3_reliability_tax_adaptive.py (numba — scoring kernel)
+      #     → scipy.optimize (differential_evolution — constrained only)
+      # -------------------------------------------------------------------
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Verify imports
+        working-directory: scripts
+        run: |
+          python -c "
+          import numpy, numba, pyarrow, pandas, scipy
+          from scipy.optimize import differential_evolution, NonlinearConstraint
+          print(f'numpy={numpy.__version__}')
+          print(f'numba={numba.__version__}')
+          print(f'scipy={scipy.__version__}')
+
+          import pipeline_config as pc
+          print(f'pipeline_config OK — {len(pc.THRESHOLDS)} thresholds')
+          "
+
+      - name: Ensure output directory
+        run: mkdir -p data/step6-v3
+
+      - name: Build pathway list
+        id: pathways
+        env:
+          PATHWAY: ${{ inputs.pathway }}
+        run: |
+          case "$PATHWAY" in
+            ALL)  echo "list=A B C D" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "list=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: "Run SMARTargets V3 — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          SWEEP: ${{ inputs.sweep }}
+          PATHWAYS: ${{ steps.pathways.outputs.list }}
+          POPSIZE: ${{ inputs.popsize }}
+          MAXITER: ${{ inputs.maxiter }}
+          SEED: ${{ inputs.seed }}
+          WORKERS: ${{ inputs.workers }}
+          DEMAND: ${{ inputs.demand_growth }}
+          SCENARIO_SET: ${{ inputs.scenario_set }}
+          BUILD_RATE: ${{ inputs.build_rate_pct }}
+        timeout-minutes: 330
+        run: |
+          set -euo pipefail
+          RATCHET_FILE=""
+
+          for pw in $PATHWAYS; do
+            echo ""
+            echo "============================================================"
+            echo "[workflow] SMARTargets V3: $SWEEP — $ISO pathway $pw"
+            if [ "$SWEEP" = "reference" ]; then
+              echo "  solver=merit-order  build_rate=${BUILD_RATE}%  demand=$DEMAND"
+              echo "  scenario_set=$SCENARIO_SET"
+            else
+              echo "  solver=DE  popsize=$POPSIZE  maxiter=$MAXITER  seed=$SEED  workers=$WORKERS"
+              echo "  demand=$DEMAND  scenario_set=$SCENARIO_SET"
+            fi
+            echo "============================================================"
+            t0=$SECONDS
+
+            # Build CLI args
+            ARGS="--iso $ISO --pathway $pw --sweep $SWEEP"
+            ARGS="$ARGS --demand-growth $DEMAND"
+            ARGS="$ARGS --scenario-set $SCENARIO_SET"
+            ARGS="$ARGS --build-rate-pct $BUILD_RATE"
+
+            # DE params (only meaningful for constrained sweeps, but safe to pass)
+            ARGS="$ARGS --popsize $POPSIZE --maxiter $MAXITER --seed $SEED --workers $WORKERS"
+
+            # Ratchet seeding: pathway B/C/D loads A's final ratchet state
+            if [ -n "$RATCHET_FILE" ] && [ -f "$RATCHET_FILE" ]; then
+              ARGS="$ARGS --init-ratchet $RATCHET_FILE"
+              echo "  Seeding from: $RATCHET_FILE"
+            fi
+
+            python scripts/step6_1_v3_smartargets.py $ARGS
+
+            elapsed=$(( SECONDS - t0 ))
+            echo "[workflow] Pathway $pw done in ${elapsed}s"
+
+            # After pathway A, set ratchet file for subsequent pathways
+            if [ "$pw" = "A" ]; then
+              RATCHET_FILE="data/step6-v3/ratchet_${ISO}_pw${pw}_${SWEEP}_${DEMAND}.json"
+              if [ -f "$RATCHET_FILE" ]; then
+                echo "[workflow] Will seed subsequent pathways with $RATCHET_FILE"
+              else
+                echo "::warning::Ratchet file not found: $RATCHET_FILE — subsequent pathways start from grid baseline"
+              fi
+            fi
+          done
+
+      - name: "Verify outputs — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ steps.pathways.outputs.list }}
+          SWEEP: ${{ inputs.sweep }}
+          DEMAND: ${{ inputs.demand_growth }}
+        run: |
+          found=0
+          for pw in $PATHWAYS; do
+            # Output naming: sweep_{type}_{ISO}_pw{pathway}_{demand}.parquet
+            results="data/step6-v3/sweep_${SWEEP}_${ISO}_pw${pw}_${DEMAND}.parquet"
+            if [ ! -f "$results" ]; then
+              echo "::error::Missing results: $results"
+              exit 1
+            fi
+            size=$(stat -c%s "$results" 2>/dev/null || stat -f%z "$results")
+            echo "[verify] ${results}: ${size} bytes"
+            found=$((found + 1))
+          done
+          echo "[verify] ${found} output file(s) verified for ${ISO}"
+
+      # -------------------------------------------------------------------
+      # git push (full clone, not REST API). Same pattern as step2-3-de.
+      # -------------------------------------------------------------------
+      - name: "Push results — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$branch"
+
+          # Stage output files
+          file_count=0
+          for f in data/step6-v3/${ISO}*.parquet data/step6-v3/${ISO}*.json \
+                   data/step6-v3/sweep_*_${ISO}_*.parquet data/step6-v3/ratchet_${ISO}_*.json; do
+            [ -f "$f" ] || continue
+            git add "$f"
+            file_count=$((file_count + 1))
+            echo "[push] Staged: ${f} ($(du -h "$f" | cut -f1))"
+          done
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No output files found for ${ISO}"
+            exit 1
+          fi
+
+          COMMIT_MSG="Step 6.1 V3: ${ISO} ${{ inputs.sweep }} pw=${{ inputs.pathway }} demand=${{ inputs.demand_growth }}"
+          if [ "${{ inputs.sweep }}" != "reference" ]; then
+            COMMIT_MSG="$COMMIT_MSG pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }}"
+          fi
+
+          git commit -m "$COMMIT_MSG"
+
+          # Retry push (parallel matrix jobs may race)
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "  Push attempt $i/$MAX_RETRIES..."
+            git push origin "$branch" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "  Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+          echo "[push] Branch created: ${branch}"
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          {
+            echo "## Step 6.1 V3 SMARTargets — ${ISO}"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---------|-------|"
+            echo "| Sweep | \`${{ inputs.sweep }}\` |"
+            echo "| Pathway | \`${{ inputs.pathway }}\` |"
+            echo "| Demand | \`${{ inputs.demand_growth }}\` |"
+            echo "| Scenarios | \`${{ inputs.scenario_set }}\` |"
+            echo "| Build rate | ${{ inputs.build_rate_pct }}% demand/yr |"
+            if [ "${{ inputs.sweep }}" != "reference" ]; then
+              echo "| DE popsize | ${{ inputs.popsize }} |"
+              echo "| DE maxiter | ${{ inputs.maxiter }} |"
+              echo "| DE seed | ${{ inputs.seed }} |"
+              echo "| Workers | ${{ inputs.workers }} |"
+            fi
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "Branch: \`${BRANCH}\`"
+            fi
+            echo ""
+            echo "**Squash:** \`auto/.*step6-v3\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step6-v3-${{ matrix.iso }}-${{ inputs.sweep }}-${{ github.run_id }}
+          path: data/step6-v3/
+          retention-days: 30
+          if-no-files-found: warn
