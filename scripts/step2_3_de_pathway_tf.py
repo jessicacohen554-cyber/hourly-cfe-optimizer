@@ -9,7 +9,7 @@ via max(announced schedule, economic sigmoid driven by CFE%). Oil declines
 ~3%/yr on age. Feedback loop: more clean → lower LMP proxy → faster coal
 retirement → more peak gap → optimizer must fill with clean or new gas.
 
-Output files tagged `_tf2` to avoid collision with baseline and v1 _tf results.
+Output files tagged `_tf` and written to data/step2.3-de/thermal-fleet/.
 
 CFE trajectory: smooth linear ramp from actual baseline (dispatch_utils scored)
 to --target-2040 (default 90%) to --target-2050 (default 99.9%).
@@ -40,7 +40,7 @@ Usage:
 
     # Pathway B seeded with A's results (guarantees B ≤ A)
     python scripts/step2_3_de_pathway_tf.py --iso ERCOT --pathway B \\
-        --ref-winners data/step2.3-de/ERCOT_pathwayA_base_Medium_p15_i150_s42_g1_tf2_winners.json
+        --ref-winners data/step2.3-de/thermal-fleet/ERCOT_pathwayA_base_Medium_p15_i150_s42_g1_tf_winners.json
 
     # Production settings
     python scripts/step2_3_de_pathway_tf.py --iso PJM --pathway B \\
@@ -786,14 +786,13 @@ def main():
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    out_dir = PROJECT_ROOT / "data" / "step2.3-de"
+    out_dir = PROJECT_ROOT / "data" / "step2.3-de" / "thermal-fleet"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Sweep-safe naming: includes popsize/maxiter/seed/gas-mode + _tf2 tag
-    # _tf2 distinguishes optimized solver (analytical H2, precomputed LCOE)
-    # from _tf v1 results for comparison.
+    # Sweep-safe naming: includes popsize/maxiter/seed/gas-mode + _tf tag
+    # Subdirectory thermal-fleet/ separates from baseline DE results.
     tag = (f"{iso}_pathway{args.pathway}_{args.scenario}_{args.demand_growth}"
-           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}_g{args.gas_mode}_tf2")
+           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}_g{args.gas_mode}_tf")
     results_path = out_dir / f"{tag}.parquet"
     winners_path = out_dir / f"{tag}_winners.json"
 
