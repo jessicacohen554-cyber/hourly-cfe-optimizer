@@ -1739,6 +1739,152 @@ OIL_CAP_TWH = {
     'MISO': 0.50, 'SPP': 0.20,
 }
 
+# ============================================================================
+# THERMAL FLEET DISAGGREGATION
+# ============================================================================
+# Converts baseline TWh generation to nameplate MW using fleet-average CFs.
+# Coal CF ~44% reflects EIA-923 2023 fleet-avg utilization (baseload units).
+# Oil CF ~12% reflects peaker-only dispatch (EIA-923 2023).
+#
+# Cross-check vs EIA-860 installed capacity (2023):
+#   ERCOT coal: TWh-derived 17,534 MW vs EIA-860 ~18 GW nameplate — within 3%
+#   PJM coal: TWh-derived 36,090 MW vs EIA-860 ~50 GW nameplate — 28% gap
+#     (many PJM coal units run <44% CF due to gas competition; use nameplate)
+#   MISO coal: TWh-derived 32,452 MW vs EIA-860 ~45 GW nameplate — 28% gap
+#     (same structural issue; use nameplate)
+# ISOs where TWh-derived diverges >20% from EIA-860 use nameplate instead.
+#
+# Sources: EIA-860 Monthly (Dec 2024), EIA-923 Annual (2023)
+
+_COAL_FLEET_CF = 0.44
+_OIL_FLEET_CF = 0.12
+
+# TWh-derived capacity (as baseline, before EIA-860 cross-check)
+_COAL_TWH_DERIVED_MW = {
+    iso: twh * 1e6 / (8760 * _COAL_FLEET_CF) for iso, twh in COAL_CAP_TWH.items()
+}
+_OIL_TWH_DERIVED_MW = {
+    iso: twh * 1e6 / (8760 * _OIL_FLEET_CF) for iso, twh in OIL_CAP_TWH.items()
+}
+
+# Final nameplate MW: EIA-860 for ISOs where TWh-derived diverges >20%
+EXISTING_COAL_CAPACITY_MW = {
+    'CAISO': 0,        # No coal
+    'ERCOT': 17534,    # TWh-derived, within 3% of EIA-860
+    'PJM':   50000,    # EIA-860 nameplate (TWh-derived 36,090 too low — many low-CF units)
+    'NYISO': 0,        # No coal
+    'NEISO': 400,      # TWh-derived ~80 MW; use EIA-860 (small fleet, all <44% CF)
+    'MISO':  45000,    # EIA-860 nameplate (TWh-derived 32,452 too low)
+    'SPP':   15000,    # EIA-860 nameplate (TWh-derived 10,906 too low — many low-CF units)
+}
+
+EXISTING_OIL_CAPACITY_MW = {
+    'CAISO': 570,      # TWh-derived, close to EIA-860
+    'ERCOT': 0,        # No oil
+    'PJM':   4367,     # TWh-derived, within ~15% of EIA-860
+    'NYISO': 143,      # TWh-derived; mostly backup peakers
+    'NEISO': 1227,     # TWh-derived; ISO-NE oil peaker fleet
+    'MISO':  476,      # TWh-derived
+    'SPP':   190,      # TWh-derived
+}
+
+# Peak availability derating: accounts for forced outage rate at peak demand
+# Coal: ~15% FOR at peak (aging fleet, heat rate degradation under stress)
+#   Source: NERC GADS Generating Availability Report, 2019-2023 averages
+#   Coal steam weighted-avg EFORd = 12-18% depending on vintage
+# Oil: ~20% FOR (oldest units in fleet, infrequent starts, poor reliability)
+#   Source: NERC GADS peaking unit data; oil CTs have highest EFORd class
+COAL_PEAK_DERATING = {iso: 0.85 for iso in ISOS}
+OIL_PEAK_DERATING = {iso: 0.80 for iso in ISOS}
+
+# Oil retirement: simple linear decline as fleet ages out
+# Oil peakers have high marginal cost ($80-150/MWh), only run during scarcity.
+# Retire on age/maintenance economics, not LMP. ~3% of remaining fleet/yr.
+_OIL_ANNUAL_RETIREMENT_RATE = 0.03  # fraction of remaining fleet per year
+_OIL_BASE_YEAR = 2025
+
+# Coal economic retirement: sigmoid mapping from CFE% to retirement fraction
+# As clean energy share rises, annual-average LMP falls below coal marginal cost.
+# Coal going-forward cost ≈ $25-30/MWh (PRB @ ~$2/MMBtu, 10k Btu/kWh HR + $5 VOM)
+# At 60% CFE: coal runs ~5,000 hrs/yr profitably → low economic retirement
+# At 80% CFE: coal runs ~2,500 hrs/yr → accelerating retirement
+# At 90%+ CFE: coal is uneconomic except as peaker → mostly retired
+#
+# sigmoid midpoint at COAL_PHASE_OUT_MID, steepness k controls transition speed
+_COAL_PHASE_OUT_MID = 72.5    # midpoint: half of fleet uneconomic here
+_COAL_PHASE_OUT_K = 0.12      # steepness: ~20pp transition band
+
+
+def _coal_economic_retirement_frac(clean_cfe_pct: float) -> float:
+    """Fraction of coal fleet that's economically unviable at given CFE%.
+
+    Returns 0.0 at low CFE (coal profitable), approaches 1.0 at high CFE.
+    Sigmoid centered at ~72.5% CFE with ~20pp transition band.
+    """
+    import math
+    x = (clean_cfe_pct - _COAL_PHASE_OUT_MID) * _COAL_PHASE_OUT_K
+    # Clamp to avoid overflow
+    x = max(-20.0, min(20.0, x))
+    return 1.0 / (1.0 + math.exp(-x))
+
+
+def _oil_remaining_frac(year: int) -> float:
+    """Fraction of 2025 oil fleet still operating in a given year."""
+    years_elapsed = max(0, year - _OIL_BASE_YEAR)
+    return max(0.0, (1.0 - _OIL_ANNUAL_RETIREMENT_RATE) ** years_elapsed)
+
+
+def thermal_fleet_mw(iso: str, year: int, current_cfe: float) -> dict:
+    """Returns remaining thermal fleet MW by fuel type.
+
+    Combines announced coal retirements (schedule-driven) with economic
+    retirement (CFE-dependent sigmoid). Takes the larger of the two —
+    economic can't un-retire what's already announced.
+
+    Args:
+        iso: ISO region
+        year: calendar year
+        current_cfe: achieved clean fraction of energy (%) — drives
+            economic coal retirement via LMP proxy
+
+    Returns:
+        dict with 'gas_mw', 'coal_mw', 'oil_mw'
+    """
+    # Gas: no retirement modeled (existing fleet maintained)
+    gas_mw = float(EXISTING_GAS_CAPACITY_MW[iso])
+
+    # Coal: max(announced, economic) retirement
+    baseline_coal_mw = float(EXISTING_COAL_CAPACITY_MW[iso])
+    if baseline_coal_mw > 0:
+        announced_retired_gw = get_announced_coal_retired_gw(iso, year)
+        announced_retired_mw = announced_retired_gw * 1000
+        announced_frac = min(1.0, announced_retired_mw / baseline_coal_mw)
+
+        econ_frac = _coal_economic_retirement_frac(current_cfe)
+        total_retired_frac = max(announced_frac, econ_frac)
+        coal_mw = baseline_coal_mw * (1.0 - total_retired_frac)
+    else:
+        coal_mw = 0.0
+
+    # Oil: age-based linear decline
+    baseline_oil_mw = float(EXISTING_OIL_CAPACITY_MW[iso])
+    oil_mw = baseline_oil_mw * _oil_remaining_frac(year)
+
+    return {'gas_mw': gas_mw, 'coal_mw': coal_mw, 'oil_mw': oil_mw}
+
+
+def thermal_peak_credit_mw(iso: str, year: int, current_cfe: float) -> float:
+    """Total peak-derated MW from all thermal sources.
+
+    This is the 'existing_gas' replacement for gas_need_mw() — it now
+    includes coal and oil peak contribution, derated for forced outage.
+    """
+    fleet = thermal_fleet_mw(iso, year, current_cfe)
+    return (fleet['gas_mw'] * float(GAS_AVAILABILITY_FACTOR[iso]) +
+            fleet['coal_mw'] * float(COAL_PEAK_DERATING[iso]) +
+            fleet['oil_mw'] * float(OIL_PEAK_DERATING[iso]))
+
+
 # Unit commitment: minimum generation as fraction of nameplate capacity
 # Nuclear: fully must-run (can't economically cycle)
 # Coal steam: min stable generation ~40% (thermal inertia, boiler constraints)
