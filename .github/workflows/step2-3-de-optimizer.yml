@@ -8,6 +8,12 @@ name: "Step 2.3 DE: Differential Evolution Pathway Optimizer"
 #   BOTH              — run A then B (B seeded with A's winners)
 #   ALL               — run A then B then C then D (each seeded with A)
 #
+# gas_mode options:
+#   1 = optimizer sees gas cost + stranding shadow (default)
+#   2 = optimizer sees gas cost only (shadow OFF)
+#   3 = optimizer blind to gas economics
+#   All modes report real gas cost + shadow in results for comparison.
+#
 # iso=ALL fans out to 7 parallel matrix jobs.
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de"
 # to consolidate into master.
@@ -41,6 +47,15 @@ on:
           - D
           - BOTH
           - ALL
+      gas_mode:
+        description: 'Gas visibility in optimizer: 1=cost+shadow, 2=cost only, 3=blind'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
       popsize:
         description: 'DE population multiplier (pop = popsize × n_dims). Larger = better search, slower.'
         required: false
@@ -219,6 +234,7 @@ jobs:
         env:
           ISO: ${{ matrix.iso }}
           PATHWAYS: ${{ steps.pathways.outputs.list }}
+          GAS_MODE: ${{ inputs.gas_mode }}
           POPSIZE: ${{ inputs.popsize }}
           MAXITER: ${{ inputs.maxiter }}
           WORKERS: ${{ inputs.workers }}
@@ -236,7 +252,8 @@ jobs:
             echo ""
             echo "============================================================"
             echo "[workflow] Starting DE Pathway $pw for $ISO"
-            echo "  popsize=$POPSIZE maxiter=$MAXITER workers=$WORKERS seed=$SEED"
+            echo "  gas_mode=$GAS_MODE popsize=$POPSIZE maxiter=$MAXITER"
+            echo "  workers=$WORKERS seed=$SEED"
             echo "  target_2040=$TARGET_2040 target_2050=$TARGET_2050"
             echo "============================================================"
             t0=$SECONDS
@@ -244,6 +261,7 @@ jobs:
             python scripts/step2_3_de_pathway.py \
               --iso "$ISO" \
               --pathway "$pw" \
+              --gas-mode "$GAS_MODE" \
               --popsize "$POPSIZE" \
               --maxiter "$MAXITER" \
               --workers "$WORKERS" \
@@ -258,7 +276,7 @@ jobs:
 
             # After pathway A, set ref-winners flag for subsequent pathways
             if [ "$pw" = "A" ]; then
-              WINNERS_FILE="data/step2.3-de/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_winners.json"
+              WINNERS_FILE="data/step2.3-de/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_g${GAS_MODE}_winners.json"
               if [ -f "$WINNERS_FILE" ]; then
                 REF_FLAG="--ref-winners $WINNERS_FILE"
                 echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
@@ -272,9 +290,10 @@ jobs:
           PATHWAYS: ${{ steps.pathways.outputs.list }}
           SCENARIO: ${{ inputs.scenario }}
           DEMAND: ${{ inputs.demand_growth }}
+          GAS_MODE: ${{ inputs.gas_mode }}
         run: |
           for pw in $PATHWAYS; do
-            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${{ inputs.seed }}.parquet"
+            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${{ inputs.seed }}_g${GAS_MODE}.parquet"
             if [ ! -f "$results" ]; then
               echo "::error::Missing results: $results"
               exit 1
@@ -295,6 +314,7 @@ jobs:
       - name: "Push results — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
+          GAS_MODE: ${{ inputs.gas_mode }}
         run: |
           set -euo pipefail
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
@@ -319,7 +339,7 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MSG="Step 2.3 DE: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }}"
+          COMMIT_MSG="Step 2.3 DE: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} gas=${GAS_MODE}"
           git commit -m "$COMMIT_MSG"
           git push origin "$branch"
           echo "[push] Branch created: ${branch}"
@@ -336,6 +356,7 @@ jobs:
             echo "| Setting | Value |"
             echo "|---------|-------|"
             echo "| Pathway | \`${{ inputs.pathway }}\` |"
+            echo "| Gas mode | ${{ inputs.gas_mode }} |"
             echo "| Popsize | ${{ inputs.popsize }} |"
             echo "| Maxiter | ${{ inputs.maxiter }} |"
             echo "| Workers | ${{ inputs.workers }} |"
@@ -344,6 +365,8 @@ jobs:
             echo "| Demand | \`${{ inputs.demand_growth }}\` |"
             echo "| Target 2040 | ${{ inputs.target_2040 }}% |"
             echo "| Target 2050 | ${{ inputs.target_2050 }}% |"
+            echo ""
+            echo "Gas mode key: 1=cost+shadow, 2=cost only, 3=blind"
             echo ""
             if [ -n "${BRANCH:-}" ]; then
               echo "Branch: \`${BRANCH}\`"
