@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>New Gas Above Existing Fossil — A g3 vs B g1 (thermal-fleet _tf)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#F8F9FC;font-family:'DM Sans',sans-serif;color:#1E293B;padding:20px}
+.wrap{max-width:900px;margin:0 auto;background:#fff;border-radius:16px;padding:28px 24px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.04)}
+h1{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.02em;margin-bottom:4px}
+.sub{font-size:12px;color:#64748B;margin-bottom:16px;line-height:1.5}
+.iso-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.iso-btn{border:none;border-radius:8px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;color:#fff;opacity:.4;outline:none}
+.iso-btn.active{opacity:1;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.iso-btn:hover{opacity:.8}
+.chart-wrap{position:relative;height:440px}
+.legend-row{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#64748B}
+.legend-row span{display:flex;align-items:center;gap:5px}
+.line-s{width:22px;height:3px;border-radius:2px;display:inline-block}
+.band-s{width:14px;height:14px;border-radius:3px;display:inline-block;border:1.5px solid}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px}
+.sc{background:#F8F9FC;border-radius:10px;padding:9px 10px;text-align:center}
+.sc .v{font-size:18px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.2}
+.sc .l{font-size:10px;color:#94A3B8;margin-top:2px}
+.sc.red{border-left:3px solid #EF4444}
+.sc.blue{border-left:3px solid #3B82F6}
+.sc.green{border-left:3px solid #059669}
+.note{font-size:11px;color:#94A3B8;margin-top:10px;text-align:center;font-style:italic}
+.tag{display:inline-block;background:#DBEAFE;color:#1D4ED8;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle}
+.loading{text-align:center;padding:60px 0;color:#94A3B8;font-size:14px}
+.error{text-align:center;padding:40px 0;color:#EF4444;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>New Gas Capacity Above Existing Fossil Fleet<span class="tag">_tf data</span></h1>
+  <p class="sub">
+    A/g3 (red) = blind to gas · B/g1 (blue) = cost + shadow price · Zero = existing fossil fleet · Above = new gas · Below = retirement<br>
+    Envelope = p10–p90 across all 9 demand × cost scenarios · Min-cost run per combo
+  </p>
+  <div class="iso-bar" id="isoBar"></div>
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+    <div class="loading" id="loading">Loading data…</div>
+  </div>
+  <div class="legend-row">
+    <span><span class="line-s" style="background:rgba(239,68,68,.9)"></span>A g3 median</span>
+    <span><span class="band-s" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2)"></span>A g3 envelope</span>
+    <span><span class="line-s" style="background:rgba(59,130,246,.9)"></span>B g1 median</span>
+    <span><span class="band-s" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2)"></span>B g1 envelope</span>
+    <span><span class="line-s" style="background:#94A3B8;border-top:2px dashed #94A3B8;height:0"></span>Existing fossil</span>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="note" id="note"></div>
+</div>
+
+<script>
+/* ── Fetch JSON produced by extract_tf_gas_compare.py ── */
+const DATA_URL = 'data/tf_gas_compare.json';
+
+const IC = {
+  CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9',
+  NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
+};
+
+let DATA = null;
+let activeISO = null;
+let chart = null;
+
+fetch(DATA_URL)
+  .then(r => {
+    if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+    return r.json();
+  })
+  .then(data => {
+    DATA = data;
+    document.getElementById('loading').style.display = 'none';
+    initButtons();
+    render();
+  })
+  .catch(err => {
+    document.getElementById('loading').innerHTML =
+      '<div class="error">Failed to load data: ' + err.message +
+      '<br>Run extract_tf_gas_compare.py to generate data/tf_gas_compare.json</div>';
+  });
+
+function initButtons() {
+  const bar = document.getElementById('isoBar');
+  const isos = Object.keys(DATA);
+  activeISO = isos.includes('PJM') ? 'PJM' : isos[0];
+  isos.forEach(iso => {
+    const b = document.createElement('button');
+    b.className = 'iso-btn' + (iso === activeISO ? ' active' : '');
+    b.textContent = iso;
+    b.style.background = IC[iso] || '#64748B';
+    b.onclick = () => {
+      activeISO = iso;
+      document.querySelectorAll('.iso-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    };
+    bar.appendChild(b);
+  });
+}
+
+function render() {
+  if (chart) chart.destroy();
+  const d = DATA[activeISO];
+  const ds = [];
+  const allY = [];
+
+  ['A_g3', 'B_g1'].forEach(k => {
+    if (d[k]) {
+      d[k].hi.forEach(p => allY.push(p.y));
+      d[k].lo.forEach(p => allY.push(p.y));
+    }
+  });
+  const mx = Math.max(...allY, 10);
+  const mn = Math.min(...allY, 0);
+
+  if (d.A_g3) {
+    if (d.A_g3.n > 1) {
+      ds.push({label:'_Ah',data:d.A_g3.hi,showLine:true,borderColor:'transparent',backgroundColor:'rgba(239,68,68,0.08)',pointRadius:0,pointHitRadius:0,fill:'+1',order:12});
+      ds.push({label:'_Al',data:d.A_g3.lo,showLine:true,borderColor:'transparent',backgroundColor:'transparent',pointRadius:0,pointHitRadius:0,fill:false,order:12});
+    }
+    ds.push({label:'A g3 · gas-blind ('+d.A_g3.n+')',data:d.A_g3.med,showLine:true,borderColor:'rgba(239,68,68,0.9)',backgroundColor:'transparent',borderWidth:2.5,pointRadius:3.5,pointBackgroundColor:'rgba(239,68,68,0.25)',pointBorderColor:'rgba(239,68,68,0.55)',pointBorderWidth:1.5,pointHoverRadius:7,fill:false,order:1});
+  }
+
+  if (d.B_g1) {
+    if (d.B_g1.n > 1) {
+      ds.push({label:'*Bh',data:d.B_g1.hi,showLine:true,borderColor:'transparent',backgroundColor:'rgba(59,130,246,0.08)',pointRadius:0,pointHitRadius:0,fill:'+1',order:10});
+      ds.push({label:'*Bl',data:d.B_g1.lo,showLine:true,borderColor:'transparent',backgroundColor:'transparent',pointRadius:0,pointHitRadius:0,fill:false,order:10});
+    }
+    ds.push({label:'B g1 · gas-aware ('+d.B_g1.n+')',data:d.B_g1.med,showLine:true,borderColor:'rgba(59,130,246,0.9)',backgroundColor:'transparent',borderWidth:2.5,pointRadius:3.5,pointBackgroundColor:'rgba(59,130,246,0.25)',pointBorderColor:'rgba(59,130,246,0.55)',pointBorderWidth:1.5,pointHoverRadius:7,fill:false,order:0});
+  }
+
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'scatter',
+    data: { datasets: ds },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 6, right: 16, bottom: 4, left: 4 } },
+      scales: {
+        x: {
+          min: 2025, max: 2051,
+          title: { display: true, text: 'Year', font: { family: "'DM Sans'", size: 13, weight: '600' }, color: '#475569' },
+          ticks: { font: { family: "'DM Sans'", size: 11 }, color: '#94A3B8', stepSize: 5 },
+          grid: { color: '#F1F5F9' }
+        },
+        y: {
+          min: Math.min(0, Math.floor(mn/10)*10 - 5),
+          max: Math.ceil(mx/10)*10 + 10,
+          title: { display: true, text: 'New Gas Above Existing Fossil (GW)', font: { family: "'DM Sans'", size: 12, weight: '600' }, color: '#475569' },
+          ticks: { font: { family: "'DM Sans'", size: 11 }, color: '#94A3B8' },
+          grid: { color: '#F1F5F9' }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { filter: i => !i.text.startsWith('*'), usePointStyle: true, pointStyle: 'circle', padding: 14, font: { family: "'DM Sans'", size: 11, weight: '500' }, color: '#334155' }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(30,41,59,0.95)', padding: 10, cornerRadius: 6,
+          titleFont: { family: "'DM Sans'", size: 12 }, bodyFont: { family: "'DM Sans'", size: 11 },
+          filter: i => !i.dataset.label.startsWith('*'),
+          callbacks: {
+            label: c => {
+              const v = c.parsed.y, n = c.dataset.label.split(' (')[0];
+              return v >= 0
+                ? [n + ': +' + v.toFixed(1) + ' GW new (' + c.parsed.x + ')']
+                : [n + ': ' + v.toFixed(1) + ' GW retired (' + c.parsed.x + ')'];
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            baseline: {
+              type: 'line', yMin: 0, yMax: 0,
+              borderColor: '#64748B', borderWidth: 2, borderDash: [6, 4],
+              label: {
+                display: true, content: 'Existing fossil: ' + d.baseline_fossil_gw + ' GW',
+                position: 'start', backgroundColor: 'rgba(100,116,139,0.9)', color: '#fff',
+                font: { family: "'DM Sans'", size: 10, weight: '500' },
+                padding: { x: 8, y: 4 }, borderRadius: 4
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  /* ── Stat cards ── */
+  const s = document.getElementById('stats');
+  const a = d.A_g3, b = d.B_g1;
+  let h = '';
+  if (a && b) {
+    const pA = Math.max(...a.med.map(p => p.y));
+    const pB = Math.max(...b.med.map(p => p.y));
+    const yA = a.med.find(p => p.y === pA).x;
+    const yB = b.med.find(p => p.y === pB).x;
+    const gr = pA > 0 ? ((pA - pB) / pA * 100).toFixed(0) : '–';
+    const cd = a.total_cost_B - b.total_cost_B;
+    const md = a.dollar_mwh - b.dollar_mwh;
+    const sv = cd > 0;
+    h += `<div class="sc red"><div class="v">$${a.total_cost_B.toLocaleString()}B</div><div class="l">A g3 · $${a.dollar_mwh}/MWh</div></div>`;
+    h += `<div class="sc blue"><div class="v">$${b.total_cost_B.toLocaleString()}B</div><div class="l">B g1 · $${b.dollar_mwh}/MWh</div></div>`;
+    h += `<div class="sc ${sv?'green':'red'}"><div class="v">${sv?'−':'+'} $${Math.abs(cd).toFixed(0)}B</div><div class="l">B ${sv?'saves':'costs more'} · ${sv?'−':'+'}$${Math.abs(md).toFixed(1)}/MWh</div></div>`;
+    h += `<div class="sc red"><div class="v">+${pA.toFixed(0)} GW</div><div class="l">A peak new (${yA})</div></div>`;
+    h += `<div class="sc blue"><div class="v">${pB>0?'+':''}${pB.toFixed(0)} GW</div><div class="l">B peak new (${yB})</div></div>`;
+    if (pA > 0) h += `<div class="sc green"><div class="v">−${gr}%</div><div class="l">New gas avoided</div></div>`;
+  }
+  s.innerHTML = h;
+
+  const nA = a ? a.n : 0, nB = b ? b.n : 0;
+  document.getElementById('note').textContent =
+    activeISO + ': ' + Math.max(nA, nB) + ' scenario combos. Fossil baseline = ' +
+    d.baseline_fossil_gw + ' GW. $/MWh = median cumulative ÷ (' + d.demand_twh + ' TWh × 25 yr).';
+}
+</script>
+
+</body>
+</html>
