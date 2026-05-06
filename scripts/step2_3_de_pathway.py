@@ -11,9 +11,21 @@ CFE trajectory: smooth linear ramp from actual baseline (dispatch_utils scored)
 to --target-2040 (default 90%) to --target-2050 (default 99.9%).
 No arbitrary waypoints.
 
+Gas modes (--gas-mode):
+    1 = optimizer sees gas cost + stranding shadow (default)
+    2 = optimizer sees gas cost only (shadow OFF)
+    3 = optimizer blind to gas economics
+    All modes: real gas cost + shadow always included in reported results.
+    The distinction is what the optimizer considers vs. what physically exists.
+
 Usage:
     # Single pathway
     python scripts/step2_3_de_pathway.py --iso CAISO --pathway A
+
+    # Compare gas visibility modes
+    python scripts/step2_3_de_pathway.py --iso ERCOT --pathway A --gas-mode 1
+    python scripts/step2_3_de_pathway.py --iso ERCOT --pathway A --gas-mode 2
+    python scripts/step2_3_de_pathway.py --iso ERCOT --pathway A --gas-mode 3
 
     # Pathway B seeded with A's results (guarantees B ≤ A)
     python scripts/step2_3_de_pathway.py --iso CAISO --pathway A
@@ -180,14 +192,14 @@ class _DEObjective:
         'demand_norm', 'supply_profiles', 'supply_matrix',
         'dem_twh', 'cfg', 'iso', 'year', 'target', 'cfe_ceiling',
         'capex_yr', 'fuel_mwh_rate', 'existing_gas', 'gaf', 'peak_gas_mw',
-        'floor_stor', 'full_x0', 'active',
+        'floor_stor', 'full_x0', 'active', 'gas_mode',
     )
 
     def __init__(self, *, lo, hi, floor_pcts, free_idx, n_free,
                  demand_norm, supply_profiles, supply_matrix,
                  dem_twh, cfg, iso, year, target, cfe_ceiling,
                  capex_yr, fuel_mwh_rate, existing_gas, gaf, peak_gas_mw,
-                 floor_stor, full_x0, active):
+                 floor_stor, full_x0, active, gas_mode=1):
         self.lo = lo
         self.hi = hi
         self.floor_pcts = floor_pcts
@@ -210,6 +222,7 @@ class _DEObjective:
         self.floor_stor = floor_stor
         self.full_x0 = full_x0
         self.active = active
+        self.gas_mode = gas_mode
 
     def __call__(self, x_active):
         """Map active-dim vector → full vector → cost."""
@@ -258,9 +271,12 @@ class _DEObjective:
 
         g = solver.gas_need_mw(h2["resid_p9997"], self.dem_twh,
                                self.existing_gas, self.gaf)
-        cost += solver.gas_annual_cost(g, self.iso, self.cfg)
-        cost += solver.gas_stranding_shadow(g, self.peak_gas_mw,
-                                            self.year, self.iso)
+        # Gas mode: 1=both on, 2=gas cost only, 3=both off
+        if self.gas_mode <= 2:
+            cost += solver.gas_annual_cost(g, self.iso, self.cfg)
+        if self.gas_mode == 1:
+            cost += solver.gas_stranding_shadow(g, self.peak_gas_mw,
+                                                self.year, self.iso)
 
         # Penalties
         if post_cfe < self.target:
@@ -277,7 +293,7 @@ class _DEObjective:
 def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                    popsize=10, maxiter=100, workers=1, seed=42,
                    target_2040=90.0, target_2050=99.9,
-                   reference_winners=None):
+                   reference_winners=None, gas_mode=1):
     """Run year-by-year DE pathway optimization.
 
     Args:
@@ -292,6 +308,9 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         reference_winners: dict {year: (pcts_array, stor_array)} from prior
             pathway run. Seeds B's DE population with A's solution to
             guarantee B ≤ A.
+        gas_mode: 1 = gas cost + shadow on (default),
+                  2 = gas cost on / shadow off,
+                  3 = both off
 
     Returns:
         (year_results_list, winners_by_year_dict)
@@ -352,10 +371,18 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
     # Start at 2026 (yi=1). 2025 is baseline year with no builds.
     START_YI = 1
 
+    GAS_MODE_LABELS = {
+        1: "gas cost + shadow ON in optimizer",
+        2: "gas cost ON / shadow OFF in optimizer",
+        3: "both OFF in optimizer (cost-blind)",
+    }
+
     print(f"\n{'='*70}")
     print(f"DE Pathway Optimizer (dispatch_utils scoring)")
     print(f"ISO={iso}  Pathway={pathway}  Scenario={scenario}  Demand={demand_growth}")
     print(f"popsize={popsize}  maxiter={maxiter}  workers={workers}  seed={seed}")
+    print(f"Gas mode: {gas_mode} — {GAS_MODE_LABELS[gas_mode]}")
+    print(f"  (real gas cost + shadow always in reported results)")
     print(f"Baseline CFE: {baseline_cfe:.1f}%  → {target_2040:.0f}% by 2040 → {target_2050:.0f}% by 2050")
     print(f"Annual ramp: {(target_2040 - baseline_cfe) / 15:.1f}pp/yr (2025-2040)"
           f"  {(target_2050 - target_2040) / 10:.1f}pp/yr (2040-2050)")
@@ -448,7 +475,7 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                     capex_yr=capex_yr, fuel_mwh_rate=fuel_mwh_rate,
                     existing_gas=existing_gas, gaf=gaf,
                     peak_gas_mw=peak_gas_mw, floor_stor=floor_stor,
-                    full_x0=full_x0, active=active)
+                    full_x0=full_x0, active=active, gas_mode=gas_mode)
 
                 de_seed = int(rng.integers(0, 2**31))
 
@@ -503,9 +530,10 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
                     winner_cfe += h2_mwh / (dem_twh * 1e6) * 100
                 resid_for_gas = h2["resid_p9997"]
 
-        # --- Gas ---
+        # --- Gas (always computed for reporting, regardless of gas_mode) ---
         g_mw = solver.gas_need_mw(resid_for_gas, dem_twh, existing_gas, gaf)
         g_cost = solver.gas_annual_cost(g_mw, iso, cfg)
+        g_shadow = solver.gas_stranding_shadow(g_mw, peak_gas_mw, year, iso)
 
         # --- Annual cost (all vintages + new) ---
         capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
@@ -522,8 +550,8 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             if ds > solver.RATCHET_TOL_PCT:
                 year_inc += ds * solver.storage_net_cost(iso, sc, cfg, year=year) * dem_twh * 1e6
         year_inc += h2_mw * capex_yr * 1000 + h2_mwh * fuel_rate
+        # Real gas operating cost always counted; shadow is solver-only (never in tally)
         year_inc += g_cost
-        year_inc += solver.gas_stranding_shadow(g_mw, peak_gas_mw, year, iso)
 
         _sn = set(solver.STORAGE_COLS)
         vintage_cost = sum(q if r in _sn else q * u * 1e6
@@ -559,6 +587,8 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
             "year": year, "target": round(target, 1),
             "achieved_cfe": round(float(winner_cfe), 2),
             "h2_mw": round(h2_mw, 1), "gas_mw": round(g_mw, 1),
+            "gas_cost_B": round(g_cost / 1e9, 4),
+            "gas_shadow_B": round(g_shadow / 1e9, 4),
             "total_annual_B": round(total_annual / 1e9, 3),
             "cumulative_B": round(cumulative_cost / 1e9, 3),
         })
@@ -606,6 +636,10 @@ def main():
                     help="CFE%% target at 2050. Linear ramp from 2040 target. Default 99.9")
     ap.add_argument("--ref-winners", default=None,
                     help="Path to JSON with reference pathway winners for seeding")
+    ap.add_argument("--gas-mode", type=int, default=1, choices=[1, 2, 3],
+                    help="Gas visibility in optimizer: "
+                         "1=cost+shadow (default), 2=cost only, 3=blind. "
+                         "Real gas cost always in reported results.")
     args = ap.parse_args()
 
     iso = args.iso.upper()
@@ -627,7 +661,7 @@ def main():
         popsize=args.popsize, maxiter=args.maxiter,
         workers=args.workers, seed=args.seed,
         target_2040=args.target_2040, target_2050=args.target_2050,
-        reference_winners=ref)
+        reference_winners=ref, gas_mode=args.gas_mode)
 
     # Save results as parquet + winners as JSON (for seeding)
     import pyarrow as pa
@@ -636,9 +670,9 @@ def main():
     out_dir = PROJECT_ROOT / "data" / "step2.3-de"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Sweep-safe naming: includes popsize/maxiter/seed so configs don't overwrite
+    # Sweep-safe naming: includes popsize/maxiter/seed/gas-mode so configs don't overwrite
     tag = (f"{iso}_pathway{args.pathway}_{args.scenario}_{args.demand_growth}"
-           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}")
+           f"_p{args.popsize}_i{args.maxiter}_s{args.seed}_g{args.gas_mode}")
     results_path = out_dir / f"{tag}.parquet"
     winners_path = out_dir / f"{tag}_winners.json"
 
@@ -653,6 +687,7 @@ def main():
         row["popsize"] = args.popsize
         row["maxiter"] = args.maxiter
         row["seed"] = args.seed
+        row["gas_mode"] = args.gas_mode
         row["target_2040"] = args.target_2040
         row["target_2050"] = args.target_2050
         rows.append(row)
@@ -670,4 +705,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
