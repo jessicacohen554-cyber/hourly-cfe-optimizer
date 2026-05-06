@@ -4,7 +4,7 @@ name: "Step 2.3 DE: Thermal Fleet Disaggregation"
 # optimizer. Identical interface to step2-3-de-optimizer.yml but uses the
 # _tf script with coal+oil peak credit and CFE-driven retirement feedback.
 #
-# Output files tagged `_tf` — won't collide with baseline runs.
+# Output files tagged `_tf2` — won't collide with baseline runs.
 #
 # iso=ALL fans out to 7 parallel matrix jobs.
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de-tf"
@@ -239,7 +239,7 @@ jobs:
 
             # After pathway A, set ref-winners flag for subsequent pathways
             if [ "$pw" = "A" ]; then
-              WINNERS_FILE="data/step2.3-de/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_g${GAS_MODE}_tf_winners.json"
+              WINNERS_FILE="data/step2.3-de/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_g${GAS_MODE}_tf2_winners.json"
               if [ -f "$WINNERS_FILE" ]; then
                 REF_FLAG="--ref-winners $WINNERS_FILE"
                 echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
@@ -256,7 +256,7 @@ jobs:
           GAS_MODE: ${{ inputs.gas_mode }}
         run: |
           for pw in $PATHWAYS; do
-            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${SEED}_g${GAS_MODE}_tf.parquet"
+            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${SEED}_g${GAS_MODE}_tf2.parquet"
             if [ ! -f "$results" ]; then
               echo "::error::Missing results: $results"
               exit 1
@@ -279,9 +279,9 @@ jobs:
 
           git checkout -b "$branch"
 
-          # Stage output files (_tf tagged)
+          # Stage output files (_tf2 tagged)
           file_count=0
-          for f in data/step2.3-de/${ISO}_*_tf.parquet data/step2.3-de/${ISO}_*_tf_winners.json; do
+          for f in data/step2.3-de/${ISO}_*_tf2.parquet data/step2.3-de/${ISO}_*_tf2_winners.json; do
             [ -f "$f" ] || continue
             git add "$f"
             file_count=$((file_count + 1))
@@ -289,7 +289,7 @@ jobs:
           done
 
           if [ "$file_count" -eq 0 ]; then
-            echo "::error::No _tf output files found for ${ISO}"
+            echo "::error::No _tf2 output files found for ${ISO}"
             exit 1
           fi
 
@@ -317,7 +317,7 @@ jobs:
             echo "| Demand | \`${{ inputs.demand_growth }}\` |"
             echo ""
             echo "**Thermal fleet model:** gas + coal + oil peak credit with CFE-driven coal retirement."
-            echo "Output tagged \`_tf\` — does not overwrite baseline results."
+            echo "Output tagged \`_tf2\` — does not overwrite baseline results."
             echo ""
             if [ -n "${BRANCH:-}" ]; then
               echo "Branch: \`${BRANCH}\`"
