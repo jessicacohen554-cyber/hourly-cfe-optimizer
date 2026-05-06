@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DE Thermal Fleet — Solver Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-page: #F8F9FC; --navy: #1A2744; --navy-dark: #0F1A2E;
+    --bg-card: #FFFFFF; --border: #D4D8E0; --border-light: #E5E7EB;
+    --text-primary: #000000; --text-secondary: #1E293B; --text-muted: #566370;
+    --text-dim: rgba(0,0,0,0.65);
+    --font-body: 'DM Sans', 'Plus Jakarta Sans', sans-serif;
+    --font-heading: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+    --font-data: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+    --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --space-xl: 32px;
+    --pad-page: 24px; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05); --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --max-content: 1440px;
+    --iso-caiso: #F59E0B; --iso-ercot: #22C55E; --iso-miso: #F97316;
+    --iso-neiso: #9C27B0; --iso-nyiso: #E91E63; --iso-pjm: #0EA5E9; --iso-spp: #14B8A6;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); color: var(--text-primary); background: var(--bg-page); line-height: 1.6; }
+.page-wrap { max-width: var(--max-content); margin: 0 auto; padding: var(--space-xl) var(--pad-page); }
+.page-header { text-align: center; margin-bottom: var(--space-lg); }
+.page-header h1 { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+.page-header .subtitle { font-size: 0.82rem; color: var(--text-muted); }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: var(–space-lg); align-items: flex-end; }
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-label { font-family: var(–font-heading); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(–text-muted); }
+.toggle-group {
+display: inline-flex; border: 1.5px solid var(–border); border-radius: var(–radius-sm);
+overflow: hidden; background: #f3f4f6; flex-shrink: 0;
+}
+.toggle-group button {
+font-family: var(–font-heading); font-size: 0.78rem; font-weight: 600;
+padding: 7px 14px; border: none; background: transparent; color: var(–text-muted);
+cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em; white-space: nowrap;
+}
+.toggle-group button:not(:last-child) { border-right: 1px solid var(–border); }
+.toggle-group button:hover { background: rgba(0,0,0,0.04); }
+.toggle-group button.active { background: var(–navy); color: #fff; }
+
+/* Tabs */
+.tab-bar { display: flex; gap: 4px; margin-bottom: var(–space-lg); border-bottom: 2px solid var(–border-light); }
+.tab-btn {
+font-family: var(–font-heading); font-size: 0.82rem; font-weight: 600;
+padding: 10px 20px; border: none; background: none; color: var(–text-muted);
+cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
+transition: color 0.15s, border-color 0.15s; letter-spacing: 0.02em;
+}
+.tab-btn:hover { color: var(–navy); }
+.tab-btn.active { color: var(–navy); border-bottom-color: var(–navy); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Stats */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: var(–space-lg); }
+.stat-card { background: var(–bg-card); border: 1px solid var(–border-light); border-radius: var(–radius-md); padding: 14px; text-align: center; box-shadow: var(–shadow-sm); }
+.stat-val { font-family: var(–font-heading); font-size: 1.4rem; font-weight: 800; color: var(–navy); }
+.stat-lbl { font-size: 0.65rem; color: var(–text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.04em; margin-top: 2px; }
+
+/* ISO blocks */
+.iso-block { margin-bottom: var(–space-lg); }
+.iso-banner {
+font-family: var(–font-heading); font-size: 0.82rem; font-weight: 700;
+color: #fff; padding: 7px 14px; border-radius: var(–radius-sm) var(–radius-sm) 0 0;
+letter-spacing: 0.04em; display: flex; justify-content: space-between; align-items: center;
+}
+.iso-banner .cov { font-weight: 500; font-size: 0.7rem; opacity: 0.85; }
+
+/* Grid table */
+.g-table {
+width: 100%; border-collapse: collapse; font-size: 0.75rem;
+background: var(–bg-card); border: 1px solid var(–border-light); border-top: none;
+border-radius: 0 0 var(–radius-sm) var(–radius-sm);
+}
+.g-table th {
+font-family: var(–font-heading); font-size: 0.65rem; text-transform: uppercase;
+letter-spacing: 0.06em; color: var(–text-dim); padding: 7px 6px;
+text-align: center; background: #F3F4F6; border-bottom: 1px solid var(–border-light);
+}
+.g-table td {
+padding: 5px 6px; text-align: center; font-family: var(–font-data);
+font-size: 0.74rem; border-bottom: 1px solid #F0F1F3; font-variant-numeric: tabular-nums;
+}
+.g-table .pw-l { font-family: var(–font-heading); font-weight: 700; color: var(–text-muted); }
+.g-table .it-l { color: var(–text-muted); font-size: 0.72rem; }
+.g-table .da { color: #D1D5DB; }
+.g-table .pwd td { border-bottom: 2px solid var(–border-light); }
+.g-table .win { color: #fff; font-weight: 700; border-radius: 3px; }
+.g-table .pat { font-size: 0.65rem; color: #888; }
+
+/* Dashboard */
+.d-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; background: var(–bg-card); border: 1px solid var(–border-light); border-radius: var(–radius-sm); overflow: hidden; }
+.d-table th { font-family: var(–font-heading); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(–text-dim); padding: 8px 6px; text-align: center; background: #F3F4F6; border-bottom: 1px solid var(–border-light); }
+.d-table td { padding: 7px 6px; text-align: center; font-family: var(–font-data); font-size: 0.75rem; border-bottom: 1px solid #F0F1F3; font-variant-numeric: tabular-nums; }
+.d-table .idv td { border-bottom: 2px solid var(–border-light); }
+
+/* Scoreboard */
+.s-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: var(–bg-card); border: 1px solid var(–border-light); border-radius: var(–radius-sm); overflow: hidden; max-width: 840px; }
+.s-table th { font-family: var(–font-heading); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(–text-dim); padding: 9px 10px; text-align: left; background: #F3F4F6; border-bottom: 1px solid var(–border-light); }
+.s-table td { padding: 9px 10px; border-bottom: 1px solid #F0F1F3; font-family: var(–font-data); }
+.s-table .r1 { background: #FFFBEB; font-weight: 700; }
+
+.landed { margin-top: var(–space-xl); }
+.landed h3 { font-family: var(–font-heading); font-size: 0.88rem; font-weight: 700; color: var(–navy); margin-bottom: var(–space-sm); }
+.landed-r { display: flex; gap: 8px; align-items: baseline; margin-bottom: 3px; font-size: 0.8rem; }
+.landed-i { font-family: var(–font-heading); font-weight: 700; min-width: 55px; }
+.landed-d { color: var(–text-muted); }
+.empty-state { padding: 40px; text-align: center; color: var(–text-muted); font-size: 0.9rem; background: var(–bg-card); border: 1px solid var(–border-light); border-radius: var(–radius-md); }
+
+@media (max-width: 900px) {
+.g-table { font-size: 0.65rem; }
+.g-table td, .g-table th { padding: 4px 3px; }
+.controls { gap: 10px; }
+.toggle-group button { padding: 6px 10px; font-size: 0.72rem; }
+}
+</style>
+
+</head>
+<body>
+<div class="page-wrap">
+    <div class="page-header">
+        <h1>DE Thermal Fleet — Solver Tracker</h1>
+        <div class="subtitle">t99.9 cumulative cost ($B) · thermal-fleet _tf runs only · winner = ISO color + white text</div>
+    </div>
+
+```
+<div class="controls">
+    <div class="control-group">
+        <span class="control-label">Cost Scenario</span>
+        <div class="toggle-group" id="tg-scen">
+            <button class="active" data-v="base">Base</button>
+            <button data-v="firm_high_vre_low">Firm↑ VRE↓</button>
+            <button data-v="firm_low_vre_high">Firm↓ VRE↑</button>
+        </div>
+    </div>
+    <div class="control-group">
+        <span class="control-label">Demand Growth</span>
+        <div class="toggle-group" id="tg-demand">
+            <button data-v="Low">Low</button>
+            <button class="active" data-v="Medium">Med</button>
+            <button data-v="High">High</button>
+        </div>
+    </div>
+    <div class="control-group">
+        <span class="control-label">Gas Mode</span>
+        <div class="toggle-group" id="tg-gas">
+            <button class="active" data-v="1">g1</button>
+            <button data-v="2">g2</button>
+            <button data-v="3">g3</button>
+        </div>
+    </div>
+</div>
+
+<div id="stats" class="stat-row"></div>
+
+<div class="tab-bar">
+    <button class="tab-btn active" data-tab="grid">Pop×Iter Grid</button>
+    <button class="tab-btn" data-tab="dashboard">Gas Config Dashboard</button>
+    <button class="tab-btn" data-tab="scoreboard">Config Scoreboard</button>
+</div>
+
+<div id="grid" class="tab-panel active"></div>
+<div id="dashboard" class="tab-panel"></div>
+<div id="scoreboard" class="tab-panel"></div>
+```
+
+</div>
+
+<script>
+const RAW={"CAISO|A|base|Medium|1|10|100":533.5,"CAISO|A|base|Medium|1|15|150":376.0,"CAISO|A|base|Medium|1|15|400":340.2,"CAISO|A|base|Medium|1|20|150":370.9,"CAISO|A|base|Medium|1|20|200":355.4,"CAISO|B|base|Medium|1|10|100":1896.2,"CAISO|B|base|Medium|1|15|150":5231.0,"CAISO|B|base|Medium|1|15|400":347.2,"CAISO|B|base|Medium|1|20|150":4492.2,"CAISO|B|base|Medium|1|20|200":357.4,"CAISO|C|base|Medium|1|10|100":809.5,"CAISO|C|base|Medium|1|15|150":763.3,"CAISO|C|base|Medium|1|15|400":346.2,"CAISO|C|base|Medium|1|20|150":3759.7,"CAISO|C|base|Medium|1|20|200":354.8,"CAISO|D|base|Medium|1|10|100":556.1,"CAISO|D|base|Medium|1|15|150":7440.7,"CAISO|D|base|Medium|1|15|400":342.7,"CAISO|D|base|Medium|1|20|150":368.7,"CAISO|D|base|Medium|1|20|200":354.4,"ERCOT|A|base|Medium|1|10|100":1120.8,"ERCOT|A|base|Medium|1|10|150":1085.8,"ERCOT|A|base|Medium|1|10|200":1008.7,"ERCOT|A|base|Medium|1|15|100":3297.4,"ERCOT|A|base|Medium|1|15|150":2157.7,"ERCOT|A|base|Medium|1|15|200":1024.2,"ERCOT|A|base|Medium|1|15|400":957.6,"ERCOT|A|base|Medium|1|20|100":11870.1,"ERCOT|A|base|Medium|1|20|150":33031.9,"ERCOT|A|base|Medium|1|20|200":1005.8,"ERCOT|A|base|Medium|1|40|100":123574.9,"ERCOT|A|base|Medium|1|40|150":1748.8,"ERCOT|A|base|Medium|1|40|400":958.4,"ERCOT|B|base|Medium|1|10|100":3467.1,"ERCOT|B|base|Medium|1|10|150":1098.5,"ERCOT|B|base|Medium|1|10|200":1069.1,"ERCOT|B|base|Medium|1|15|100":2674.0,"ERCOT|B|base|Medium|1|15|200":1032.6,"ERCOT|B|base|Medium|1|15|400":955.5,"ERCOT|B|base|Medium|1|20|100":98063.7,"ERCOT|B|base|Medium|1|20|150":170197.2,"ERCOT|B|base|Medium|1|20|200":14786.8,"ERCOT|B|base|Medium|1|40|100":2717.3,"ERCOT|B|base|Medium|1|40|150":32970.5,"ERCOT|B|base|Medium|1|40|400":967.2,"ERCOT|C|base|Medium|1|10|100":2128.1,"ERCOT|C|base|Medium|1|10|150":1107.0,"ERCOT|C|base|Medium|1|10|200":1066.5,"ERCOT|C|base|Medium|1|15|100":3093.0,"ERCOT|C|base|Medium|1|15|200":1045.1,"ERCOT|C|base|Medium|1|15|400":956.8,"ERCOT|C|base|Medium|1|20|100":144343.6,"ERCOT|C|base|Medium|1|20|150":170132.5,"ERCOT|C|base|Medium|1|20|200":14840.3,"ERCOT|C|base|Medium|1|40|100":2618.7,"ERCOT|C|base|Medium|1|40|150":34610.7,"ERCOT|C|base|Medium|1|40|400":970.9,"ERCOT|D|base|Medium|1|10|100":2718.2,"ERCOT|D|base|Medium|1|10|150":1099.5,"ERCOT|D|base|Medium|1|10|200":1073.6,"ERCOT|D|base|Medium|1|15|100":5612.7,"ERCOT|D|base|Medium|1|15|200":1038.6,"ERCOT|D|base|Medium|1|15|400":957.4,"ERCOT|D|base|Medium|1|20|100":125613.0,"ERCOT|D|base|Medium|1|20|150":170129.3,"ERCOT|D|base|Medium|1|20|200":14770.2,"ERCOT|D|base|Medium|1|40|100":2839.0,"ERCOT|D|base|Medium|1|40|150":33806.3,"ERCOT|D|base|Medium|1|40|400":967.4,"MISO|A|base|Medium|1|10|100":172666.3,"MISO|A|base|Medium|1|15|150":1130.2,"MISO|A|base|Medium|1|15|400":1128.6,"MISO|A|base|Medium|1|20|150":11844.4,"MISO|A|base|Medium|1|20|200":1199.2,"MISO|B|base|Medium|1|10|100":391733.4,"MISO|B|base|Medium|1|15|150":1116.8,"MISO|B|base|Medium|1|15|400":1124.8,"MISO|B|base|Medium|1|20|150":11834.7,"MISO|B|base|Medium|1|20|200":1179.1,"MISO|C|base|Medium|1|10|100":391722.4,"MISO|C|base|Medium|1|15|150":1116.4,"MISO|C|base|Medium|1|15|400":1124.9,"MISO|C|base|Medium|1|20|150":11818.6,"MISO|C|base|Medium|1|20|200":1191.4,"MISO|D|base|Medium|1|10|100":391731.6,"MISO|D|base|Medium|1|15|150":1124.0,"MISO|D|base|Medium|1|15|400":1124.9,"MISO|D|base|Medium|1|20|150":11822.6,"MISO|D|base|Medium|1|20|200":1142.5,"NEISO|A|base|Medium|1|10|100":2860.3,"NEISO|A|base|Medium|1|15|150":1030.5,"NEISO|A|base|Medium|1|20|150":276.6,"NEISO|A|base|Medium|1|20|200":278.3,"NEISO|B|base|Medium|1|10|100":1313.5,"NEISO|B|base|Medium|1|15|150":1029.7,"NEISO|B|base|Medium|1|20|150":266.1,"NEISO|B|base|Medium|1|20|200":265.6,"NEISO|C|base|Medium|1|10|100":723.0,"NEISO|C|base|Medium|1|15|150":1029.1,"NEISO|C|base|Medium|1|20|150":270.2,"NEISO|C|base|Medium|1|20|200":271.3,"NEISO|D|base|Medium|1|10|100":964.4,"NEISO|D|base|Medium|1|15|150":1028.1,"NEISO|D|base|Medium|1|20|150":267.6,"NEISO|D|base|Medium|1|20|200":259.9,"NYISO|A|base|Medium|1|10|100":991.0,"NYISO|A|base|Medium|1|15|150":864.9,"NYISO|A|base|Medium|1|20|150":353.8,"NYISO|A|base|Medium|1|20|200":349.0,"NYISO|B|base|Medium|1|10|100":926.1,"NYISO|B|base|Medium|1|15|150":862.6,"NYISO|B|base|Medium|1|20|150":351.7,"NYISO|B|base|Medium|1|20|200":344.9,"NYISO|C|base|Medium|1|10|100":926.1,"NYISO|C|base|Medium|1|15|150":861.0,"NYISO|C|base|Medium|1|20|150":351.7,"NYISO|C|base|Medium|1|20|200":347.4,"NYISO|D|base|Medium|1|10|100":939.0,"NYISO|D|base|Medium|1|15|150":860.7,"NYISO|D|base|Medium|1|20|150":352.5,"NYISO|D|base|Medium|1|20|200":347.2,"PJM|A|base|Medium|1|10|100":10033.8,"PJM|A|base|Medium|1|10|150":1835.7,"PJM|A|base|Medium|1|15|100":7458.4,"PJM|A|base|Medium|1|15|150":1829.8,"PJM|A|base|Medium|1|15|200":1708.4,"PJM|A|base|Medium|1|15|400":1684.7,"PJM|A|base|Medium|1|20|100":1849.8,"PJM|A|base|Medium|1|20|150":1827.2,"PJM|A|base|Medium|1|20|200":1711.2,"PJM|A|base|Medium|1|40|100":116896.7,"PJM|A|base|Medium|1|40|150":1759.5,"PJM|A|base|Medium|1|40|400":1682.5,"PJM|B|base|Medium|1|10|100":122076.3,"PJM|B|base|Medium|1|10|150":1822.2,"PJM|B|base|Medium|1|15|100":150450.4,"PJM|B|base|Medium|1|15|150":17683.5,"PJM|B|base|Medium|1|15|200":1694.8,"PJM|B|base|Medium|1|15|400":1584.8,"PJM|B|base|Medium|1|20|100":66469.7,"PJM|B|base|Medium|1|20|150":9631.7,"PJM|B|base|Medium|1|20|200":1713.8,"PJM|B|base|Medium|1|40|100":126988.9,"PJM|B|base|Medium|1|40|150":139159.6,"PJM|B|base|Medium|1|40|400":1582.7,"PJM|C|base|Medium|1|10|100":133183.1,"PJM|C|base|Medium|1|10|150":1947.5,"PJM|C|base|Medium|1|15|100":137207.2,"PJM|C|base|Medium|1|15|150":17757.2,"PJM|C|base|Medium|1|15|200":1711.0,"PJM|C|base|Medium|1|15|400":1595.3,"PJM|C|base|Medium|1|20|100":66506.1,"PJM|C|base|Medium|1|20|150":9678.2,"PJM|C|base|Medium|1|20|200":1738.1,"PJM|C|base|Medium|1|40|100":125563.7,"PJM|C|base|Medium|1|40|150":139150.6,"PJM|C|base|Medium|1|40|400":1602.5,"PJM|D|base|Medium|1|10|100":133161.4,"PJM|D|base|Medium|1|10|150":1828.5,"PJM|D|base|Medium|1|15|100":129493.1,"PJM|D|base|Medium|1|15|150":17737.8,"PJM|D|base|Medium|1|15|200":1748.5,"PJM|D|base|Medium|1|15|400":1595.1,"PJM|D|base|Medium|1|20|100":66543.6,"PJM|D|base|Medium|1|20|150":9667.3,"PJM|D|base|Medium|1|20|200":1728.0,"PJM|D|base|Medium|1|40|100":132720.8,"PJM|D|base|Medium|1|40|150":139160.5,"PJM|D|base|Medium|1|40|400":1596.0,"SPP|A|base|Medium|1|10|100":114736.3,"SPP|A|base|Medium|1|15|150":18556.7,"SPP|A|base|Medium|1|15|400":380.2,"SPP|A|base|Medium|1|20|150":373.6,"SPP|A|base|Medium|1|20|200":394.1,"SPP|B|base|Medium|1|10|100":228745.1,"SPP|B|base|Medium|1|15|150":18554.5,"SPP|B|base|Medium|1|15|400":379.7,"SPP|B|base|Medium|1|20|150":373.0,"SPP|B|base|Medium|1|20|200":386.4,"SPP|C|base|Medium|1|10|100":218102.9,"SPP|C|base|Medium|1|15|150":18555.4,"SPP|C|base|Medium|1|15|400":379.7,"SPP|C|base|Medium|1|20|150":375.4,"SPP|C|base|Medium|1|20|200":386.9,"SPP|D|base|Medium|1|10|100":230238.1,"SPP|D|base|Medium|1|15|150":18558.8,"SPP|D|base|Medium|1|15|400":379.7,"SPP|D|base|Medium|1|20|150":371.9,"SPP|D|base|Medium|1|20|200":388.7};
+
+const ISOS=['CAISO','ERCOT','MISO','NEISO','NYISO','PJM','SPP'];
+const PWS=['A','B','C','D'];
+const POPS=[10,15,20,40,80,160];
+const ITERS=[100,150,200,400,800,1600];
+const IX={CAISO:'#F59E0B',ERCOT:'#22C55E',MISO:'#F97316',NEISO:'#9C27B0',NYISO:'#E91E63',PJM:'#0EA5E9',SPP:'#14B8A6'};
+
+let scen='base', demand='Medium', gas='1';
+
+function gk(iso,pw,pop,itr){ return `${iso}|${pw}|${scen}|${demand}|${gas}|${pop}|${itr}`; }
+function get(iso,pw,pop,itr){ return RAW[gk(iso,pw,pop,itr)]; }
+function fmt(v){ return v>=10000? Math.round(v).toLocaleString() : v.toFixed(1); }
+function tint(hex,f){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgb(${Math.round(r+(255-r)*f)},${Math.round(g+(255-g)*f)},${Math.round(b+(255-b)*f)})`; }
+
+// Toggle wiring
+document.querySelectorAll('.toggle-group').forEach(grp => {
+    grp.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            grp.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (grp.id==='tg-scen') scen=btn.dataset.v;
+            if (grp.id==='tg-demand') demand=btn.dataset.v;
+            if (grp.id==='tg-gas') gas=btn.dataset.v;
+            render();
+        });
+    });
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+function render() {
+    // Count cells for current filter
+    let total=0, filled=0;
+    const perISO={};
+    for (const iso of ISOS) {
+        let n=0;
+        for (const pw of PWS) for (const p of POPS) for (const i of ITERS) {
+            total++;
+            if (get(iso,pw,p,i)!==undefined){ filled++; n++; }
+        }
+        perISO[iso]=n;
+    }
+    const slots=ISOS.length*PWS.length*POPS.length*ITERS.length;
+    const isosWith=ISOS.filter(iso=>perISO[iso]>0).length;
+
+    document.getElementById('stats').innerHTML=`
+        <div class="stat-card"><div class="stat-val">${filled}</div><div class="stat-lbl">Cells filled</div></div>
+        <div class="stat-card"><div class="stat-val">${slots}</div><div class="stat-lbl">Total slots</div></div>
+        <div class="stat-card"><div class="stat-val">${slots>0?(filled/slots*100).toFixed(0):'0'}%</div><div class="stat-lbl">Coverage</div></div>
+        <div class="stat-card"><div class="stat-val">${isosWith} / 7</div><div class="stat-lbl">ISOs with data</div></div>
+    `;
+
+    // Grid
+    if (filled===0) {
+        document.getElementById('grid').innerHTML='<div class="empty-state">No thermal fleet results for this filter combination yet.</div>';
+        document.getElementById('dashboard').innerHTML='<div class="empty-state">No data for this filter.</div>';
+        document.getElementById('scoreboard').innerHTML='<div class="empty-state">No data for this filter.</div>';
+        return;
+    }
+
+    let gh='';
+    for (const iso of ISOS) {
+        const isoSlots=PWS.length*POPS.length*ITERS.length;
+        gh+=`<div class="iso-block"><div class="iso-banner" style="background:${IX[iso]}">${iso}<span class="cov">${perISO[iso]} / ${isoSlots}</span></div>`;
+        gh+=`<table class="g-table"><thead><tr><th>Pw</th><th>Iter</th>`;
+        for (const p of POPS) gh+=`<th>p${p}</th>`;
+        gh+=`</tr></thead><tbody>`;
+        for (const pw of PWS) {
+            const vals=[];
+            for (const p of POPS) for (const i of ITERS){ const v=get(iso,pw,p,i); if(v!==undefined) vals.push(v); }
+            const mc=vals.length?Math.min(...vals):null;
+            const sv=[...vals].sort((a,b)=>a-b);
+            const p75=sv.length>1?sv[Math.max(0,Math.floor(sv.length*0.75)-1)]:mc;
+            const lm=mc?Math.log10(Math.max(mc,1)):0;
+            const lp=p75?Math.log10(Math.max(p75,1)):0;
+            const lr=(lp-lm)||1;
+            const bc=IX[iso];
+            for (let ii=0;ii<ITERS.length;ii++){
+                const it=ITERS[ii]; const last=ii===ITERS.length-1;
+                gh+=`<tr class="${last?'pwd':''}">`;
+                gh+=ii===0?`<td class="pw-l">${pw}</td>`:`<td></td>`;
+                gh+=`<td class="it-l">${it}</td>`;
+                for (const p of POPS){
+                    const v=get(iso,pw,p,it);
+                    if(v===undefined){ gh+=`<td class="da">\u2014</td>`; }
+                    else if(v===mc){ gh+=`<td class="win" style="background:${bc}">${fmt(v)}</td>`; }
+                    else {
+                        const lv=Math.log10(Math.max(v,1));
+                        const fr=Math.min(1,(lv-lm)/lr);
+                        const bg=tint(bc,0.40+fr*0.45);
+                        const pat=mc&&v>mc*5;
+                        gh+=`<td class="${pat?'pat':''}" style="background:${bg}">${fmt(v)}</td>`;
+                    }
+                }
+                gh+=`</tr>`;
+            }
+        }
+        gh+=`</tbody></table></div>`;
+    }
+    document.getElementById('grid').innerHTML=gh;
+
+    // Dashboard
+    let dh=`<table class="d-table"><thead><tr><th>ISO</th><th>Pw</th><th>Best Config</th><th>Cost ($B)</th></tr></thead><tbody>`;
+    for (const iso of ISOS){
+        for (let pi=0;pi<PWS.length;pi++){
+            const pw=PWS[pi]; let best=null,cfg=null;
+            for (const p of POPS) for (const i of ITERS){
+                const v=get(iso,pw,p,i);
+                if(v!==undefined&&(best===null||v<best)){best=v;cfg=`p${p} i${i}`;}
+            }
+            const last=pi===PWS.length-1;
+            dh+=`<tr class="${last?'idv':''}">`;
+            dh+=`<td style="background:${IX[iso]};color:#fff;font-weight:700;font-size:0.72rem;letter-spacing:0.04em">${iso}</td>`;
+            dh+=`<td style="color:var(--text-muted);font-weight:600">${pw}</td>`;
+            if(best!==null){
+                dh+=`<td style="background:${IX[iso]};color:#fff;font-weight:700">${cfg}</td>`;
+                dh+=`<td style="background:${IX[iso]};color:#fff;font-weight:700">${fmt(best)}</td>`;
+            } else {
+                dh+=`<td class="da">\u2014</td><td class="da">\u2014</td>`;
+            }
+            dh+=`</tr>`;
+        }
+    }
+    dh+=`</tbody></table>`;
+    document.getElementById('dashboard').innerHTML=dh;
+
+    // Scoreboard
+    const wins={};
+    for (const iso of ISOS) for (const pw of PWS){
+        let best=null,cfg=null;
+        for (const p of POPS) for (const i of ITERS){
+            const v=get(iso,pw,p,i);
+            if(v!==undefined&&(best===null||v<best)){best=v;cfg=`p${p} i${i}`;}
+        }
+        if(cfg){
+            if(!wins[cfg]) wins[cfg]={n:0,c:[]};
+            wins[cfg].n++; wins[cfg].c.push(`${iso} pw${pw}`);
+        }
+    }
+    const ranked=Object.entries(wins).sort((a,b)=>b[1].n-a[1].n);
+    const tw=ranked.reduce((s,r)=>s+r[1].n,0);
+    let sh=`<table class="s-table"><thead><tr><th>#</th><th>Config</th><th>Wins</th><th>Share</th><th>Winning Combos</th></tr></thead><tbody>`;
+    ranked.forEach(([cfg,{n,c}],i)=>{
+        sh+=`<tr class="${i===0?'r1':''}"><td>${i+1}</td><td>${cfg}</td><td>${n}</td><td>${n}/${tw}</td><td>${c.join(', ')}</td></tr>`;
+    });
+    sh+=`</tbody></table>`;
+    sh+=`<div class="landed"><h3>Coverage by ISO</h3>`;
+    for (const iso of ISOS){
+        const pcs=PWS.map(pw=>{
+            const n=POPS.flatMap(p=>ITERS.filter(i=>get(iso,pw,p,i)!==undefined)).length;
+            return n?`pw${pw}: ${n}`:null;
+        }).filter(Boolean);
+        if(pcs.length) sh+=`<div class="landed-r"><span class="landed-i" style="color:${IX[iso]}">${iso}</span><span class="landed-d">${pcs.join(' \u00b7 ')}</span></div>`;
+    }
+    sh+=`</div>`;
+    document.getElementById('scoreboard').innerHTML=sh;
+}
+
+render();
+</script>
+
+</body>
+</html>
