@@ -17,6 +17,8 @@ name: "Step 2.3 DE: Differential Evolution Pathway Optimizer"
 # iso=ALL fans out to 7 parallel matrix jobs.
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de"
 # to consolidate into master.
+#
+# Hardcoded defaults: seed=42, target_2040=90%, target_2050=99.9%, workers=2
 
 on:
   workflow_dispatch:
@@ -80,15 +82,6 @@ on:
           - '400'
           - '800'
           - '1600'
-      seed:
-        description: 'RNG seed for reproducibility'
-        required: false
-        default: '42'
-        type: choice
-        options:
-          - '42'
-          - '80'
-          - '160'
       demand_growth:
         description: 'Demand growth level'
         required: true
@@ -107,24 +100,6 @@ on:
           - base
           - firm_high_vre_low
           - firm_low_vre_high
-      target_2040:
-        description: 'CFE% target at 2040 (linear ramp from baseline)'
-        required: false
-        default: '90'
-        type: string
-      target_2050:
-        description: 'CFE% target at 2050 (linear ramp from 2040 target)'
-        required: false
-        default: '99.9'
-        type: string
-      workers:
-        description: 'Parallel DE evaluations per year-step (1=safe default, 2=faster but may fail on closure pickling)'
-        required: false
-        default: '1'
-        type: choice
-        options:
-          - '1'
-          - '2'
       branch:
         description: 'Branch to checkout'
         required: false
@@ -134,6 +109,10 @@ on:
 env:
   BRANCH_PREFIX: step2-3-de
   PYTHONUNBUFFERED: "1"
+  SEED: "42"
+  TARGET_2040: "90"
+  TARGET_2050: "99.9"
+  WORKERS: "2"
 
 jobs:
   prepare:
@@ -188,14 +167,6 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      # -------------------------------------------------------------------
-      # Full dependency set verified via AST scan of the import chain:
-      #   step2_3_de_pathway.py → eia_data_io.py (pandas)
-      #                         → dispatch_utils.py
-      #                         → step2_3_adaptive_sobol.py (pyarrow, numba)
-      #                         → pipeline_config.py (numpy)
-      #                         → scipy.optimize (differential_evolution)
-      # -------------------------------------------------------------------
       - name: Install dependencies
         run: pip install numpy numba pyarrow pandas scipy
 
@@ -211,7 +182,6 @@ jobs:
           print(f'pandas={pandas.__version__}')
           print(f'scipy={scipy.__version__}')
 
-          # Verify project modules resolve (import-time only, no data needed)
           import pipeline_config as pc
           print(f'pipeline_config OK — {len(pc.LCOE_TABLES)} LCOE entries')
           "
@@ -237,12 +207,8 @@ jobs:
           GAS_MODE: ${{ inputs.gas_mode }}
           POPSIZE: ${{ inputs.popsize }}
           MAXITER: ${{ inputs.maxiter }}
-          WORKERS: ${{ inputs.workers }}
-          SEED: ${{ inputs.seed }}
           SCENARIO: ${{ inputs.scenario }}
           DEMAND: ${{ inputs.demand_growth }}
-          TARGET_2040: ${{ inputs.target_2040 }}
-          TARGET_2050: ${{ inputs.target_2050 }}
         timeout-minutes: 330
         run: |
           set -euo pipefail
@@ -293,7 +259,7 @@ jobs:
           GAS_MODE: ${{ inputs.gas_mode }}
         run: |
           for pw in $PATHWAYS; do
-            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${{ inputs.seed }}_g${GAS_MODE}.parquet"
+            results="data/step2.3-de/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${SEED}_g${GAS_MODE}.parquet"
             if [ ! -f "$results" ]; then
               echo "::error::Missing results: $results"
               exit 1
@@ -302,15 +268,6 @@ jobs:
             echo "[verify] ${results}: ${size} bytes"
           done
 
-      # -------------------------------------------------------------------
-      # git push (not REST API).  This workflow uses fetch-depth: 0
-      # (full clone), so git push works natively.  The REST API blob→
-      # tree→commit→ref pattern was designed for shallow/sparse clones
-      # and introduces unnecessary failure modes here: rate-limiting
-      # across 7 parallel matrix jobs, swallowed errors in the retry
-      # loop, no retries on blob/tree/commit calls, and ~33% payload
-      # bloat from base64-encoding binaries through JSON.
-      # -------------------------------------------------------------------
       - name: "Push results — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
@@ -359,12 +316,8 @@ jobs:
             echo "| Gas mode | ${{ inputs.gas_mode }} |"
             echo "| Popsize | ${{ inputs.popsize }} |"
             echo "| Maxiter | ${{ inputs.maxiter }} |"
-            echo "| Workers | ${{ inputs.workers }} |"
-            echo "| Seed | ${{ inputs.seed }} |"
             echo "| Scenario | \`${{ inputs.scenario }}\` |"
             echo "| Demand | \`${{ inputs.demand_growth }}\` |"
-            echo "| Target 2040 | ${{ inputs.target_2040 }}% |"
-            echo "| Target 2050 | ${{ inputs.target_2050 }}% |"
             echo ""
             echo "Gas mode key: 1=cost+shadow, 2=cost only, 3=blind"
             echo ""
