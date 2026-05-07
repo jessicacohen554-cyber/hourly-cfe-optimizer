@@ -341,7 +341,24 @@ COST_SCENARIOS = {
         "fuel_cost": "M", "tx_level": "H", "ccs_cost": "L", "geo_cost": "L",
         "q45": "1",
     },
+    "all_low": {
+        # Everything cheap — floor case, fastest possible decarbonization.
+        # Neither pathway has structural advantage; tests whether A-B cost
+        # spread collapses when all technologies hit aggressive learning targets.
+        "ren_cost": "L", "firm_cost": "L", "batt_cost": "L", "ldes_cost": "L",
+        "fuel_cost": "L", "tx_level": "L", "ccs_cost": "L", "geo_cost": "L",
+        "q45": "1",
+    },
+    "all_high": {
+        # Everything expensive — ceiling case, costliest decarbonization.
+        # Tests which pathway degrades less gracefully under universal cost
+        # pressure, and whether gas backstop dependency increases symmetrically.
+        "ren_cost": "H", "firm_cost": "H", "batt_cost": "H", "ldes_cost": "H",
+        "fuel_cost": "H", "tx_level": "H", "ccs_cost": "H", "geo_cost": "H",
+        "q45": "1",
+    },
 }
+
 
 LEVEL_NAME = {"L": "Low", "M": "Medium", "H": "High"}
 
