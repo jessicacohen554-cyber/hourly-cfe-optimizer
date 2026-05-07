@@ -249,6 +249,8 @@ class _DEObjective:
         '_lcoe_by_free_k', '_stor_net',
         # Pre-allocated buffers (workers=1 only)
         '_buf_full', '_buf_pcts', '_use_buffers',
+        # Clean firm uprate tranche (v2.1)
+        '_cf_free_k', '_remaining_uprate_pct', '_uprate_lcoe', '_newbuild_lcoe',
     )
 
     def __init__(self, *, lo, hi, floor_pcts, free_idx, n_free,
@@ -290,6 +292,32 @@ class _DEObjective:
         self._stor_net = np.array([
             solver.storage_net_cost(iso, sc, cfg, year=year)
             for sc in solver.STORAGE_COLS], dtype=np.float64)
+
+        # --- Clean firm uprate tranche (v2.1) ---
+        # First UPRATE_CAP_TWH of increment above existing fleet baseline
+        # is priced at UPRATE_LCOE (no TX adder); remainder at Wright's Law
+        # newbuild cost (with TX).  _cf_free_k = -1 when clean_firm is frozen
+        # (Pathway A), so the special pricing is never triggered.
+        cf_ri = solver.RES_IDX["clean_firm"]
+        self._cf_free_k = -1
+        for k, ri in enumerate(free_idx):
+            if ri == cf_ri:
+                self._cf_free_k = k
+                break
+        if self._cf_free_k >= 0:
+            baseline_cf_twh = (pc.GRID_MIX_SHARES[iso].get("clean_firm", 0.0)
+                               / 100.0 * float(pc.REGIONAL_DEMAND_TWH[iso]))
+            uprate_cap_twh = float(pc.UPRATE_CAP_TWH[iso])
+            floor_cf_twh = floor_pcts[cf_ri] / 100.0 * dem_twh
+            remaining_twh = max(0.0, baseline_cf_twh + uprate_cap_twh - floor_cf_twh)
+            self._remaining_uprate_pct = remaining_twh / dem_twh * 100.0
+            self._uprate_lcoe = float(pc.UPRATE_LCOE[cfg.firm_cost])
+            # Newbuild = what get_resource_lcoe already returns (Wright's Law + TX)
+            self._newbuild_lcoe = self._lcoe_by_free_k[self._cf_free_k]
+        else:
+            self._remaining_uprate_pct = 0.0
+            self._uprate_lcoe = 0.0
+            self._newbuild_lcoe = 0.0
 
         # --- Pre-allocate work buffers if single-threaded (v2.0) ---
         # With workers > 1, each process gets its own copy via pickle,
@@ -346,12 +374,22 @@ class _DEObjective:
             return PENALTY_WEIGHT * (self.target - post_cfe) ** 2
 
         # --- Incremental cost above floor (precomputed LCOEs, v2.0) ---
+        # v2.1: clean_firm uses piecewise pricing — uprate tranche at
+        # UPRATE_LCOE, remainder at Wright's Law newbuild.
         cost = 0.0
         dem_twh = self.dem_twh
+        cf_k = self._cf_free_k
         for k, ri in enumerate(free_idx):
             delta = pcts[ri] - floor_pcts[ri]
             if delta > 0:
-                cost += delta / 100 * dem_twh * self._lcoe_by_free_k[k] * 1e6
+                if k == cf_k:
+                    # Piecewise: uprate tranche (cheap) then newbuild (expensive)
+                    uprate_d = min(delta, self._remaining_uprate_pct)
+                    newbuild_d = delta - uprate_d
+                    cost += uprate_d / 100 * dem_twh * self._uprate_lcoe * 1e6
+                    cost += newbuild_d / 100 * dem_twh * self._newbuild_lcoe * 1e6
+                else:
+                    cost += delta / 100 * dem_twh * self._lcoe_by_free_k[k] * 1e6
 
         for j in range(solver.N_STORAGE):
             ds = (xc[n_free + j] - self.floor_stor[j]) / 100
@@ -647,12 +685,30 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         g_shadow = solver.gas_stranding_shadow(g_mw, peak_gas_mw, year, iso)
 
         # --- Annual cost (all vintages + new) ---
+        # v2.1: clean_firm uses piecewise pricing in tally to match optimizer.
+        cf_ri = solver.RES_IDX["clean_firm"]
+        baseline_cf_twh = (pc.GRID_MIX_SHARES[iso].get("clean_firm", 0.0)
+                           / 100.0 * float(pc.REGIONAL_DEMAND_TWH[iso]))
+        uprate_cap_twh = float(pc.UPRATE_CAP_TWH[iso])
+        uprate_lcoe = float(pc.UPRATE_LCOE[cfg.firm_cost])
+
         year_inc = 0.0
         for k, ri in enumerate(free_idx):
             delta = winner_pcts[ri] - floor_pcts[ri]
             if delta > solver.RATCHET_TOL_PCT:
-                year_inc += delta / 100 * dem_twh * solver.get_resource_lcoe(
-                    iso, solver.RESOURCE_ORDER[ri], year, cfg) * 1e6
+                if ri == cf_ri:
+                    # Piecewise: uprate tranche then newbuild
+                    floor_cf_twh = floor_pcts[ri] / 100 * dem_twh
+                    remaining_twh = max(0.0, baseline_cf_twh + uprate_cap_twh - floor_cf_twh)
+                    remaining_pct = remaining_twh / dem_twh * 100.0
+                    uprate_d = min(delta, remaining_pct)
+                    newbuild_d = delta - uprate_d
+                    newbuild_lcoe = solver.get_resource_lcoe(iso, "clean_firm", year, cfg)
+                    year_inc += uprate_d / 100 * dem_twh * uprate_lcoe * 1e6
+                    year_inc += newbuild_d / 100 * dem_twh * newbuild_lcoe * 1e6
+                else:
+                    year_inc += delta / 100 * dem_twh * solver.get_resource_lcoe(
+                        iso, solver.RESOURCE_ORDER[ri], year, cfg) * 1e6
         for j, sc in enumerate(solver.STORAGE_COLS):
             ds = (winner_stor[j] - floor_stor[j]) / 100
             if ds > solver.RATCHET_TOL_PCT:
@@ -673,14 +729,31 @@ def run_de_pathway(iso, pathway, scenario="base", demand_growth="Medium",
         if h2_mw > peak_h2_mw:
             peak_h2_mw = h2_mw
 
-        # Record vintages
+        # Record vintages — clean_firm decomposed into uprate + newbuild tranches
         for k, ri in enumerate(free_idx):
             delta = winner_pcts[ri] - floor_pcts[ri]
             if delta > solver.RATCHET_TOL_PCT:
                 res = solver.RESOURCE_ORDER[ri]
-                vintage_ledger.append(VintageEntry(
-                    year, res, delta / 100 * dem_twh,
-                    solver.get_resource_lcoe(iso, res, year, cfg)))
+                if ri == cf_ri:
+                    # Decompose into uprate + newbuild tranches for vintage tracking
+                    floor_cf_twh_v = floor_pcts[ri] / 100 * dem_twh
+                    remaining_twh_v = max(0.0, baseline_cf_twh + uprate_cap_twh - floor_cf_twh_v)
+                    remaining_pct_v = remaining_twh_v / dem_twh * 100.0
+                    uprate_d_v = min(delta, remaining_pct_v)
+                    newbuild_d_v = delta - uprate_d_v
+                    if uprate_d_v > solver.RATCHET_TOL_PCT:
+                        vintage_ledger.append(VintageEntry(
+                            year, "clean_firm_uprate",
+                            uprate_d_v / 100 * dem_twh, uprate_lcoe))
+                    if newbuild_d_v > solver.RATCHET_TOL_PCT:
+                        vintage_ledger.append(VintageEntry(
+                            year, "clean_firm_newbuild",
+                            newbuild_d_v / 100 * dem_twh,
+                            solver.get_resource_lcoe(iso, "clean_firm", year, cfg)))
+                else:
+                    vintage_ledger.append(VintageEntry(
+                        year, res, delta / 100 * dem_twh,
+                        solver.get_resource_lcoe(iso, res, year, cfg)))
         for j, sc in enumerate(solver.STORAGE_COLS):
             ds = (winner_stor[j] - floor_stor[j]) / 100
             if ds > solver.RATCHET_TOL_PCT:
@@ -825,3 +898,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
