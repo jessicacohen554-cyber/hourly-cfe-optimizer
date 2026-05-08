@@ -1,0 +1,385 @@
+name: "Step 2.3 DE: Myopic Threshold Optimizer"
+
+# Runs step2_3_de_myopic_tf.py — myopic (standalone-point) DE optimizer
+# that solves each CFE threshold independently from the grid baseline.
+# No year-by-year ratchet, no build history between thresholds.
+#
+# Each threshold (90–99.9%) maps to a year on the linear ramp (90% @ 2040 →
+# 99.9% @ 2050) for cost curves and demand growth.
+#
+# Gas mode 1 (shadow) is excluded — no prior peak exists in a myopic solve.
+#
+# iso=ALL fans out to 7 parallel matrix jobs.
+# pathway/gas-mode/scenario/demand each support ALL/BOTH for sweep runs.
+#
+# Output directory: data/step2.3-de/myopic/
+# Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de-myopic"
+# to consolidate into master.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = parallel across 7)'
+        required: true
+        default: 'ERCOT'
+        type: choice
+        options:
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+          - ALL
+      pathway:
+        description: 'Pathway (A=VRE-only, B=all resources, BOTH=A+B, ALL=A+B+C+D)'
+        required: true
+        default: 'BOTH'
+        type: choice
+        options:
+          - A
+          - B
+          - C
+          - D
+          - BOTH
+          - ALL
+      gas_mode:
+        description: 'Gas in optimizer: 2=cost only, 3=blind, BOTH=2+3'
+        required: true
+        default: '2'
+        type: choice
+        options:
+          - '2'
+          - '3'
+          - BOTH
+      scenario:
+        description: 'Cost scenario (ALL = loop all 5)'
+        required: true
+        default: 'base'
+        type: choice
+        options:
+          - base
+          - firm_high_vre_low
+          - firm_low_vre_high
+          - all_low
+          - all_high
+          - ALL
+      demand_growth:
+        description: 'Demand growth (ALL = loop L/M/H)'
+        required: true
+        default: 'Medium'
+        type: choice
+        options:
+          - Low
+          - Medium
+          - High
+          - ALL
+      popsize:
+        description: 'DE population multiplier (pop = popsize × n_dims)'
+        required: false
+        default: '15'
+        type: choice
+        options:
+          - '10'
+          - '15'
+          - '20'
+          - '40'
+          - '80'
+      maxiter:
+        description: 'DE generations per threshold'
+        required: false
+        default: '150'
+        type: choice
+        options:
+          - '100'
+          - '150'
+          - '200'
+          - '400'
+          - '800'
+      thresholds:
+        description: 'CFE thresholds (space-separated, default: all 6)'
+        required: false
+        default: '90 92.5 95 97.5 99 99.9'
+        type: string
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step2-3-de-myopic
+  PYTHONUNBUFFERED: "1"
+  SEED: "42"
+  WORKERS: "2"
+
+jobs:
+  # -------------------------------------------------------------------
+  # Fan-out: ISO dimension → parallel matrix jobs
+  # -------------------------------------------------------------------
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      pathways: ${{ steps.dims.outputs.pathways }}
+      gas_modes: ${{ steps.dims.outputs.gas_modes }}
+      scenarios: ${{ steps.dims.outputs.scenarios }}
+      demands: ${{ steps.dims.outputs.demands }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+      # Expand ALL/BOTH for each dimension into space-separated lists.
+      # These are passed to the matrix job and looped sequentially.
+      - id: dims
+        env:
+          PATHWAY: ${{ inputs.pathway }}
+          GAS_MODE: ${{ inputs.gas_mode }}
+          SCENARIO: ${{ inputs.scenario }}
+          DEMAND: ${{ inputs.demand_growth }}
+        run: |
+          # Pathways
+          case "$PATHWAY" in
+            BOTH) echo "pathways=A B" >> "$GITHUB_OUTPUT" ;;
+            ALL)  echo "pathways=A B C D" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Gas modes
+          case "$GAS_MODE" in
+            BOTH) echo "gas_modes=2 3" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "gas_modes=$GAS_MODE" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Scenarios
+          case "$SCENARIO" in
+            ALL) echo "scenarios=base firm_high_vre_low firm_low_vre_high all_low all_high" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "scenarios=$SCENARIO" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Demand growth
+          case "$DEMAND" in
+            ALL) echo "demands=Low Medium High" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "demands=$DEMAND" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  # -------------------------------------------------------------------
+  # Main job: one per ISO, loops other dims sequentially
+  # -------------------------------------------------------------------
+  de-myopic:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    concurrency:
+      group: step2-3-de-myopic-${{ matrix.iso }}-${{ github.run_id }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Verify prerequisites
+        run: |
+          for f in data/eia-930/eia_generation_profiles.parquet data/eia-930/eia_demand_profiles.parquet; do
+            if [ ! -f "$f" ]; then
+              echo "::error::$f not found. Run Step 0 data fetch first."
+              exit 1
+            fi
+          done
+          if [ ! -f "data/hybrid_profiles/${{ matrix.iso }}_hybrid_profiles.npz" ]; then
+            echo "::warning::Hybrid profiles not found for ${{ matrix.iso }} — hybrids will be zero"
+          fi
+
+      - name: Verify myopic script exists
+        run: |
+          if [ ! -f "scripts/step2_3_de_myopic_tf.py" ]; then
+            echo "::error::scripts/step2_3_de_myopic_tf.py not found. Commit it first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Verify imports
+        working-directory: scripts
+        run: |
+          python -c "
+          import numpy, numba, pyarrow, pandas, scipy
+          from scipy.optimize import differential_evolution
+          print(f'numpy={numpy.__version__}')
+          print(f'scipy={scipy.__version__}')
+
+          import pipeline_config as pc
+          fleet = pc.thermal_fleet_mw('ERCOT', 2030, 60.0)
+          peak = pc.thermal_peak_credit_mw('ERCOT', 2030, 60.0)
+          print(f'Thermal fleet OK — ERCOT 2030 @60% CFE: gas={fleet[\"gas_mw\"]:,.0f} coal={fleet[\"coal_mw\"]:,.0f} peak={peak:,.0f}')
+          "
+
+      - name: Ensure output directory
+        run: mkdir -p data/step2.3-de/myopic
+
+      # ------------------------------------------------------------------
+      # Nested loop: pathway × gas_mode × scenario × demand_growth
+      # Each combo runs the full threshold sweep (default 6 thresholds).
+      # Sequential within the job; ISO is the only parallel axis.
+      # ------------------------------------------------------------------
+      - name: "Run myopic DE — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ needs.prepare.outputs.pathways }}
+          GAS_MODES: ${{ needs.prepare.outputs.gas_modes }}
+          SCENARIOS: ${{ needs.prepare.outputs.scenarios }}
+          DEMANDS: ${{ needs.prepare.outputs.demands }}
+          POPSIZE: ${{ inputs.popsize }}
+          MAXITER: ${{ inputs.maxiter }}
+          THRESHOLDS: ${{ inputs.thresholds }}
+        timeout-minutes: 330
+        run: |
+          set -euo pipefail
+          run_count=0
+          t_total=$SECONDS
+
+          for pw in $PATHWAYS; do
+            for gm in $GAS_MODES; do
+              for sc in $SCENARIOS; do
+                for dg in $DEMANDS; do
+                  run_count=$((run_count + 1))
+                  echo ""
+                  echo "============================================================"
+                  echo "[run $run_count] $ISO pw=$pw gas=$gm scenario=$sc demand=$dg"
+                  echo "  popsize=$POPSIZE maxiter=$MAXITER workers=$WORKERS seed=$SEED"
+                  echo "  thresholds: $THRESHOLDS"
+                  echo "============================================================"
+                  t0=$SECONDS
+
+                  python scripts/step2_3_de_myopic_tf.py \
+                    --iso "$ISO" \
+                    --pathway "$pw" \
+                    --gas-mode "$gm" \
+                    --popsize "$POPSIZE" \
+                    --maxiter "$MAXITER" \
+                    --workers "$WORKERS" \
+                    --seed "$SEED" \
+                    --scenario "$sc" \
+                    --demand-growth "$dg" \
+                    --thresholds $THRESHOLDS
+
+                  echo "[run $run_count] Done in $(( SECONDS - t0 ))s"
+                done
+              done
+            done
+          done
+
+          echo ""
+          echo "============================================================"
+          echo "[workflow] All $run_count runs complete in $(( SECONDS - t_total ))s"
+          echo "============================================================"
+
+      - name: "Verify outputs — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          count=$(find data/step2.3-de/myopic/ -name "${ISO}_*.parquet" | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No parquet files produced for ${ISO}"
+            exit 1
+          fi
+          echo "[verify] Found $count parquet file(s) for $ISO:"
+          find data/step2.3-de/myopic/ -name "${ISO}_*.parquet" -exec ls -lh {} \;
+
+      - name: "Push results — ${{ matrix.iso }}"
+        env:
+          ISO: ${{ matrix.iso }}
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$branch"
+
+          # Stage all myopic output files for this ISO
+          file_count=0
+          for f in data/step2.3-de/myopic/${ISO}_*.parquet data/step2.3-de/myopic/${ISO}_*.json; do
+            [ -f "$f" ] || continue
+            git add "$f"
+            file_count=$((file_count + 1))
+          done
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "::error::No output files found for ${ISO}"
+            exit 1
+          fi
+
+          COMMIT_MSG="Step 2.3 DE myopic: ${ISO} pw=${{ inputs.pathway }} gas=${{ inputs.gas_mode }} sc=${{ inputs.scenario }} dg=${{ inputs.demand_growth }} p=${{ inputs.popsize }} i=${{ inputs.maxiter }}"
+          git commit -m "$COMMIT_MSG"
+          git push origin "$branch"
+          echo "[push] Branch created: ${branch} ($file_count files)"
+          echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
+
+      - name: Summary
+        if: always()
+        env:
+          ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ needs.prepare.outputs.pathways }}
+          GAS_MODES: ${{ needs.prepare.outputs.gas_modes }}
+          SCENARIOS: ${{ needs.prepare.outputs.scenarios }}
+          DEMANDS: ${{ needs.prepare.outputs.demands }}
+        run: |
+          {
+            echo "## Step 2.3 DE Myopic — ${ISO}"
+            echo ""
+            echo "| Setting | Value |"
+            echo "|---------|-------|"
+            echo "| Pathways | \`${PATHWAYS}\` |"
+            echo "| Gas modes | \`${GAS_MODES}\` |"
+            echo "| Scenarios | \`${SCENARIOS}\` |"
+            echo "| Demand growth | \`${DEMANDS}\` |"
+            echo "| Popsize | ${{ inputs.popsize }} |"
+            echo "| Maxiter | ${{ inputs.maxiter }} |"
+            echo "| Thresholds | \`${{ inputs.thresholds }}\` |"
+            echo ""
+            echo "**Myopic solver:** each threshold solved independently from grid baseline."
+            echo "No ratchet between thresholds. Thermal fleet retirement keyed to target CFE."
+            echo ""
+            echo "Output: \`data/step2.3-de/myopic/\`"
+            echo ""
+            if [ -n "${BRANCH:-}" ]; then
+              echo "Branch: \`${BRANCH}\`"
+            fi
+            echo ""
+            echo "Run **Squash Pipeline Branches** with pattern \`auto/.*step2-3-de-myopic\` to consolidate."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-3-de-myopic-${{ matrix.iso }}-${{ github.run_id }}
+          path: data/step2.3-de/myopic/
+          retention-days: 30
+          if-no-files-found: warn
