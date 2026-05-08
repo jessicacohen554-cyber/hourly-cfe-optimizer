@@ -50,6 +50,14 @@ Usage:
     # Gas-blind, custom thresholds
     python scripts/step2_3_de_myopic_tf.py --iso PJM --pathway A \\
         --thresholds 90 95 99 99.9 --gas-mode 3
+
+    # Disable warm-starting (enables independent threshold solves)
+    python scripts/step2_3_de_myopic_tf.py --iso ERCOT --pathway B \\
+        --no-warm-start
+
+    # Tighter convergence tolerance (faster, slightly less exhaustive)
+    python scripts/step2_3_de_myopic_tf.py --iso ERCOT --pathway A \\
+        --tol 0.005
 """
 from __future__ import annotations
 
@@ -97,6 +105,9 @@ PENALTY_WEIGHT = 1e12        # $/pp^2 for CFE shortfall and overshoot
 MAX_RESOURCE_PCT = 200.0     # hard ceiling per resource dimension
 STORAGE_MAX_PCT = 50.0       # generous storage cap — cost function regulates
 EARLY_EXIT_GAP_PP = 10.0     # skip cost loop if CFE misses target by >10pp
+
+# DE convergence — v2.0: nonzero default allows early termination
+DEFAULT_DE_TOL = 0.01        # stop when population energy spread < 1%
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +268,11 @@ class _MyopicDEObjective:
     Includes clean_firm uprate tranche pricing for pathway B/C/D.
     For pathway A, clean_firm is never in free_idx so the uprate branch
     is never reached (_cf_free_k stays at -1).
+
+    v2.0: Cost computation vectorized via numpy dot products.  The inner
+    for-loop over free resources is replaced with a single np.dot call,
+    plus a scalar correction for the clean_firm piecewise tranche.
+    Storage cost similarly vectorized.
     """
 
     __slots__ = (
@@ -267,6 +283,8 @@ class _MyopicDEObjective:
         'floor_stor', 'full_x0', 'active', 'gas_mode',
         # Precomputed cost arrays
         '_lcoe_by_free_k', '_stor_net',
+        # v2.0: vectorized cost support
+        '_floor_by_free', '_cost_scale',
         # Pre-allocated buffers (workers=1 only)
         '_buf_full', '_buf_pcts', '_use_buffers',
         # Clean firm uprate tranche (pathway B/C/D only)
@@ -302,7 +320,6 @@ class _MyopicDEObjective:
         self.gas_mode = gas_mode
 
         # --- Precompute year-constant LCOEs ---
-        # Eliminates per-evaluation function call overhead.
         self._lcoe_by_free_k = np.array([
             solver.get_resource_lcoe(iso, solver.RESOURCE_ORDER[ri], year, cfg)
             for ri in free_idx], dtype=np.float64)
@@ -311,11 +328,15 @@ class _MyopicDEObjective:
             solver.storage_net_cost(iso, sc, cfg, year=year)
             for sc in solver.STORAGE_COLS], dtype=np.float64)
 
+        # --- v2.0: vectorized cost support ---
+        # Floor values indexed by free-resource position (length n_free).
+        # Allows computing deltas as xc[:n_free] - _floor_by_free in one op.
+        self._floor_by_free = np.array(
+            [floor_pcts[ri] for ri in free_idx], dtype=np.float64)
+        # Common scale factor: converts pct-delta to $ via dem_twh
+        self._cost_scale = dem_twh * 1e6 / 100.0
+
         # --- Clean firm uprate tranche ---
-        # In pathway A, clean_firm is not in free_idx so _cf_free_k = -1
-        # and the piecewise branch is never entered.  In B/C/D, the first
-        # UPRATE_CAP_TWH above the existing fleet baseline is priced at
-        # UPRATE_LCOE (no TX); remainder at Wright's Law newbuild (with TX).
         cf_ri = solver.RES_IDX["clean_firm"]
         self._cf_free_k = -1
         for k, ri in enumerate(free_idx):
@@ -331,7 +352,6 @@ class _MyopicDEObjective:
                                 - floor_cf_twh)
             self._remaining_uprate_pct = remaining_twh / dem_twh * 100.0
             self._uprate_lcoe = float(pc.UPRATE_LCOE[cfg.firm_cost])
-            # Newbuild = what get_resource_lcoe returns (Wright's Law + TX)
             self._newbuild_lcoe = self._lcoe_by_free_k[self._cf_free_k]
         else:
             self._remaining_uprate_pct = 0.0
@@ -391,34 +411,52 @@ class _MyopicDEObjective:
         if post_cfe < self.target - EARLY_EXIT_GAP_PP:
             return PENALTY_WEIGHT * (self.target - post_cfe) ** 2
 
-        # --- Incremental cost above floor ---
-        cost = 0.0
-        dem_twh = self.dem_twh
-        cf_k = self._cf_free_k
-        for k, ri in enumerate(free_idx):
-            delta = pcts[ri] - floor_pcts[ri]
-            if delta > 0:
-                if k == cf_k:
-                    # Piecewise: uprate tranche (cheap) then newbuild
-                    uprate_d = min(delta, self._remaining_uprate_pct)
-                    newbuild_d = delta - uprate_d
-                    cost += uprate_d / 100 * dem_twh * self._uprate_lcoe * 1e6
-                    cost += newbuild_d / 100 * dem_twh * self._newbuild_lcoe * 1e6
-                else:
-                    cost += delta / 100 * dem_twh * self._lcoe_by_free_k[k] * 1e6
+        # ---------------------------------------------------------------
+        # v2.0: Vectorized incremental cost above floor
+        # ---------------------------------------------------------------
+        # Resource deltas: xc[:n_free] holds free-resource percentages.
+        # Subtracting floor_by_free gives the incremental build above
+        # baseline for each free resource.  Negatives zeroed — we only
+        # pay for new capacity, never get credit for reductions.
+        res_deltas = xc[:n_free] - self._floor_by_free
+        np.maximum(res_deltas, 0.0, out=res_deltas)
 
-        # Storage cost
-        for j in range(solver.N_STORAGE):
-            ds = (xc[n_free + j] - self.floor_stor[j]) / 100
-            if ds > 0:
-                cost += ds * self._stor_net[j] * dem_twh * 1e6
+        cost = 0.0
+
+        # Clean_firm piecewise: uprate tranche (cheap) then newbuild.
+        # Handled as a scalar correction outside the vectorized path.
+        cf_k = self._cf_free_k
+        if cf_k >= 0 and res_deltas[cf_k] > 0:
+            cf_d = res_deltas[cf_k]
+            # Zero out CF in the delta array so it's excluded from
+            # the dot product below — its cost uses different LCOEs.
+            res_deltas[cf_k] = 0.0
+            uprate_d = min(cf_d, self._remaining_uprate_pct)
+            newbuild_d = cf_d - uprate_d
+            cost += ((uprate_d * self._uprate_lcoe
+                      + newbuild_d * self._newbuild_lcoe)
+                     * self._cost_scale)
+
+        # All other free resources: single dot product.
+        # _lcoe_by_free_k[k] * res_deltas[k] summed over k, scaled by
+        # dem_twh * 1e6 / 100 — identical to the per-element loop but
+        # executed in compiled numpy C code.
+        cost += np.dot(res_deltas, self._lcoe_by_free_k) * self._cost_scale
+
+        # Storage cost: same vectorized pattern.
+        # stor_deltas = (current - floor) / 100 gives the fractional
+        # increment; dot with net cost array gives total storage cost.
+        stor_vals = xc[n_free:n_free + solver.N_STORAGE]
+        stor_deltas = (stor_vals - self.floor_stor) / 100.0
+        np.maximum(stor_deltas, 0.0, out=stor_deltas)
+        cost += np.dot(stor_deltas, self._stor_net) * self.dem_twh * 1e6
 
         # H2 peaker cost
         cost += h2["h2_mw"] * self.capex_yr * 1000
         cost += h2["h2_mwh"] * self.fuel_mwh_rate
 
         # Gas — mode 2: cost visible to optimizer, mode 3: blind
-        g = solver.gas_need_mw(h2["resid_p9997"], dem_twh,
+        g = solver.gas_need_mw(h2["resid_p9997"], self.dem_twh,
                                self.thermal_peak_credit, self.gaf)
         if self.gas_mode == 2:
             cost += solver.gas_annual_cost(g, self.iso, self.cfg)
@@ -441,11 +479,19 @@ def solve_one_threshold(
     dem_twh, floor_pcts, floor_stor,
     thermal_peak_credit, gaf,
     popsize, maxiter, workers, seed, gas_mode,
+    de_tol=DEFAULT_DE_TOL,
+    warm_x0=None,
 ):
     """Solve a single CFE threshold from the grid baseline.
 
     Returns dict with target, year, achieved_cfe, cost breakdown, resource
     mix, gas/H2 sizing, and per-resource incremental TWh.
+
+    v2.0 additions:
+        de_tol: DE convergence tolerance (0 = run all maxiter generations).
+        warm_x0: full-space vector (n_free + N_STORAGE) from a prior solve.
+            If provided and dimensionally compatible, injected as one row
+            of the initial DE population to give the optimizer a head start.
     """
     capex_yr = solver.h2_peaker_capex_kw_yr(year, cfg)
     fuel_mwh_rate = solver.h2_peaker_fuel_mwh(year, cfg)
@@ -469,6 +515,7 @@ def solve_one_threshold(
         winner_stor = floor_stor.copy()
         winner_cfe = floor_cfe
         resid_for_gas = _p9997(floor_resid)
+        warm_out = None  # nothing to warm-start from
     else:
         # CFE ceiling: don't overbuild beyond a reasonable margin
         cfe_ceiling = min(target + 3.0, 100.0)
@@ -480,8 +527,6 @@ def solve_one_threshold(
             lo[k] = floor_pcts[ri]
             hi[k] = MAX_RESOURCE_PCT
             res = solver.RESOURCE_ORDER[ri]
-            # Regional caps on firm resources (pathway B/C/D only —
-            # pathway A never includes these in free_idx)
             if res == "ccs_ccgt":
                 hi[k] = min(hi[k],
                             float(pc.CCS_CAP_TWH.get(iso, 9999)) / dem_twh * 100)
@@ -502,8 +547,10 @@ def solve_one_threshold(
             winner_cfe = floor_cfe
             h2_mw = h2_mwh = 0.0
             resid_for_gas = _p9997(floor_resid)
+            warm_out = None
         else:
             bounds = [(lo[i], hi[i]) for i in active]
+            n_active = len(active)
             full_x0 = np.concatenate([
                 np.array([floor_pcts[ri] for ri in free_idx]),
                 floor_stor.copy()])
@@ -524,11 +571,38 @@ def solve_one_threshold(
             rng = np.random.default_rng(seed)
             de_seed = int(rng.integers(0, 2**31))
 
+            # -------------------------------------------------------
+            # v2.0: Warm-start initial population
+            # -------------------------------------------------------
+            # If a prior threshold's winner is available and dimensionally
+            # compatible, inject it as the first row of the initial
+            # population.  The remaining rows are uniform random within
+            # bounds, providing full exploration coverage.  This gives
+            # the optimizer a head start without constraining the search.
+            de_init = "latinhypercube"  # default
+
+            if warm_x0 is not None and len(warm_x0) == len(lo):
+                n_pop = max(5, popsize * n_active)
+                rng_pop = np.random.default_rng(de_seed)
+                lo_active = np.array([lo[i] for i in active])
+                hi_active = np.array([hi[i] for i in active])
+
+                # Build population: uniform random in bounds
+                init_pop = rng_pop.uniform(
+                    lo_active, hi_active,
+                    size=(n_pop, n_active))
+
+                # Inject warm-start as first row, clipped to new bounds
+                warm_clipped = np.clip(warm_x0, lo, hi)
+                init_pop[0] = np.array([warm_clipped[i] for i in active])
+                de_init = init_pop
+
             de_result = differential_evolution(
                 obj_fn, bounds,
                 seed=de_seed, maxiter=maxiter, popsize=popsize,
-                tol=0, mutation=(0.5, 1.0), recombination=0.7,
-                polish=True, init="latinhypercube",
+                tol=de_tol,
+                mutation=(0.5, 1.0), recombination=0.7,
+                polish=True, init=de_init,
                 workers=workers)
 
             # Reconstruct winner from DE result
@@ -536,6 +610,9 @@ def solve_one_threshold(
             for ai, idx in enumerate(active):
                 full_best[idx] = de_result.x[ai]
             full_best = np.clip(full_best, lo, hi)
+
+            # v2.0: save full-space winner for warm-starting next threshold
+            warm_out = full_best.copy()
 
             winner_pcts = floor_pcts.copy()
             for k, ri in enumerate(free_idx):
@@ -569,7 +646,6 @@ def solve_one_threshold(
             delta_twh = delta / 100 * dem_twh
             resource_twh[res] = delta_twh
             if ri == cf_ri:
-                # Piecewise: uprate tranche (cheap) then newbuild (expensive)
                 floor_cf_twh = floor_pcts[ri] / 100 * dem_twh
                 remaining_twh = max(0.0, baseline_cf_twh + uprate_cap_twh
                                     - floor_cf_twh)
@@ -580,7 +656,6 @@ def solve_one_threshold(
                     iso, "clean_firm", year, cfg)
                 inc_cost += uprate_d / 100 * dem_twh * uprate_lcoe * 1e6
                 inc_cost += newbuild_d / 100 * dem_twh * newbuild_lcoe * 1e6
-                # Record tranche decomposition for inspection
                 resource_twh["clean_firm_uprate"] = uprate_d / 100 * dem_twh
                 resource_twh["clean_firm_newbuild"] = newbuild_d / 100 * dem_twh
             else:
@@ -596,7 +671,7 @@ def solve_one_threshold(
     inc_cost += h2_mw * capex_yr * 1000 + h2_mwh * fuel_mwh_rate
     total_cost = inc_cost + g_cost
 
-    return {
+    result = {
         "target": target,
         "year": year,
         "pathway": pathway,
@@ -609,14 +684,15 @@ def solve_one_threshold(
         "h2_mwh": round(h2_mwh, 1),
         "dem_twh": round(dem_twh, 2),
         "thermal_peak_credit_mw": round(thermal_peak_credit, 1),
-        # Per-resource build percentages (absolute, not delta)
         "winner_pcts": {solver.RESOURCE_ORDER[ri]: round(float(winner_pcts[ri]), 3)
                         for ri in range(solver.N_RESOURCES)},
         "winner_stor": {solver.STORAGE_COLS[j]: round(float(winner_stor[j]), 3)
                         for j in range(solver.N_STORAGE)},
-        # Per-resource incremental TWh above baseline
         "resource_twh": {k: round(v, 3) for k, v in resource_twh.items()},
+        # v2.0: internal key for warm-starting — popped by run_myopic
+        "_warm_x0": warm_out,
     }
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -624,17 +700,23 @@ def solve_one_threshold(
 # ---------------------------------------------------------------------------
 def run_myopic(iso, pathway, thresholds, scenario="base",
                demand_growth="Medium", popsize=15, maxiter=150,
-               workers=1, seed=42, gas_mode=2):
+               workers=1, seed=42, gas_mode=2,
+               de_tol=DEFAULT_DE_TOL, warm_start=True):
     """Run myopic optimization for each threshold independently.
 
     Each threshold starts from the grid baseline — no ratchet between
     thresholds.  Returns list of per-threshold result dicts.
+
+    v2.0 additions:
+        de_tol: DE convergence tolerance (default 0.01).  Set to 0 to
+            force all maxiter generations (v1 behavior).
+        warm_start: if True (default), each threshold seeds its initial
+            population from the previous threshold's winner.  Thresholds
+            must be sorted ascending for warm-starting to be meaningful.
+            Set False for fully independent solves (enables future
+            parallelization across thresholds).
     """
     sc = solver.COST_SCENARIOS[scenario]
-    # Pathway is used for: (a) noak_pathway_key (Wright's Law timeline for
-    # firm resources), (b) offshore_noak_cap, (c) free_resources property
-    # (which we bypass via pathway_free_indices).  We pass the real pathway
-    # to RunConfig so cost lookups are pathway-consistent.
     cfg = solver.RunConfig(
         iso=iso, pathway=pathway, scenario_name=scenario,
         demand_growth=demand_growth, cost_mode=1, **sc)
@@ -645,7 +727,6 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
     n_free = len(free_idx)
     baseline = pc.GRID_MIX_SHARES[iso]
 
-    # Base-year demand (for converting baseline grid mix pct -> TWh)
     base_demand_twh = float(pc.REGIONAL_DEMAND_TWH[iso])
 
     # Load profiles once — shared across all thresholds for this ISO
@@ -659,8 +740,6 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
     base_floor_stor = np.zeros(solver.N_STORAGE, dtype=np.float64)
 
     # Pathway A: zero out firm resources that A excludes entirely.
-    # These are not just absent from free_idx — they must be zeroed in
-    # the floor so they don't contribute to CFE scoring.
     if pathway == "A":
         for res in ["offshore_wind", "geothermal", "ccs_ccgt"]:
             base_floor_pcts[solver.RES_IDX[res]] = 0.0
@@ -676,11 +755,12 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
     }
 
     print(f"\n{'='*70}")
-    print(f"MYOPIC DE Optimizer — THERMAL FLEET variant")
+    print(f"MYOPIC DE Optimizer — THERMAL FLEET variant (v2.0)")
     print(f"ISO={iso}  Pathway={pathway}  Scenario={scenario}  "
           f"Demand={demand_growth}")
     print(f"popsize={popsize}  maxiter={maxiter}  workers={workers}  "
           f"seed={seed}")
+    print(f"DE tol={de_tol}  warm_start={warm_start}")
     print(f"Gas mode: {gas_mode} — {GAS_MODE_LABELS[gas_mode]}")
     print(f"Thresholds: {thresholds}")
     print(f"Baseline CFE: {baseline_cfe:.1f}%")
@@ -699,6 +779,10 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
     results = []
     t0 = time.time()
 
+    # v2.0: carry previous winner for warm-starting.  None until the
+    # first threshold completes.  Only used when warm_start=True.
+    prev_warm = None
+
     for target in thresholds:
         _tt = time.time()
         year = threshold_to_year(target)
@@ -706,25 +790,17 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
 
         dem_twh = demand_vec[yi]
 
-        # Thermal fleet retirement keyed to target CFE — by the time the
-        # grid reaches X% CFE, the coal/oil fleet has already responded
-        # via the economic retirement sigmoid.
         thermal_peak = pc.thermal_peak_credit_mw(iso, year, target)
         yr_fleet = pc.thermal_fleet_mw(iso, year, target)
 
         # Fresh floor from baseline for each threshold (no ratchet).
-        # base_floor_pcts already has pathway A exclusions applied.
         floor_pcts = base_floor_pcts.copy()
         floor_stor = base_floor_stor.copy()
 
-        # Frozen resources: adjust baseline TWh for demand growth at this
-        # year.  Hydro stays at baseline nameplate TWh.
+        # Frozen resources: adjust baseline TWh for demand growth
         hydro_twh = baseline.get("hydro", 0) / 100.0 * base_demand_twh
         floor_pcts[solver.RES_IDX["hydro"]] = hydro_twh / dem_twh * 100.0
 
-        # Clean_firm floor: baseline TWh adjusted for demand growth.
-        # Pathway A: frozen (not expandable — not in free_idx).
-        # Pathway B/C/D: minimum commitment (optimizer can build above).
         cf_twh_base = baseline.get("clean_firm", 0) / 100.0 * base_demand_twh
         if pathway == "A":
             floor_pcts[solver.RES_IDX["clean_firm"]] = (
@@ -734,10 +810,13 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
                 floor_pcts[solver.RES_IDX["clean_firm"]],
                 cf_twh_base / dem_twh * 100.0)
 
+        warm_for_this = prev_warm if warm_start else None
+
         print(f"  Target {target:.1f}% @ year {year} "
               f"(demand={dem_twh:.1f} TWh, "
               f"thermal_peak={thermal_peak:,.0f} MW, "
-              f"coal={yr_fleet['coal_mw']:,.0f} MW)")
+              f"coal={yr_fleet['coal_mw']:,.0f} MW)"
+              f"{'  [warm-start]' if warm_for_this is not None else ''}")
 
         result = solve_one_threshold(
             iso=iso, target=target, year=year, pathway=pathway, cfg=cfg,
@@ -748,7 +827,12 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
             dem_twh=dem_twh, floor_pcts=floor_pcts, floor_stor=floor_stor,
             thermal_peak_credit=thermal_peak, gaf=gaf,
             popsize=popsize, maxiter=maxiter, workers=workers,
-            seed=seed, gas_mode=gas_mode)
+            seed=seed, gas_mode=gas_mode,
+            de_tol=de_tol,
+            warm_x0=warm_for_this)
+
+        # v2.0: extract warm vector for next threshold, then drop internal key
+        prev_warm = result.pop("_warm_x0", None)
 
         elapsed = time.time() - _tt
         print(f"    -> CFE={result['achieved_cfe']:.1f}%  "
@@ -784,7 +868,7 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
 def main():
     ap = argparse.ArgumentParser(
         description="Myopic DE optimizer — independent CFE threshold solves "
-                    "with pathway A/B/C/D resource constraints")
+                    "with pathway A/B/C/D resource constraints (v2.0)")
     ap.add_argument("--iso", required=True)
     ap.add_argument("--pathway", required=True, choices=["A", "B", "C", "D"],
                     help="A = VRE only (no firm expansion). "
@@ -815,6 +899,14 @@ def main():
                     help="Year for 90%% target (default 2040)")
     ap.add_argument("--ramp-end-year", type=int, default=2050,
                     help="Year for 99.9%% target (default 2050)")
+    # v2.0 flags
+    ap.add_argument("--tol", type=float, default=DEFAULT_DE_TOL,
+                    help=f"DE convergence tolerance (default {DEFAULT_DE_TOL}). "
+                         "Set 0 for v1 behavior (run all maxiter gens).")
+    ap.add_argument("--no-warm-start", action="store_true",
+                    help="Disable warm-starting from prior threshold winners. "
+                         "Each threshold solved from scratch (enables future "
+                         "parallelization across thresholds).")
     args = ap.parse_args()
 
     iso = args.iso.upper()
@@ -830,7 +922,8 @@ def main():
         iso, args.pathway, sorted(args.thresholds),
         scenario=args.scenario, demand_growth=args.demand_growth,
         popsize=args.popsize, maxiter=args.maxiter,
-        workers=args.workers, seed=args.seed, gas_mode=args.gas_mode)
+        workers=args.workers, seed=args.seed, gas_mode=args.gas_mode,
+        de_tol=args.tol, warm_start=not args.no_warm_start)
 
     # --- Save outputs ---
     import pyarrow as pa
