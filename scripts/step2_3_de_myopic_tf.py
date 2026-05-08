@@ -20,10 +20,17 @@ Year mapping: linear ramp 90% @ 2040 → 99.9% @ 2050.  Each threshold snaps
 to the nearest model year for Wright's Law cost lookups and demand growth.
 
 Gas modes:
+    1 = optimizer sees gas cost + stranding shadow (v2.1)
     2 = optimizer sees gas cost only (default)
     3 = optimizer blind to gas economics
-    Mode 1 (cost + stranding shadow) is excluded — no prior-year peak gas
-    exists in a myopic solve, so the shadow has no reference point.
+
+    Mode 1 uses the existing gas fleet (derated by GAF) as the stranding
+    reference point.  In a myopic solve, the question is "what's cheapest
+    from today's grid?" — the shadow penalizes new gas construction above
+    the installed base, because that capacity faces stranding risk as
+    decarbonization proceeds.  The years_remaining_frac inside
+    gas_stranding_shadow() naturally scales the penalty: thresholds
+    mapping to ~2040 are penalized more than those mapping to ~2050.
 
 Thermal fleet: coal/oil retirement computed using the target CFE as prev_cfe.
 At the year where X% CFE is reached on the trajectory, the fleet has already
@@ -46,6 +53,10 @@ Usage:
     # Single threshold, high resolution
     python scripts/step2_3_de_myopic_tf.py --iso PJM --pathway B \\
         --thresholds 95 --popsize 20 --maxiter 200
+
+    # Gas mode 1: cost + stranding shadow (penalizes new gas above existing fleet)
+    python scripts/step2_3_de_myopic_tf.py --iso ERCOT --pathway B \\
+        --gas-mode 1
 
     # Gas-blind, custom thresholds
     python scripts/step2_3_de_myopic_tf.py --iso PJM --pathway A \\
@@ -264,7 +275,15 @@ class _MyopicDEObjective:
     """Picklable DE objective for a single-threshold myopic solve.
 
     Same core logic as the pathway solver's _DEObjective but simplified:
-    no gas stranding shadow (mode 1 excluded), no year-to-year state.
+    no year-to-year state, single-threshold scope.
+
+    v2.1: Gas mode 1 now supported.  The stranding shadow uses the existing
+    gas fleet (derated by GAF) as the reference point.  Any gas capacity the
+    optimizer builds above that baseline incurs a shadow cost proportional to
+    annualized new-CCGT capex × years remaining on the decarbonization ramp.
+    This mirrors the pathway solver's mode 1 behavior, with the existing fleet
+    standing in for the pathway solver's running peak_gas_mw high-water mark.
+
     Includes clean_firm uprate tranche pricing for pathway B/C/D.
     For pathway A, clean_firm is never in free_idx so the uprate branch
     is never reached (_cf_free_k stays at -1).
@@ -280,6 +299,7 @@ class _MyopicDEObjective:
         'demand_norm', 'supply_profiles', 'supply_matrix',
         'dem_twh', 'cfg', 'iso', 'year', 'target', 'cfe_ceiling',
         'capex_yr', 'fuel_mwh_rate', 'thermal_peak_credit', 'gaf',
+        'peak_gas_mw',  # v2.1: stranding shadow reference point
         'floor_stor', 'full_x0', 'active', 'gas_mode',
         # Precomputed cost arrays
         '_lcoe_by_free_k', '_stor_net',
@@ -295,6 +315,7 @@ class _MyopicDEObjective:
                  demand_norm, supply_profiles, supply_matrix,
                  dem_twh, cfg, iso, year, target, cfe_ceiling,
                  capex_yr, fuel_mwh_rate, thermal_peak_credit, gaf,
+                 peak_gas_mw,  # v2.1: existing gas fleet × GAF
                  floor_stor, full_x0, active, gas_mode=2, workers=1):
         self.lo = lo
         self.hi = hi
@@ -314,6 +335,7 @@ class _MyopicDEObjective:
         self.fuel_mwh_rate = fuel_mwh_rate
         self.thermal_peak_credit = thermal_peak_credit
         self.gaf = gaf
+        self.peak_gas_mw = peak_gas_mw
         self.floor_stor = floor_stor
         self.full_x0 = full_x0
         self.active = active
@@ -329,11 +351,8 @@ class _MyopicDEObjective:
             for sc in solver.STORAGE_COLS], dtype=np.float64)
 
         # --- v2.0: vectorized cost support ---
-        # Floor values indexed by free-resource position (length n_free).
-        # Allows computing deltas as xc[:n_free] - _floor_by_free in one op.
         self._floor_by_free = np.array(
             [floor_pcts[ri] for ri in free_idx], dtype=np.float64)
-        # Common scale factor: converts pct-delta to $ via dem_twh
         self._cost_scale = dem_twh * 1e6 / 100.0
 
         # --- Clean firm uprate tranche ---
@@ -414,22 +433,15 @@ class _MyopicDEObjective:
         # ---------------------------------------------------------------
         # v2.0: Vectorized incremental cost above floor
         # ---------------------------------------------------------------
-        # Resource deltas: xc[:n_free] holds free-resource percentages.
-        # Subtracting floor_by_free gives the incremental build above
-        # baseline for each free resource.  Negatives zeroed — we only
-        # pay for new capacity, never get credit for reductions.
         res_deltas = xc[:n_free] - self._floor_by_free
         np.maximum(res_deltas, 0.0, out=res_deltas)
 
         cost = 0.0
 
         # Clean_firm piecewise: uprate tranche (cheap) then newbuild.
-        # Handled as a scalar correction outside the vectorized path.
         cf_k = self._cf_free_k
         if cf_k >= 0 and res_deltas[cf_k] > 0:
             cf_d = res_deltas[cf_k]
-            # Zero out CF in the delta array so it's excluded from
-            # the dot product below — its cost uses different LCOEs.
             res_deltas[cf_k] = 0.0
             uprate_d = min(cf_d, self._remaining_uprate_pct)
             newbuild_d = cf_d - uprate_d
@@ -438,14 +450,9 @@ class _MyopicDEObjective:
                      * self._cost_scale)
 
         # All other free resources: single dot product.
-        # _lcoe_by_free_k[k] * res_deltas[k] summed over k, scaled by
-        # dem_twh * 1e6 / 100 — identical to the per-element loop but
-        # executed in compiled numpy C code.
         cost += np.dot(res_deltas, self._lcoe_by_free_k) * self._cost_scale
 
         # Storage cost: same vectorized pattern.
-        # stor_deltas = (current - floor) / 100 gives the fractional
-        # increment; dot with net cost array gives total storage cost.
         stor_vals = xc[n_free:n_free + solver.N_STORAGE]
         stor_deltas = (stor_vals - self.floor_stor) / 100.0
         np.maximum(stor_deltas, 0.0, out=stor_deltas)
@@ -455,11 +462,19 @@ class _MyopicDEObjective:
         cost += h2["h2_mw"] * self.capex_yr * 1000
         cost += h2["h2_mwh"] * self.fuel_mwh_rate
 
-        # Gas — mode 2: cost visible to optimizer, mode 3: blind
+        # Gas — mode 1: cost + stranding shadow
+        #        mode 2: cost only
+        #        mode 3: blind (no gas economics in optimizer)
         g = solver.gas_need_mw(h2["resid_p9997"], self.dem_twh,
                                self.thermal_peak_credit, self.gaf)
-        if self.gas_mode == 2:
+        if self.gas_mode <= 2:
             cost += solver.gas_annual_cost(g, self.iso, self.cfg)
+        if self.gas_mode == 1:
+            # v2.1: stranding shadow against existing fleet baseline.
+            # Penalizes new gas construction above peak_gas_mw (the
+            # existing fleet derated by GAF).
+            cost += solver.gas_stranding_shadow(
+                g, self.peak_gas_mw, self.year, self.iso)
 
         # Penalties for missing target or overshooting ceiling
         if post_cfe < self.target:
@@ -477,7 +492,7 @@ def solve_one_threshold(
     iso, target, year, pathway, cfg, free_idx, n_free,
     demand_norm, supply_profiles, supply_matrix,
     dem_twh, floor_pcts, floor_stor,
-    thermal_peak_credit, gaf,
+    thermal_peak_credit, gaf, peak_gas_mw,
     popsize, maxiter, workers, seed, gas_mode,
     de_tol=DEFAULT_DE_TOL,
     warm_x0=None,
@@ -486,6 +501,10 @@ def solve_one_threshold(
 
     Returns dict with target, year, achieved_cfe, cost breakdown, resource
     mix, gas/H2 sizing, and per-resource incremental TWh.
+
+    v2.1 additions:
+        peak_gas_mw: stranding shadow reference (existing gas fleet × GAF).
+            Only used when gas_mode=1.  Passed through to the DE objective.
 
     v2.0 additions:
         de_tol: DE convergence tolerance (0 = run all maxiter generations).
@@ -565,6 +584,7 @@ def solve_one_threshold(
                 target=target, cfe_ceiling=cfe_ceiling,
                 capex_yr=capex_yr, fuel_mwh_rate=fuel_mwh_rate,
                 thermal_peak_credit=thermal_peak_credit, gaf=gaf,
+                peak_gas_mw=peak_gas_mw,  # v2.1: stranding reference
                 floor_stor=floor_stor, full_x0=full_x0,
                 active=active, gas_mode=gas_mode, workers=workers)
 
@@ -574,11 +594,6 @@ def solve_one_threshold(
             # -------------------------------------------------------
             # v2.0: Warm-start initial population
             # -------------------------------------------------------
-            # If a prior threshold's winner is available and dimensionally
-            # compatible, inject it as the first row of the initial
-            # population.  The remaining rows are uniform random within
-            # bounds, providing full exploration coverage.  This gives
-            # the optimizer a head start without constraining the search.
             de_init = "latinhypercube"  # default
 
             if warm_x0 is not None and len(warm_x0) == len(lo):
@@ -635,6 +650,8 @@ def solve_one_threshold(
     # --- Gas (always computed for reporting, regardless of gas_mode) ---
     g_mw = solver.gas_need_mw(resid_for_gas, dem_twh, thermal_peak_credit, gaf)
     g_cost = solver.gas_annual_cost(g_mw, iso, cfg)
+    # v2.1: always compute shadow for reporting, even when gas_mode != 1
+    g_shadow = solver.gas_stranding_shadow(g_mw, peak_gas_mw, year, iso)
 
     # --- Incremental cost tally with piecewise clean_firm ---
     inc_cost = 0.0
@@ -679,11 +696,13 @@ def solve_one_threshold(
         "total_cost_B": round(total_cost / 1e9, 4),
         "clean_inc_cost_B": round(inc_cost / 1e9, 4),
         "gas_cost_B": round(g_cost / 1e9, 4),
+        "gas_shadow_B": round(g_shadow / 1e9, 4),  # v2.1: always reported
         "gas_mw": round(g_mw, 1),
         "h2_mw": round(h2_mw, 1),
         "h2_mwh": round(h2_mwh, 1),
         "dem_twh": round(dem_twh, 2),
         "thermal_peak_credit_mw": round(thermal_peak_credit, 1),
+        "peak_gas_ref_mw": round(peak_gas_mw, 1),  # v2.1: reference point
         "winner_pcts": {solver.RESOURCE_ORDER[ri]: round(float(winner_pcts[ri]), 3)
                         for ri in range(solver.N_RESOURCES)},
         "winner_stor": {solver.STORAGE_COLS[j]: round(float(winner_stor[j]), 3)
@@ -707,6 +726,11 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
     Each threshold starts from the grid baseline — no ratchet between
     thresholds.  Returns list of per-threshold result dicts.
 
+    v2.1 additions:
+        gas_mode=1: gas cost + stranding shadow.  Reference point is the
+            existing gas fleet (derated by GAF).  The shadow penalizes
+            new gas construction above the installed base.
+
     v2.0 additions:
         de_tol: DE convergence tolerance (default 0.01).  Set to 0 to
             force all maxiter generations (v1 behavior).
@@ -729,6 +753,14 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
 
     base_demand_twh = float(pc.REGIONAL_DEMAND_TWH[iso])
 
+    # v2.1: Compute stranding shadow reference point.
+    # The existing gas fleet (derated by GAF) serves as the "installed
+    # base" that the stranding shadow penalizes above.  This is the
+    # myopic analog of the pathway solver's running peak_gas_mw
+    # high-water mark — in a standalone solve from today's grid, "prior
+    # peak" is simply "what's already there."
+    existing_gas_peak_mw = float(pc.EXISTING_GAS_CAPACITY_MW[iso]) * gaf
+
     # Load profiles once — shared across all thresholds for this ISO
     du.warm_dispatch_kernels()
     demand_norm, supply_profiles, supply_matrix = load_iso_data(iso)
@@ -750,18 +782,25 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
         demand_norm, supply_profiles, supply_matrix)
 
     GAS_MODE_LABELS = {
+        1: "gas cost + stranding shadow ON in optimizer (ref = existing fleet)",
         2: "gas cost ON in optimizer",
         3: "gas cost OFF in optimizer (blind)",
     }
 
     print(f"\n{'='*70}")
-    print(f"MYOPIC DE Optimizer — THERMAL FLEET variant (v2.0)")
+    print(f"MYOPIC DE Optimizer — THERMAL FLEET variant (v2.1)")
     print(f"ISO={iso}  Pathway={pathway}  Scenario={scenario}  "
           f"Demand={demand_growth}")
     print(f"popsize={popsize}  maxiter={maxiter}  workers={workers}  "
           f"seed={seed}")
     print(f"DE tol={de_tol}  warm_start={warm_start}")
     print(f"Gas mode: {gas_mode} — {GAS_MODE_LABELS[gas_mode]}")
+    if gas_mode == 1:
+        print(f"  Stranding ref: existing gas fleet = "
+              f"{existing_gas_peak_mw:,.0f} MW "
+              f"(raw {float(pc.EXISTING_GAS_CAPACITY_MW[iso]):,.0f} MW × "
+              f"GAF {gaf:.2f})")
+    print(f"  (real gas cost + shadow always in reported results)")
     print(f"Thresholds: {thresholds}")
     print(f"Baseline CFE: {baseline_cfe:.1f}%")
     free_names = [solver.RESOURCE_ORDER[ri] for ri in free_idx]
@@ -826,6 +865,7 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
             supply_matrix=supply_matrix,
             dem_twh=dem_twh, floor_pcts=floor_pcts, floor_stor=floor_stor,
             thermal_peak_credit=thermal_peak, gaf=gaf,
+            peak_gas_mw=existing_gas_peak_mw,  # v2.1: stranding reference
             popsize=popsize, maxiter=maxiter, workers=workers,
             seed=seed, gas_mode=gas_mode,
             de_tol=de_tol,
@@ -835,27 +875,33 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
         prev_warm = result.pop("_warm_x0", None)
 
         elapsed = time.time() - _tt
+        # v2.1: show shadow in console output when gas_mode=1
+        shadow_str = (f"  shd=${result['gas_shadow_B']:.3f}B"
+                      if gas_mode == 1 else "")
         print(f"    -> CFE={result['achieved_cfe']:.1f}%  "
               f"cost=${result['total_cost_B']:.3f}B  "
               f"gas={result['gas_mw']:,.0f}MW  "
-              f"h2={result['h2_mw']:,.0f}MW  "
+              f"h2={result['h2_mw']:,.0f}MW"
+              f"{shadow_str}  "
               f"({elapsed:.1f}s)")
         results.append(result)
 
     total_elapsed = time.time() - t0
     print(f"\nTotal: {total_elapsed:.1f}s")
 
-    # Summary table
+    # Summary table — v2.1: added Shadow $B column
     print(f"\n{'='*70}")
     print(f"Pathway {pathway}  |  {iso}  |  {scenario}  |  gas_mode={gas_mode}")
     print(f"{'Thr%':>6}  {'Year':>4}  {'CFE%':>6}  {'Cost $B':>8}  "
-          f"{'Clean $B':>9}  {'Gas $B':>7}  {'Gas MW':>8}  {'H2 MW':>8}")
+          f"{'Clean $B':>9}  {'Gas $B':>7}  {'Shd $B':>7}  "
+          f"{'Gas MW':>8}  {'H2 MW':>8}")
     print(f"{'-'*6}  {'-'*4}  {'-'*6}  {'-'*8}  "
-          f"{'-'*9}  {'-'*7}  {'-'*8}  {'-'*8}")
+          f"{'-'*9}  {'-'*7}  {'-'*7}  {'-'*8}  {'-'*8}")
     for r in results:
         print(f"{r['target']:6.1f}  {r['year']:4d}  {r['achieved_cfe']:6.1f}  "
               f"{r['total_cost_B']:8.3f}  {r['clean_inc_cost_B']:9.3f}  "
-              f"{r['gas_cost_B']:7.3f}  {r['gas_mw']:8,.0f}  "
+              f"{r['gas_cost_B']:7.3f}  {r['gas_shadow_B']:7.3f}  "
+              f"{r['gas_mw']:8,.0f}  "
               f"{r['h2_mw']:8,.0f}")
     print(f"{'='*70}")
 
@@ -868,7 +914,7 @@ def run_myopic(iso, pathway, thresholds, scenario="base",
 def main():
     ap = argparse.ArgumentParser(
         description="Myopic DE optimizer — independent CFE threshold solves "
-                    "with pathway A/B/C/D resource constraints (v2.0)")
+                    "with pathway A/B/C/D resource constraints (v2.1)")
     ap.add_argument("--iso", required=True)
     ap.add_argument("--pathway", required=True, choices=["A", "B", "C", "D"],
                     help="A = VRE only (no firm expansion). "
@@ -891,14 +937,15 @@ def main():
                     choices=list(solver.COST_SCENARIOS.keys()))
     ap.add_argument("--demand-growth", default="Medium",
                     choices=["Low", "Medium", "High"])
-    ap.add_argument("--gas-mode", type=int, default=2, choices=[2, 3],
-                    help="Gas in optimizer: 2=cost only (default), 3=blind. "
-                         "Mode 1 (shadow) not applicable — no prior peak "
-                         "exists in a myopic solve.")
+    ap.add_argument("--gas-mode", type=int, default=2, choices=[1, 2, 3],
+                    help="Gas in optimizer: "
+                         "1=cost+stranding shadow (ref=existing fleet), "
+                         "2=cost only (default), "
+                         "3=blind.")
     ap.add_argument("--ramp-start-year", type=int, default=2040,
-                    help="Year for 90%% target (default 2040)")
+                    help="Year for 90%%%% target (default 2040)")
     ap.add_argument("--ramp-end-year", type=int, default=2050,
-                    help="Year for 99.9%% target (default 2050)")
+                    help="Year for 99.9%%%% target (default 2050)")
     # v2.0 flags
     ap.add_argument("--tol", type=float, default=DEFAULT_DE_TOL,
                     help=f"DE convergence tolerance (default {DEFAULT_DE_TOL}). "
@@ -950,8 +997,10 @@ def main():
             "seed": args.seed,
         }
         for k in ("target", "year", "achieved_cfe", "total_cost_B",
-                  "clean_inc_cost_B", "gas_cost_B", "gas_mw", "h2_mw",
-                  "h2_mwh", "dem_twh", "thermal_peak_credit_mw"):
+                  "clean_inc_cost_B", "gas_cost_B", "gas_shadow_B",
+                  "gas_mw", "h2_mw",
+                  "h2_mwh", "dem_twh", "thermal_peak_credit_mw",
+                  "peak_gas_ref_mw"):
             row[k] = r[k]
         for res, pct in r["winner_pcts"].items():
             row[f"pct_{res}"] = pct
@@ -973,6 +1022,9 @@ def main():
             "scenario": args.scenario,
             "demand_growth": args.demand_growth,
             "gas_mode": args.gas_mode,
+            "peak_gas_ref_mw": round(
+                float(pc.EXISTING_GAS_CAPACITY_MW[iso])
+                * float(pc.GAS_AVAILABILITY_FACTOR[iso]), 1),
             "thresholds": results,
         }, f, indent=2)
 
