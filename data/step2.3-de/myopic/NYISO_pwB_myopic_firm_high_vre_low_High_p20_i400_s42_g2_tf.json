@@ -1,0 +1,253 @@
+{
+  "iso": "NYISO",
+  "pathway": "B",
+  "scenario": "firm_high_vre_low",
+  "demand_growth": "High",
+  "gas_mode": 2,
+  "peak_gas_ref_mw": 14760.0,
+  "thresholds": [
+    {
+      "target": 90.0,
+      "year": 2040,
+      "pathway": "B",
+      "achieved_cfe": 90.01,
+      "total_cost_B": 20.1611,
+      "clean_inc_cost_B": 14.7169,
+      "gas_cost_B": 5.4443,
+      "gas_shadow_B": 0.071,
+      "gas_mw": 17875.6,
+      "h2_mw": 21072.4,
+      "h2_mwh": 175152250.8,
+      "dem_twh": 289.2,
+      "thermal_peak_credit_mw": 14832.4,
+      "peak_gas_ref_mw": 14760.0,
+      "winner_pcts": {
+        "clean_firm": 18.4,
+        "solar": 0.0,
+        "wind": 4.7,
+        "hydro": 8.335,
+        "offshore_wind": 0.0,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 35.6,
+        "battery8_dispatch_pct": 24.699,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {}
+    },
+    {
+      "target": 92.5,
+      "year": 2043,
+      "pathway": "B",
+      "achieved_cfe": 92.51,
+      "total_cost_B": 20.5278,
+      "clean_inc_cost_B": 15.7536,
+      "gas_cost_B": 4.7742,
+      "gas_shadow_B": 0.0146,
+      "gas_mw": 15675.5,
+      "h2_mw": 15061.8,
+      "h2_mwh": 106714640.0,
+      "dem_twh": 329.08,
+      "thermal_peak_credit_mw": 14826.1,
+      "peak_gas_ref_mw": 14760.0,
+      "winner_pcts": {
+        "clean_firm": 18.4,
+        "solar": 8.195,
+        "wind": 4.7,
+        "hydro": 7.325,
+        "offshore_wind": 23.559,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 38.44,
+        "battery8_dispatch_pct": 43.103,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {
+        "solar": 26.969,
+        "offshore_wind": 77.527
+      }
+    },
+    {
+      "target": 95.0,
+      "year": 2045,
+      "pathway": "B",
+      "achieved_cfe": 95.01,
+      "total_cost_B": 22.8833,
+      "clean_inc_cost_B": 18.2109,
+      "gas_cost_B": 4.6724,
+      "gas_shadow_B": 0.0066,
+      "gas_mw": 15341.1,
+      "h2_mw": 19156.6,
+      "h2_mwh": 127086476.6,
+      "dem_twh": 358.68,
+      "thermal_peak_credit_mw": 14822.2,
+      "peak_gas_ref_mw": 14760.0,
+      "winner_pcts": {
+        "clean_firm": 18.4,
+        "solar": 8.302,
+        "wind": 4.7,
+        "hydro": 6.72,
+        "offshore_wind": 23.554,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 38.44,
+        "battery8_dispatch_pct": 43.103,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {
+        "solar": 29.778,
+        "offshore_wind": 84.482
+      }
+    },
+    {
+      "target": 97.5,
+      "year": 2048,
+      "pathway": "B",
+      "achieved_cfe": 100.0,
+      "total_cost_B": 19.2855,
+      "clean_inc_cost_B": 19.2855,
+      "gas_cost_B": 0.0,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 0.0,
+      "h2_mw": 0.0,
+      "h2_mwh": 0.0,
+      "dem_twh": 408.14,
+      "thermal_peak_credit_mw": 14816.8,
+      "peak_gas_ref_mw": 14760.0,
+      "winner_pcts": {
+        "clean_firm": 18.405,
+        "solar": 1.63,
+        "wind": 5.133,
+        "hydro": 5.906,
+        "offshore_wind": 73.967,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.001,
+        "solar_batt8": 0.48,
+        "wind_batt4": 0.385,
+        "wind_batt8": 0.723
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 37.331,
+        "battery8_dispatch_pct": 34.954,
+        "ldes_dispatch_pct": 0.001
+      },
+      "resource_twh": {
+        "solar": 6.654,
+        "wind": 1.766,
+        "solar_batt8": 1.957,
+        "wind_batt4": 1.571,
+        "wind_batt8": 2.951,
+        "offshore_wind": 301.889
+      }
+    },
+    {
+      "target": 99.0,
+      "year": 2049,
+      "pathway": "B",
+      "achieved_cfe": 100.0,
+      "total_cost_B": 20.115,
+      "clean_inc_cost_B": 20.115,
+      "gas_cost_B": 0.0,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 0.0,
+      "h2_mw": 0.0,
+      "h2_mwh": 0.0,
+      "dem_twh": 426.1,
+      "thermal_peak_credit_mw": 14815.1,
+      "peak_gas_ref_mw": 14760.0,
+      "winner_pcts": {
+        "clean_firm": 18.436,
+        "solar": 1.346,
+        "wind": 4.987,
+        "hydro": 5.657,
+        "offshore_wind": 75.482,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.035,
+        "solar_batt8": 0.227,
+        "wind_batt4": 0.26,
+        "wind_batt8": 0.252
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 34.772,
+        "battery8_dispatch_pct": 4.806,
+        "ldes_dispatch_pct": 0.001
+      },
+      "resource_twh": {
+        "solar": 5.735,
+        "wind": 1.223,
+        "solar_batt4": 0.149,
+        "solar_batt8": 0.967,
+        "wind_batt4": 1.11,
+        "wind_batt8": 1.073,
+        "clean_firm": 0.153,
+        "clean_firm_uprate": 0.0,
+        "clean_firm_newbuild": 0.153,
+        "offshore_wind": 321.625
+      }
+    },
+    {
+      "target": 99.9,
+      "year": 2050,
+      "pathway": "B",
+      "achieved_cfe": 100.0,
+      "total_cost_B": 21.0169,
+      "clean_inc_cost_B": 21.0169,
+      "gas_cost_B": 0.0,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 0.0,
+      "h2_mw": 0.0,
+      "h2_mwh": 0.0,
+      "dem_twh": 444.85,
+      "thermal_peak_credit_mw": 14813.4,
+      "peak_gas_ref_mw": 14760.0,
+      "winner_pcts": {
+        "clean_firm": 18.459,
+        "solar": 0.247,
+        "wind": 4.917,
+        "hydro": 5.419,
+        "offshore_wind": 77.639,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.218,
+        "solar_batt8": 0.01,
+        "wind_batt4": 0.035,
+        "wind_batt8": 0.007
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 49.804,
+        "battery8_dispatch_pct": 14.232,
+        "ldes_dispatch_pct": 0.005
+      },
+      "resource_twh": {
+        "solar": 1.098,
+        "wind": 0.967,
+        "solar_batt4": 0.972,
+        "wind_batt4": 0.156,
+        "clean_firm": 0.262,
+        "clean_firm_uprate": 0.0,
+        "clean_firm_newbuild": 0.262,
+        "offshore_wind": 345.372
+      }
+    }
+  ]
+}
