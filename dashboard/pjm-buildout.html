@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PJM Grid Buildout Comparison | The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/shared-footer.js"></script>
+<style>
+/* ========== PAGE-SPECIFIC: PJM Buildout Comparison ========== */
+.buildout-hero {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--pad-page) var(--space-lg);
+}
+.hero-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+.kpi-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 20px 18px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+}
+.kpi-card .kpi-val {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+.kpi-card .kpi-label {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+.kpi-val.red { color: #B91C1C; }
+.kpi-val.green { color: #15803D; }
+.kpi-val.blue { color: #0369A1; }
+.kpi-val.navy { color: var(--navy); }
+
+/* Solver badge */
+.solver-badge {
+display: inline-block;
+font-family: var(–font-data);
+font-size: 0.65rem;
+font-weight: 700;
+padding: 3px 10px;
+border-radius: var(–radius-pill);
+text-transform: uppercase;
+letter-spacing: 0.06em;
+vertical-align: middle;
+margin-left: 8px;
+}
+.solver-badge.pd {
+background: rgba(14,165,233,0.1);
+color: #0369A1;
+border: 1px solid rgba(14,165,233,0.2);
+}
+.solver-badge.myopic {
+background: rgba(139,92,246,0.1);
+color: #6D28D9;
+border: 1px solid rgba(139,92,246,0.2);
+}
+
+/* Section panels */
+.analysis-section {
+max-width: 1320px;
+margin: 0 auto;
+padding: var(–space-xl) var(–pad-page);
+}
+.section-intro {
+max-width: 800px;
+margin-bottom: var(–space-lg);
+}
+.section-intro p {
+font-size: 0.92rem;
+color: var(–text-secondary);
+line-height: 1.75;
+}
+.chart-panel-buildout {
+background: var(–bg-card);
+border-radius: var(–radius-xl);
+border: 1px solid var(–border-light);
+box-shadow: var(–shadow-md);
+padding: 24px 20px 16px;
+margin-bottom: var(–space-lg);
+}
+.chart-panel-buildout h4 {
+font-family: var(–font-heading);
+font-size: 1.0rem;
+font-weight: 700;
+color: var(–navy);
+margin-bottom: 12px;
+}
+.chart-panel-buildout .chart-subtitle {
+font-size: 0.78rem;
+color: var(–text-muted);
+margin-top: -8px;
+margin-bottom: 12px;
+}
+.chart-wrap-buildout {
+position: relative;
+height: 380px;
+}
+.chart-wrap-sm {
+height: 300px;
+}
+
+/* Toggle row for demand/gas mode */
+.control-row {
+display: flex;
+gap: var(–space-md);
+flex-wrap: wrap;
+margin-bottom: var(–space-md);
+align-items: center;
+}
+.control-group {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.control-group label {
+font-family: var(–font-heading);
+font-size: 0.72rem;
+font-weight: 700;
+color: var(–text-muted);
+text-transform: uppercase;
+letter-spacing: 0.06em;
+}
+.pill-group {
+display: flex;
+gap: 4px;
+}
+.pill-btn {
+border: 1px solid var(–border);
+border-radius: var(–radius-pill);
+padding: 5px 14px;
+font-family: var(–font-body);
+font-size: 0.75rem;
+font-weight: 600;
+cursor: pointer;
+background: transparent;
+color: var(–text-muted);
+transition: all 0.2s;
+}
+.pill-btn.active {
+background: var(–navy);
+color: #fff;
+border-color: var(–navy);
+}
+.pill-btn:hover:not(.active) {
+border-color: var(–navy-light);
+color: var(–navy);
+}
+
+/* Comparison grid */
+.compare-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+gap: var(–space-md);
+}
+
+/* Stat row inside chart panels */
+.stat-row {
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
+margin-top: 14px;
+padding-top: 12px;
+border-top: 1px solid var(–border-light);
+}
+.stat-chip {
+display: flex;
+align-items: baseline;
+gap: 6px;
+font-size: 0.78rem;
+}
+.stat-chip .sv {
+font-family: var(–font-heading);
+font-weight: 700;
+font-size: 0.92rem;
+}
+.stat-chip .sl {
+color: var(–text-muted);
+font-size: 0.72rem;
+}
+
+/* Myopic heatmap table */
+.heatmap-table {
+width: 100%;
+border-collapse: collapse;
+font-size: 0.78rem;
+margin-top: 12px;
+}
+.heatmap-table th {
+font-family: var(–font-heading);
+font-weight: 700;
+font-size: 0.72rem;
+color: var(–text-muted);
+text-transform: uppercase;
+letter-spacing: 0.04em;
+padding: 8px 10px;
+text-align: center;
+border-bottom: 2px solid var(–border-light);
+}
+.heatmap-table th:first-child { text-align: left; }
+.heatmap-table td {
+padding: 7px 10px;
+text-align: center;
+font-family: var(–font-data);
+font-weight: 600;
+border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.heatmap-table td:first-child {
+text-align: left;
+font-family: var(–font-body);
+font-weight: 500;
+color: var(–text-secondary);
+}
+.heatmap-cell {
+border-radius: var(–radius-sm);
+padding: 4px 8px;
+display: inline-block;
+min-width: 60px;
+}
+
+/* Placeholder box */
+.placeholder-box {
+background: repeating-linear-gradient(
+-45deg,
+rgba(0,0,0,0.02),
+rgba(0,0,0,0.02) 10px,
+transparent 10px,
+transparent 20px
+);
+border: 2px dashed var(–border);
+border-radius: var(–radius-lg);
+padding: 40px 24px;
+text-align: center;
+margin: var(–space-md) 0;
+}
+.placeholder-box h4 {
+font-family: var(–font-heading);
+color: var(–text-muted);
+margin-bottom: 8px;
+}
+.placeholder-box p {
+font-size: 0.82rem;
+color: var(–text-muted);
+max-width: 500px;
+margin: 0 auto;
+}
+
+/* Narrative callout */
+.narrative-callout-row {
+display: flex;
+gap: var(–space-md);
+flex-wrap: wrap;
+margin: var(–space-lg) 0;
+}
+.n-callout {
+flex: 1;
+min-width: 220px;
+padding: 18px 16px;
+border-radius: var(–radius-lg);
+border: 1px solid;
+}
+.n-callout.callout-red {
+background: rgba(239,68,68,0.04);
+border-color: rgba(239,68,68,0.15);
+}
+.n-callout.callout-green {
+background: rgba(34,197,94,0.04);
+border-color: rgba(34,197,94,0.15);
+}
+.n-callout.callout-blue {
+background: rgba(14,165,233,0.04);
+border-color: rgba(14,165,233,0.15);
+}
+.n-callout .nc-val {
+font-family: var(–font-heading);
+font-weight: 800;
+font-size: 1.4rem;
+line-height: 1.2;
+}
+.n-callout .nc-label {
+font-size: 0.78rem;
+color: var(–text-muted);
+margin-top: 4px;
+line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+.hero-kpis { grid-template-columns: repeat(2, 1fr); }
+.compare-grid { grid-template-columns: 1fr; }
+.chart-wrap-buildout { height: 280px; }
+.chart-wrap-sm { height: 240px; }
+.control-row { gap: 8px; }
+.heatmap-table { font-size: 0.7rem; }
+}
+@media (max-width: 480px) {
+.hero-kpis { grid-template-columns: 1fr; }
+.kpi-card .kpi-val { font-size: 1.5rem; }
+}
+</style>
+
+</head>
+<body>
+
+<!-- TOP NAV -->
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+
+<!-- HEADER -->
+
+<header class="header" id="pageHeader">
+    <h1>PJM Grid Buildout Comparison</h1>
+    <p class="subtitle">Path-dependent and myopic solver results across cost scenarios, demand levels, and gas dispatch modes &mdash; how optimizer structure shapes the 25-year procurement trajectory.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="main-content">
+
+<!-- ===== HERO KPIs ===== -->
+
+<div class="buildout-hero">
+    <p style="font-size:0.92rem;color:var(--text-secondary);max-width:800px;line-height:1.75;">
+        PJM Interconnection serves 65 million people across 13 states with 62.9 GW of existing fossil capacity. Every decarbonization pathway must navigate the same fundamental tension: how aggressively to build clean generation while managing the retirement timeline of a massive thermal fleet. The path-dependent solver optimizes a full 25-year trajectory from 2026 to 2050. The myopic solver optimizes each threshold independently, finding the cheapest mix at 90%, 95%, 99%, and 99.9% clean energy without considering the path between them.
+    </p>
+
+```
+<div class="hero-kpis">
+    <div class="kpi-card">
+        <div class="kpi-val navy">62.9 GW</div>
+        <div class="kpi-label">Existing PJM fossil fleet<br>(coal + gas + oil)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-val red">120.4 GW</div>
+        <div class="kpi-label">Peak gas under gas-blind path-dependent<br>(Pathway A at 90% CFE)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-val green">$1,218B</div>
+        <div class="kpi-label">Cheapest path-dependent trajectory<br>(Pathway C &middot; All-Low &middot; g1)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-val blue">$56.5B</div>
+        <div class="kpi-label">Cheapest myopic 99.9% solution<br>(Pathway B &middot; All-Low &middot; Med &middot; g2)</div>
+    </div>
+</div>
+```
+
+</div>
+
+<hr class="story-divider" style="max-width:1320px;margin:0 auto;">
+
+<!-- ===== SECTION 1: PATH-DEPENDENT BASELINE ===== -->
+
+<section class="analysis-section scroll-reveal">
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>Path-Dependent Baseline <span class="solver-badge pd">Path-Dep</span></h2>
+        <p>Pathway A &middot; Base Cost &middot; Medium Demand &middot; Gas-Blind (g3)</p>
+    </div>
+
+```
+<div class="section-intro fade-in">
+    <p>The gas-blind path-dependent solver (gas mode 3) treats gas capacity as a free variable with no shadow price penalty for overbuilding. This creates the upper bound on gas procurement &mdash; the most gas-heavy trajectory PJM can follow under base cost assumptions at medium demand growth. The 25-year cumulative system cost reaches <strong>$1,787B</strong>, with gas capacity peaking at 120 GW before dropping sharply as the target ramps above 95%.</p>
+</div>
+
+<!-- Trajectory chart -->
+<div class="chart-panel-buildout fade-in">
+    <h4>25-Year Trajectory: Gas Fleet &amp; Clean Energy Target</h4>
+    <div class="chart-subtitle">Annual CFE target ramps from ~42% (2026) to 99.9% (2050). Gas capacity shown in GW.</div>
+    <div class="chart-wrap-buildout">
+        <canvas id="chartPdRefTraj"></canvas>
+    </div>
+    <div class="stat-row">
+        <div class="stat-chip"><span class="sv" style="color:#B91C1C">120.4 GW</span><span class="sl">Peak gas (2040)</span></div>
+        <div class="stat-chip"><span class="sv" style="color:#15803D">9.4 GW</span><span class="sl">Gas at 99.9%</span></div>
+        <div class="stat-chip"><span class="sv" style="color:var(--navy)">$1,787B</span><span class="sl">Cumulative cost</span></div>
+        <div class="stat-chip"><span class="sv" style="color:#6366F1">112 GW</span><span class="sl">H&#8322; at 99.9%</span></div>
+    </div>
+</div>
+
+<!-- Resource mix at thresholds -->
+<div class="chart-panel-buildout fade-in">
+    <h4>Resource Mix at Threshold Milestones</h4>
+    <div class="chart-subtitle">Share of annual demand met by each resource at the year each target is first achieved. Values above 100% reflect generation used for storage charging or curtailed.</div>
+    <div class="chart-wrap-buildout chart-wrap-sm">
+        <canvas id="chartPdRefMix"></canvas>
+    </div>
+</div>
+```
+
+</section>
+
+<hr class="story-divider" style="max-width:1320px;margin:0 auto;">
+
+<!-- ===== SECTION 2: ALL-LOW COST SENSITIVITY ===== -->
+
+<section class="analysis-section scroll-reveal">
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>All-Low Cost Scenario <span class="solver-badge pd">Path-Dep</span></h2>
+        <p>All resource costs at floor &middot; Gas mode 1 vs. 2 &middot; Pathways A&ndash;D</p>
+    </div>
+
+```
+<div class="section-intro fade-in">
+    <p>When all technology costs drop to their floor projections, the procurement landscape shifts dramatically. Gas mode 1 (gas-aware dispatch with cost optimization) and mode 2 (gas-aware with enhanced constraints) produce nearly identical trajectories for Pathway A, but diverge for Pathway B where the stranding shadow price interacts differently with each dispatch rule. Pathway C (hourly matching) emerges as the cheapest overall at <strong>$1,218B</strong> under gas mode 1.</p>
+</div>
+
+<div class="control-row fade-in">
+    <div class="control-group">
+        <label>Demand</label>
+        <div class="pill-group" id="demandPills">
+            <button class="pill-btn" data-val="Low">Low</button>
+            <button class="pill-btn active" data-val="Medium">Medium</button>
+            <button class="pill-btn" data-val="High">High</button>
+        </div>
+    </div>
+</div>
+
+<!-- Gas trajectory comparison -->
+<div class="chart-panel-buildout fade-in">
+    <h4>Gas Fleet Trajectory: Pathway A vs. B, g1 vs. g2</h4>
+    <div class="chart-subtitle">All-low cost scenario. Gas capacity (GW) from 2026 to 2050 under each pathway &times; gas mode combination.</div>
+    <div class="chart-wrap-buildout">
+        <canvas id="chartAllLowGas"></canvas>
+    </div>
+</div>
+
+<!-- Cost comparison -->
+<div class="chart-panel-buildout fade-in">
+    <h4>Cumulative System Cost by Pathway &amp; Gas Mode</h4>
+    <div class="chart-subtitle">25-year cumulative cost ($B) under all-low cost assumptions. Lower is cheaper.</div>
+    <div class="chart-wrap-buildout chart-wrap-sm">
+        <canvas id="chartAllLowCost"></canvas>
+    </div>
+</div>
+
+<div class="narrative-callout-row fade-in">
+    <div class="n-callout callout-green">
+        <div class="nc-val" style="color:#15803D">$65.5B</div>
+        <div class="nc-label">Pathway B saves over A<br>All-Low &middot; Medium &middot; g2</div>
+    </div>
+    <div class="n-callout callout-blue">
+        <div class="nc-val" style="color:#0369A1">Pathway C</div>
+        <div class="nc-label">Cheapest trajectory overall<br>$1,218B (g1) &mdash; hourly matching wins</div>
+    </div>
+    <div class="n-callout callout-red">
+        <div class="nc-val" style="color:#B91C1C">&lt; $1B</div>
+        <div class="nc-label">g1 vs. g2 cost delta (Pathway A)<br>Dispatch mode barely matters without shadow price</div>
+    </div>
+</div>
+```
+
+</section>
+
+<hr class="story-divider" style="max-width:1320px;margin:0 auto;">
+
+<!-- ===== SECTION 3: MYOPIC SOLVER ===== -->
+
+<section class="analysis-section scroll-reveal">
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>Myopic Solver Results <span class="solver-badge myopic">Myopic</span></h2>
+        <p>Both pathways &middot; All cost scenarios &middot; Gas modes 2 &amp; 3</p>
+    </div>
+
+```
+<div class="section-intro fade-in">
+    <p>The myopic solver optimizes each threshold independently &mdash; it finds the cheapest resource mix to hit 90%, 95%, 99%, and 99.9% CFE without considering the path between them. This produces cost estimates for each threshold that can't be directly summed into a trajectory (a retroactive cumulative calculation is pending). Pathway B consistently outperforms A across all scenarios, with savings of 20&ndash;35% at the 99.9% endpoint. Gas mode 2 (cost-optimized dispatch) beats gas mode 3 (gas-blind) by 10&ndash;25% in most configurations.</p>
+</div>
+
+<div class="control-row fade-in">
+    <div class="control-group">
+        <label>Demand</label>
+        <div class="pill-group" id="myopicDemandPills">
+            <button class="pill-btn" data-val="Low">Low</button>
+            <button class="pill-btn active" data-val="Medium">Medium</button>
+            <button class="pill-btn" data-val="High">High</button>
+        </div>
+    </div>
+    <div class="control-group">
+        <label>Threshold</label>
+        <div class="pill-group" id="myopicThreshPills">
+            <button class="pill-btn" data-val="90.0">90%</button>
+            <button class="pill-btn" data-val="95.0">95%</button>
+            <button class="pill-btn active" data-val="99.9">99.9%</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cost heatmap -->
+<div class="chart-panel-buildout fade-in">
+    <h4>System Cost at Selected Threshold ($B)</h4>
+    <div class="chart-subtitle">Each cell shows the total cost to achieve the selected CFE threshold. Color intensity scales with cost.</div>
+    <div id="heatmapContainer"></div>
+</div>
+
+<!-- Myopic resource mix -->
+<div class="chart-panel-buildout fade-in">
+    <h4>Resource Mix: Cheapest Myopic Outcome per Scenario</h4>
+    <div class="chart-subtitle">Resource share of demand (%) for the lowest-cost configuration at 99.9% CFE, Medium demand.</div>
+    <div class="chart-wrap-buildout chart-wrap-sm">
+        <canvas id="chartMyopicMix"></canvas>
+    </div>
+</div>
+
+<!-- Myopic gas comparison -->
+<div class="chart-panel-buildout fade-in">
+    <h4>Gas Capacity by Threshold: Pathway A vs. B</h4>
+    <div class="chart-subtitle">Remaining gas fleet (GW) at each threshold step. Myopic solver &middot; base scenario &middot; Medium demand.</div>
+    <div class="chart-wrap-buildout chart-wrap-sm">
+        <canvas id="chartMyopicGas"></canvas>
+    </div>
+</div>
+```
+
+</section>
+
+<hr class="story-divider" style="max-width:1320px;margin:0 auto;">
+
+<!-- ===== SECTION 4: CROSS-SOLVER SYNTHESIS ===== -->
+
+<section class="analysis-section scroll-reveal">
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Cross-Solver Synthesis</h2>
+        <p>Comparing path-dependent and myopic optimizer outcomes</p>
+    </div>
+
+```
+<div class="section-intro fade-in">
+    <p>The path-dependent and myopic solvers answer fundamentally different questions. The path-dependent solver asks: <em>What's the cheapest 25-year trajectory from here to 99.9% clean?</em> The myopic solver asks: <em>What's the cheapest way to hit each threshold, solved independently?</em> Costs aren't directly comparable &mdash; path-dependent cumulative costs include every year of operation, while myopic costs are point-in-time snapshots. The comparison below uses annual system cost from path-dependent results at each threshold's achievement year alongside myopic single-year costs.</p>
+</div>
+
+<!-- Annual cost comparison -->
+<div class="chart-panel-buildout fade-in">
+    <h4>Annual System Cost at Threshold Achievement Year</h4>
+    <div class="chart-subtitle">Path-dependent annual cost vs. myopic total cost ($B) at each threshold. Base scenario, Medium demand.</div>
+    <div class="chart-wrap-buildout chart-wrap-sm">
+        <canvas id="chartCrossCost"></canvas>
+    </div>
+</div>
+
+<!-- Placeholder for retroactive cumulative -->
+<div class="placeholder-box fade-in">
+    <h4>&#128736; Retroactive Cumulative Cost (Pending)</h4>
+    <p>A future version will compute a retroactive cumulative cost for the myopic solver by chaining threshold-optimal mixes into a continuous 2026&ndash;2050 trajectory and summing annual system costs. This enables direct apples-to-apples comparison with path-dependent cumulative costs.</p>
+</div>
+
+<!-- Placeholder for compressed day dispatch -->
+<div class="placeholder-box fade-in">
+    <h4>&#9889; Compressed Day Dispatch Charts (Pending)</h4>
+    <p>A future version will run winning mixes through the dispatch simulation engine to produce 8,760-hour stacked area charts showing hourly generation, storage charge/discharge, and curtailment for each scenario&rsquo;s optimal resource mix.</p>
+</div>
+```
+
+</section>
+
+</div><!-- /main-content -->
+
+<!-- FOOTER -->
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="research_paper.html">Research</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+    </div>
+    <p style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:12px;">
+        Data: DE thermal-fleet solver &amp; myopic solver results. PJM ISO, 2026&ndash;2050.<br>
+        Path-dependent: base &amp; all-low cost scenarios. Myopic: all 5 cost scenarios.<br>
+        All values nominal $B. Gas baseline: 62.9 GW existing fossil fleet.
+    </p>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ===== DATA ===== -->
+
+<script>
+const D = {"pdRef":{"label":"Pathway A \u00b7 Base Cost \u00b7 Medium Demand \u00b7 Gas-Blind (g3)","costB":1787.2,"traj":[{"year":2026,"target":41.9,"cfe":41.9,"gas_gw":36.8,"coal_gw":44.7,"h2_gw":0.0,"annual_B":12.0,"cum_B":12.0},{"year":2027,"target":45.3,"cfe":45.4,"gas_gw":42.3,"coal_gw":42.3,"h2_gw":0.0,"annual_B":16.3,"cum_B":28.2},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":47.6,"coal_gw":40.0,"h2_gw":0.0,"annual_B":20.6,"cum_B":48.8},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":55.4,"coal_gw":36.0,"h2_gw":0.0,"annual_B":25.6,"cum_B":74.4},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":63.1,"coal_gw":32.0,"h2_gw":0.0,"annual_B":30.7,"cum_B":105.1},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":71.0,"coal_gw":28.5,"h2_gw":0.0,"annual_B":36.1,"cum_B":141.3},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":78.9,"coal_gw":25.0,"h2_gw":0.0,"annual_B":41.7,"cum_B":182.9},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":85.2,"coal_gw":23.3,"h2_gw":0.0,"annual_B":47.0,"cum_B":229.9},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":91.4,"coal_gw":21.7,"h2_gw":0.0,"annual_B":52.5,"cum_B":282.4},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":97.7,"coal_gw":20.0,"h2_gw":0.0,"annual_B":58.3,"cum_B":340.7},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":102.5,"coal_gw":20.0,"h2_gw":0.0,"annual_B":63.8,"cum_B":404.5},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":99.6,"coal_gw":19.5,"h2_gw":0.0,"annual_B":67.7,"cum_B":472.2},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":104.9,"coal_gw":14.8,"h2_gw":0.0,"annual_B":73.9,"cum_B":546.1},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":112.8,"coal_gw":10.9,"h2_gw":0.0,"annual_B":81.1,"cum_B":627.2},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":120.4,"coal_gw":7.8,"h2_gw":0.0,"annual_B":88.4,"cum_B":715.6},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":127.9,"coal_gw":5.5,"h2_gw":0.0,"annual_B":93.4,"cum_B":809.0},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":133.9,"coal_gw":4.9,"h2_gw":0.0,"annual_B":98.1,"cum_B":907.2},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":122.9,"coal_gw":4.4,"h2_gw":0.0,"annual_B":98.7,"cum_B":1005.8},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":128.8,"coal_gw":3.9,"h2_gw":0.0,"annual_B":103.6,"cum_B":1109.4},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":122.5,"coal_gw":3.5,"h2_gw":0.0,"annual_B":105.6,"cum_B":1215.0},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":124.8,"coal_gw":3.2,"h2_gw":0.0,"annual_B":109.9,"cum_B":1324.9},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":131.1,"coal_gw":2.8,"h2_gw":0.0,"annual_B":115.3,"cum_B":1440.2},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":136.0,"coal_gw":2.5,"h2_gw":0.0,"annual_B":120.8,"cum_B":1561.0},{"year":2049,"target":98.9,"cfe":98.9,"gas_gw":97.7,"coal_gw":2.3,"h2_gw":35.6,"annual_B":118.6,"cum_B":1679.6},{"year":2050,"target":99.9,"cfe":99.9,"gas_gw":9.4,"coal_gw":2.0,"h2_gw":112.4,"annual_B":107.6,"cum_B":1787.2}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":120380.0,"gas_gw":120.4,"coal_mw":7804.0,"h2_mw":0.0,"annual_cost_B":88.4,"cumulative_B":715.6,"mix":{"clean_firm":22.49,"solar":20.75,"wind":50.95,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.06,"wind_batt4":0.07,"wind_batt8":0.03}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":122486.0,"gas_gw":122.5,"coal_mw":3538.0,"h2_mw":0.0,"annual_cost_B":105.6,"cumulative_B":1215.0,"mix":{"clean_firm":19.98,"solar":34.38,"wind":46.76,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.09,"solar_batt8":0.05,"wind_batt4":0.06,"wind_batt8":0.03}},"99":{"year":2049,"target":98.9,"achieved_cfe":98.9,"gas_mw":97736.0,"gas_gw":97.7,"coal_mw":2260.0,"h2_mw":35592.0,"annual_cost_B":118.6,"cumulative_B":1679.6,"mix":{"clean_firm":18.17,"solar":38.95,"wind":48.88,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.09,"solar_batt8":0.05,"wind_batt4":0.05,"wind_batt8":0.02}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"gas_mw":9380.0,"gas_gw":9.4,"coal_mw":2017.0,"h2_mw":112354.0,"annual_cost_B":107.6,"cumulative_B":1787.2,"mix":{"clean_firm":17.74,"solar":38.04,"wind":50.61,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.05,"wind_batt4":0.05,"wind_batt8":0.02}}}},"pdAllLow":{"A|all_low|High|g2":{"costB":1721.5,"traj":[{"year":2026,"target":41.9,"cfe":41.9,"gas_gw":36.5,"coal_gw":44.7,"h2_gw":0.0,"annual_B":10.7,"cum_B":10.7},{"year":2027,"target":45.3,"cfe":45.4,"gas_gw":43.8,"coal_gw":42.3,"h2_gw":0.0,"annual_B":14.7,"cum_B":25.3},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":49.2,"coal_gw":40.0,"h2_gw":0.0,"annual_B":18.5,"cum_B":43.8},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":58.4,"coal_gw":36.0,"h2_gw":0.0,"annual_B":23.2,"cum_B":67.0},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":68.2,"coal_gw":32.0,"h2_gw":0.0,"annual_B":28.3,"cum_B":95.3},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":77.6,"coal_gw":28.5,"h2_gw":0.0,"annual_B":33.4,"cum_B":128.8},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":87.3,"coal_gw":25.0,"h2_gw":0.0,"annual_B":38.9,"cum_B":167.6},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":95.6,"coal_gw":23.3,"h2_gw":0.0,"annual_B":44.2,"cum_B":211.8},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":104.2,"coal_gw":21.7,"h2_gw":0.0,"annual_B":49.8,"cum_B":261.6},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":111.2,"coal_gw":20.0,"h2_gw":1.6,"annual_B":55.6,"cum_B":317.2},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":109.4,"coal_gw":20.0,"h2_gw":10.0,"annual_B":61.2,"cum_B":378.4},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":109.8,"coal_gw":19.5,"h2_gw":16.9,"annual_B":66.8,"cum_B":445.2},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":106.0,"coal_gw":14.8,"h2_gw":31.1,"annual_B":72.3,"cum_B":517.5},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":106.7,"coal_gw":10.9,"h2_gw":40.4,"annual_B":78.4,"cum_B":595.9},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":101.7,"coal_gw":7.8,"h2_gw":54.4,"annual_B":84.2,"cum_B":680.2},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":106.5,"coal_gw":5.5,"h2_gw":60.1,"annual_B":89.4,"cum_B":769.5},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":108.3,"coal_gw":4.9,"h2_gw":67.5,"annual_B":94.2,"cum_B":863.7},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":108.8,"coal_gw":4.4,"h2_gw":76.4,"annual_B":99.2,"cum_B":962.9},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":112.2,"coal_gw":3.9,"h2_gw":82.5,"annual_B":104.1,"cum_B":1067.1},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":113.4,"coal_gw":3.5,"h2_gw":90.7,"annual_B":109.1,"cum_B":1176.1},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":111.9,"coal_gw":3.2,"h2_gw":101.6,"annual_B":113.9,"cum_B":1290.1},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":119.8,"coal_gw":2.8,"h2_gw":37.3,"annual_B":115.8,"cum_B":1405.9},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":99.8,"coal_gw":2.5,"h2_gw":61.9,"annual_B":118.2,"cum_B":1524.1},{"year":2049,"target":98.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":2.3,"h2_gw":0.0,"annual_B":96.8,"cum_B":1620.9},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":100.7,"cum_B":1721.5}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":101749.0,"gas_gw":101.7,"coal_mw":7802.0,"h2_mw":54364.0,"annual_cost_B":84.2,"cumulative_B":680.2,"mix":{"clean_firm":18.88,"solar":11.66,"wind":46.37,"hydro":1.06,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.01,"wind_batt4":0.0,"wind_batt8":0.01}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":113405.0,"gas_gw":113.4,"coal_mw":3536.0,"h2_mw":90689.0,"annual_cost_B":109.1,"cumulative_B":1176.1,"mix":{"clean_firm":15.82,"solar":12.25,"wind":53.58,"hydro":0.89,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.01,"wind_batt4":0.0,"wind_batt8":0.01}},"99":{"year":2049,"target":98.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":96.8,"cumulative_B":1620.9,"mix":{"clean_firm":13.74,"solar":21.33,"wind":75.8,"hydro":0.77,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.03,"wind_batt4":0.12,"wind_batt8":0.06}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1781.0,"h2_mw":0.0,"annual_cost_B":100.7,"cumulative_B":1721.5,"mix":{"clean_firm":13.26,"solar":24.17,"wind":73.19,"hydro":0.74,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.03,"wind_batt4":0.12,"wind_batt8":0.05}}}},"A|all_low|Low|g2":{"costB":1021.9,"traj":[{"year":2026,"target":41.9,"cfe":41.9,"gas_gw":33.2,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.6,"cum_B":9.6},{"year":2027,"target":45.3,"cfe":45.3,"gas_gw":36.3,"coal_gw":42.3,"h2_gw":0.0,"annual_B":12.1,"cum_B":21.7},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":39.1,"coal_gw":40.0,"h2_gw":0.0,"annual_B":14.7,"cum_B":36.4},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":43.3,"coal_gw":36.0,"h2_gw":0.0,"annual_B":17.7,"cum_B":54.1},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":48.8,"coal_gw":32.0,"h2_gw":0.0,"annual_B":21.0,"cum_B":75.1},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":54.0,"coal_gw":28.5,"h2_gw":0.0,"annual_B":24.3,"cum_B":99.4},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":59.1,"coal_gw":25.0,"h2_gw":0.0,"annual_B":27.6,"cum_B":127.0},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":62.7,"coal_gw":23.3,"h2_gw":0.0,"annual_B":30.6,"cum_B":157.6},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":66.3,"coal_gw":21.7,"h2_gw":0.0,"annual_B":33.8,"cum_B":191.4},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":69.9,"coal_gw":20.0,"h2_gw":0.0,"annual_B":37.0,"cum_B":228.4},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":65.4,"coal_gw":20.0,"h2_gw":6.0,"annual_B":39.9,"cum_B":268.3},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":61.7,"coal_gw":19.5,"h2_gw":11.8,"annual_B":42.7,"cum_B":311.0},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":58.0,"coal_gw":14.8,"h2_gw":20.6,"annual_B":45.5,"cum_B":356.5},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":57.3,"coal_gw":10.9,"h2_gw":26.0,"annual_B":48.6,"cum_B":405.2},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":51.9,"coal_gw":7.8,"h2_gw":35.0,"annual_B":51.3,"cum_B":456.5},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":52.2,"coal_gw":5.5,"h2_gw":38.9,"annual_B":53.3,"cum_B":509.9},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":51.7,"coal_gw":4.9,"h2_gw":42.2,"annual_B":55.0,"cum_B":564.8},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":49.9,"coal_gw":4.4,"h2_gw":46.6,"annual_B":56.5,"cum_B":621.3},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":49.7,"coal_gw":3.9,"h2_gw":49.4,"annual_B":58.0,"cum_B":679.4},{"year":2045,"target":95.0,"cfe":95.9,"gas_gw":59.5,"coal_gw":3.5,"h2_gw":0.0,"annual_B":58.3,"cum_B":737.6},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":62.1,"coal_gw":2.8,"h2_gw":0.5,"annual_B":59.9,"cum_B":797.5},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":50.2,"coal_gw":2.8,"h2_gw":12.2,"annual_B":59.8,"cum_B":857.3},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":36.3,"coal_gw":2.5,"h2_gw":25.8,"annual_B":59.3,"cum_B":916.6},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":2.9,"coal_gw":2.3,"h2_gw":0.0,"annual_B":52.4,"cum_B":969.1},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":52.8,"cum_B":1021.9}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":51869.0,"gas_gw":51.9,"coal_mw":7802.0,"h2_mw":34983.0,"annual_cost_B":51.3,"cumulative_B":456.5,"mix":{"clean_firm":25.68,"solar":11.1,"wind":41.5,"hydro":1.44,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.03,"wind_batt4":0.03,"wind_batt8":0.02}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.9,"gas_mw":59544.0,"gas_gw":59.5,"coal_mw":3536.0,"h2_mw":0.0,"annual_cost_B":58.3,"cumulative_B":737.6,"mix":{"clean_firm":23.83,"solar":14.23,"wind":65.98,"hydro":1.34,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.05,"wind_batt4":0.05,"wind_batt8":0.04}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":2936.0,"gas_gw":2.9,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":52.4,"cumulative_B":969.1,"mix":{"clean_firm":22.46,"solar":21.21,"wind":65.69,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.05,"wind_batt4":0.11,"wind_batt8":0.13}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1798.0,"h2_mw":0.0,"annual_cost_B":52.8,"cumulative_B":1021.9,"mix":{"clean_firm":22.12,"solar":21.63,"wind":65.69,"hydro":1.24,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.05,"wind_batt4":0.11,"wind_batt8":0.12}}}},"A|all_low|Medium|g1":{"costB":1296.8,"traj":[{"year":2026,"target":41.9,"cfe":41.9,"gas_gw":34.6,"coal_gw":44.7,"h2_gw":0.0,"annual_B":10.0,"cum_B":10.0},{"year":2027,"target":45.3,"cfe":45.3,"gas_gw":39.5,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.2,"cum_B":23.3},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":43.4,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.3,"cum_B":39.6},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":49.6,"coal_gw":36.0,"h2_gw":0.0,"annual_B":20.0,"cum_B":59.6},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.9,"coal_gw":32.0,"h2_gw":0.0,"annual_B":24.0,"cum_B":83.6},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":63.8,"coal_gw":28.5,"h2_gw":0.0,"annual_B":28.1,"cum_B":111.7},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":70.8,"coal_gw":25.0,"h2_gw":0.0,"annual_B":32.2,"cum_B":143.9},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":76.2,"coal_gw":23.3,"h2_gw":0.0,"annual_B":36.2,"cum_B":180.1},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":81.8,"coal_gw":21.7,"h2_gw":0.0,"annual_B":40.3,"cum_B":220.4},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":82.6,"coal_gw":20.0,"h2_gw":4.4,"annual_B":44.7,"cum_B":265.1},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":82.6,"coal_gw":20.0,"h2_gw":8.2,"annual_B":48.5,"cum_B":313.6},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":80.4,"coal_gw":19.5,"h2_gw":14.4,"annual_B":52.4,"cum_B":366.0},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":76.4,"coal_gw":14.8,"h2_gw":25.5,"annual_B":56.2,"cum_B":422.2},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":76.7,"coal_gw":10.9,"h2_gw":31.9,"annual_B":60.4,"cum_B":482.6},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":71.5,"coal_gw":7.8,"h2_gw":42.6,"annual_B":64.3,"cum_B":546.9},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":72.9,"coal_gw":5.5,"h2_gw":47.8,"annual_B":67.4,"cum_B":614.3},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":73.6,"coal_gw":4.9,"h2_gw":52.1,"annual_B":70.2,"cum_B":684.6},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":72.7,"coal_gw":4.4,"h2_gw":58.0,"annual_B":73.0,"cum_B":757.6},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":73.7,"coal_gw":3.9,"h2_gw":62.0,"annual_B":75.7,"cum_B":833.3},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":74.7,"coal_gw":3.5,"h2_gw":65.9,"annual_B":78.4,"cum_B":911.7},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":87.1,"coal_gw":3.2,"h2_gw":9.6,"annual_B":79.7,"cum_B":991.3},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":73.9,"coal_gw":2.8,"h2_gw":24.7,"annual_B":80.7,"cum_B":1072.0},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":57.3,"coal_gw":2.5,"h2_gw":42.6,"annual_B":81.2,"cum_B":1153.2},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":11.2,"coal_gw":2.3,"h2_gw":0.0,"annual_B":72.1,"cum_B":1225.3},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":71.5,"cum_B":1296.8}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":71520.0,"gas_gw":71.5,"coal_mw":7802.0,"h2_mw":42607.0,"annual_cost_B":64.3,"cumulative_B":546.9,"mix":{"clean_firm":22.49,"solar":11.36,"wind":43.81,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.03,"solar_batt8":0.01,"wind_batt4":0.01,"wind_batt8":0.0}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":74720.0,"gas_gw":74.7,"coal_mw":3536.0,"h2_mw":65939.0,"annual_cost_B":78.4,"cumulative_B":911.7,"mix":{"clean_firm":19.98,"solar":11.98,"wind":51.64,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.03,"solar_batt8":0.01,"wind_batt4":0.01,"wind_batt8":0.0}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":11240.0,"gas_gw":11.2,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":72.1,"cumulative_B":1225.3,"mix":{"clean_firm":18.17,"solar":10.95,"wind":82.12,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.12,"solar_batt8":0.21,"wind_batt4":0.02,"wind_batt8":0.04}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1803.0,"h2_mw":0.0,"annual_cost_B":71.5,"cumulative_B":1296.8,"mix":{"clean_firm":17.74,"solar":13.18,"wind":80.2,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.12,"solar_batt8":0.21,"wind_batt4":0.02,"wind_batt8":0.04}}}},"A|all_low|Medium|g2":{"costB":1296.7,"traj":[{"year":2026,"target":41.9,"cfe":41.9,"gas_gw":34.6,"coal_gw":44.7,"h2_gw":0.0,"annual_B":10.0,"cum_B":10.0},{"year":2027,"target":45.3,"cfe":45.3,"gas_gw":39.5,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.2,"cum_B":23.3},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":43.4,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.3,"cum_B":39.6},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":49.6,"coal_gw":36.0,"h2_gw":0.0,"annual_B":20.0,"cum_B":59.6},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.9,"coal_gw":32.0,"h2_gw":0.0,"annual_B":24.0,"cum_B":83.6},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":63.8,"coal_gw":28.5,"h2_gw":0.0,"annual_B":28.1,"cum_B":111.7},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":70.8,"coal_gw":25.0,"h2_gw":0.0,"annual_B":32.2,"cum_B":143.9},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":76.2,"coal_gw":23.3,"h2_gw":0.0,"annual_B":36.2,"cum_B":180.1},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":81.8,"coal_gw":21.7,"h2_gw":0.0,"annual_B":40.3,"cum_B":220.5},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":87.0,"coal_gw":20.0,"h2_gw":0.4,"annual_B":44.6,"cum_B":265.1},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":83.7,"coal_gw":20.0,"h2_gw":7.1,"annual_B":48.5,"cum_B":313.6},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":80.4,"coal_gw":19.5,"h2_gw":14.4,"annual_B":52.4,"cum_B":365.9},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":76.4,"coal_gw":14.8,"h2_gw":25.5,"annual_B":56.2,"cum_B":422.1},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":76.7,"coal_gw":10.9,"h2_gw":31.9,"annual_B":60.4,"cum_B":482.6},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":71.5,"coal_gw":7.8,"h2_gw":42.6,"annual_B":64.3,"cum_B":546.8},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":72.9,"coal_gw":5.5,"h2_gw":47.8,"annual_B":67.4,"cum_B":614.3},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":73.6,"coal_gw":4.9,"h2_gw":52.1,"annual_B":70.2,"cum_B":684.5},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":72.7,"coal_gw":4.4,"h2_gw":58.0,"annual_B":73.0,"cum_B":757.5},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":73.7,"coal_gw":3.9,"h2_gw":62.0,"annual_B":75.7,"cum_B":833.2},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":73.0,"coal_gw":3.5,"h2_gw":67.6,"annual_B":78.4,"cum_B":911.6},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":86.9,"coal_gw":3.2,"h2_gw":9.7,"annual_B":79.6,"cum_B":991.2},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":73.7,"coal_gw":2.8,"h2_gw":24.9,"annual_B":80.7,"cum_B":1071.9},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":57.2,"coal_gw":2.5,"h2_gw":42.8,"annual_B":81.2,"cum_B":1153.1},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":11.2,"coal_gw":2.3,"h2_gw":0.0,"annual_B":72.1,"cum_B":1225.2},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":71.5,"cum_B":1296.7}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":71519.0,"gas_gw":71.5,"coal_mw":7802.0,"h2_mw":42607.0,"annual_cost_B":64.3,"cumulative_B":546.8,"mix":{"clean_firm":22.49,"solar":11.36,"wind":43.81,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.02,"solar_batt8":0.01,"wind_batt4":0.0,"wind_batt8":0.0}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":73017.0,"gas_gw":73.0,"coal_mw":3536.0,"h2_mw":67628.0,"annual_cost_B":78.4,"cumulative_B":911.6,"mix":{"clean_firm":19.98,"solar":11.9,"wind":50.35,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.02,"solar_batt8":0.01,"wind_batt4":0.0,"wind_batt8":0.0}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":11236.0,"gas_gw":11.2,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":72.1,"cumulative_B":1225.2,"mix":{"clean_firm":18.17,"solar":10.95,"wind":82.08,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.28,"solar_batt8":0.02,"wind_batt4":0.06,"wind_batt8":0.06}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1807.0,"h2_mw":0.0,"annual_cost_B":71.5,"cumulative_B":1296.7,"mix":{"clean_firm":17.74,"solar":13.2,"wind":80.16,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.28,"solar_batt8":0.02,"wind_batt4":0.05,"wind_batt8":0.06}}}},"B|all_low|High|g2":{"costB":1616.5,"traj":[{"year":2026,"target":41.9,"cfe":41.9,"gas_gw":35.1,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.4,"cum_B":9.4},{"year":2027,"target":45.3,"cfe":45.3,"gas_gw":41.1,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.2,"cum_B":22.6},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":48.0,"coal_gw":40.0,"h2_gw":0.0,"annual_B":17.3,"cum_B":40.0},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":52.8,"coal_gw":36.0,"h2_gw":0.0,"annual_B":21.8,"cum_B":61.8},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.5,"coal_gw":32.0,"h2_gw":0.0,"annual_B":26.6,"cum_B":88.4},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":62.1,"coal_gw":28.5,"h2_gw":0.0,"annual_B":31.4,"cum_B":119.8},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":69.9,"coal_gw":25.0,"h2_gw":0.0,"annual_B":36.5,"cum_B":156.3},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":76.2,"coal_gw":23.3,"h2_gw":0.0,"annual_B":41.5,"cum_B":197.8},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":81.7,"coal_gw":21.7,"h2_gw":0.0,"annual_B":46.5,"cum_B":244.4},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":87.5,"coal_gw":20.0,"h2_gw":0.0,"annual_B":51.9,"cum_B":296.3},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":90.9,"coal_gw":20.0,"h2_gw":0.0,"annual_B":57.0,"cum_B":353.3},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":93.8,"coal_gw":19.5,"h2_gw":1.8,"annual_B":62.5,"cum_B":415.9},{"year":2038,"target":83.1,"cfe":83.5,"gas_gw":94.8,"coal_gw":14.8,"h2_gw":0.0,"annual_B":67.5,"cum_B":483.3},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":91.1,"coal_gw":10.6,"h2_gw":9.8,"annual_B":72.7,"cum_B":556.1},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":81.9,"coal_gw":7.8,"h2_gw":23.6,"annual_B":77.8,"cum_B":633.9},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":84.1,"coal_gw":5.5,"h2_gw":29.1,"annual_B":82.6,"cum_B":716.5},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":84.5,"coal_gw":4.9,"h2_gw":35.2,"annual_B":87.2,"cum_B":803.8},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":84.6,"coal_gw":4.4,"h2_gw":42.2,"annual_B":91.9,"cum_B":895.7},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":83.9,"coal_gw":3.9,"h2_gw":50.0,"annual_B":96.7,"cum_B":992.4},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":82.0,"coal_gw":3.5,"h2_gw":59.1,"annual_B":101.5,"cum_B":1093.9},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":96.9,"coal_gw":3.2,"h2_gw":22.2,"annual_B":104.0,"cum_B":1197.9},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":86.1,"coal_gw":2.8,"h2_gw":36.6,"annual_B":107.4,"cum_B":1305.3},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":71.2,"coal_gw":2.5,"h2_gw":54.7,"annual_B":110.3,"cum_B":1415.6},{"year":2049,"target":98.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":2.3,"h2_gw":0.0,"annual_B":98.8,"cum_B":1514.4},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":102.0,"cum_B":1616.5}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":81925.0,"gas_gw":81.9,"coal_mw":7803.0,"h2_mw":23579.0,"annual_cost_B":77.8,"cumulative_B":633.9,"mix":{"clean_firm":20.29,"solar":11.95,"wind":17.56,"hydro":1.06,"offshore_wind":35.78,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":81999.0,"gas_gw":82.0,"coal_mw":3537.0,"h2_mw":59065.0,"annual_cost_B":101.5,"cumulative_B":1093.9,"mix":{"clean_firm":17.0,"solar":12.81,"wind":17.1,"hydro":0.89,"offshore_wind":37.86,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.2,"solar_batt8":0.2,"wind_batt4":0.0,"wind_batt8":0.0}},"99":{"year":2049,"target":98.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":98.8,"cumulative_B":1514.4,"mix":{"clean_firm":14.78,"solar":11.13,"wind":30.77,"hydro":0.77,"offshore_wind":50.63,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.18,"solar_batt8":0.18,"wind_batt4":0.02,"wind_batt8":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1782.0,"h2_mw":0.0,"annual_cost_B":102.0,"cumulative_B":1616.5,"mix":{"clean_firm":14.26,"solar":10.74,"wind":32.69,"hydro":0.74,"offshore_wind":48.87,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.17,"solar_batt8":0.17,"wind_batt4":0.01,"wind_batt8":0.0}}}},"B|all_low|Low|g2":{"costB":963.5,"traj":[{"year":2026,"target":41.9,"cfe":42.4,"gas_gw":32.6,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.5,"cum_B":9.5},{"year":2027,"target":45.3,"cfe":45.8,"gas_gw":35.7,"coal_gw":42.3,"h2_gw":0.0,"annual_B":12.0,"cum_B":21.5},{"year":2028,"target":48.8,"cfe":49.2,"gas_gw":38.5,"coal_gw":40.0,"h2_gw":0.0,"annual_B":14.6,"cum_B":36.1},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":42.8,"coal_gw":36.0,"h2_gw":0.0,"annual_B":17.4,"cum_B":53.4},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":48.3,"coal_gw":32.0,"h2_gw":0.0,"annual_B":20.7,"cum_B":74.1},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":53.6,"coal_gw":28.5,"h2_gw":0.0,"annual_B":24.0,"cum_B":98.1},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":58.6,"coal_gw":25.0,"h2_gw":0.0,"annual_B":27.3,"cum_B":125.3},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":62.2,"coal_gw":23.3,"h2_gw":0.0,"annual_B":30.3,"cum_B":155.7},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":61.1,"coal_gw":21.7,"h2_gw":0.0,"annual_B":32.5,"cum_B":188.2},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":59.9,"coal_gw":20.0,"h2_gw":0.0,"annual_B":34.7,"cum_B":222.9},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":57.1,"coal_gw":20.0,"h2_gw":0.0,"annual_B":36.7,"cum_B":259.5},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":53.0,"coal_gw":19.5,"h2_gw":3.2,"annual_B":39.0,"cum_B":298.5},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":49.6,"coal_gw":14.8,"h2_gw":11.6,"annual_B":42.1,"cum_B":340.7},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":52.2,"coal_gw":10.9,"h2_gw":6.7,"annual_B":44.6,"cum_B":385.3},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":44.5,"coal_gw":7.8,"h2_gw":17.3,"annual_B":47.1,"cum_B":432.4},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":44.5,"coal_gw":5.5,"h2_gw":20.9,"annual_B":49.0,"cum_B":481.4},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":42.7,"coal_gw":4.9,"h2_gw":24.9,"annual_B":50.5,"cum_B":531.9},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":40.5,"coal_gw":4.4,"h2_gw":29.2,"annual_B":52.0,"cum_B":583.9},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":37.7,"coal_gw":3.9,"h2_gw":33.9,"annual_B":53.4,"cum_B":637.3},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":49.1,"coal_gw":3.5,"h2_gw":2.8,"annual_B":54.2,"cum_B":691.5},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":41.9,"coal_gw":3.2,"h2_gw":10.3,"annual_B":54.9,"cum_B":746.4},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":33.2,"coal_gw":2.8,"h2_gw":19.1,"annual_B":55.3,"cum_B":801.7},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":21.8,"coal_gw":2.5,"h2_gw":30.1,"annual_B":55.4,"cum_B":857.1},{"year":2049,"target":98.9,"cfe":99.8,"gas_gw":9.8,"coal_gw":2.3,"h2_gw":0.0,"annual_B":53.5,"cum_B":910.6},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":52.9,"cum_B":963.5}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":44484.0,"gas_gw":44.5,"coal_mw":7803.0,"h2_mw":17270.0,"annual_cost_B":47.1,"cumulative_B":432.4,"mix":{"clean_firm":26.13,"solar":9.57,"wind":26.59,"hydro":1.44,"offshore_wind":23.34,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":0.07,"wind_batt4":0.04,"wind_batt8":0.04}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":49123.0,"gas_gw":49.1,"coal_mw":3537.0,"h2_mw":2782.0,"annual_cost_B":54.2,"cumulative_B":691.5,"mix":{"clean_firm":24.34,"solar":8.94,"wind":26.86,"hydro":1.34,"offshore_wind":37.54,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.07,"solar_batt8":0.09,"wind_batt4":0.06,"wind_batt8":0.1}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.8,"gas_mw":9785.0,"gas_gw":9.8,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":53.5,"cumulative_B":910.6,"mix":{"clean_firm":23.13,"solar":8.58,"wind":25.95,"hydro":1.26,"offshore_wind":47.47,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.12,"wind_batt4":0.1,"wind_batt8":0.14}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1809.0,"h2_mw":0.0,"annual_cost_B":52.9,"cumulative_B":963.5,"mix":{"clean_firm":22.79,"solar":8.45,"wind":28.19,"hydro":1.24,"offshore_wind":46.78,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.12,"wind_batt4":0.1,"wind_batt8":0.14}}}},"B|all_low|Medium|g1":{"costB":1244.4,"traj":[{"year":2026,"target":41.9,"cfe":42.6,"gas_gw":33.7,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.8,"cum_B":9.8},{"year":2027,"target":45.3,"cfe":46.0,"gas_gw":38.6,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.0,"cum_B":22.8},{"year":2028,"target":48.8,"cfe":49.5,"gas_gw":42.5,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.1,"cum_B":38.9},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":48.8,"coal_gw":36.0,"h2_gw":0.0,"annual_B":19.5,"cum_B":58.5},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.1,"coal_gw":32.0,"h2_gw":0.0,"annual_B":23.5,"cum_B":82.0},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":58.1,"coal_gw":28.5,"h2_gw":0.0,"annual_B":27.1,"cum_B":109.1},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":59.9,"coal_gw":25.0,"h2_gw":0.0,"annual_B":30.6,"cum_B":139.7},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":60.7,"coal_gw":23.3,"h2_gw":0.0,"annual_B":33.8,"cum_B":173.5},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":64.1,"coal_gw":21.7,"h2_gw":0.0,"annual_B":37.5,"cum_B":211.0},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":62.8,"coal_gw":20.0,"h2_gw":0.0,"annual_B":41.4,"cum_B":252.4},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":60.2,"coal_gw":20.0,"h2_gw":0.0,"annual_B":45.1,"cum_B":297.4},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":57.5,"coal_gw":19.5,"h2_gw":0.0,"annual_B":49.0,"cum_B":346.4},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":55.9,"coal_gw":14.8,"h2_gw":8.5,"annual_B":53.5,"cum_B":399.9},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":56.0,"coal_gw":10.9,"h2_gw":14.3,"annual_B":58.0,"cum_B":457.9},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":54.4,"coal_gw":7.8,"h2_gw":13.2,"annual_B":61.0,"cum_B":518.9},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":56.2,"coal_gw":5.5,"h2_gw":14.5,"annual_B":63.7,"cum_B":582.6},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":55.9,"coal_gw":4.9,"h2_gw":16.3,"annual_B":66.1,"cum_B":648.6},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":51.9,"coal_gw":4.4,"h2_gw":24.2,"annual_B":68.5,"cum_B":717.1},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":47.8,"coal_gw":3.9,"h2_gw":32.2,"annual_B":71.0,"cum_B":788.2},{"year":2045,"target":95.0,"cfe":95.2,"gas_gw":61.3,"coal_gw":3.5,"h2_gw":0.0,"annual_B":73.2,"cum_B":861.4},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":56.6,"coal_gw":3.1,"h2_gw":7.0,"annual_B":75.2,"cum_B":936.5},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":47.4,"coal_gw":2.8,"h2_gw":18.1,"annual_B":76.8,"cum_B":1013.3},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":34.3,"coal_gw":2.5,"h2_gw":31.8,"annual_B":77.8,"cum_B":1091.1},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":19.0,"coal_gw":2.3,"h2_gw":0.0,"annual_B":77.5,"cum_B":1168.6},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":75.8,"cum_B":1244.4}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":54390.0,"gas_gw":54.4,"coal_mw":7803.0,"h2_mw":13209.0,"annual_cost_B":61.0,"cumulative_B":518.9,"mix":{"clean_firm":37.35,"solar":8.07,"wind":19.13,"hydro":1.26,"offshore_wind":23.43,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":0.02,"wind_batt4":0.05,"wind_batt8":0.06}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.2,"gas_mw":61339.0,"gas_gw":61.3,"coal_mw":3537.0,"h2_mw":0.0,"annual_cost_B":73.2,"cumulative_B":861.4,"mix":{"clean_firm":33.23,"solar":7.64,"wind":17.18,"hydro":1.12,"offshore_wind":40.18,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.02,"wind_batt4":0.1,"wind_batt8":0.13}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":19043.0,"gas_gw":19.0,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":77.5,"cumulative_B":1168.6,"mix":{"clean_firm":30.25,"solar":7.21,"wind":19.95,"hydro":1.02,"offshore_wind":48.81,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.12,"solar_batt8":0.06,"wind_batt4":0.13,"wind_batt8":0.28}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1807.0,"h2_mw":0.0,"annual_cost_B":75.8,"cumulative_B":1244.4,"mix":{"clean_firm":29.55,"solar":7.04,"wind":22.93,"hydro":0.99,"offshore_wind":47.68,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.06,"wind_batt4":0.13,"wind_batt8":0.29}}}},"B|all_low|Medium|g2":{"costB":1231.2,"traj":[{"year":2026,"target":41.9,"cfe":42.6,"gas_gw":33.7,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.8,"cum_B":9.8},{"year":2027,"target":45.3,"cfe":46.0,"gas_gw":38.6,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.0,"cum_B":22.9},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":43.2,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.0,"cum_B":38.8},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":49.0,"coal_gw":36.0,"h2_gw":0.0,"annual_B":19.6,"cum_B":58.4},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.0,"coal_gw":32.0,"h2_gw":0.0,"annual_B":23.6,"cum_B":82.0},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":61.0,"coal_gw":28.5,"h2_gw":0.0,"annual_B":27.6,"cum_B":109.6},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":63.0,"coal_gw":25.0,"h2_gw":0.0,"annual_B":31.1,"cum_B":140.7},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":62.8,"coal_gw":23.3,"h2_gw":0.0,"annual_B":34.2,"cum_B":174.8},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":64.5,"coal_gw":21.7,"h2_gw":0.0,"annual_B":37.4,"cum_B":212.2},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":68.3,"coal_gw":20.0,"h2_gw":0.0,"annual_B":41.3,"cum_B":253.5},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":68.0,"coal_gw":20.0,"h2_gw":0.0,"annual_B":45.0,"cum_B":298.5},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":66.9,"coal_gw":19.5,"h2_gw":4.3,"annual_B":48.9,"cum_B":347.4},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":64.8,"coal_gw":14.8,"h2_gw":13.1,"annual_B":53.2,"cum_B":400.6},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":68.8,"coal_gw":10.9,"h2_gw":7.4,"annual_B":56.7,"cum_B":457.3},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":61.1,"coal_gw":7.8,"h2_gw":19.7,"annual_B":60.2,"cum_B":517.5},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":62.0,"coal_gw":5.5,"h2_gw":24.3,"annual_B":63.2,"cum_B":580.7},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":61.1,"coal_gw":4.9,"h2_gw":29.3,"annual_B":65.8,"cum_B":646.5},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":62.3,"coal_gw":4.4,"h2_gw":28.5,"annual_B":68.1,"cum_B":714.6},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":57.1,"coal_gw":3.9,"h2_gw":37.3,"annual_B":70.4,"cum_B":785.1},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":51.4,"coal_gw":3.5,"h2_gw":47.0,"annual_B":72.9,"cum_B":858.0},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":61.7,"coal_gw":3.2,"h2_gw":12.5,"annual_B":74.0,"cum_B":932.0},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":51.6,"coal_gw":2.8,"h2_gw":23.7,"annual_B":75.4,"cum_B":1007.4},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":38.1,"coal_gw":2.5,"h2_gw":37.8,"annual_B":76.3,"cum_B":1083.7},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":26.9,"coal_gw":2.3,"h2_gw":0.0,"annual_B":75.8,"cum_B":1159.5},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":71.7,"cum_B":1231.2}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":61107.0,"gas_gw":61.1,"coal_mw":7803.0,"h2_mw":19693.0,"annual_cost_B":60.2,"cumulative_B":517.5,"mix":{"clean_firm":25.84,"solar":7.87,"wind":26.11,"hydro":1.26,"offshore_wind":25.28,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.56,"solar_batt8":0.09,"wind_batt4":0.05,"wind_batt8":0.04}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":51362.0,"gas_gw":51.4,"coal_mw":3537.0,"h2_mw":46977.0,"annual_cost_B":72.9,"cumulative_B":858.0,"mix":{"clean_firm":22.96,"solar":7.13,"wind":24.88,"hydro":1.12,"offshore_wind":29.75,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.5,"solar_batt8":0.08,"wind_batt4":0.05,"wind_batt8":0.06}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":26942.0,"gas_gw":26.9,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":75.8,"cumulative_B":1159.5,"mix":{"clean_firm":21.09,"solar":7.33,"wind":26.29,"hydro":1.02,"offshore_wind":49.75,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.59,"solar_batt8":0.34,"wind_batt4":0.2,"wind_batt8":0.3}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1799.0,"h2_mw":0.0,"annual_cost_B":71.7,"cumulative_B":1231.2,"mix":{"clean_firm":20.6,"solar":7.16,"wind":28.38,"hydro":0.99,"offshore_wind":48.62,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.59,"solar_batt8":0.33,"wind_batt4":0.21,"wind_batt8":0.3}}}},"C|all_low|Medium|g1":{"costB":1218.0,"traj":[{"year":2026,"target":41.9,"cfe":42.6,"gas_gw":33.7,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.8,"cum_B":9.8},{"year":2027,"target":45.3,"cfe":46.0,"gas_gw":38.6,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.0,"cum_B":22.8},{"year":2028,"target":48.8,"cfe":49.5,"gas_gw":42.5,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.1,"cum_B":38.9},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":48.8,"coal_gw":36.0,"h2_gw":0.0,"annual_B":19.5,"cum_B":58.5},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.1,"coal_gw":32.0,"h2_gw":0.0,"annual_B":23.5,"cum_B":82.0},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":63.0,"coal_gw":28.5,"h2_gw":0.0,"annual_B":27.6,"cum_B":109.6},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":70.0,"coal_gw":25.0,"h2_gw":0.0,"annual_B":31.7,"cum_B":141.3},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":71.6,"coal_gw":23.3,"h2_gw":0.0,"annual_B":35.2,"cum_B":176.5},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":71.4,"coal_gw":21.7,"h2_gw":0.0,"annual_B":38.2,"cum_B":214.7},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":71.1,"coal_gw":20.0,"h2_gw":0.0,"annual_B":41.2,"cum_B":255.9},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":71.2,"coal_gw":20.0,"h2_gw":0.0,"annual_B":44.4,"cum_B":300.2},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":69.1,"coal_gw":19.5,"h2_gw":5.2,"annual_B":48.2,"cum_B":348.5},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":66.4,"coal_gw":14.8,"h2_gw":14.7,"annual_B":52.4,"cum_B":400.9},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":70.4,"coal_gw":10.9,"h2_gw":8.7,"annual_B":55.9,"cum_B":456.7},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":62.6,"coal_gw":7.8,"h2_gw":21.2,"annual_B":59.4,"cum_B":516.2},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":63.4,"coal_gw":5.5,"h2_gw":25.9,"annual_B":62.4,"cum_B":578.6},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":62.3,"coal_gw":4.9,"h2_gw":30.9,"annual_B":65.0,"cum_B":643.5},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":60.7,"coal_gw":4.4,"h2_gw":36.5,"annual_B":67.6,"cum_B":711.1},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":58.3,"coal_gw":3.9,"h2_gw":42.7,"annual_B":70.1,"cum_B":781.2},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":54.9,"coal_gw":3.5,"h2_gw":49.8,"annual_B":72.6,"cum_B":853.8},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":65.1,"coal_gw":3.2,"h2_gw":14.1,"annual_B":73.7,"cum_B":927.5},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":55.1,"coal_gw":2.8,"h2_gw":25.2,"annual_B":75.1,"cum_B":1002.6},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":41.6,"coal_gw":2.5,"h2_gw":39.3,"annual_B":76.0,"cum_B":1078.6},{"year":2049,"target":98.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":2.3,"h2_gw":0.0,"annual_B":68.7,"cum_B":1147.3},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":70.8,"cum_B":1218.0}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":62569.0,"gas_gw":62.6,"coal_mw":7803.0,"h2_mw":21174.0,"annual_cost_B":59.4,"cumulative_B":516.2,"mix":{"clean_firm":23.36,"solar":8.91,"wind":27.93,"hydro":1.26,"offshore_wind":25.06,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.12,"solar_batt8":0.03,"wind_batt4":0.06,"wind_batt8":0.01}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":54930.0,"gas_gw":54.9,"coal_mw":3537.0,"h2_mw":49848.0,"annual_cost_B":72.6,"cumulative_B":853.8,"mix":{"clean_firm":20.78,"solar":7.93,"wind":28.9,"hydro":1.12,"offshore_wind":27.21,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.04,"wind_batt4":0.07,"wind_batt8":0.02}},"99":{"year":2049,"target":98.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":68.7,"cumulative_B":1147.3,"mix":{"clean_firm":19.06,"solar":8.66,"wind":30.22,"hydro":1.02,"offshore_wind":45.91,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.25,"solar_batt8":0.55,"wind_batt4":1.26,"wind_batt8":0.46}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1785.0,"h2_mw":0.0,"annual_cost_B":70.8,"cumulative_B":1218.0,"mix":{"clean_firm":18.62,"solar":9.29,"wind":31.03,"hydro":0.99,"offshore_wind":44.91,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.28,"solar_batt8":0.57,"wind_batt4":1.31,"wind_batt8":0.45}}}},"C|all_low|Medium|g2":{"costB":1224.7,"traj":[{"year":2026,"target":41.9,"cfe":42.6,"gas_gw":33.7,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.8,"cum_B":9.8},{"year":2027,"target":45.3,"cfe":46.0,"gas_gw":38.6,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.0,"cum_B":22.9},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":43.2,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.0,"cum_B":38.8},{"year":2029,"target":52.2,"cfe":52.9,"gas_gw":48.8,"coal_gw":36.0,"h2_gw":0.0,"annual_B":19.9,"cum_B":58.7},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":52.7,"coal_gw":32.0,"h2_gw":0.0,"annual_B":23.4,"cum_B":82.2},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":59.6,"coal_gw":28.5,"h2_gw":0.0,"annual_B":27.5,"cum_B":109.7},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":61.3,"coal_gw":25.0,"h2_gw":0.0,"annual_B":31.0,"cum_B":140.6},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":61.4,"coal_gw":23.3,"h2_gw":0.0,"annual_B":34.1,"cum_B":174.7},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":64.1,"coal_gw":21.7,"h2_gw":0.0,"annual_B":37.6,"cum_B":212.3},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":68.5,"coal_gw":20.0,"h2_gw":0.0,"annual_B":41.5,"cum_B":253.8},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":71.0,"coal_gw":20.0,"h2_gw":0.0,"annual_B":45.2,"cum_B":299.0},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":69.0,"coal_gw":19.5,"h2_gw":5.3,"annual_B":49.1,"cum_B":348.1},{"year":2038,"target":83.1,"cfe":83.8,"gas_gw":73.3,"coal_gw":14.8,"h2_gw":0.0,"annual_B":53.0,"cum_B":401.1},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":70.1,"coal_gw":10.2,"h2_gw":8.6,"annual_B":56.7,"cum_B":457.8},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":62.5,"coal_gw":7.8,"h2_gw":17.3,"annual_B":59.8,"cum_B":517.7},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":60.6,"coal_gw":5.5,"h2_gw":24.6,"annual_B":62.6,"cum_B":580.2},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":58.9,"coal_gw":4.9,"h2_gw":29.7,"annual_B":65.1,"cum_B":645.4},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":57.2,"coal_gw":4.4,"h2_gw":34.8,"annual_B":67.7,"cum_B":713.0},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":62.3,"coal_gw":3.9,"h2_gw":26.7,"annual_B":69.9,"cum_B":782.9},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":68.7,"coal_gw":3.5,"h2_gw":4.0,"annual_B":71.7,"cum_B":854.6},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":60.7,"coal_gw":3.2,"h2_gw":13.3,"annual_B":73.4,"cum_B":928.0},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":50.2,"coal_gw":2.8,"h2_gw":24.8,"annual_B":74.7,"cum_B":1002.7},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":36.1,"coal_gw":2.5,"h2_gw":39.1,"annual_B":75.5,"cum_B":1078.2},{"year":2049,"target":98.9,"cfe":99.8,"gas_gw":25.8,"coal_gw":2.3,"h2_gw":0.0,"annual_B":74.8,"cum_B":1153.1},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":71.6,"cum_B":1224.7}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":62542.0,"gas_gw":62.5,"coal_mw":7803.0,"h2_mw":17345.0,"annual_cost_B":59.8,"cumulative_B":517.7,"mix":{"clean_firm":23.09,"solar":8.05,"wind":25.15,"hydro":1.26,"offshore_wind":30.19,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.09,"solar_batt8":0.04,"wind_batt4":0.08,"wind_batt8":0.07}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":68712.0,"gas_gw":68.7,"coal_mw":3537.0,"h2_mw":3967.0,"annual_cost_B":71.7,"cumulative_B":854.6,"mix":{"clean_firm":20.55,"solar":8.38,"wind":22.65,"hydro":1.12,"offshore_wind":45.69,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.08,"wind_batt4":0.08,"wind_batt8":0.08}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.8,"gas_mw":25849.0,"gas_gw":25.8,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":74.8,"cumulative_B":1153.1,"mix":{"clean_firm":18.75,"solar":7.92,"wind":23.25,"hydro":1.02,"offshore_wind":55.11,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.15,"solar_batt8":0.11,"wind_batt4":0.11,"wind_batt8":0.12}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1810.0,"h2_mw":0.0,"annual_cost_B":71.6,"cumulative_B":1224.7,"mix":{"clean_firm":18.32,"solar":7.73,"wind":26.17,"hydro":0.99,"offshore_wind":53.82,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.15,"solar_batt8":0.12,"wind_batt4":0.13,"wind_batt8":0.12}}}},"D|all_low|Medium|g1":{"costB":1238.4,"traj":[{"year":2026,"target":41.9,"cfe":42.6,"gas_gw":33.7,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.8,"cum_B":9.8},{"year":2027,"target":45.3,"cfe":46.0,"gas_gw":38.6,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.0,"cum_B":22.8},{"year":2028,"target":48.8,"cfe":49.5,"gas_gw":42.5,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.1,"cum_B":38.9},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":49.0,"coal_gw":36.0,"h2_gw":0.0,"annual_B":19.5,"cum_B":58.5},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":54.3,"coal_gw":32.0,"h2_gw":0.0,"annual_B":23.5,"cum_B":82.0},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":59.4,"coal_gw":28.5,"h2_gw":0.0,"annual_B":27.7,"cum_B":109.7},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":60.9,"coal_gw":25.0,"h2_gw":0.0,"annual_B":31.1,"cum_B":140.8},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":60.9,"coal_gw":23.3,"h2_gw":0.0,"annual_B":34.2,"cum_B":175.0},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":64.4,"coal_gw":21.7,"h2_gw":0.0,"annual_B":37.9,"cum_B":212.9},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":68.7,"coal_gw":20.0,"h2_gw":0.0,"annual_B":41.8,"cum_B":254.7},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":69.3,"coal_gw":20.0,"h2_gw":2.2,"annual_B":45.5,"cum_B":300.3},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":69.2,"coal_gw":19.5,"h2_gw":5.5,"annual_B":49.4,"cum_B":349.7},{"year":2038,"target":83.1,"cfe":83.1,"gas_gw":66.8,"coal_gw":14.8,"h2_gw":14.6,"annual_B":53.6,"cum_B":403.2},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":70.7,"coal_gw":10.9,"h2_gw":8.8,"annual_B":57.0,"cum_B":460.2},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":62.8,"coal_gw":7.8,"h2_gw":21.3,"annual_B":60.6,"cum_B":520.8},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":63.6,"coal_gw":5.5,"h2_gw":26.0,"annual_B":63.5,"cum_B":584.3},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":62.6,"coal_gw":4.9,"h2_gw":31.0,"annual_B":66.1,"cum_B":650.4},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":60.9,"coal_gw":4.4,"h2_gw":36.6,"annual_B":68.7,"cum_B":719.1},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":58.6,"coal_gw":3.9,"h2_gw":42.9,"annual_B":71.3,"cum_B":790.4},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":72.8,"coal_gw":3.5,"h2_gw":4.6,"annual_B":73.0,"cum_B":863.4},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":64.7,"coal_gw":3.2,"h2_gw":14.0,"annual_B":74.7,"cum_B":938.1},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":54.6,"coal_gw":2.8,"h2_gw":25.2,"annual_B":76.1,"cum_B":1014.1},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":41.0,"coal_gw":2.5,"h2_gw":39.3,"annual_B":76.9,"cum_B":1091.1},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":28.4,"coal_gw":2.3,"h2_gw":0.0,"annual_B":75.8,"cum_B":1166.9},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":71.5,"cum_B":1238.4}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":62754.0,"gas_gw":62.8,"coal_mw":7803.0,"h2_mw":21349.0,"annual_cost_B":60.6,"cumulative_B":520.8,"mix":{"clean_firm":23.15,"solar":8.27,"wind":27.82,"hydro":1.26,"offshore_wind":24.75,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.36,"solar_batt8":0.56,"wind_batt4":0.35,"wind_batt8":0.08}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":72798.0,"gas_gw":72.8,"coal_mw":3537.0,"h2_mw":4636.0,"annual_cost_B":73.0,"cumulative_B":863.4,"mix":{"clean_firm":20.58,"solar":7.53,"wind":27.97,"hydro":1.12,"offshore_wind":40.57,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.33,"solar_batt8":0.51,"wind_batt4":0.35,"wind_batt8":0.13}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":28427.0,"gas_gw":28.4,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":75.8,"cumulative_B":1166.9,"mix":{"clean_firm":18.94,"solar":7.67,"wind":26.49,"hydro":1.02,"offshore_wind":51.09,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.45,"solar_batt8":0.57,"wind_batt4":0.41,"wind_batt8":0.2}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1800.0,"h2_mw":0.0,"annual_cost_B":71.5,"cumulative_B":1238.4,"mix":{"clean_firm":18.5,"solar":7.51,"wind":28.54,"hydro":0.99,"offshore_wind":50.01,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.44,"solar_batt8":0.58,"wind_batt4":0.43,"wind_batt8":0.21}}}},"D|all_low|Medium|g2":{"costB":1225.3,"traj":[{"year":2026,"target":41.9,"cfe":42.6,"gas_gw":33.7,"coal_gw":44.7,"h2_gw":0.0,"annual_B":9.8,"cum_B":9.8},{"year":2027,"target":45.3,"cfe":46.0,"gas_gw":38.6,"coal_gw":42.3,"h2_gw":0.0,"annual_B":13.0,"cum_B":22.9},{"year":2028,"target":48.8,"cfe":48.8,"gas_gw":43.2,"coal_gw":40.0,"h2_gw":0.0,"annual_B":16.0,"cum_B":38.8},{"year":2029,"target":52.2,"cfe":52.2,"gas_gw":49.0,"coal_gw":36.0,"h2_gw":0.0,"annual_B":19.6,"cum_B":58.4},{"year":2030,"target":55.6,"cfe":55.6,"gas_gw":56.0,"coal_gw":32.0,"h2_gw":0.0,"annual_B":23.6,"cum_B":82.0},{"year":2031,"target":59.1,"cfe":59.1,"gas_gw":62.8,"coal_gw":28.5,"h2_gw":0.0,"annual_B":27.6,"cum_B":109.6},{"year":2032,"target":62.5,"cfe":62.5,"gas_gw":65.8,"coal_gw":25.0,"h2_gw":0.0,"annual_B":31.3,"cum_B":140.9},{"year":2033,"target":66.0,"cfe":66.0,"gas_gw":65.6,"coal_gw":23.3,"h2_gw":0.0,"annual_B":34.4,"cum_B":175.2},{"year":2034,"target":69.4,"cfe":69.4,"gas_gw":65.5,"coal_gw":21.7,"h2_gw":0.0,"annual_B":37.3,"cum_B":212.5},{"year":2035,"target":72.8,"cfe":72.8,"gas_gw":68.5,"coal_gw":20.0,"h2_gw":0.0,"annual_B":41.0,"cum_B":253.5},{"year":2036,"target":76.3,"cfe":76.3,"gas_gw":71.2,"coal_gw":20.0,"h2_gw":0.0,"annual_B":44.7,"cum_B":298.2},{"year":2037,"target":79.7,"cfe":79.7,"gas_gw":69.0,"coal_gw":19.5,"h2_gw":5.5,"annual_B":48.6,"cum_B":346.8},{"year":2038,"target":83.1,"cfe":83.8,"gas_gw":73.6,"coal_gw":14.8,"h2_gw":0.0,"annual_B":52.5,"cum_B":399.3},{"year":2039,"target":86.6,"cfe":86.6,"gas_gw":71.0,"coal_gw":10.3,"h2_gw":8.7,"annual_B":56.3,"cum_B":455.6},{"year":2040,"target":90.0,"cfe":90.0,"gas_gw":62.5,"coal_gw":7.8,"h2_gw":21.2,"annual_B":59.8,"cum_B":515.4},{"year":2041,"target":91.0,"cfe":91.0,"gas_gw":63.3,"coal_gw":5.5,"h2_gw":26.0,"annual_B":62.7,"cum_B":578.1},{"year":2042,"target":92.0,"cfe":92.0,"gas_gw":62.2,"coal_gw":4.9,"h2_gw":31.1,"annual_B":65.3,"cum_B":643.4},{"year":2043,"target":93.0,"cfe":93.0,"gas_gw":60.6,"coal_gw":4.4,"h2_gw":36.6,"annual_B":67.9,"cum_B":711.3},{"year":2044,"target":94.0,"cfe":94.0,"gas_gw":60.6,"coal_gw":3.9,"h2_gw":37.1,"annual_B":70.1,"cum_B":781.4},{"year":2045,"target":95.0,"cfe":95.0,"gas_gw":54.4,"coal_gw":3.5,"h2_gw":47.1,"annual_B":72.4,"cum_B":853.8},{"year":2046,"target":95.9,"cfe":95.9,"gas_gw":49.8,"coal_gw":3.2,"h2_gw":54.6,"annual_B":74.8,"cum_B":928.6},{"year":2047,"target":96.9,"cfe":96.9,"gas_gw":53.6,"coal_gw":2.8,"h2_gw":25.1,"annual_B":75.0,"cum_B":1003.7},{"year":2048,"target":97.9,"cfe":97.9,"gas_gw":39.9,"coal_gw":2.5,"h2_gw":39.3,"annual_B":75.9,"cum_B":1079.6},{"year":2049,"target":98.9,"cfe":99.9,"gas_gw":28.2,"coal_gw":2.3,"h2_gw":0.0,"annual_B":75.0,"cum_B":1154.6},{"year":2050,"target":99.9,"cfe":100.0,"gas_gw":0.0,"coal_gw":1.8,"h2_gw":0.0,"annual_B":70.7,"cum_B":1225.3}],"snap":{"90":{"year":2040,"target":90.0,"achieved_cfe":90.0,"gas_mw":62524.0,"gas_gw":62.5,"coal_mw":7803.0,"h2_mw":21169.0,"annual_cost_B":59.8,"cumulative_B":515.4,"mix":{"clean_firm":23.08,"solar":8.54,"wind":27.13,"hydro":1.26,"offshore_wind":26.17,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.06,"solar_batt8":0.07,"wind_batt4":0.19,"wind_batt8":0.15}},"95":{"year":2045,"target":95.0,"achieved_cfe":95.0,"gas_mw":54407.0,"gas_gw":54.4,"coal_mw":3537.0,"h2_mw":47079.0,"annual_cost_B":72.4,"cumulative_B":853.8,"mix":{"clean_firm":20.53,"solar":7.77,"wind":26.89,"hydro":1.12,"offshore_wind":30.43,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.06,"solar_batt8":0.06,"wind_batt4":0.19,"wind_batt8":0.14}},"99":{"year":2049,"target":98.9,"achieved_cfe":99.9,"gas_mw":28199.0,"gas_gw":28.2,"coal_mw":2260.0,"h2_mw":0.0,"annual_cost_B":75.0,"cumulative_B":1154.6,"mix":{"clean_firm":18.82,"solar":8.18,"wind":26.7,"hydro":1.02,"offshore_wind":51.19,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.3,"solar_batt8":0.19,"wind_batt4":0.26,"wind_batt8":0.26}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"gas_mw":0.0,"gas_gw":0.0,"coal_mw":1799.0,"h2_mw":0.0,"annual_cost_B":70.7,"cumulative_B":1225.3,"mix":{"clean_firm":18.4,"solar":8.01,"wind":28.74,"hydro":0.99,"offshore_wind":50.04,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.29,"solar_batt8":0.19,"wind_batt4":0.27,"wind_batt8":0.27}}}}},"myopic":{"A|all_high|Medium|g2":{"costB":129.2,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":112.5,"gas_mw":98672.0,"gas_gw":98.7,"h2_mw":20121.0,"h2_gw":20.1,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":15.76,"wind":50.73,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":126.4,"gas_mw":94823.0,"gas_gw":94.8,"h2_mw":38146.0,"h2_gw":38.1,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":12.54,"wind":54.74,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.9,"total_cost_B":132.6,"gas_mw":91348.0,"gas_gw":91.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":15.03,"wind":65.74,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.63,"solar_batt8":0.14,"wind_batt4":2.55,"wind_batt8":0.35},"storage":{"battery_pct":17.59,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":121.9,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":22.49,"wind":67.95,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.19,"wind_batt4":0.44,"wind_batt8":0.65},"storage":{"battery_pct":18.18,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":126.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":20.92,"wind":68.43,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.1,"solar_batt8":1.08,"wind_batt4":0.86,"wind_batt8":0.84},"storage":{"battery_pct":22.3,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":129.2,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":21.99,"wind":69.03,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.6,"solar_batt8":0.21,"wind_batt4":0.14,"wind_batt8":0.61},"storage":{"battery_pct":28.72,"battery8_pct":0.0,"ldes_pct":0.0}}}},"A|all_high|Medium|g3":{"costB":138.1,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":114.6,"gas_mw":123361.0,"gas_gw":123.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":36.57,"wind":37.08,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":125.2,"gas_mw":123308.0,"gas_gw":123.3,"h2_mw":2.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":31.5,"wind":45.74,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":133.7,"gas_mw":118983.0,"gas_gw":119.0,"h2_mw":21.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":34.67,"wind":46.79,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":153.0,"gas_mw":136584.0,"gas_gw":136.6,"h2_mw":576.0,"h2_gw":0.6,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":41.77,"wind":44.74,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":147.9,"gas_mw":77157.0,"gas_gw":77.2,"h2_mw":54219.0,"h2_gw":54.2,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":42.1,"wind":45.06,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":138.1,"gas_mw":497.0,"gas_gw":0.5,"h2_mw":122016.0,"h2_gw":122.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":42.33,"wind":45.29,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}}}},"A|all_low|Medium|g2":{"costB":68.4,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":63.4,"gas_mw":70582.0,"gas_gw":70.6,"h2_mw":47427.0,"h2_gw":47.4,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":5.96,"wind":47.11,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":25.12,"battery8_pct":39.1,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":71.4,"gas_mw":69990.0,"gas_gw":70.0,"h2_mw":63377.0,"h2_gw":63.4,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":6.01,"wind":47.52,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":25.12,"battery8_pct":39.1,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":76.5,"gas_mw":65481.0,"gas_gw":65.5,"h2_mw":77709.0,"h2_gw":77.7,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":6.11,"wind":51.27,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.21,"wind_batt8":0.0},"storage":{"battery_pct":23.62,"battery8_pct":37.07,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":64.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":21.28,"wind":69.91,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.34,"solar_batt8":0.01,"wind_batt4":0.1,"wind_batt8":0.12},"storage":{"battery_pct":6.08,"battery8_pct":28.12,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":66.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":22.42,"wind":69.63,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.08,"wind_batt4":0.04,"wind_batt8":0.11},"storage":{"battery_pct":28.94,"battery8_pct":47.37,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":68.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":21.95,"wind":69.58,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.07,"solar_batt8":0.8,"wind_batt4":0.08,"wind_batt8":0.09},"storage":{"battery_pct":29.06,"battery8_pct":49.27,"ldes_pct":0.0}}}},"A|all_low|Medium|g3":{"costB":88.3,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":69.1,"gas_mw":122124.0,"gas_gw":122.1,"h2_mw":210.0,"h2_gw":0.2,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":20.84,"wind":51.08,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":24.62,"battery8_pct":46.57,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":79.6,"gas_mw":139883.0,"gas_gw":139.9,"h2_mw":383.0,"h2_gw":0.4,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":27.7,"wind":49.2,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":24.62,"battery8_pct":46.57,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":80.7,"gas_mw":120988.0,"gas_gw":121.0,"h2_mw":420.0,"h2_gw":0.4,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":34.6,"wind":46.82,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":24.62,"battery8_pct":46.57,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":91.5,"gas_mw":129569.0,"gas_gw":129.6,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":31.09,"wind":50.96,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":3.43,"wind_batt4":0.76,"wind_batt8":0.08},"storage":{"battery_pct":30.06,"battery8_pct":25.95,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.1,"total_cost_B":97.1,"gas_mw":137048.0,"gas_gw":137.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":30.53,"wind":55.27,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.97,"solar_batt8":0.47,"wind_batt4":1.86,"wind_batt8":0.61},"storage":{"battery_pct":26.49,"battery8_pct":35.88,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":88.3,"gas_mw":86678.0,"gas_gw":86.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":24.09,"wind":66.72,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.38,"solar_batt8":0.37,"wind_batt4":0.26,"wind_batt8":0.41},"storage":{"battery_pct":43.68,"battery8_pct":26.24,"ldes_pct":0.02}}}},"A|base|High|g2":{"costB":133.5,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":111.0,"gas_mw":121439.0,"gas_gw":121.4,"h2_mw":39274.0,"h2_gw":39.3,"dem_twh":1433.5,"mix":{"clean_firm":18.89,"solar":31.4,"wind":36.59,"hydro":1.06,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":44.8,"battery8_pct":30.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":128.2,"gas_mw":121077.0,"gas_gw":121.1,"h2_mw":66431.0,"h2_gw":66.4,"dem_twh":1594.0,"mix":{"clean_firm":16.98,"solar":31.45,"wind":36.63,"hydro":0.95,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":44.8,"battery8_pct":30.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":138.9,"gas_mw":130352.0,"gas_gw":130.4,"h2_mw":45633.0,"h2_gw":45.6,"dem_twh":1710.8,"mix":{"clean_firm":15.82,"solar":47.83,"wind":33.35,"hydro":0.89,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.06,"solar_batt8":2.07,"wind_batt4":0.0,"wind_batt8":0.46},"storage":{"battery_pct":33.79,"battery8_pct":26.8,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":123.3,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1902.3,"mix":{"clean_firm":14.23,"solar":22.03,"wind":72.43,"hydro":0.8,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":1.28,"solar_batt8":0.45,"wind_batt4":0.26,"wind_batt8":0.06},"storage":{"battery_pct":25.98,"battery8_pct":30.89,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":128.2,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1970.8,"mix":{"clean_firm":13.74,"solar":23.52,"wind":72.23,"hydro":0.77,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.15,"solar_batt8":0.06,"wind_batt4":0.8,"wind_batt8":0.39},"storage":{"battery_pct":14.77,"battery8_pct":29.37,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":133.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":2041.7,"mix":{"clean_firm":13.26,"solar":24.06,"wind":73.06,"hydro":0.74,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.01,"wind_batt4":0.6,"wind_batt8":0.03},"storage":{"battery_pct":16.43,"battery8_pct":32.36,"ldes_pct":0.0}}}},"A|base|High|g3":{"costB":158.2,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":113.5,"gas_mw":166314.0,"gas_gw":166.3,"h2_mw":331.0,"h2_gw":0.3,"dem_twh":1433.5,"mix":{"clean_firm":18.89,"solar":28.3,"wind":47.88,"hydro":1.06,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":44.8,"battery8_pct":30.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":134.9,"gas_mw":192538.0,"gas_gw":192.5,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1594.0,"mix":{"clean_firm":16.98,"solar":24.61,"wind":55.1,"hydro":0.95,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":1.35,"solar_batt8":0.27,"wind_batt4":0.0,"wind_batt8":0.07},"storage":{"battery_pct":10.3,"battery8_pct":21.88,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":141.7,"gas_mw":176522.0,"gas_gw":176.5,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1710.8,"mix":{"clean_firm":15.82,"solar":37.33,"wind":48.49,"hydro":0.89,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.03,"wind_batt8":0.2},"storage":{"battery_pct":23.33,"battery8_pct":38.3,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":168.1,"gas_mw":209140.0,"gas_gw":209.1,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1902.3,"mix":{"clean_firm":14.23,"solar":42.7,"wind":47.87,"hydro":0.8,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.26,"solar_batt8":0.22,"wind_batt4":0.0,"wind_batt8":0.28},"storage":{"battery_pct":15.7,"battery8_pct":7.87,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":178.9,"gas_mw":213819.0,"gas_gw":213.8,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1970.8,"mix":{"clean_firm":13.74,"solar":34.86,"wind":57.94,"hydro":0.77,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.57,"solar_batt8":0.31,"wind_batt4":0.15,"wind_batt8":0.77},"storage":{"battery_pct":1.65,"battery8_pct":27.32,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":158.2,"gas_mw":97664.0,"gas_gw":97.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":2041.7,"mix":{"clean_firm":13.26,"solar":25.13,"wind":70.99,"hydro":0.74,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.47,"solar_batt8":0.1,"wind_batt4":0.46,"wind_batt8":0.32},"storage":{"battery_pct":46.19,"battery8_pct":24.16,"ldes_pct":0.0}}}},"A|base|Low|g2":{"costB":71.4,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":68.3,"gas_mw":63976.0,"gas_gw":64.0,"h2_mw":25662.0,"h2_gw":25.7,"dem_twh":1054.4,"mix":{"clean_firm":25.68,"solar":12.02,"wind":47.1,"hydro":1.44,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":28.91,"battery8_pct":36.9,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":73.8,"gas_mw":59563.0,"gas_gw":59.6,"h2_mw":37997.0,"h2_gw":38.0,"dem_twh":1102.5,"mix":{"clean_firm":24.55,"solar":12.44,"wind":47.45,"hydro":1.38,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":28.91,"battery8_pct":36.9,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":96.2,"total_cost_B":75.6,"gas_mw":59253.0,"gas_gw":59.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1135.8,"mix":{"clean_firm":23.83,"solar":16.47,"wind":61.92,"hydro":1.34,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.12,"solar_batt8":0.43,"wind_batt4":1.2,"wind_batt8":0.2},"storage":{"battery_pct":9.53,"battery8_pct":39.87,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":99.9,"total_cost_B":68.7,"gas_mw":2.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1187.7,"mix":{"clean_firm":22.79,"solar":19.57,"wind":66.0,"hydro":1.28,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.14,"solar_batt8":0.37,"wind_batt4":0.06,"wind_batt8":0.88},"storage":{"battery_pct":32.69,"battery8_pct":12.93,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":70.3,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1205.5,"mix":{"clean_firm":22.45,"solar":17.75,"wind":69.73,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.07,"solar_batt8":0.17,"wind_batt4":0.01,"wind_batt8":0.24},"storage":{"battery_pct":34.07,"battery8_pct":16.46,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":71.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1223.6,"mix":{"clean_firm":22.12,"solar":21.54,"wind":64.78,"hydro":1.24,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.13,"wind_batt4":0.31,"wind_batt8":0.89},"storage":{"battery_pct":37.25,"battery8_pct":24.46,"ldes_pct":0.0}}}},"A|base|Low|g3":{"costB":82.3,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":71.8,"gas_mw":94841.0,"gas_gw":94.8,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1054.4,"mix":{"clean_firm":25.68,"solar":36.53,"wind":33.88,"hydro":1.44,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":24.62,"battery8_pct":46.57,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":78.7,"gas_mw":104152.0,"gas_gw":104.2,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1102.5,"mix":{"clean_firm":24.55,"solar":25.74,"wind":47.27,"hydro":1.38,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":25.56,"battery8_pct":33.69,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":80.1,"gas_mw":89918.0,"gas_gw":89.9,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1135.8,"mix":{"clean_firm":23.83,"solar":30.18,"wind":47.16,"hydro":1.34,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":16.84,"battery8_pct":35.55,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":87.8,"gas_mw":92374.0,"gas_gw":92.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1187.7,"mix":{"clean_firm":22.79,"solar":33.92,"wind":45.86,"hydro":1.28,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.91,"solar_batt8":0.6,"wind_batt4":0.17,"wind_batt8":0.4},"storage":{"battery_pct":6.51,"battery8_pct":15.52,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.1,"total_cost_B":91.9,"gas_mw":93058.0,"gas_gw":93.1,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1205.5,"mix":{"clean_firm":22.45,"solar":31.57,"wind":51.51,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.22,"solar_batt8":0.41,"wind_batt4":0.41,"wind_batt8":1.13},"storage":{"battery_pct":37.2,"battery8_pct":12.68,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":82.3,"gas_mw":39702.0,"gas_gw":39.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1223.6,"mix":{"clean_firm":22.12,"solar":22.02,"wind":63.01,"hydro":1.24,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.82,"solar_batt8":0.48,"wind_batt4":1.2,"wind_batt8":0.51},"storage":{"battery_pct":49.02,"battery8_pct":13.52,"ldes_pct":0.0}}}},"A|base|Medium|g2":{"costB":93.7,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":84.4,"gas_mw":85312.0,"gas_gw":85.3,"h2_mw":31652.0,"h2_gw":31.7,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":11.86,"wind":50.18,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":0.04,"battery8_pct":20.91,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":94.5,"gas_mw":87893.0,"gas_gw":87.9,"h2_mw":30885.0,"h2_gw":30.9,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":50.94,"wind":24.72,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":0.07,"battery8_pct":32.28,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":100.5,"gas_mw":86902.0,"gas_gw":86.9,"h2_mw":31590.0,"h2_gw":31.6,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":44.15,"wind":33.13,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.05,"solar_batt8":2.11,"wind_batt4":0.01,"wind_batt8":0.01},"storage":{"battery_pct":0.04,"battery8_pct":38.52,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":88.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":22.81,"wind":68.81,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.01},"storage":{"battery_pct":37.4,"battery8_pct":11.36,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":91.0,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":22.99,"wind":69.12,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.0,"wind_batt4":0.01,"wind_batt8":0.0},"storage":{"battery_pct":0.77,"battery8_pct":14.78,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":93.7,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":23.14,"wind":69.45,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.01,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":42.42,"battery8_pct":38.54,"ldes_pct":0.0}}}},"A|base|Medium|g3":{"costB":114.1,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":87.6,"gas_mw":122480.0,"gas_gw":122.5,"h2_mw":257.0,"h2_gw":0.3,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":26.36,"wind":45.88,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":28.91,"battery8_pct":36.9,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":99.5,"gas_mw":136395.0,"gas_gw":136.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":27.55,"wind":49.42,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":16.26,"battery8_pct":20.01,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":102.4,"gas_mw":119026.0,"gas_gw":119.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":34.72,"wind":46.75,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":30.98,"battery8_pct":8.8,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":118.1,"gas_mw":137629.0,"gas_gw":137.6,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":41.5,"wind":43.81,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":0.95,"wind_batt4":0.06,"wind_batt8":0.15},"storage":{"battery_pct":24.33,"battery8_pct":12.84,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":123.3,"gas_mw":138082.0,"gas_gw":138.1,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":34.03,"wind":55.66,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":40.95,"battery8_pct":34.01,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":114.1,"gas_mw":78792.0,"gas_gw":78.8,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":23.87,"wind":66.82,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.13,"solar_batt8":0.47,"wind_batt4":0.16,"wind_batt8":0.82},"storage":{"battery_pct":43.4,"battery8_pct":9.8,"ldes_pct":0.0}}}},"A|firm_high_vre_low|Medium|g2":{"costB":68.5,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":65.3,"gas_mw":75069.0,"gas_gw":75.1,"h2_mw":43494.0,"h2_gw":43.5,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":5.96,"wind":50.12,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":18.44,"battery8_pct":44.98,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":73.1,"gas_mw":72888.0,"gas_gw":72.9,"h2_mw":60766.0,"h2_gw":60.8,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":6.01,"wind":50.11,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":18.44,"battery8_pct":44.98,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":78.0,"gas_mw":63883.0,"gas_gw":63.9,"h2_mw":79155.0,"h2_gw":79.2,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":6.04,"wind":50.09,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":18.44,"battery8_pct":44.98,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":64.7,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":21.86,"wind":68.16,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.52,"solar_batt8":0.37,"wind_batt4":0.47,"wind_batt8":0.21},"storage":{"battery_pct":12.62,"battery8_pct":28.74,"ldes_pct":0.01}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":66.6,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":22.19,"wind":68.47,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.37,"solar_batt8":0.34,"wind_batt4":0.61,"wind_batt8":0.1},"storage":{"battery_pct":12.93,"battery8_pct":37.63,"ldes_pct":0.01}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":68.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":22.37,"wind":68.7,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.25,"solar_batt8":0.49,"wind_batt4":0.72,"wind_batt8":0.03},"storage":{"battery_pct":43.22,"battery8_pct":37.4,"ldes_pct":0.0}}}},"A|firm_high_vre_low|Medium|g3":{"costB":92.7,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":72.3,"gas_mw":122687.0,"gas_gw":122.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":25.06,"wind":47.14,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":33.94,"battery8_pct":23.77,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":82.1,"gas_mw":136415.0,"gas_gw":136.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":27.56,"wind":48.93,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.07,"solar_batt8":0.18,"wind_batt4":0.09,"wind_batt8":0.09},"storage":{"battery_pct":40.46,"battery8_pct":27.25,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":83.8,"gas_mw":120887.0,"gas_gw":120.9,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":32.2,"wind":48.27,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.12,"solar_batt8":0.48,"wind_batt4":0.04,"wind_batt8":0.36},"storage":{"battery_pct":6.1,"battery8_pct":18.36,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":95.8,"gas_mw":137022.0,"gas_gw":137.0,"h2_mw":562.0,"h2_gw":0.6,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":42.18,"wind":43.07,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.28,"solar_batt8":0.28,"wind_batt4":0.52,"wind_batt8":0.27},"storage":{"battery_pct":10.29,"battery8_pct":10.41,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.1,"total_cost_B":99.7,"gas_mw":136717.0,"gas_gw":136.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":30.84,"wind":57.81,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.18,"solar_batt8":0.44,"wind_batt4":0.13,"wind_batt8":0.49},"storage":{"battery_pct":33.39,"battery8_pct":1.26,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":92.7,"gas_mw":95718.0,"gas_gw":95.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":24.98,"wind":66.28,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.3,"solar_batt8":0.39,"wind_batt4":0.17,"wind_batt8":0.24},"storage":{"battery_pct":10.33,"battery8_pct":46.67,"ldes_pct":0.0}}}},"A|firm_low_vre_high|Medium|g2":{"costB":129.0,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":107.8,"gas_mw":113284.0,"gas_gw":113.3,"h2_mw":7578.0,"h2_gw":7.6,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":17.8,"wind":52.37,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":122.1,"gas_mw":103894.0,"gas_gw":103.9,"h2_mw":30579.0,"h2_gw":30.6,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":17.77,"wind":52.09,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":96.2,"total_cost_B":126.7,"gas_mw":90061.0,"gas_gw":90.1,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":20.53,"wind":61.81,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.28,"solar_batt8":0.6,"wind_batt4":0.09,"wind_batt8":0.87},"storage":{"battery_pct":26.79,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":121.7,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":22.09,"wind":68.57,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.5,"solar_batt8":0.06,"wind_batt4":0.35,"wind_batt8":0.16},"storage":{"battery_pct":43.04,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":125.8,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":20.63,"wind":70.78,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.28,"wind_batt4":0.6,"wind_batt8":0.05},"storage":{"battery_pct":36.88,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":129.0,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":21.66,"wind":69.79,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.48,"solar_batt8":0.28,"wind_batt4":0.34,"wind_batt8":0.05},"storage":{"battery_pct":33.14,"battery8_pct":0.0,"ldes_pct":0.0}}}},"A|firm_low_vre_high|Medium|g3":{"costB":138.1,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":109.2,"gas_mw":123361.0,"gas_gw":123.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":22.49,"solar":36.57,"wind":37.08,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":119.9,"gas_mw":123308.0,"gas_gw":123.3,"h2_mw":2.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":20.95,"solar":31.5,"wind":45.74,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":128.5,"gas_mw":118983.0,"gas_gw":119.0,"h2_mw":21.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":19.98,"solar":34.67,"wind":46.79,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":147.1,"gas_mw":136584.0,"gas_gw":136.6,"h2_mw":576.0,"h2_gw":0.6,"dem_twh":1455.1,"mix":{"clean_firm":18.6,"solar":41.77,"wind":44.74,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":144.6,"gas_mw":77157.0,"gas_gw":77.2,"h2_mw":54219.0,"h2_gw":54.2,"dem_twh":1490.0,"mix":{"clean_firm":18.17,"solar":42.1,"wind":45.06,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":138.1,"gas_mw":497.0,"gas_gw":0.5,"h2_mw":122016.0,"h2_gw":122.0,"dem_twh":1525.8,"mix":{"clean_firm":17.74,"solar":42.33,"wind":45.29,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":22.65,"battery8_pct":0.0,"ldes_pct":0.0}}}},"B|all_high|Medium|g2":{"costB":103.0,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":97.2,"gas_mw":88372.0,"gas_gw":88.4,"h2_mw":17023.0,"h2_gw":17.0,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":12.34,"wind":44.94,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":12.32,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":93.0,"total_cost_B":93.2,"gas_mw":60639.0,"gas_gw":60.6,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":32.23,"solar":8.04,"wind":5.87,"hydro":1.18,"offshore_wind":42.74,"ccs_ccgt":3.18,"geothermal":0.0,"solar_batt4":0.15,"solar_batt8":2.31,"wind_batt4":0.73,"wind_batt8":0.31},"storage":{"battery_pct":26.99,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.7,"total_cost_B":97.4,"gas_mw":53489.0,"gas_gw":53.5,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":32.28,"solar":6.63,"wind":5.32,"hydro":1.12,"offshore_wind":46.57,"ccs_ccgt":7.13,"geothermal":0.0,"solar_batt4":0.03,"solar_batt8":0.23,"wind_batt4":0.07,"wind_batt8":0.0},"storage":{"battery_pct":18.68,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":99.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.4,"solar":4.46,"wind":24.67,"hydro":1.04,"offshore_wind":41.78,"ccs_ccgt":1.65,"geothermal":0.0,"solar_batt4":0.15,"solar_batt8":0.24,"wind_batt4":0.39,"wind_batt8":0.78},"storage":{"battery_pct":16.85,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":100.6,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.26,"solar":3.86,"wind":23.52,"hydro":1.02,"offshore_wind":46.26,"ccs_ccgt":0.1,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.07,"wind_batt4":0.12,"wind_batt8":0.02},"storage":{"battery_pct":17.3,"battery8_pct":0.0,"ldes_pct":0.01}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":103.0,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":32.26,"solar":3.86,"wind":23.52,"hydro":0.99,"offshore_wind":46.26,"ccs_ccgt":0.1,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.07,"wind_batt4":0.12,"wind_batt8":0.02},"storage":{"battery_pct":17.3,"battery8_pct":0.0,"ldes_pct":0.01}}}},"B|all_high|Medium|g3":{"costB":117.8,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":98.8,"gas_mw":109323.0,"gas_gw":109.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":31.62,"wind":32.07,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.76,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":109.6,"gas_mw":103734.0,"gas_gw":103.7,"h2_mw":16768.0,"h2_gw":16.8,"dem_twh":1292.4,"mix":{"clean_firm":32.1,"solar":31.62,"wind":32.07,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.76,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":114.7,"gas_mw":110418.0,"gas_gw":110.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":32.1,"solar":28.27,"wind":40.63,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.76,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":126.5,"gas_mw":113909.0,"gas_gw":113.9,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.1,"solar":34.69,"wind":37.82,"hydro":1.04,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.76,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":133.0,"gas_mw":113632.0,"gas_gw":113.6,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.1,"solar":28.56,"wind":46.59,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.76,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":117.8,"gas_mw":17261.0,"gas_gw":17.3,"h2_mw":82669.0,"h2_gw":82.7,"dem_twh":1525.8,"mix":{"clean_firm":32.1,"solar":28.46,"wind":46.73,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.76,"battery8_pct":0.0,"ldes_pct":0.0}}}},"B|all_low|Medium|g2":{"costB":56.5,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":55.3,"gas_mw":64432.0,"gas_gw":64.4,"h2_mw":31900.0,"h2_gw":31.9,"dem_twh":1203.6,"mix":{"clean_firm":38.21,"solar":5.96,"wind":37.49,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":34.53,"battery8_pct":42.9,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":54.4,"gas_mw":44440.0,"gas_gw":44.4,"h2_mw":18318.0,"h2_gw":18.3,"dem_twh":1292.4,"mix":{"clean_firm":33.59,"solar":9.92,"wind":4.78,"hydro":1.18,"offshore_wind":33.0,"ccs_ccgt":7.59,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.46,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":28.67,"battery8_pct":9.12,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":58.3,"gas_mw":37412.0,"gas_gw":37.4,"h2_mw":30453.0,"h2_gw":30.5,"dem_twh":1355.2,"mix":{"clean_firm":33.6,"solar":9.93,"wind":4.79,"hydro":1.12,"offshore_wind":33.0,"ccs_ccgt":7.59,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.46,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":28.67,"battery8_pct":9.12,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":54.6,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.65,"solar":6.02,"wind":29.32,"hydro":1.04,"offshore_wind":35.24,"ccs_ccgt":0.9,"geothermal":0.0,"solar_batt4":0.82,"solar_batt8":0.23,"wind_batt4":0.2,"wind_batt8":1.47},"storage":{"battery_pct":18.68,"battery8_pct":29.83,"ldes_pct":0.01}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":55.2,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.21,"solar":8.87,"wind":32.94,"hydro":1.02,"offshore_wind":31.74,"ccs_ccgt":0.68,"geothermal":0.0,"solar_batt4":0.38,"solar_batt8":0.01,"wind_batt4":0.27,"wind_batt8":0.05},"storage":{"battery_pct":16.85,"battery8_pct":31.82,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":56.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":32.21,"solar":8.87,"wind":32.94,"hydro":0.99,"offshore_wind":31.74,"ccs_ccgt":0.68,"geothermal":0.0,"solar_batt4":0.38,"solar_batt8":0.01,"wind_batt4":0.27,"wind_batt8":0.05},"storage":{"battery_pct":16.85,"battery8_pct":31.82,"ldes_pct":0.0}}}},"B|all_low|Medium|g3":{"costB":68.0,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":61.1,"gas_mw":109375.0,"gas_gw":109.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":32.6,"wind":31.24,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":34.53,"battery8_pct":42.9,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":66.0,"gas_mw":113356.0,"gas_gw":113.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":32.25,"solar":18.46,"wind":39.59,"hydro":1.18,"offshore_wind":5.26,"ccs_ccgt":0.89,"geothermal":0.0,"solar_batt4":0.07,"solar_batt8":0.13,"wind_batt4":0.07,"wind_batt8":0.35},"storage":{"battery_pct":1.86,"battery8_pct":46.94,"ldes_pct":0.01}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":64.0,"gas_mw":86333.0,"gas_gw":86.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":32.1,"solar":20.55,"wind":26.75,"hydro":1.12,"offshore_wind":19.01,"ccs_ccgt":0.17,"geothermal":0.0,"solar_batt4":0.11,"solar_batt8":0.41,"wind_batt4":0.07,"wind_batt8":0.33},"storage":{"battery_pct":22.73,"battery8_pct":11.36,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":74.1,"gas_mw":103865.0,"gas_gw":103.9,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.44,"solar":30.18,"wind":32.92,"hydro":1.04,"offshore_wind":6.78,"ccs_ccgt":0.51,"geothermal":0.0,"solar_batt4":0.57,"solar_batt8":0.14,"wind_batt4":0.3,"wind_batt8":0.0},"storage":{"battery_pct":20.88,"battery8_pct":31.76,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":70.2,"gas_mw":72748.0,"gas_gw":72.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.11,"solar":17.45,"wind":30.26,"hydro":1.02,"offshore_wind":23.02,"ccs_ccgt":1.08,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":0.92,"wind_batt4":0.1,"wind_batt8":0.22},"storage":{"battery_pct":17.92,"battery8_pct":21.88,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":68.0,"gas_mw":49298.0,"gas_gw":49.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":32.54,"solar":16.86,"wind":46.81,"hydro":0.99,"offshore_wind":9.88,"ccs_ccgt":0.15,"geothermal":0.0,"solar_batt4":0.49,"solar_batt8":0.21,"wind_batt4":0.87,"wind_batt8":0.59},"storage":{"battery_pct":2.07,"battery8_pct":25.13,"ldes_pct":0.01}}}},"B|base|High|g2":{"costB":101.4,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":91.4,"gas_mw":118703.0,"gas_gw":118.7,"h2_mw":20844.0,"h2_gw":20.8,"dem_twh":1433.5,"mix":{"clean_firm":32.1,"solar":11.63,"wind":45.74,"hydro":1.06,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":33.88,"battery8_pct":49.52,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":90.0,"gas_mw":79495.0,"gas_gw":79.5,"h2_mw":12640.0,"h2_gw":12.6,"dem_twh":1594.0,"mix":{"clean_firm":32.1,"solar":10.71,"wind":4.52,"hydro":0.95,"offshore_wind":36.86,"ccs_ccgt":7.39,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":1.2,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":45.35,"battery8_pct":45.2,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":99.5,"gas_mw":74464.0,"gas_gw":74.5,"h2_mw":26986.0,"h2_gw":27.0,"dem_twh":1710.8,"mix":{"clean_firm":32.1,"solar":10.96,"wind":4.59,"hydro":0.89,"offshore_wind":37.46,"ccs_ccgt":7.31,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":1.17,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":45.35,"battery8_pct":45.2,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":97.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1902.3,"mix":{"clean_firm":32.82,"solar":9.32,"wind":36.31,"hydro":0.8,"offshore_wind":24.52,"ccs_ccgt":1.42,"geothermal":0.0,"solar_batt4":0.82,"solar_batt8":1.04,"wind_batt4":1.16,"wind_batt8":0.47},"storage":{"battery_pct":42.74,"battery8_pct":15.4,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":98.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1970.8,"mix":{"clean_firm":32.6,"solar":4.13,"wind":21.51,"hydro":0.77,"offshore_wind":45.96,"ccs_ccgt":1.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.16,"wind_batt4":0.82,"wind_batt8":0.51},"storage":{"battery_pct":36.61,"battery8_pct":31.02,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":101.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":2041.7,"mix":{"clean_firm":32.26,"solar":3.87,"wind":22.12,"hydro":0.74,"offshore_wind":46.52,"ccs_ccgt":0.59,"geothermal":0.0,"solar_batt4":0.07,"solar_batt8":0.2,"wind_batt4":0.33,"wind_batt8":0.62},"storage":{"battery_pct":29.62,"battery8_pct":34.42,"ldes_pct":0.01}}}},"B|base|High|g3":{"costB":109.6,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":93.8,"gas_mw":143696.0,"gas_gw":143.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1433.5,"mix":{"clean_firm":32.1,"solar":21.58,"wind":41.04,"hydro":1.06,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":33.88,"battery8_pct":49.52,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":110.1,"gas_mw":168615.0,"gas_gw":168.6,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1594.0,"mix":{"clean_firm":32.1,"solar":22.98,"wind":42.79,"hydro":0.95,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":33.88,"battery8_pct":49.52,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":118.0,"gas_mw":163060.0,"gas_gw":163.1,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1710.8,"mix":{"clean_firm":32.1,"solar":25.28,"wind":44.1,"hydro":0.89,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":33.88,"battery8_pct":49.52,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":126.9,"gas_mw":148772.0,"gas_gw":148.8,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1902.3,"mix":{"clean_firm":32.1,"solar":29.5,"wind":30.82,"hydro":0.8,"offshore_wind":9.31,"ccs_ccgt":1.65,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":0.12,"wind_batt4":0.21,"wind_batt8":0.15},"storage":{"battery_pct":19.65,"battery8_pct":37.1,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":120.9,"gas_mw":109692.0,"gas_gw":109.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1970.8,"mix":{"clean_firm":32.18,"solar":11.01,"wind":8.59,"hydro":0.77,"offshore_wind":51.42,"ccs_ccgt":0.11,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.31,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":18.68,"battery8_pct":42.33,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":109.6,"gas_mw":15045.0,"gas_gw":15.0,"h2_mw":82602.0,"h2_gw":82.6,"dem_twh":2041.7,"mix":{"clean_firm":32.18,"solar":11.11,"wind":8.69,"hydro":0.74,"offshore_wind":51.5,"ccs_ccgt":0.12,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.31,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":18.68,"battery8_pct":42.33,"ldes_pct":0.0}}}},"B|base|Low|g2":{"costB":60.4,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":61.7,"gas_mw":61335.0,"gas_gw":61.3,"h2_mw":20936.0,"h2_gw":20.9,"dem_twh":1054.4,"mix":{"clean_firm":32.1,"solar":11.27,"wind":43.05,"hydro":1.44,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":34.3,"battery8_pct":23.96,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":66.0,"gas_mw":56428.0,"gas_gw":56.4,"h2_mw":32086.0,"h2_gw":32.1,"dem_twh":1102.5,"mix":{"clean_firm":32.1,"solar":11.29,"wind":42.95,"hydro":1.38,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":34.3,"battery8_pct":23.96,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":61.0,"gas_mw":40054.0,"gas_gw":40.1,"h2_mw":213.0,"h2_gw":0.2,"dem_twh":1135.8,"mix":{"clean_firm":33.23,"solar":3.79,"wind":7.26,"hydro":1.34,"offshore_wind":41.73,"ccs_ccgt":6.74,"geothermal":0.0,"solar_batt4":0.54,"solar_batt8":1.85,"wind_batt4":1.71,"wind_batt8":0.24},"storage":{"battery_pct":8.19,"battery8_pct":19.3,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":58.6,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1187.7,"mix":{"clean_firm":32.23,"solar":3.04,"wind":20.59,"hydro":1.28,"offshore_wind":46.94,"ccs_ccgt":2.03,"geothermal":0.0,"solar_batt4":0.02,"solar_batt8":0.33,"wind_batt4":0.39,"wind_batt8":0.34},"storage":{"battery_pct":1.61,"battery8_pct":34.44,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":59.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1205.5,"mix":{"clean_firm":32.23,"solar":3.04,"wind":20.59,"hydro":1.26,"offshore_wind":46.94,"ccs_ccgt":2.03,"geothermal":0.0,"solar_batt4":0.02,"solar_batt8":0.33,"wind_batt4":0.39,"wind_batt8":0.34},"storage":{"battery_pct":1.61,"battery8_pct":34.44,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":60.4,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1223.6,"mix":{"clean_firm":32.23,"solar":3.04,"wind":20.59,"hydro":1.24,"offshore_wind":46.94,"ccs_ccgt":2.03,"geothermal":0.0,"solar_batt4":0.02,"solar_batt8":0.33,"wind_batt4":0.39,"wind_batt8":0.34},"storage":{"battery_pct":1.61,"battery8_pct":34.44,"ldes_pct":0.0}}}},"B|base|Low|g3":{"costB":62.7,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":63.5,"gas_mw":85656.0,"gas_gw":85.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1054.4,"mix":{"clean_firm":32.1,"solar":15.88,"wind":46.05,"hydro":1.44,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":26.59,"battery8_pct":43.23,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":70.2,"gas_mw":93756.0,"gas_gw":93.8,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1102.5,"mix":{"clean_firm":32.1,"solar":18.99,"wind":46.51,"hydro":1.38,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":26.59,"battery8_pct":43.23,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":72.5,"gas_mw":78226.0,"gas_gw":78.2,"h2_mw":17678.0,"h2_gw":17.7,"dem_twh":1135.8,"mix":{"clean_firm":32.1,"solar":18.99,"wind":46.51,"hydro":1.34,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":26.59,"battery8_pct":43.23,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":64.9,"gas_mw":40012.0,"gas_gw":40.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1187.7,"mix":{"clean_firm":32.1,"solar":10.7,"wind":9.57,"hydro":1.28,"offshore_wind":38.72,"ccs_ccgt":7.96,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":1.53,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":32.87,"battery8_pct":32.4,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":67.3,"gas_mw":41756.0,"gas_gw":41.8,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1205.5,"mix":{"clean_firm":32.17,"solar":9.57,"wind":4.7,"hydro":1.26,"offshore_wind":54.36,"ccs_ccgt":0.76,"geothermal":0.0,"solar_batt4":0.25,"solar_batt8":0.06,"wind_batt4":0.67,"wind_batt8":0.28},"storage":{"battery_pct":36.2,"battery8_pct":44.41,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":62.7,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":49681.0,"h2_gw":49.7,"dem_twh":1223.6,"mix":{"clean_firm":32.1,"solar":10.16,"wind":5.65,"hydro":1.24,"offshore_wind":55.1,"ccs_ccgt":0.11,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":36.2,"battery8_pct":44.41,"ldes_pct":0.0}}}},"B|base|Medium|g2":{"costB":74.8,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":61.3,"gas_mw":50718.0,"gas_gw":50.7,"h2_mw":21.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":10.44,"wind":3.83,"hydro":1.26,"offshore_wind":34.88,"ccs_ccgt":10.35,"geothermal":0.0,"solar_batt4":0.67,"solar_batt8":0.09,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":43.28,"battery8_pct":46.55,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":95.4,"total_cost_B":68.5,"gas_mw":45074.0,"gas_gw":45.1,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":32.13,"solar":6.29,"wind":4.92,"hydro":1.18,"offshore_wind":44.97,"ccs_ccgt":9.3,"geothermal":0.0,"solar_batt4":0.08,"solar_batt8":0.16,"wind_batt4":0.06,"wind_batt8":0.0},"storage":{"battery_pct":4.39,"battery8_pct":24.2,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":96.0,"total_cost_B":72.9,"gas_mw":49282.0,"gas_gw":49.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":32.12,"solar":5.24,"wind":5.42,"hydro":1.12,"offshore_wind":46.43,"ccs_ccgt":9.2,"geothermal":0.0,"solar_batt4":0.03,"solar_batt8":0.02,"wind_batt4":0.02,"wind_batt8":0.03},"storage":{"battery_pct":28.86,"battery8_pct":7.44,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":71.3,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.13,"solar":3.4,"wind":21.36,"hydro":1.04,"offshore_wind":48.76,"ccs_ccgt":0.14,"geothermal":0.0,"solar_batt4":0.04,"solar_batt8":0.06,"wind_batt4":0.12,"wind_batt8":0.05},"storage":{"battery_pct":2.07,"battery8_pct":40.47,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":73.2,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.1,"solar":3.17,"wind":21.14,"hydro":1.02,"offshore_wind":48.54,"ccs_ccgt":0.51,"geothermal":0.0,"solar_batt4":0.13,"solar_batt8":0.09,"wind_batt4":0.15,"wind_batt8":0.25},"storage":{"battery_pct":11.41,"battery8_pct":43.32,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":74.8,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":32.1,"solar":2.94,"wind":20.37,"hydro":0.99,"offshore_wind":50.26,"ccs_ccgt":0.24,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.07,"wind_batt4":0.03,"wind_batt8":0.06},"storage":{"battery_pct":9.39,"battery8_pct":35.83,"ldes_pct":0.0}}}},"B|base|Medium|g3":{"costB":78.8,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":75.9,"gas_mw":108948.0,"gas_gw":108.9,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":24.97,"wind":37.83,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":26.59,"battery8_pct":43.23,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":85.8,"gas_mw":123154.0,"gas_gw":123.2,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":32.1,"solar":26.31,"wind":39.47,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":26.59,"battery8_pct":43.23,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":87.5,"gas_mw":107691.0,"gas_gw":107.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":32.1,"solar":29.23,"wind":39.75,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":26.59,"battery8_pct":43.23,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":89.1,"gas_mw":85642.0,"gas_gw":85.6,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.18,"solar":26.09,"wind":27.11,"hydro":1.04,"offshore_wind":16.01,"ccs_ccgt":1.31,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.07,"wind_batt4":0.0,"wind_batt8":0.3},"storage":{"battery_pct":21.43,"battery8_pct":49.89,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":87.6,"gas_mw":69324.0,"gas_gw":69.3,"h2_mw":369.0,"h2_gw":0.4,"dem_twh":1490.0,"mix":{"clean_firm":32.1,"solar":11.37,"wind":4.99,"hydro":1.02,"offshore_wind":53.13,"ccs_ccgt":0.94,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.18,"wind_batt8":0.37},"storage":{"battery_pct":15.08,"battery8_pct":14.63,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":78.8,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":65951.0,"h2_gw":66.0,"dem_twh":1525.8,"mix":{"clean_firm":32.1,"solar":11.39,"wind":5.4,"hydro":0.99,"offshore_wind":53.58,"ccs_ccgt":0.64,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":15.08,"battery8_pct":14.63,"ldes_pct":0.0}}}},"B|firm_high_vre_low|Medium|g2":{"costB":56.5,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":56.7,"gas_mw":65452.0,"gas_gw":65.5,"h2_mw":39145.0,"h2_gw":39.1,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":5.96,"wind":40.19,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":24.44,"battery8_pct":46.38,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":56.0,"gas_mw":47798.0,"gas_gw":47.8,"h2_mw":22150.0,"h2_gw":22.2,"dem_twh":1292.4,"mix":{"clean_firm":32.11,"solar":11.68,"wind":4.87,"hydro":1.18,"offshore_wind":37.9,"ccs_ccgt":0.05,"geothermal":0.0,"solar_batt4":1.02,"solar_batt8":0.35,"wind_batt4":0.15,"wind_batt8":0.4},"storage":{"battery_pct":15.36,"battery8_pct":18.85,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":59.4,"gas_mw":40864.0,"gas_gw":40.9,"h2_mw":33838.0,"h2_gw":33.8,"dem_twh":1355.2,"mix":{"clean_firm":32.1,"solar":12.47,"wind":5.59,"hydro":1.12,"offshore_wind":37.98,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":1.05,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":10.6,"battery8_pct":20.78,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":100.0,"total_cost_B":54.0,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.11,"solar":13.91,"wind":49.6,"hydro":1.04,"offshore_wind":10.39,"ccs_ccgt":0.04,"geothermal":0.0,"solar_batt4":0.26,"solar_batt8":1.75,"wind_batt4":0.32,"wind_batt8":0.07},"storage":{"battery_pct":45.84,"battery8_pct":10.65,"ldes_pct":0.01}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":100.0,"total_cost_B":55.1,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.13,"solar":15.55,"wind":50.53,"hydro":1.02,"offshore_wind":9.08,"ccs_ccgt":0.04,"geothermal":0.0,"solar_batt4":0.34,"solar_batt8":0.53,"wind_batt4":0.1,"wind_batt8":0.38},"storage":{"battery_pct":42.69,"battery8_pct":5.17,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":56.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":32.12,"solar":15.74,"wind":47.67,"hydro":0.99,"offshore_wind":11.94,"ccs_ccgt":0.04,"geothermal":0.0,"solar_batt4":0.19,"solar_batt8":0.05,"wind_batt4":0.56,"wind_batt8":0.27},"storage":{"battery_pct":15.4,"battery8_pct":39.66,"ldes_pct":0.0}}}},"B|firm_high_vre_low|Medium|g3":{"costB":56.7,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":62.3,"gas_mw":108317.0,"gas_gw":108.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":32.1,"solar":16.05,"wind":46.09,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":4.66,"battery8_pct":32.19,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":70.7,"gas_mw":122392.0,"gas_gw":122.4,"h2_mw":361.0,"h2_gw":0.4,"dem_twh":1292.4,"mix":{"clean_firm":32.1,"solar":21.9,"wind":43.5,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":4.66,"battery8_pct":32.19,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":72.0,"gas_mw":110417.0,"gas_gw":110.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":32.1,"solar":28.27,"wind":40.64,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":4.6,"battery8_pct":32.19,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":78.0,"gas_mw":107304.0,"gas_gw":107.3,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":32.1,"solar":28.79,"wind":38.74,"hydro":1.04,"offshore_wind":1.82,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.2,"solar_batt8":0.37,"wind_batt4":1.96,"wind_batt8":0.58},"storage":{"battery_pct":14.44,"battery8_pct":31.75,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":71.3,"gas_mw":69203.0,"gas_gw":69.2,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":32.23,"solar":13.47,"wind":9.52,"hydro":1.02,"offshore_wind":46.97,"ccs_ccgt":0.03,"geothermal":0.0,"solar_batt4":0.28,"solar_batt8":0.07,"wind_batt4":0.51,"wind_batt8":0.54},"storage":{"battery_pct":35.45,"battery8_pct":26.9,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":100.0,"total_cost_B":56.7,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1525.8,"mix":{"clean_firm":32.12,"solar":13.89,"wind":46.12,"hydro":0.99,"offshore_wind":14.23,"ccs_ccgt":0.02,"geothermal":0.0,"solar_batt4":0.14,"solar_batt8":0.38,"wind_batt4":0.72,"wind_batt8":0.82},"storage":{"battery_pct":39.18,"battery8_pct":28.8,"ldes_pct":0.0}}}},"B|firm_low_vre_high|Medium|g2":{"costB":84.3,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":62.6,"gas_mw":40979.0,"gas_gw":41.0,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":87.61,"solar":2.9,"wind":3.8,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":6.51,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":73.1,"gas_mw":41704.0,"gas_gw":41.7,"h2_mw":7525.0,"h2_gw":7.5,"dem_twh":1292.4,"mix":{"clean_firm":87.61,"solar":2.9,"wind":3.8,"hydro":1.18,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":6.51,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.0,"total_cost_B":73.1,"gas_mw":39403.0,"gas_gw":39.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":83.31,"solar":3.19,"wind":3.8,"hydro":1.12,"offshore_wind":0.0,"ccs_ccgt":9.22,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":12.24,"battery8_pct":0.0,"ldes_pct":0.0}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":98.1,"total_cost_B":80.9,"gas_mw":29499.0,"gas_gw":29.5,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":86.88,"solar":3.02,"wind":4.19,"hydro":1.04,"offshore_wind":0.17,"ccs_ccgt":8.53,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.39,"wind_batt4":0.04,"wind_batt8":0.43},"storage":{"battery_pct":43.16,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":82.5,"gas_mw":13626.0,"gas_gw":13.6,"h2_mw":15318.0,"h2_gw":15.3,"dem_twh":1490.0,"mix":{"clean_firm":87.25,"solar":3.22,"wind":4.17,"hydro":1.02,"offshore_wind":0.31,"ccs_ccgt":7.91,"geothermal":0.0,"solar_batt4":0.15,"solar_batt8":0.42,"wind_batt4":0.06,"wind_batt8":0.27},"storage":{"battery_pct":45.09,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":84.3,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":38016.0,"h2_gw":38.0,"dem_twh":1525.8,"mix":{"clean_firm":90.72,"solar":2.9,"wind":3.8,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":8.19,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":41.96,"battery8_pct":0.0,"ldes_pct":0.0}}}},"B|firm_low_vre_high|Medium|g3":{"costB":84.5,"thresholds":{"90.0":{"year":2040,"target":90.0,"achieved_cfe":90.0,"total_cost_B":84.2,"gas_mw":85657.0,"gas_gw":85.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1203.6,"mix":{"clean_firm":48.44,"solar":27.11,"wind":20.28,"hydro":1.26,"offshore_wind":0.0,"ccs_ccgt":0.0,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":6.51,"battery8_pct":0.0,"ldes_pct":0.0}},"92.5":{"year":2043,"target":92.5,"achieved_cfe":92.5,"total_cost_B":93.9,"gas_mw":94362.0,"gas_gw":94.4,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1292.4,"mix":{"clean_firm":48.48,"solar":22.26,"wind":24.37,"hydro":1.18,"offshore_wind":1.54,"ccs_ccgt":0.74,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.46,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":7.45,"battery8_pct":0.0,"ldes_pct":0.0}},"95.0":{"year":2045,"target":95.0,"achieved_cfe":95.6,"total_cost_B":78.0,"gas_mw":41531.0,"gas_gw":41.5,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1355.2,"mix":{"clean_firm":81.58,"solar":5.61,"wind":3.83,"hydro":1.12,"offshore_wind":0.04,"ccs_ccgt":6.28,"geothermal":0.0,"solar_batt4":1.66,"solar_batt8":0.34,"wind_batt4":0.07,"wind_batt8":0.96},"storage":{"battery_pct":38.44,"battery8_pct":0.0,"ldes_pct":0.01}},"97.5":{"year":2048,"target":97.5,"achieved_cfe":97.5,"total_cost_B":85.7,"gas_mw":47684.0,"gas_gw":47.7,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1455.1,"mix":{"clean_firm":80.89,"solar":6.02,"wind":4.97,"hydro":1.04,"offshore_wind":0.69,"ccs_ccgt":8.59,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":1.34,"wind_batt8":0.0},"storage":{"battery_pct":31.59,"battery8_pct":0.0,"ldes_pct":0.0}},"99.0":{"year":2049,"target":99.0,"achieved_cfe":99.0,"total_cost_B":82.5,"gas_mw":24219.0,"gas_gw":24.2,"h2_mw":0.0,"h2_gw":0.0,"dem_twh":1490.0,"mix":{"clean_firm":89.81,"solar":2.9,"wind":4.27,"hydro":1.02,"offshore_wind":0.0,"ccs_ccgt":8.39,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":31.59,"battery8_pct":0.0,"ldes_pct":0.0}},"99.9":{"year":2050,"target":99.9,"achieved_cfe":99.9,"total_cost_B":84.5,"gas_mw":0.0,"gas_gw":0.0,"h2_mw":37706.0,"h2_gw":37.7,"dem_twh":1525.8,"mix":{"clean_firm":90.41,"solar":2.9,"wind":4.26,"hydro":0.99,"offshore_wind":0.0,"ccs_ccgt":8.19,"geothermal":0.0,"solar_batt4":0.0,"solar_batt8":0.0,"wind_batt4":0.0,"wind_batt8":0.0},"storage":{"battery_pct":31.59,"battery8_pct":0.0,"ldes_pct":0.0}}}}}};
+</script>
+
+<!-- ===== CHARTS ===== -->
+
+<script>
+(function() {
+"use strict";
+
+/* ---------- Color palette (fallback if chart-colors.js not loaded) ---------- */
+const RC = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {
+    cleanFirm:'#6366F1', solar:'#F59E0B', wind:'#22C55E', hydro:'#0EA5E9',
+    offshoreWind:'#009688', ccs:'#26A69A', geothermal:'#D97706',
+    solarBatt4:'#E6890B', solarBatt8:'#CC7A0A', windBatt4:'#1AA34E', windBatt8:'#158F42',
+    fossilGas:'#6B7280', greenH2:'#10B981', storage:'#EF4444',
+};
+const IC = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS : { PJM:'#0EA5E9' };
+
+const NAVY = '#1A2744';
+const MUTED = '#64748B';
+
+/* Resource key → chart color mapping */
+const MIX_COLORS = {
+    clean_firm: RC.cleanFirm || '#6366F1',
+    solar: RC.solar || '#F59E0B',
+    wind: RC.wind || '#22C55E',
+    hydro: RC.hydro || '#0EA5E9',
+    offshore_wind: RC.offshoreWind || '#009688',
+    ccs_ccgt: RC.ccs || '#26A69A',
+    geothermal: RC.geothermal || '#D97706',
+    solar_batt4: RC.solarBatt4 || '#E6890B',
+    solar_batt8: RC.solarBatt8 || '#CC7A0A',
+    wind_batt4: RC.windBatt4 || '#1AA34E',
+    wind_batt8: RC.windBatt8 || '#158F42',
+};
+const MIX_LABELS = {
+    clean_firm:'Clean Firm',solar:'Solar',wind:'Wind',hydro:'Hydro',
+    offshore_wind:'Offshore Wind',ccs_ccgt:'CCS-CCGT',geothermal:'Geothermal',
+    solar_batt4:'Solar+Batt4',solar_batt8:'Solar+Batt8',
+    wind_batt4:'Wind+Batt4',wind_batt8:'Wind+Batt8',
+};
+
+/* Pathway colors */
+const PW_COLORS = {
+    'A': {g1:'#EF4444',g2:'#F97316'},
+    'B': {g1:'#3B82F6',g2:'#8B5CF6'},
+    'C': {g1:'#22C55E',g2:'#14B8A6'},
+    'D': {g1:'#EC4899',g2:'#A855F7'},
+};
+const PW_LABELS = {A:'Pathway A',B:'Pathway B',C:'Pathway C',D:'Pathway D'};
+
+/* Chart.js defaults */
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = MUTED;
+
+/* ---------- 1) PD Reference Trajectory ---------- */
+(function(){
+    const traj = D.pdRef.traj;
+    const ctx = document.getElementById('chartPdRefTraj');
+    if(!ctx) return;
+    new Chart(ctx, {
+        type:'line',
+        data:{
+            labels: traj.map(r => r.year),
+            datasets:[
+                {
+                    label:'Gas Fleet (GW)',
+                    data: traj.map(r => r.gas_gw),
+                    borderColor:'#EF4444',
+                    backgroundColor:'rgba(239,68,68,0.08)',
+                    borderWidth:2.5,
+                    pointRadius:3,
+                    pointBackgroundColor:'rgba(239,68,68,0.3)',
+                    fill:true,
+                    yAxisID:'y',
+                },
+                {
+                    label:'CFE Target (%)',
+                    data: traj.map(r => r.target),
+                    borderColor:'#3B82F6',
+                    borderWidth:2,
+                    borderDash:[6,3],
+                    pointRadius:0,
+                    fill:false,
+                    yAxisID:'y1',
+                },
+                {
+                    label:'H\u2082 Storage (GW)',
+                    data: traj.map(r => r.h2_gw),
+                    borderColor:RC.greenH2 || '#10B981',
+                    backgroundColor:'rgba(16,185,129,0.06)',
+                    borderWidth:2,
+                    pointRadius:2,
+                    fill:true,
+                    yAxisID:'y',
+                },
+                {
+                    label:'Cumulative Cost ($B)',
+                    data: traj.map(r => r.cum_B),
+                    borderColor: NAVY,
+                    borderWidth:1.5,
+                    borderDash:[3,3],
+                    pointRadius:0,
+                    fill:false,
+                    yAxisID:'y2',
+                },
+            ]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{
+                legend:{position:'top',labels:{boxWidth:14,padding:12,font:{size:11}}},
+                annotation:{
+                    annotations:{
+                        baseline:{
+                            type:'line',yMin:62.9,yMax:62.9,
+                            borderColor:'rgba(107,114,128,0.4)',borderWidth:1,borderDash:[4,4],
+                            label:{display:true,content:'Existing fossil: 62.9 GW',position:'start',
+                                   font:{size:10},color:MUTED,backgroundColor:'rgba(255,255,255,0.8)'},
+                        }
+                    }
+                }
+            },
+            scales:{
+                x:{grid:{display:false},ticks:{maxTicksLimit:10}},
+                y:{position:'left',title:{display:true,text:'GW',font:{weight:'bold'}},
+                   grid:{color:'rgba(0,0,0,0.04)'},min:0},
+                y1:{position:'right',title:{display:true,text:'CFE %',font:{weight:'bold'}},
+                    min:0,max:100,grid:{display:false}},
+                y2:{display:false,min:0},
+            }
+        }
+    });
+})();
+
+/* ---------- 2) PD Reference Resource Mix (stacked bar) ---------- */
+(function(){
+    const snap = D.pdRef.snap;
+    const ctx = document.getElementById('chartPdRefMix');
+    if(!ctx) return;
+    const thresholds = ['90','95','99','99.9'];
+    const labels = thresholds.map(t => {
+        const s = snap[t];
+        return s ? t+'% ('+s.year+')' : t+'%';
+    });
+    const resourceKeys = Object.keys(MIX_COLORS);
+    const datasets = resourceKeys.map(rk => ({
+        label: MIX_LABELS[rk],
+        data: thresholds.map(t => {
+            const s = snap[t];
+            return s && s.mix ? (s.mix[rk]||0) : 0;
+        }),
+        backgroundColor: MIX_COLORS[rk],
+    })).filter(ds => ds.data.some(v => v > 0.5));
+
+    new Chart(ctx, {
+        type:'bar',
+        data:{labels, datasets},
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{position:'top',labels:{boxWidth:12,padding:8,font:{size:10}}}},
+            scales:{
+                x:{stacked:true,grid:{display:false}},
+                y:{stacked:true,title:{display:true,text:'% of Demand',font:{weight:'bold'}},
+                   grid:{color:'rgba(0,0,0,0.04)'}},
+            }
+        }
+    });
+})();
+
+/* ---------- 3) All-Low Gas Trajectories ---------- */
+let chartAllLowGas = null;
+let chartAllLowCost = null;
+
+function renderAllLow(demand) {
+    const al = D.pdAllLow;
+    // Filter to selected demand (or 'Medium' default for pathways C/D which only have Medium)
+    const keys = Object.keys(al).filter(k => {
+        const parts = k.split('|');
+        return parts[2] === demand || (parts[2] === 'Medium' && ['C','D'].includes(parts[0]));
+    });
+
+    /* Gas trajectory chart */
+    const ctx1 = document.getElementById('chartAllLowGas');
+    if(chartAllLowGas) chartAllLowGas.destroy();
+    const datasets1 = [];
+    keys.forEach(k => {
+        const parts = k.split('|');
+        const pw = parts[0], gas = parts[3];
+        const colors = PW_COLORS[pw] || {g1:'#888',g2:'#aaa'};
+        const color = colors[gas] || '#888';
+        const dash = gas === 'g2' ? [6,3] : [];
+        datasets1.push({
+            label: PW_LABELS[pw]+' '+gas + (parts[2]!==demand?' (Med)':''),
+            data: al[k].traj.map(r => ({x:r.year, y:r.gas_gw})),
+            borderColor: color,
+            borderWidth: pw==='A'||pw==='B' ? 2.5 : 1.5,
+            borderDash: dash,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.1,
+        });
+    });
+
+    chartAllLowGas = new Chart(ctx1, {
+        type:'line',
+        data:{datasets:datasets1},
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            interaction:{mode:'nearest',intersect:false},
+            plugins:{
+                legend:{position:'top',labels:{boxWidth:14,padding:8,font:{size:10}}},
+                annotation:{annotations:{
+                    bl:{type:'line',yMin:62.9,yMax:62.9,
+                        borderColor:'rgba(107,114,128,0.3)',borderWidth:1,borderDash:[4,4],
+                        label:{display:true,content:'Existing: 62.9 GW',position:'start',
+                               font:{size:9},color:MUTED,backgroundColor:'rgba(255,255,255,0.8)'}},
+                }}
+            },
+            scales:{
+                x:{type:'linear',min:2026,max:2050,ticks:{stepSize:5},grid:{display:false}},
+                y:{title:{display:true,text:'Gas Fleet (GW)'},min:0,grid:{color:'rgba(0,0,0,0.04)'}},
+            }
+        }
+    });
+
+    /* Cost bar chart */
+    const ctx2 = document.getElementById('chartAllLowCost');
+    if(chartAllLowCost) chartAllLowCost.destroy();
+    const costKeys = keys.sort();
+    const costLabels = costKeys.map(k => {
+        const p = k.split('|');
+        return PW_LABELS[p[0]]+' '+p[3];
+    });
+    const costData = costKeys.map(k => al[k].costB);
+    const costColors = costKeys.map(k => {
+        const p = k.split('|');
+        return (PW_COLORS[p[0]]||{})[p[3]] || '#888';
+    });
+
+    chartAllLowCost = new Chart(ctx2, {
+        type:'bar',
+        data:{
+            labels:costLabels,
+            datasets:[{
+                data:costData,
+                backgroundColor:costColors.map(c=>c+'33'),
+                borderColor:costColors,
+                borderWidth:2,
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            indexAxis:'y',
+            plugins:{legend:{display:false},
+                tooltip:{callbacks:{label:ctx=>'$'+ctx.raw.toLocaleString()+'B'}}},
+            scales:{
+                x:{title:{display:true,text:'Cumulative Cost ($B)'},grid:{color:'rgba(0,0,0,0.04)'}},
+                y:{grid:{display:false}},
+            }
+        }
+    });
+}
+
+/* Demand pill handlers */
+document.querySelectorAll('#demandPills .pill-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#demandPills .pill-btn').forEach(b=>b.classList.remove('active'));
+        this.classList.add('active');
+        renderAllLow(this.dataset.val);
+    });
+});
+renderAllLow('Medium');
+
+/* ---------- 4) Myopic Heatmap & Charts ---------- */
+let chartMyopicMix = null;
+let chartMyopicGas = null;
+
+function renderMyopic(demand, threshold) {
+    const my = D.myopic;
+    const container = document.getElementById('heatmapContainer');
+
+    /* Build heatmap table */
+    const scenarios = ['all_low','firm_high_vre_low','base','firm_low_vre_high','all_high'];
+    const scenLabels = {
+        all_low:'All Low',firm_high_vre_low:'High Firm / Low VRE',
+        base:'Base',firm_low_vre_high:'Low Firm / High VRE',all_high:'All High'
+    };
+    const combos = ['A|g2','A|g3','B|g2','B|g3'];
+    const comboLabels = ['A g2','A g3','B g2','B g3'];
+
+    let minCost = Infinity, maxCost = 0;
+    const grid = [];
+    scenarios.forEach(sc => {
+        const row = [];
+        combos.forEach(c => {
+            const [pw,gas] = c.split('|');
+            const key = pw+'|'+sc+'|'+demand+'|'+gas;
+            const entry = my[key];
+            let cost = null;
+            if(entry && entry.thresholds[threshold]) {
+                cost = entry.thresholds[threshold].total_cost_B;
+                if(cost < minCost) minCost = cost;
+                if(cost > maxCost) maxCost = cost;
+            }
+            row.push(cost);
+        });
+        grid.push(row);
+    });
+
+    function heatColor(v) {
+        if(v === null) return 'background:#f3f4f6;color:#94a3b8';
+        const range = maxCost - minCost || 1;
+        const t = (v - minCost) / range;
+        // Green (cheap) → Yellow → Red (expensive)
+        const r = Math.round(220 * t + 34 * (1-t));
+        const g = Math.round(60 * t + 197 * (1-t));
+        const b = Math.round(60 * t + 94 * (1-t));
+        const bg = 'rgba('+r+','+g+','+b+',0.12)';
+        const fg = t > 0.6 ? '#991B1B' : t > 0.3 ? '#92400E' : '#166534';
+        return 'background:'+bg+';color:'+fg;
+    }
+
+    let html = '<table class="heatmap-table"><thead><tr><th>Scenario</th>';
+    comboLabels.forEach(l => html += '<th>'+l+'</th>');
+    html += '</tr></thead><tbody>';
+    scenarios.forEach((sc,i) => {
+        html += '<tr><td>'+scenLabels[sc]+'</td>';
+        grid[i].forEach(v => {
+            const display = v !== null ? '$'+v.toFixed(1)+'B' : '&mdash;';
+            html += '<td><span class="heatmap-cell" style="'+heatColor(v)+'">'+display+'</span></td>';
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    /* Myopic resource mix chart — cheapest per scenario at 99.9, Medium */
+    const ctx3 = document.getElementById('chartMyopicMix');
+    if(chartMyopicMix) chartMyopicMix.destroy();
+
+    const mixLabels = [];
+    const mixDatasets = {};
+    const resourceKeys = Object.keys(MIX_COLORS);
+    resourceKeys.forEach(rk => mixDatasets[rk] = []);
+
+    scenarios.forEach(sc => {
+        // Find cheapest combo for this scenario at 99.9
+        let best = null, bestCost = Infinity;
+        combos.forEach(c => {
+            const [pw,gas] = c.split('|');
+            const key = pw+'|'+sc+'|'+demand+'|'+gas;
+            const entry = my[key];
+            if(entry && entry.costB < bestCost) {
+                bestCost = entry.costB;
+                best = entry;
+            }
+        });
+        mixLabels.push(scenLabels[sc]);
+        const th = best ? best.thresholds['99.9'] : null;
+        resourceKeys.forEach(rk => {
+            mixDatasets[rk].push(th && th.mix ? (th.mix[rk]||0) : 0);
+        });
+    });
+
+    const ds3 = resourceKeys.map(rk => ({
+        label: MIX_LABELS[rk],
+        data: mixDatasets[rk],
+        backgroundColor: MIX_COLORS[rk],
+    })).filter(ds => ds.data.some(v => v > 0.5));
+
+    chartMyopicMix = new Chart(ctx3, {
+        type:'bar',
+        data:{labels:mixLabels, datasets:ds3},
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{position:'top',labels:{boxWidth:12,padding:8,font:{size:10}}}},
+            scales:{
+                x:{stacked:true,grid:{display:false}},
+                y:{stacked:true,title:{display:true,text:'% of Demand'},grid:{color:'rgba(0,0,0,0.04)'}},
+            }
+        }
+    });
+
+    /* Myopic gas by threshold — base scenario, A vs B, g2 */
+    const ctx4 = document.getElementById('chartMyopicGas');
+    if(chartMyopicGas) chartMyopicGas.destroy();
+
+    const threshKeys = ['90.0','92.5','95.0','97.5','99.0','99.9'];
+    const threshLabels = threshKeys.map(t => t+'%');
+    const gasA = [], gasB = [];
+    threshKeys.forEach(t => {
+        const eA = my['A|base|'+demand+'|g2'];
+        const eB = my['B|base|'+demand+'|g2'];
+        gasA.push(eA && eA.thresholds[t] ? eA.thresholds[t].gas_gw : null);
+        gasB.push(eB && eB.thresholds[t] ? eB.thresholds[t].gas_gw : null);
+    });
+
+    chartMyopicGas = new Chart(ctx4, {
+        type:'bar',
+        data:{
+            labels:threshLabels,
+            datasets:[
+                {label:'Pathway A (g2)',data:gasA,backgroundColor:'rgba(239,68,68,0.2)',borderColor:'#EF4444',borderWidth:2},
+                {label:'Pathway B (g2)',data:gasB,backgroundColor:'rgba(59,130,246,0.2)',borderColor:'#3B82F6',borderWidth:2},
+            ]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{position:'top',labels:{boxWidth:14,font:{size:11}}},
+                annotation:{annotations:{
+                    bl:{type:'line',yMin:62.9,yMax:62.9,
+                        borderColor:'rgba(107,114,128,0.3)',borderWidth:1,borderDash:[4,4],
+                        label:{display:true,content:'Existing: 62.9 GW',position:'start',
+                               font:{size:9},color:MUTED,backgroundColor:'rgba(255,255,255,0.8)'}},
+                }}},
+            scales:{
+                x:{grid:{display:false}},
+                y:{title:{display:true,text:'Gas Fleet (GW)'},min:0,grid:{color:'rgba(0,0,0,0.04)'}},
+            }
+        }
+    });
+}
+
+/* Myopic pill handlers */
+function getMyopicDemand() {
+    const active = document.querySelector('#myopicDemandPills .pill-btn.active');
+    return active ? active.dataset.val : 'Medium';
+}
+function getMyopicThresh() {
+    const active = document.querySelector('#myopicThreshPills .pill-btn.active');
+    return active ? active.dataset.val : '99.9';
+}
+document.querySelectorAll('#myopicDemandPills .pill-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#myopicDemandPills .pill-btn').forEach(b=>b.classList.remove('active'));
+        this.classList.add('active');
+        renderMyopic(getMyopicDemand(), getMyopicThresh());
+    });
+});
+document.querySelectorAll('#myopicThreshPills .pill-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#myopicThreshPills .pill-btn').forEach(b=>b.classList.remove('active'));
+        this.classList.add('active');
+        renderMyopic(getMyopicDemand(), getMyopicThresh());
+    });
+});
+renderMyopic('Medium','99.9');
+
+/* ---------- 5) Cross-Solver Annual Cost Comparison ---------- */
+(function(){
+    const ctx = document.getElementById('chartCrossCost');
+    if(!ctx) return;
+
+    const thresholds = ['90','95','99','99.9'];
+    const labels = thresholds.map(t => t+'%');
+
+    // PD reference annual costs at threshold years
+    const pdAnnual = thresholds.map(t => {
+        const s = D.pdRef.snap[t];
+        return s ? s.annual_cost_B : null;
+    });
+
+    // Myopic costs for base/Medium/g2, pwA and pwB
+    const myA = thresholds.map(t => {
+        const e = D.myopic['A|base|Medium|g2'];
+        const tKey = t === '99' ? '99.0' : t === '99.9' ? '99.9' : t+'.0';
+        return e && e.thresholds[tKey] ? e.thresholds[tKey].total_cost_B : null;
+    });
+    const myB = thresholds.map(t => {
+        const e = D.myopic['B|base|Medium|g2'];
+        const tKey = t === '99' ? '99.0' : t === '99.9' ? '99.9' : t+'.0';
+        return e && e.thresholds[tKey] ? e.thresholds[tKey].total_cost_B : null;
+    });
+
+    new Chart(ctx, {
+        type:'bar',
+        data:{
+            labels,
+            datasets:[
+                {label:'PD Annual (pwA/base/g3)',data:pdAnnual,backgroundColor:'rgba(239,68,68,0.2)',borderColor:'#EF4444',borderWidth:2},
+                {label:'Myopic pwA (base/g2)',data:myA,backgroundColor:'rgba(245,158,11,0.2)',borderColor:'#F59E0B',borderWidth:2},
+                {label:'Myopic pwB (base/g2)',data:myB,backgroundColor:'rgba(59,130,246,0.2)',borderColor:'#3B82F6',borderWidth:2},
+            ]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{position:'top',labels:{boxWidth:14,font:{size:11}}},
+                tooltip:{callbacks:{label:ctx=>{
+                    const v = ctx.raw;
+                    return v !== null ? ctx.dataset.label+': $'+v.toFixed(1)+'B' : 'No data';
+                }}}},
+            scales:{
+                x:{grid:{display:false}},
+                y:{title:{display:true,text:'System Cost ($B)'},min:0,grid:{color:'rgba(0,0,0,0.04)'}},
+            }
+        }
+    });
+})();
+
+/* ---------- Scroll observer for fade-in ---------- */
+if(typeof IntersectionObserver !== 'undefined') {
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if(e.isIntersecting) e.target.classList.add('visible');
+        });
+    }, {threshold:0.1});
+    document.querySelectorAll('.fade-in, .scroll-reveal').forEach(el => obs.observe(el));
+}
+
+})();
+</script>
+
+</body>
+</html>
