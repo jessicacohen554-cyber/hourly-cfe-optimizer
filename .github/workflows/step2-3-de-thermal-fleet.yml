@@ -7,6 +7,7 @@ name: "Step 2.3 DE: Thermal Fleet Disaggregation"
 # Output files tagged `_tf` — won't collide with baseline runs.
 #
 # iso=ALL fans out to 7 parallel matrix jobs.
+# seed_mode=loop_new runs seeds 7, 123, 256 sequentially (skips 42).
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de-tf"
 # to consolidate into master.
 
@@ -93,7 +94,7 @@ on:
           - all_low
           - all_high
       seed:
-        description: 'Random seed (use different seeds to test sensitivity)'
+        description: 'Random seed (ignored when seed_mode=loop_new)'
         required: false
         default: '42'
         type: choice
@@ -101,7 +102,15 @@ on:
           - '42'
           - '7'
           - '123'
-          - '456'
+          - '256'
+      seed_mode:
+        description: 'single = use selected seed | loop_new = run seeds 7, 123, 256 sequentially'
+        required: false
+        default: 'single'
+        type: choice
+        options:
+          - single
+          - loop_new
       branch:
         description: 'Branch to checkout'
         required: false
@@ -111,7 +120,6 @@ on:
 env:
   BRANCH_PREFIX: step2-3-de-tf
   PYTHONUNBUFFERED: "1"
-  SEED: ${{ inputs.seed || '42' }}
   TARGET_2040: "90"
   TARGET_2050: "99.9"
   WORKERS: "2"
@@ -121,6 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      seed_list: ${{ steps.set-seeds.outputs.seed_list }}
     steps:
       - id: set-matrix
         run: |
@@ -128,6 +137,14 @@ jobs:
             echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
           else
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: set-seeds
+        run: |
+          if [ "${{ inputs.seed_mode }}" = "loop_new" ]; then
+            echo "seed_list=7 123 256" >> "$GITHUB_OUTPUT"
+          else
+            echo "seed_list=${{ inputs.seed || '42' }}" >> "$GITHUB_OUTPUT"
           fi
 
   de-optimize-tf:
@@ -218,45 +235,55 @@ jobs:
           MAXITER: ${{ inputs.maxiter }}
           SCENARIO: ${{ inputs.scenario }}
           DEMAND: ${{ inputs.demand_growth }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         timeout-minutes: 330
         run: |
           set -euo pipefail
-          REF_FLAG=""
 
-          for pw in $PATHWAYS; do
+          for SEED in $SEED_LIST; do
             echo ""
-            echo "============================================================"
-            echo "[workflow] Starting DE Pathway $pw (thermal fleet) for $ISO"
-            echo "  gas_mode=$GAS_MODE popsize=$POPSIZE maxiter=$MAXITER"
-            echo "  workers=$WORKERS seed=$SEED"
-            echo "  target_2040=$TARGET_2040 target_2050=$TARGET_2050"
-            echo "============================================================"
-            t0=$SECONDS
+            echo "############################################################"
+            echo "# SEED $SEED"
+            echo "############################################################"
 
-            python scripts/step2_3_de_pathway_tf.py \
-              --iso "$ISO" \
-              --pathway "$pw" \
-              --gas-mode "$GAS_MODE" \
-              --popsize "$POPSIZE" \
-              --maxiter "$MAXITER" \
-              --workers "$WORKERS" \
-              --seed "$SEED" \
-              --scenario "$SCENARIO" \
-              --demand-growth "$DEMAND" \
-              --target-2040 "$TARGET_2040" \
-              --target-2050 "$TARGET_2050" \
-              $REF_FLAG
+            REF_FLAG=""
 
-            echo "[workflow] Pathway $pw done in $(( SECONDS - t0 ))s"
+            for pw in $PATHWAYS; do
+              echo ""
+              echo "============================================================"
+              echo "[workflow] Starting DE Pathway $pw (thermal fleet) for $ISO"
+              echo "  gas_mode=$GAS_MODE popsize=$POPSIZE maxiter=$MAXITER"
+              echo "  workers=$WORKERS seed=$SEED"
+              echo "  target_2040=$TARGET_2040 target_2050=$TARGET_2050"
+              echo "============================================================"
+              t0=$SECONDS
 
-            # After pathway A, set ref-winners flag for subsequent pathways
-            if [ "$pw" = "A" ]; then
-              WINNERS_FILE="data/step2.3-de/thermal-fleet/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_g${GAS_MODE}_tf_winners.json"
-              if [ -f "$WINNERS_FILE" ]; then
-                REF_FLAG="--ref-winners $WINNERS_FILE"
-                echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
+              python scripts/step2_3_de_pathway_tf.py \
+                --iso "$ISO" \
+                --pathway "$pw" \
+                --gas-mode "$GAS_MODE" \
+                --popsize "$POPSIZE" \
+                --maxiter "$MAXITER" \
+                --workers "$WORKERS" \
+                --seed "$SEED" \
+                --scenario "$SCENARIO" \
+                --demand-growth "$DEMAND" \
+                --target-2040 "$TARGET_2040" \
+                --target-2050 "$TARGET_2050" \
+                $REF_FLAG
+
+              echo "[workflow] Pathway $pw seed=$SEED done in $(( SECONDS - t0 ))s"
+
+              # After pathway A, set ref-winners flag for subsequent pathways
+              # (path-dependent seeding: B/C/D warm-start from A's winners)
+              if [ "$pw" = "A" ]; then
+                WINNERS_FILE="data/step2.3-de/thermal-fleet/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_g${GAS_MODE}_tf_winners.json"
+                if [ -f "$WINNERS_FILE" ]; then
+                  REF_FLAG="--ref-winners $WINNERS_FILE"
+                  echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
+                fi
               fi
-            fi
+            done
           done
 
       - name: "Verify outputs — ${{ matrix.iso }}"
@@ -266,25 +293,35 @@ jobs:
           SCENARIO: ${{ inputs.scenario }}
           DEMAND: ${{ inputs.demand_growth }}
           GAS_MODE: ${{ inputs.gas_mode }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
-          for pw in $PATHWAYS; do
-            results="data/step2.3-de/thermal-fleet/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${SEED}_g${GAS_MODE}_tf.parquet"
-            if [ ! -f "$results" ]; then
-              echo "::error::Missing results: $results"
-              exit 1
-            fi
-            size=$(stat -c%s "$results" 2>/dev/null || stat -f%z "$results")
-            echo "[verify] ${results}: ${size} bytes"
+          fail=0
+          for SEED in $SEED_LIST; do
+            for pw in $PATHWAYS; do
+              results="data/step2.3-de/thermal-fleet/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${SEED}_g${GAS_MODE}_tf.parquet"
+              if [ ! -f "$results" ]; then
+                echo "::error::Missing results: $results"
+                fail=1
+              else
+                size=$(stat -c%s "$results" 2>/dev/null || stat -f%z "$results")
+                echo "[verify] ${results}: ${size} bytes"
+              fi
+            done
           done
+          if [ "$fail" -ne 0 ]; then exit 1; fi
 
       - name: "Push results — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
           GAS_MODE: ${{ inputs.gas_mode }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
           set -euo pipefail
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+
+          # Annotate branch name with seed info
+          SEED_TAG=$(echo "$SEED_LIST" | tr ' ' '-')
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}-s${SEED_TAG}"
 
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -305,7 +342,7 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MSG="Step 2.3 DE thermal fleet: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} gas=${GAS_MODE} s=${SEED}"
+          COMMIT_MSG="Step 2.3 DE thermal fleet: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} gas=${GAS_MODE} seeds=${SEED_TAG}"
           git commit -m "$COMMIT_MSG"
           git push origin "$branch"
           echo "[push] Branch created: ${branch}"
@@ -315,6 +352,7 @@ jobs:
         if: always()
         env:
           ISO: ${{ matrix.iso }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
           {
             echo "## Step 2.3 DE Thermal Fleet — ${ISO}"
@@ -325,7 +363,8 @@ jobs:
             echo "| Gas mode | ${{ inputs.gas_mode }} |"
             echo "| Popsize | ${{ inputs.popsize }} |"
             echo "| Maxiter | ${{ inputs.maxiter }} |"
-            echo "| Seed | ${SEED} |"
+            echo "| Seed(s) | \`${SEED_LIST}\` |"
+            echo "| Seed mode | \`${{ inputs.seed_mode }}\` |"
             echo "| Scenario | \`${{ inputs.scenario }}\` |"
             echo "| Demand | \`${{ inputs.demand_growth }}\` |"
             echo ""
