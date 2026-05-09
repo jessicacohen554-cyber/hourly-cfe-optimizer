@@ -7,7 +7,10 @@ name: "Step 2.3 DE: Myopic Threshold Optimizer"
 # Each threshold (90–99.9%) maps to a year on the linear ramp (90% @ 2040 →
 # 99.9% @ 2050) for cost curves and demand growth.
 #
-# Gas mode 1 (shadow) is excluded — no prior peak exists in a myopic solve.
+# Gas modes:
+#   1 = cost + stranding shadow (ref = existing gas fleet × GAF)     [v2.1]
+#   2 = cost only (default)
+#   3 = blind (no gas economics in optimizer)
 #
 # iso=ALL fans out to 7 parallel matrix jobs.
 # pathway/gas-mode/scenario/demand each support ALL/BOTH for sweep runs.
@@ -46,14 +49,16 @@ on:
           - BOTH
           - ALL
       gas_mode:
-        description: 'Gas in optimizer: 2=cost only, 3=blind, BOTH=2+3'
+        description: 'Gas in optimizer: 1=cost+shadow, 2=cost only, 3=blind, BOTH=2+3, ALL=1+2+3'
         required: true
         default: '2'
         type: choice
         options:
+          - '1'
           - '2'
           - '3'
           - BOTH
+          - ALL
       scenario:
         description: 'Cost scenario (ALL = loop all 5)'
         required: true
@@ -152,9 +157,10 @@ jobs:
             *)    echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
           esac
 
-          # Gas modes
+          # Gas modes — BOTH = 2+3 (legacy), ALL = 1+2+3
           case "$GAS_MODE" in
             BOTH) echo "gas_modes=2 3" >> "$GITHUB_OUTPUT" ;;
+            ALL)  echo "gas_modes=1 2 3" >> "$GITHUB_OUTPUT" ;;
             *)    echo "gas_modes=$GAS_MODE" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -365,6 +371,9 @@ jobs:
             echo ""
             echo "**Myopic solver:** each threshold solved independently from grid baseline."
             echo "No ratchet between thresholds. Thermal fleet retirement keyed to target CFE."
+            echo ""
+            echo "**Gas modes:** 1 = cost + stranding shadow (ref = existing fleet × GAF),"
+            echo "2 = cost only, 3 = gas-blind. Shadow always reported regardless of mode."
             echo ""
             echo "Output: \`data/step2.3-de/myopic/\`"
             echo ""
