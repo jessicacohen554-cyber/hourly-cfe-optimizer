@@ -92,6 +92,16 @@ on:
           - firm_low_vre_high
           - all_low
           - all_high
+      seed:
+        description: 'Random seed (use different seeds to test sensitivity)'
+        required: false
+        default: '42'
+        type: choice
+        options:
+          - '42'
+          - '7'
+          - '123'
+          - '456'
       branch:
         description: 'Branch to checkout'
         required: false
@@ -101,7 +111,7 @@ on:
 env:
   BRANCH_PREFIX: step2-3-de-tf
   PYTHONUNBUFFERED: "1"
-  SEED: "42"
+  SEED: ${{ inputs.seed || '42' }}
   TARGET_2040: "90"
   TARGET_2050: "99.9"
   WORKERS: "2"
@@ -295,7 +305,7 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MSG="Step 2.3 DE thermal fleet: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} gas=${GAS_MODE}"
+          COMMIT_MSG="Step 2.3 DE thermal fleet: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} gas=${GAS_MODE} s=${SEED}"
           git commit -m "$COMMIT_MSG"
           git push origin "$branch"
           echo "[push] Branch created: ${branch}"
@@ -315,6 +325,7 @@ jobs:
             echo "| Gas mode | ${{ inputs.gas_mode }} |"
             echo "| Popsize | ${{ inputs.popsize }} |"
             echo "| Maxiter | ${{ inputs.maxiter }} |"
+            echo "| Seed | ${SEED} |"
             echo "| Scenario | \`${{ inputs.scenario }}\` |"
             echo "| Demand | \`${{ inputs.demand_growth }}\` |"
             echo ""
