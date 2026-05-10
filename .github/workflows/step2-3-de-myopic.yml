@@ -14,6 +14,7 @@ name: "Step 2.3 DE: Myopic Threshold Optimizer"
 #
 # iso=ALL fans out to 7 parallel matrix jobs.
 # pathway/gas-mode/scenario/demand each support ALL/BOTH for sweep runs.
+# seed_mode=loop_new runs seeds 7, 123, 256, 314, 567, 773, 999 sequentially (skips 42).
 #
 # Output directory: data/step2.3-de/myopic/
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de-myopic"
@@ -110,7 +111,7 @@ on:
         default: '90 92.5 95 97.5 99 99.9'
         type: string
       seed:
-        description: 'Random seed (use different seeds to test sensitivity)'
+        description: 'Random seed (ignored when seed_mode=loop_new)'
         required: false
         default: '42'
         type: choice
@@ -118,7 +119,19 @@ on:
           - '42'
           - '7'
           - '123'
-          - '456'
+          - '256'
+          - '314'
+          - '567'
+          - '773'
+          - '999'
+      seed_mode:
+        description: 'single = use selected seed | loop_new = run 7 new seeds sequentially (excludes 42)'
+        required: false
+        default: 'single'
+        type: choice
+        options:
+          - single
+          - loop_new
       branch:
         description: 'Branch to checkout'
         required: false
@@ -128,7 +141,6 @@ on:
 env:
   BRANCH_PREFIX: step2-3-de-myopic
   PYTHONUNBUFFERED: "1"
-  SEED: ${{ inputs.seed || '42' }}
   WORKERS: "2"
 
 jobs:
@@ -143,6 +155,7 @@ jobs:
       gas_modes: ${{ steps.dims.outputs.gas_modes }}
       scenarios: ${{ steps.dims.outputs.scenarios }}
       demands: ${{ steps.dims.outputs.demands }}
+      seed_list: ${{ steps.set-seeds.outputs.seed_list }}
     steps:
       - id: set-matrix
         run: |
@@ -150,6 +163,14 @@ jobs:
             echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
           else
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: set-seeds
+        run: |
+          if [ "${{ inputs.seed_mode }}" = "loop_new" ]; then
+            echo "seed_list=7 123 256 314 567 773 999" >> "$GITHUB_OUTPUT"
+          else
+            echo "seed_list=${{ inputs.seed || '42' }}" >> "$GITHUB_OUTPUT"
           fi
 
       # Expand ALL/BOTH for each dimension into space-separated lists.
@@ -258,7 +279,7 @@ jobs:
         run: mkdir -p data/step2.3-de/myopic
 
       # ------------------------------------------------------------------
-      # Nested loop: pathway × gas_mode × scenario × demand_growth
+      # Nested loop: seed × pathway × gas_mode × scenario × demand_growth
       # Each combo runs the full threshold sweep (default 6 thresholds).
       # Sequential within the job; ISO is the only parallel axis.
       # ------------------------------------------------------------------
@@ -272,38 +293,46 @@ jobs:
           POPSIZE: ${{ inputs.popsize }}
           MAXITER: ${{ inputs.maxiter }}
           THRESHOLDS: ${{ inputs.thresholds }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         timeout-minutes: 330
         run: |
           set -euo pipefail
           run_count=0
           t_total=$SECONDS
 
-          for pw in $PATHWAYS; do
-            for gm in $GAS_MODES; do
-              for sc in $SCENARIOS; do
-                for dg in $DEMANDS; do
-                  run_count=$((run_count + 1))
-                  echo ""
-                  echo "============================================================"
-                  echo "[run $run_count] $ISO pw=$pw gas=$gm scenario=$sc demand=$dg"
-                  echo "  popsize=$POPSIZE maxiter=$MAXITER workers=$WORKERS seed=$SEED"
-                  echo "  thresholds: $THRESHOLDS"
-                  echo "============================================================"
-                  t0=$SECONDS
+          for SEED in $SEED_LIST; do
+            echo ""
+            echo "############################################################"
+            echo "# SEED $SEED"
+            echo "############################################################"
 
-                  python scripts/step2_3_de_myopic_tf.py \
-                    --iso "$ISO" \
-                    --pathway "$pw" \
-                    --gas-mode "$gm" \
-                    --popsize "$POPSIZE" \
-                    --maxiter "$MAXITER" \
-                    --workers "$WORKERS" \
-                    --seed "$SEED" \
-                    --scenario "$sc" \
-                    --demand-growth "$dg" \
-                    --thresholds $THRESHOLDS
+            for pw in $PATHWAYS; do
+              for gm in $GAS_MODES; do
+                for sc in $SCENARIOS; do
+                  for dg in $DEMANDS; do
+                    run_count=$((run_count + 1))
+                    echo ""
+                    echo "============================================================"
+                    echo "[run $run_count] $ISO pw=$pw gas=$gm scenario=$sc demand=$dg seed=$SEED"
+                    echo "  popsize=$POPSIZE maxiter=$MAXITER workers=$WORKERS"
+                    echo "  thresholds: $THRESHOLDS"
+                    echo "============================================================"
+                    t0=$SECONDS
 
-                  echo "[run $run_count] Done in $(( SECONDS - t0 ))s"
+                    python scripts/step2_3_de_myopic_tf.py \
+                      --iso "$ISO" \
+                      --pathway "$pw" \
+                      --gas-mode "$gm" \
+                      --popsize "$POPSIZE" \
+                      --maxiter "$MAXITER" \
+                      --workers "$WORKERS" \
+                      --seed "$SEED" \
+                      --scenario "$sc" \
+                      --demand-growth "$dg" \
+                      --thresholds $THRESHOLDS
+
+                    echo "[run $run_count] Done in $(( SECONDS - t0 ))s"
+                  done
                 done
               done
             done
@@ -329,10 +358,14 @@ jobs:
       - name: "Push results — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
           set -euo pipefail
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}"
+
+          # Annotate branch name with seed info
+          SEED_TAG=$(echo "$SEED_LIST" | tr ' ' '-')
+          branch="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO}-s${SEED_TAG}"
 
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -352,7 +385,7 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MSG="Step 2.3 DE myopic: ${ISO} pw=${{ inputs.pathway }} gas=${{ inputs.gas_mode }} sc=${{ inputs.scenario }} dg=${{ inputs.demand_growth }} p=${{ inputs.popsize }} i=${{ inputs.maxiter }} s=${SEED}"
+          COMMIT_MSG="Step 2.3 DE myopic: ${ISO} pw=${{ inputs.pathway }} gas=${{ inputs.gas_mode }} sc=${{ inputs.scenario }} dg=${{ inputs.demand_growth }} p=${{ inputs.popsize }} i=${{ inputs.maxiter }} seeds=${SEED_TAG}"
           git commit -m "$COMMIT_MSG"
           git push origin "$branch"
           echo "[push] Branch created: ${branch} ($file_count files)"
@@ -366,6 +399,7 @@ jobs:
           GAS_MODES: ${{ needs.prepare.outputs.gas_modes }}
           SCENARIOS: ${{ needs.prepare.outputs.scenarios }}
           DEMANDS: ${{ needs.prepare.outputs.demands }}
+          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
           {
             echo "## Step 2.3 DE Myopic — ${ISO}"
@@ -378,7 +412,8 @@ jobs:
             echo "| Demand growth | \`${DEMANDS}\` |"
             echo "| Popsize | ${{ inputs.popsize }} |"
             echo "| Maxiter | ${{ inputs.maxiter }} |"
-            echo "| Seed | ${SEED} |"
+            echo "| Seed(s) | \`${SEED_LIST}\` |"
+            echo "| Seed mode | \`${{ inputs.seed_mode }}\` |"
             echo "| Thresholds | \`${{ inputs.thresholds }}\` |"
             echo ""
             echo "**Myopic solver:** each threshold solved independently from grid baseline."
