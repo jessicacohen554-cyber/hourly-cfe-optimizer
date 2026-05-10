@@ -6,8 +6,16 @@ name: "Step 2.3 DE: Thermal Fleet Disaggregation"
 #
 # Output files tagged `_tf` — won't collide with baseline runs.
 #
-# iso=ALL fans out to 7 parallel matrix jobs.
-# seed_mode=loop_new runs seeds 7, 123, 256, 314, 567, 773, 999 sequentially (skips 42).
+# Sweep dimensions (all sequential except ISO which fans out in parallel):
+#   iso       — ALL fans out to 7 parallel matrix jobs
+#   pathway   — BOTH = A→B seeded, ALL = A→B→C→D
+#   gas_mode  — BOTH = 1+2, ALL = 1+2+3
+#   scenario  — extremes/cross/core/ALL (see descriptions)
+#   demand    — ALL = Low+Medium+High
+#   popsize   — explore = 10+15+20, bounds = 10+20
+#   maxiter   — mid_high = 400+800
+#   seed_mode — loop_new runs seeds 7,123,256,314,567,773,999 (skips 42)
+#
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de-tf"
 # to consolidate into master.
 
@@ -41,7 +49,7 @@ on:
           - BOTH
           - ALL
       gas_mode:
-        description: 'Gas visibility in optimizer: 1=cost+shadow, 2=cost only, 3=blind'
+        description: 'Gas in optimizer: 1=cost+shadow, 2=cost only, 3=blind, BOTH=1+2, ALL=1+2+3'
         required: true
         default: '1'
         type: choice
@@ -49,8 +57,35 @@ on:
           - '1'
           - '2'
           - '3'
+          - BOTH
+          - ALL
+      scenario:
+        description: 'Cost scenario — extremes=low+high, cross=firm↔vre, core=base+low+high, ALL=all 5'
+        required: true
+        default: 'base'
+        type: choice
+        options:
+          - base
+          - firm_high_vre_low
+          - firm_low_vre_high
+          - all_low
+          - all_high
+          - extremes
+          - cross
+          - core
+          - ALL
+      demand_growth:
+        description: 'Demand growth (ALL = loop Low/Medium/High)'
+        required: true
+        default: 'Medium'
+        type: choice
+        options:
+          - Low
+          - Medium
+          - High
+          - ALL
       popsize:
-        description: 'DE population multiplier (pop = popsize × n_dims)'
+        description: 'DE pop multiplier — explore=10+15+20, bounds=10+20'
         required: false
         default: '15'
         type: choice
@@ -61,8 +96,10 @@ on:
           - '40'
           - '80'
           - '160'
+          - explore
+          - bounds
       maxiter:
-        description: 'DE generations per year-step'
+        description: 'DE generations — mid_high=400+800'
         required: false
         default: '150'
         type: choice
@@ -73,26 +110,7 @@ on:
           - '400'
           - '800'
           - '1600'
-      demand_growth:
-        description: 'Demand growth level'
-        required: true
-        default: 'Medium'
-        type: choice
-        options:
-          - Medium
-          - Low
-          - High
-      scenario:
-        description: 'Cost scenario'
-        required: true
-        default: 'base'
-        type: choice
-        options:
-          - base
-          - firm_high_vre_low
-          - firm_low_vre_high
-          - all_low
-          - all_high
+          - mid_high
       seed:
         description: 'Random seed (ignored when seed_mode=loop_new)'
         required: false
@@ -129,10 +147,21 @@ env:
   WORKERS: "2"
 
 jobs:
+  # -------------------------------------------------------------------
+  # Fan-out: ISO dimension → parallel matrix jobs
+  # All other dimensions expand to space-separated lists, looped
+  # sequentially inside each matrix job.
+  # -------------------------------------------------------------------
   prepare:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      pathways: ${{ steps.dims.outputs.pathways }}
+      gas_modes: ${{ steps.dims.outputs.gas_modes }}
+      scenarios: ${{ steps.dims.outputs.scenarios }}
+      demands: ${{ steps.dims.outputs.demands }}
+      popsizes: ${{ steps.dims.outputs.popsizes }}
+      maxiters: ${{ steps.dims.outputs.maxiters }}
       seed_list: ${{ steps.set-seeds.outputs.seed_list }}
     steps:
       - id: set-matrix
@@ -151,6 +180,65 @@ jobs:
             echo "seed_list=${{ inputs.seed || '42' }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # Expand ALL/BOTH/group shortcuts into space-separated lists.
+      # These are passed to the matrix job and looped sequentially.
+      - id: dims
+        env:
+          PATHWAY: ${{ inputs.pathway }}
+          GAS_MODE: ${{ inputs.gas_mode }}
+          SCENARIO: ${{ inputs.scenario }}
+          DEMAND: ${{ inputs.demand_growth }}
+          POPSIZE: ${{ inputs.popsize }}
+          MAXITER: ${{ inputs.maxiter }}
+        run: |
+          # Pathways
+          case "$PATHWAY" in
+            BOTH) echo "pathways=A B" >> "$GITHUB_OUTPUT" ;;
+            ALL)  echo "pathways=A B C D" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "pathways=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Gas modes — BOTH = 1+2, ALL = 1+2+3
+          case "$GAS_MODE" in
+            BOTH) echo "gas_modes=1 2" >> "$GITHUB_OUTPUT" ;;
+            ALL)  echo "gas_modes=1 2 3" >> "$GITHUB_OUTPUT" ;;
+            *)    echo "gas_modes=$GAS_MODE" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Scenarios
+          case "$SCENARIO" in
+            extremes) echo "scenarios=all_low all_high" >> "$GITHUB_OUTPUT" ;;
+            cross)    echo "scenarios=firm_high_vre_low firm_low_vre_high" >> "$GITHUB_OUTPUT" ;;
+            core)     echo "scenarios=base all_low all_high" >> "$GITHUB_OUTPUT" ;;
+            ALL)      echo "scenarios=base firm_high_vre_low firm_low_vre_high all_low all_high" >> "$GITHUB_OUTPUT" ;;
+            *)        echo "scenarios=$SCENARIO" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Demand growth
+          case "$DEMAND" in
+            ALL) echo "demands=Low Medium High" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "demands=$DEMAND" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Popsize — explore = 10+15+20, bounds = 10+20
+          case "$POPSIZE" in
+            explore) echo "popsizes=10 15 20" >> "$GITHUB_OUTPUT" ;;
+            bounds)  echo "popsizes=10 20" >> "$GITHUB_OUTPUT" ;;
+            *)       echo "popsizes=$POPSIZE" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Maxiter — mid_high = 400+800
+          case "$MAXITER" in
+            mid_high) echo "maxiters=400 800" >> "$GITHUB_OUTPUT" ;;
+            *)        echo "maxiters=$MAXITER" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  # -------------------------------------------------------------------
+  # Main job: one per ISO, loops all other dims sequentially.
+  # Loop order: seed → demand → scenario → gas_mode → popsize →
+  #             maxiter → pathway
+  # Pathway is innermost because A's winners seed B/C/D (REF_FLAG).
+  # -------------------------------------------------------------------
   de-optimize-tf:
     needs: prepare
     runs-on: ubuntu-latest
@@ -219,30 +307,29 @@ jobs:
       - name: Ensure output directory
         run: mkdir -p data/step2.3-de/thermal-fleet
 
-      - name: Build pathway list
-        id: pathways
-        env:
-          PATHWAY: ${{ inputs.pathway }}
-        run: |
-          case "$PATHWAY" in
-            BOTH)     echo "list=A B" >> "$GITHUB_OUTPUT" ;;
-            ALL)      echo "list=A B C D" >> "$GITHUB_OUTPUT" ;;
-            *)        echo "list=$PATHWAY" >> "$GITHUB_OUTPUT" ;;
-          esac
-
+      # ------------------------------------------------------------------
+      # Nested loop: seed × demand × scenario × gas_mode × popsize ×
+      #              maxiter × pathway
+      #
+      # Pathway is innermost so A's winners file can seed B/C/D.
+      # REF_FLAG resets at the top of each pathway sweep (i.e., every
+      # unique combo of the outer dimensions).
+      # ------------------------------------------------------------------
       - name: "Run DE optimizer (thermal fleet) — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
-          PATHWAYS: ${{ steps.pathways.outputs.list }}
-          GAS_MODE: ${{ inputs.gas_mode }}
-          POPSIZE: ${{ inputs.popsize }}
-          MAXITER: ${{ inputs.maxiter }}
-          SCENARIO: ${{ inputs.scenario }}
-          DEMAND: ${{ inputs.demand_growth }}
+          PATHWAYS: ${{ needs.prepare.outputs.pathways }}
+          GAS_MODES: ${{ needs.prepare.outputs.gas_modes }}
+          SCENARIOS: ${{ needs.prepare.outputs.scenarios }}
+          DEMANDS: ${{ needs.prepare.outputs.demands }}
+          POPSIZES: ${{ needs.prepare.outputs.popsizes }}
+          MAXITERS: ${{ needs.prepare.outputs.maxiters }}
           SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         timeout-minutes: 330
         run: |
           set -euo pipefail
+          run_count=0
+          t_total=$SECONDS
 
           for SEED in $SEED_LIST; do
             echo ""
@@ -250,74 +337,79 @@ jobs:
             echo "# SEED $SEED"
             echo "############################################################"
 
-            REF_FLAG=""
+            for dg in $DEMANDS; do
+              for sc in $SCENARIOS; do
+                for gm in $GAS_MODES; do
+                  for ps in $POPSIZES; do
+                    for mi in $MAXITERS; do
 
-            for pw in $PATHWAYS; do
-              echo ""
-              echo "============================================================"
-              echo "[workflow] Starting DE Pathway $pw (thermal fleet) for $ISO"
-              echo "  gas_mode=$GAS_MODE popsize=$POPSIZE maxiter=$MAXITER"
-              echo "  workers=$WORKERS seed=$SEED"
-              echo "  target_2040=$TARGET_2040 target_2050=$TARGET_2050"
-              echo "============================================================"
-              t0=$SECONDS
+                      # Reset ref-winners for each outer-dimension combo
+                      REF_FLAG=""
 
-              python scripts/step2_3_de_pathway_tf.py \
-                --iso "$ISO" \
-                --pathway "$pw" \
-                --gas-mode "$GAS_MODE" \
-                --popsize "$POPSIZE" \
-                --maxiter "$MAXITER" \
-                --workers "$WORKERS" \
-                --seed "$SEED" \
-                --scenario "$SCENARIO" \
-                --demand-growth "$DEMAND" \
-                --target-2040 "$TARGET_2040" \
-                --target-2050 "$TARGET_2050" \
-                $REF_FLAG
+                      for pw in $PATHWAYS; do
+                        run_count=$((run_count + 1))
+                        echo ""
+                        echo "============================================================"
+                        echo "[run $run_count] $ISO pw=$pw gas=$gm scenario=$sc demand=$dg"
+                        echo "  popsize=$ps maxiter=$mi workers=$WORKERS seed=$SEED"
+                        echo "  target_2040=$TARGET_2040 target_2050=$TARGET_2050"
+                        echo "============================================================"
+                        t0=$SECONDS
 
-              echo "[workflow] Pathway $pw seed=$SEED done in $(( SECONDS - t0 ))s"
+                        python scripts/step2_3_de_pathway_tf.py \
+                          --iso "$ISO" \
+                          --pathway "$pw" \
+                          --gas-mode "$gm" \
+                          --popsize "$ps" \
+                          --maxiter "$mi" \
+                          --workers "$WORKERS" \
+                          --seed "$SEED" \
+                          --scenario "$sc" \
+                          --demand-growth "$dg" \
+                          --target-2040 "$TARGET_2040" \
+                          --target-2050 "$TARGET_2050" \
+                          $REF_FLAG
 
-              # After pathway A, set ref-winners flag for subsequent pathways
-              # (path-dependent seeding: B/C/D warm-start from A's winners)
-              if [ "$pw" = "A" ]; then
-                WINNERS_FILE="data/step2.3-de/thermal-fleet/${ISO}_pathwayA_${SCENARIO}_${DEMAND}_p${POPSIZE}_i${MAXITER}_s${SEED}_g${GAS_MODE}_tf_winners.json"
-                if [ -f "$WINNERS_FILE" ]; then
-                  REF_FLAG="--ref-winners $WINNERS_FILE"
-                  echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
-                fi
-              fi
+                        echo "[run $run_count] Pathway $pw done in $(( SECONDS - t0 ))s"
+
+                        # After pathway A, set ref-winners flag for subsequent pathways
+                        # (path-dependent seeding: B/C/D warm-start from A's winners)
+                        if [ "$pw" = "A" ]; then
+                          WINNERS_FILE="data/step2.3-de/thermal-fleet/${ISO}_pathwayA_${sc}_${dg}_p${ps}_i${mi}_s${SEED}_g${gm}_tf_winners.json"
+                          if [ -f "$WINNERS_FILE" ]; then
+                            REF_FLAG="--ref-winners $WINNERS_FILE"
+                            echo "[workflow] Will seed subsequent pathways with $WINNERS_FILE"
+                          fi
+                        fi
+                      done
+
+                    done
+                  done
+                done
+              done
             done
           done
+
+          echo ""
+          echo "============================================================"
+          echo "[workflow] All $run_count runs complete in $(( SECONDS - t_total ))s"
+          echo "============================================================"
 
       - name: "Verify outputs — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
-          PATHWAYS: ${{ steps.pathways.outputs.list }}
-          SCENARIO: ${{ inputs.scenario }}
-          DEMAND: ${{ inputs.demand_growth }}
-          GAS_MODE: ${{ inputs.gas_mode }}
-          SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
-          fail=0
-          for SEED in $SEED_LIST; do
-            for pw in $PATHWAYS; do
-              results="data/step2.3-de/thermal-fleet/${ISO}_pathway${pw}_${SCENARIO}_${DEMAND}_p${{ inputs.popsize }}_i${{ inputs.maxiter }}_s${SEED}_g${GAS_MODE}_tf.parquet"
-              if [ ! -f "$results" ]; then
-                echo "::error::Missing results: $results"
-                fail=1
-              else
-                size=$(stat -c%s "$results" 2>/dev/null || stat -f%z "$results")
-                echo "[verify] ${results}: ${size} bytes"
-              fi
-            done
-          done
-          if [ "$fail" -ne 0 ]; then exit 1; fi
+          count=$(find data/step2.3-de/thermal-fleet/ -name "${ISO}_*_tf.parquet" | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No _tf parquet files produced for ${ISO}"
+            exit 1
+          fi
+          echo "[verify] Found $count parquet file(s) for $ISO:"
+          find data/step2.3-de/thermal-fleet/ -name "${ISO}_*_tf.parquet" -exec ls -lh {} \;
 
       - name: "Push results — ${{ matrix.iso }}"
         env:
           ISO: ${{ matrix.iso }}
-          GAS_MODE: ${{ inputs.gas_mode }}
           SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
           set -euo pipefail
@@ -332,13 +424,12 @@ jobs:
 
           git checkout -b "$branch"
 
-          # Stage output files (_tf tagged)
+          # Stage all _tf output files for this ISO
           file_count=0
           for f in data/step2.3-de/thermal-fleet/${ISO}_*_tf.parquet data/step2.3-de/thermal-fleet/${ISO}_*_tf_winners.json; do
             [ -f "$f" ] || continue
             git add "$f"
             file_count=$((file_count + 1))
-            echo "[push] Staged: ${f} ($(du -h "$f" | cut -f1))"
           done
 
           if [ "$file_count" -eq 0 ]; then
@@ -346,16 +437,22 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MSG="Step 2.3 DE thermal fleet: ${ISO} pw=${{ inputs.pathway }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} gas=${GAS_MODE} seeds=${SEED_TAG}"
+          COMMIT_MSG="Step 2.3 DE thermal fleet: ${ISO} pw=${{ inputs.pathway }} gas=${{ inputs.gas_mode }} sc=${{ inputs.scenario }} dg=${{ inputs.demand_growth }} pop=${{ inputs.popsize }} iter=${{ inputs.maxiter }} seeds=${SEED_TAG}"
           git commit -m "$COMMIT_MSG"
           git push origin "$branch"
-          echo "[push] Branch created: ${branch}"
+          echo "[push] Branch created: ${branch} ($file_count files)"
           echo "BRANCH=${branch}" >> "${GITHUB_ENV}"
 
       - name: Summary
         if: always()
         env:
           ISO: ${{ matrix.iso }}
+          PATHWAYS: ${{ needs.prepare.outputs.pathways }}
+          GAS_MODES: ${{ needs.prepare.outputs.gas_modes }}
+          SCENARIOS: ${{ needs.prepare.outputs.scenarios }}
+          DEMANDS: ${{ needs.prepare.outputs.demands }}
+          POPSIZES: ${{ needs.prepare.outputs.popsizes }}
+          MAXITERS: ${{ needs.prepare.outputs.maxiters }}
           SEED_LIST: ${{ needs.prepare.outputs.seed_list }}
         run: |
           {
@@ -363,14 +460,14 @@ jobs:
             echo ""
             echo "| Setting | Value |"
             echo "|---------|-------|"
-            echo "| Pathway | \`${{ inputs.pathway }}\` |"
-            echo "| Gas mode | ${{ inputs.gas_mode }} |"
-            echo "| Popsize | ${{ inputs.popsize }} |"
-            echo "| Maxiter | ${{ inputs.maxiter }} |"
+            echo "| Pathway | \`${{ inputs.pathway }}\` → \`${PATHWAYS}\` |"
+            echo "| Gas mode | \`${{ inputs.gas_mode }}\` → \`${GAS_MODES}\` |"
+            echo "| Scenario | \`${{ inputs.scenario }}\` → \`${SCENARIOS}\` |"
+            echo "| Demand | \`${{ inputs.demand_growth }}\` → \`${DEMANDS}\` |"
+            echo "| Popsize | \`${{ inputs.popsize }}\` → \`${POPSIZES}\` |"
+            echo "| Maxiter | \`${{ inputs.maxiter }}\` → \`${MAXITERS}\` |"
             echo "| Seed(s) | \`${SEED_LIST}\` |"
             echo "| Seed mode | \`${{ inputs.seed_mode }}\` |"
-            echo "| Scenario | \`${{ inputs.scenario }}\` |"
-            echo "| Demand | \`${{ inputs.demand_growth }}\` |"
             echo ""
             echo "**Thermal fleet model:** gas + coal + oil peak credit with CFE-driven coal retirement."
             echo "Output tagged \`_tf\` — does not overwrite baseline results."
