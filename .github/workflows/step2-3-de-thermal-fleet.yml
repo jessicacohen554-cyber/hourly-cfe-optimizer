@@ -7,7 +7,7 @@ name: "Step 2.3 DE: Thermal Fleet Disaggregation"
 # Output files tagged `_tf` — won't collide with baseline runs.
 #
 # iso=ALL fans out to 7 parallel matrix jobs.
-# seed_mode=loop_new runs seeds 7, 123, 256 sequentially (skips 42).
+# seed_mode=loop_new runs seeds 7, 123, 256, 314, 567, 773, 999 sequentially (skips 42).
 # Run squash-pipeline-branches.yml with pattern "auto/.*step2-3-de-tf"
 # to consolidate into master.
 
@@ -103,8 +103,12 @@ on:
           - '7'
           - '123'
           - '256'
+          - '314'
+          - '567'
+          - '773'
+          - '999'
       seed_mode:
-        description: 'single = use selected seed | loop_new = run seeds 7, 123, 256 sequentially'
+        description: 'single = use selected seed | loop_new = run 7 new seeds sequentially (excludes 42)'
         required: false
         default: 'single'
         type: choice
@@ -142,7 +146,7 @@ jobs:
       - id: set-seeds
         run: |
           if [ "${{ inputs.seed_mode }}" = "loop_new" ]; then
-            echo "seed_list=7 123 256" >> "$GITHUB_OUTPUT"
+            echo "seed_list=7 123 256 314 567 773 999" >> "$GITHUB_OUTPUT"
           else
             echo "seed_list=${{ inputs.seed || '42' }}" >> "$GITHUB_OUTPUT"
           fi
