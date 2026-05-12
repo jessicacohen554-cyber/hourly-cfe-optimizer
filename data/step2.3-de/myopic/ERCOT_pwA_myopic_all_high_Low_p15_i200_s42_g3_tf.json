@@ -1,0 +1,162 @@
+{
+  "iso": "ERCOT",
+  "pathway": "A",
+  "scenario": "all_high",
+  "demand_growth": "Low",
+  "gas_mode": 3,
+  "peak_gas_ref_mw": 45650.0,
+  "thresholds": [
+    {
+      "target": 90.0,
+      "year": 2040,
+      "pathway": "A",
+      "achieved_cfe": 90.0,
+      "total_cost_B": 43.1831,
+      "clean_inc_cost_B": 34.0547,
+      "gas_cost_B": 9.1284,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 34480.8,
+      "h2_mw": 8972.4,
+      "h2_mwh": 28985180.9,
+      "dem_twh": 656.81,
+      "thermal_peak_credit_mw": 47276.0,
+      "peak_gas_ref_mw": 45650.0,
+      "winner_pcts": {
+        "clean_firm": 6.39,
+        "solar": 22.53,
+        "wind": 80.642,
+        "hydro": 0.074,
+        "offshore_wind": 0.0,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 0.011,
+        "battery8_dispatch_pct": 0.0,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {
+        "solar": 57.341,
+        "wind": 374.659
+      }
+    },
+    {
+      "target": 95.0,
+      "year": 2045,
+      "pathway": "A",
+      "achieved_cfe": 95.0,
+      "total_cost_B": 51.1253,
+      "clean_inc_cost_B": 45.2384,
+      "gas_cost_B": 5.8869,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 22236.7,
+      "h2_mw": 28822.0,
+      "h2_mwh": 93586462.4,
+      "dem_twh": 725.17,
+      "thermal_peak_credit_mw": 46588.5,
+      "peak_gas_ref_mw": 45650.0,
+      "winner_pcts": {
+        "clean_firm": 5.788,
+        "solar": 21.473,
+        "wind": 73.735,
+        "hydro": 0.067,
+        "offshore_wind": 0.0,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 0.006,
+        "battery8_dispatch_pct": 0.0,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {
+        "solar": 55.642,
+        "wind": 363.565
+      }
+    },
+    {
+      "target": 99.0,
+      "year": 2049,
+      "pathway": "A",
+      "achieved_cfe": 99.0,
+      "total_cost_B": 55.444,
+      "clean_inc_cost_B": 55.3951,
+      "gas_cost_B": 0.0489,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 184.6,
+      "h2_mw": 55147.9,
+      "h2_mwh": 153715327.9,
+      "dem_twh": 784.95,
+      "thermal_peak_credit_mw": 46245.0,
+      "peak_gas_ref_mw": 45650.0,
+      "winner_pcts": {
+        "clean_firm": 5.347,
+        "solar": 17.778,
+        "wind": 72.77,
+        "hydro": 0.062,
+        "offshore_wind": 0.0,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 0.002,
+        "battery8_dispatch_pct": 0.0,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {
+        "solar": 31.229,
+        "wind": 385.957
+      }
+    },
+    {
+      "target": 99.9,
+      "year": 2050,
+      "pathway": "A",
+      "achieved_cfe": 99.9,
+      "total_cost_B": 59.6534,
+      "clean_inc_cost_B": 59.6534,
+      "gas_cost_B": 0.0,
+      "gas_shadow_B": 0.0,
+      "gas_mw": 0.0,
+      "h2_mw": 75084.1,
+      "h2_mwh": 163982500.0,
+      "dem_twh": 800.65,
+      "thermal_peak_credit_mw": 46186.3,
+      "peak_gas_ref_mw": 45650.0,
+      "winner_pcts": {
+        "clean_firm": 5.242,
+        "solar": 17.778,
+        "wind": 72.769,
+        "hydro": 0.061,
+        "offshore_wind": 0.0,
+        "ccs_ccgt": 0.0,
+        "geothermal": 0.0,
+        "solar_batt4": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0,
+        "wind_batt8": 0.0
+      },
+      "winner_stor": {
+        "battery_dispatch_pct": 0.003,
+        "battery8_dispatch_pct": 0.0,
+        "ldes_dispatch_pct": 0.0
+      },
+      "resource_twh": {
+        "solar": 31.853,
+        "wind": 393.673
+      }
+    }
+  ]
+}
