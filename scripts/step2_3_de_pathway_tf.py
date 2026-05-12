@@ -76,6 +76,7 @@ import step2_3_adaptive_sobol as solver
 import dispatch_utils as du
 import pipeline_config as pc
 from eia_data_io import load_demand_profiles, load_generation_profiles
+from dispatch_fast import DispatchBuffers, score_cfe_fast          # ← FAST PATH
 from scipy.optimize import differential_evolution
 
 # ---------------------------------------------------------------------------
@@ -233,6 +234,10 @@ class _DEObjective:
     """Callable wrapper that scipy.optimize.differential_evolution can pickle
     when ``workers > 1`` triggers multiprocessing.
 
+    v2.2 change: uses dispatch_fast.score_cfe_fast for ~17% dispatch speedup.
+    DispatchBuffers pre-allocates all 8760-element work arrays once; each
+    pickled copy (one per worker process) gets its own independent buffers.
+
     v2.0 optimizations vs. v1.x:
     - Precomputed LCOE and storage cost arrays (eliminates per-eval function calls)
     - Pre-allocated work buffers when workers=1 (skipped for multiprocessing safety)
@@ -251,6 +256,8 @@ class _DEObjective:
         '_buf_full', '_buf_pcts', '_use_buffers',
         # Clean firm uprate tranche (v2.1)
         '_cf_free_k', '_remaining_uprate_pct', '_uprate_lcoe', '_newbuild_lcoe',
+        # Fast dispatch buffers (v2.2)
+        '_dbufs',                                                  # ← FAST PATH
     )
 
     def __init__(self, *, lo, hi, floor_pcts, free_idx, n_free,
@@ -281,6 +288,10 @@ class _DEObjective:
         self.full_x0 = full_x0
         self.active = active
         self.gas_mode = gas_mode
+
+        # --- Pre-allocated dispatch buffers (v2.2) ---
+        # Pickle-safe: each worker gets its own copy.
+        self._dbufs = DispatchBuffers(demand_norm, supply_matrix)  # ← FAST PATH
 
         # --- Precompute year-constant costs (v2.0) ---
         # These depend only on (iso, resource, year, cfg) — invariant within
@@ -356,9 +367,9 @@ class _DEObjective:
         for k, ri in enumerate(free_idx):
             pcts[ri] = xc[k]
 
-        cfe, resid = score_cfe(
-            pcts_to_dict(pcts), xc[n_free], xc[n_free+1], xc[n_free+2],
-            self.demand_norm, self.supply_profiles, self.supply_matrix)
+        cfe, resid = score_cfe_fast(                               # ← FAST PATH
+            pcts, xc[n_free], xc[n_free+1], xc[n_free+2],         # ← FAST PATH
+            self._dbufs)                                           # ← FAST PATH
 
         h2 = size_h2(resid, self.demand_norm, cfe, self.target, self.dem_twh)
         if h2["h2_mw"] > 1e8:
@@ -898,4 +909,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
